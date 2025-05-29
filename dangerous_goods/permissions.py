@@ -32,4 +32,4 @@ class CanManageDGData(permissions.BasePermission):
         return request.user.is_staff or request.user.is_superuser
 
 # Alias for clarity if used elsewhere, or directly use CanManageDGData
-IsAdminOrReadOnlyForDG = CanManageDGData 
+# IsAdminOrReadOnlyForDG = CanManageDGData # You can use this alias if you prefer the name
