@@ -1,23 +1,23 @@
 # dangerous_goods/services.py
-from typing import List, Optional, Dict, Union # Added Union
+from typing import List, Optional, Dict, Union
 from .models import DangerousGood, DGProductSynonym, SegregationGroup, SegregationRule, PackingGroup
+from shipments.models import ConsignmentItem # Import ConsignmentItem
 from django.db.models import Q
+from .safety_rules import ( # Import from our new safety_rules module
+    get_all_hazard_classes_for_dg,
+    check_item_fire_risk_conflict_with_oxidizer,
+    check_item_food_sensitivity_conflict,
+    check_item_bulk_incompatibility
+)
+from django.core.exceptions import ObjectDoesNotExist # Corrected import
 
 def get_dangerous_good_by_un_number(un_number: str) -> Optional[DangerousGood]:
-    """
-    Retrieves a DangerousGood instance by its UN number (case-insensitive).
-    Returns None if not found.
-    """
     try:
         return DangerousGood.objects.get(un_number__iexact=un_number)
     except DangerousGood.DoesNotExist:
         return None
 
 def find_dangerous_goods(query: str) -> List[DangerousGood]:
-    """
-    Searches for dangerous goods by UN number, proper shipping name, or simplified name.
-    Returns a list (queryset converted to list).
-    """
     return list(DangerousGood.objects.filter(
         Q(un_number__icontains=query) |
         Q(proper_shipping_name__icontains=query) |
@@ -25,109 +25,155 @@ def find_dangerous_goods(query: str) -> List[DangerousGood]:
     ).distinct())
 
 def match_synonym_to_dg(text: str) -> Optional[DangerousGood]:
-    """
-    Attempts to match a given text (e.g., product name from a manifest) 
-    to a DangerousGood entry via its synonyms or proper/simplified names.
-    Returns the DangerousGood object if a match is found, otherwise None.
-    For simplicity, this returns the first match. More sophisticated logic
-    could return multiple matches or a best match with confidence.
-    """
-    # Exact match on synonym first
     synonym_match = DGProductSynonym.objects.filter(synonym__iexact=text).select_related('dangerous_good').first()
     if synonym_match:
         return synonym_match.dangerous_good
-
-    # Then try partial match on synonym (could be noisy)
-    # synonym_partial_match = DGProductSynonym.objects.filter(synonym__icontains=text).select_related('dangerous_good').first()
-    # if synonym_partial_match:
-    #     return synonym_partial_match.dangerous_good
-
-    # Then try exact match on proper shipping name or simplified name
     dg_match = DangerousGood.objects.filter(
         Q(proper_shipping_name__iexact=text) | Q(simplified_name__iexact=text)
     ).first()
     if dg_match:
         return dg_match
-        
-    # Could add more sophisticated matching logic here (e.g., Levenshtein distance, ML)
     return None
 
 def lookup_packing_instruction(un_number: str, mode: str = 'air_passenger') -> Optional[str]:
-    """
-    Looks up packing instruction for a given UN number and transport mode.
-    'mode' can be 'air_passenger', 'air_cargo', etc.
-    This is a placeholder; actual packing instructions can be complex and vary by mode.
-    """
     dg = get_dangerous_good_by_un_number(un_number)
-    if not dg:
-        return None
-    
-    if mode == 'air_passenger':
-        return dg.packing_instruction_passenger_aircraft
-    elif mode == 'air_cargo':
-        return dg.packing_instruction_cargo_aircraft
-    # TODO: Add logic for other modes (road, sea, rail) if those fields are added to the model
-    
+    if not dg: return None
+    if mode == 'air_passenger': return dg.packing_instruction_passenger_aircraft
+    elif mode == 'air_cargo': return dg.packing_instruction_cargo_aircraft
     return "Packing instruction not available for the specified mode."
 
 
-def check_dg_compatibility(dg1: DangerousGood, dg2: DangerousGood) -> Dict[str, Union[bool, str, None]]:
+def check_dg_compatibility(item1: ConsignmentItem, item2: ConsignmentItem) -> Dict[str, Union[bool, List[str]]]:
     """
-    Checks the compatibility between two dangerous goods based on defined SegregationRules.
-    Returns a dictionary with 'compatible' (bool) and 'reason' (str).
-    This implementation is a starting point and needs to be significantly expanded
-    to cover various rule types and regulatory nuances.
+    Checks the compatibility between two ConsignmentItems based on their associated Dangerous Goods.
+    Returns a dictionary with 'compatible' (bool) and 'reasons' (list of strings for conflicts).
+    This service function integrates checks from safety_rules.py and SegregationRule model.
     """
-    if dg1.un_number == dg2.un_number: # Technically same substance, but might be different packing or form
-        return {"compatible": True, "reason": "Same UN Number. Further checks on specific forms/packing may apply.", "rule_applied": None}
+    reasons_for_incompatibility: List[str] = []
 
-    # 1. Check direct UN number to UN number rules (if modeled)
-    # For now, this type is not fully implemented in SegregationRule model example
+    # Ensure both items are actually marked as dangerous goods
+    if not item1.is_dangerous_good or not item2.is_dangerous_good:
+        # If one or both are not DGs, they are generally compatible by default from a DG perspective.
+        # However, one could be a DG and the other food, so food sensitivity check is still relevant.
+        if check_item_food_sensitivity_conflict(item1, item2): # Assuming this handles non-DG food item
+             reasons_for_incompatibility.append(
+                f"Food Sensitivity: Potential conflict between food item and dangerous good."
+            )
+        return {
+            "compatible": not reasons_for_incompatibility,
+            "reasons": reasons_for_incompatibility
+        }
 
-    # 2. Check Class to Class rules
-    class_rule = SegregationRule.objects.filter(
-        Q(primary_hazard_class=dg1.hazard_class, secondary_hazard_class=dg2.hazard_class) |
-        Q(primary_hazard_class=dg2.hazard_class, secondary_hazard_class=dg1.hazard_class),
-        rule_type=SegregationRule.RuleType.CLASS_TO_CLASS
-    ).first()
+    # Retrieve the DangerousGood master records.
+    # Assuming ConsignmentItem has a ForeignKey 'dangerous_good_master' to DangerousGood model.
+    # If not, this needs adjustment to fetch DG based on item1.un_number etc.
+    dg1 = getattr(item1, 'dangerous_good_master', None)
+    dg2 = getattr(item2, 'dangerous_good_master', None)
 
-    if class_rule:
-        if class_rule.compatibility_status == SegregationRule.Compatibility.INCOMPATIBLE_PROHIBITED:
-            return {"compatible": False, "reason": f"Class-level incompatibility: {class_rule.notes or 'Prohibited'}", "rule_applied": str(class_rule)}
-        # Handle other statuses like AWAY_FROM, SEPARATED_FROM if needed as "conditionally compatible"
-        # For now, if not INCOMPATIBLE_PROHIBITED, we'll assume it passes this check or other checks will refine.
+    # If for some reason an item is marked as DG but doesn't link to master data
+    if not dg1:
+        reasons_for_incompatibility.append(f"Item '{item1.description}' is marked as DG but missing master DG data (UN: {item1.un_number}).")
+    if not dg2:
+        reasons_for_incompatibility.append(f"Item '{item2.description}' is marked as DG but missing master DG data (UN: {item2.un_number}).")
+    
+    if not dg1 or not dg2: # Cannot proceed with DG-specific checks if master data is missing
+        return {"compatible": False, "reasons": reasons_for_incompatibility}
 
-    # 3. Check Segregation Group to Segregation Group rules
+
+    if dg1.un_number == dg2.un_number:
+        # Same UN Number - generally compatible, but specific forms/packagings might differ.
+        # Add a note if detailed checks are needed, but don't mark as incompatible by default.
+        # reasons_for_incompatibility.append(f"Note: Same UN Number ({dg1.un_number}). Ensure specific forms and packagings are compatible.")
+        pass
+
+
+    # 1. Check explicit SegregationRule model entries
+    # This queries your database for predefined rules.
+    dg1_classes_set = get_all_hazard_classes_for_dg(dg1)
+    dg2_classes_set = get_all_hazard_classes_for_dg(dg2)
     dg1_groups = dg1.segregation_groups.all()
     dg2_groups = dg2.segregation_groups.all()
 
-    if dg1_groups.exists() and dg2_groups.exists():
-        for group1 in dg1_groups:
-            for group2 in dg2_groups:
-                if group1 == group2: continue # Skip if they are in the same group (usually handled differently)
-                
-                group_rule = SegregationRule.objects.filter(
-                    Q(primary_segregation_group=group1, secondary_segregation_group=group2) |
-                    Q(primary_segregation_group=group2, secondary_segregation_group=group1),
-                    rule_type=SegregationRule.RuleType.GROUP_TO_GROUP
-                ).first()
+    q_rules = Q()
+    # Class vs Class rules
+    for c1 in dg1_classes_set:
+        for c2 in dg2_classes_set:
+            q_rules |= (Q(rule_type=SegregationRule.RuleType.CLASS_TO_CLASS) & ((Q(primary_hazard_class=c1) & Q(secondary_hazard_class=c2)) | (Q(primary_hazard_class=c2) & Q(secondary_hazard_class=c1))))
+    
+    # Group vs Group rules
+    for g1 in dg1_groups:
+        for g2 in dg2_groups:
+            if g1 == g2: continue # Usually no rule against self, or specific rules apply
+            q_rules |= (Q(rule_type=SegregationRule.RuleType.GROUP_TO_GROUP) & ((Q(primary_segregation_group=g1) & Q(secondary_segregation_group=g2)) | (Q(primary_segregation_group=g2) & Q(secondary_segregation_group=g1))))
 
-                if group_rule:
-                    if group_rule.compatibility_status == SegregationRule.Compatibility.INCOMPATIBLE_PROHIBITED:
-                        return {"compatible": False, "reason": f"Group-level incompatibility: {group_rule.notes or 'Prohibited'}", "rule_applied": str(group_rule)}
-                    # Handle other statuses
+    # Class vs Group rules
+    for c1 in dg1_classes_set:
+        for g2 in dg2_groups:
+            q_rules |= (Q(rule_type=SegregationRule.RuleType.CLASS_TO_GROUP) & ((Q(primary_hazard_class=c1) & Q(secondary_segregation_group=g2)) | (Q(primary_segregation_group=g2) & Q(secondary_hazard_class=c1)))) # Assuming class can be primary or secondary
+    for c2 in dg2_classes_set:
+        for g1 in dg1_groups:
+             q_rules |= (Q(rule_type=SegregationRule.RuleType.CLASS_TO_GROUP) & ((Q(primary_hazard_class=c2) & Q(secondary_segregation_group=g1)) | (Q(primary_segregation_group=g1) & Q(secondary_hazard_class=c2))))
 
-    # 4. Consider subsidiary risks: A subsidiary risk of one DG might be incompatible
-    #    with the primary class (or another subsidiary risk) of another DG.
-    #    This requires iterating through dg1.subsidiary_risks vs dg2.hazard_class/subsidiary_risks
-    #    and dg2.subsidiary_risks vs dg1.hazard_class. (Complex logic omitted for brevity)
 
-    # 5. Default: If no specific prohibition rule is found, assume compatible for this basic check.
-    #    Real-world systems often default to requiring specific permissions/allowances.
-    #    Or, they might have a "general segregation" requirement if items are in different classes.
-    return {"compatible": True, "reason": "No direct prohibition rule found (basic check). Consult regulations for full compliance.", "rule_applied": None}
+    applicable_db_rules = SegregationRule.objects.filter(q_rules).distinct()
+    for rule in applicable_db_rules:
+        condition_passes = True # Assume condition passes unless proven otherwise
+        if rule.condition_type and rule.condition_type != SegregationRule.ConditionType.NONE:
+            # Implement structured condition checking here based on rule.condition_type and rule.condition_value
+            # This is where you'd check item1.is_bulk_item, dg1.is_fire_risk, etc.
+            # For example:
+            if rule.condition_type == SegregationRule.ConditionType.BOTH_BULK:
+                condition_passes = item1.is_bulk_item and item2.is_bulk_item
+            elif rule.condition_type == SegregationRule.ConditionType.PRIMARY_FIRE_RISK: # This interpretation needs clarity
+                condition_passes = item1.fire_risk_override if item1.fire_risk_override is not None else dg1.is_fire_risk
+            # Add more conditions...
 
-# --- Further service functions ---
-# - add_dangerous_good_to_segregation_group
-# - load_dg_data_from_source (e.g., CSV, API)
-# - comprehensive_dg_validation (checking against all rules and regulations)
+        if condition_passes:
+            if rule.compatibility_status == SegregationRule.Compatibility.INCOMPATIBLE_PROHIBITED:
+                reasons_for_incompatibility.append(f"Rule Violation: {str(rule)}. {rule.notes or ''}")
+            elif rule.compatibility_status == SegregationRule.Compatibility.CONDITIONAL_NOTES:
+                reasons_for_incompatibility.append(f"Conditional: {str(rule)}. Notes: {rule.notes or 'Review specific conditions.'}")
+            # Handle other statuses like AWAY_FROM, SEPARATED_FROM as incompatibility reasons or specific instructions
+
+    # 2. Apply specific safety_rules from safety_rules.py (these are often hardcoded or derived general rules)
+    if check_item_fire_risk_conflict_with_oxidizer(item1, item2): # This function uses item.fire_risk_override and dg.is_fire_risk
+        reasons_for_incompatibility.append(f"Fire Risk Conflict: {dg1.un_number} vs {dg2.un_number}. Potential oxidizer conflict.")
+
+    if check_item_food_sensitivity_conflict(item1, item2): # This relies on "SGG_FOODSTUFFS" group
+        reasons_for_incompatibility.append(f"Food Sensitivity: Potential conflict between item and food-sensitive DG class.")
+
+    if check_item_bulk_incompatibility(item1, item2): # This uses item.is_bulk_item and INCOMPATIBLE_BULK_PAIRS
+        reasons_for_incompatibility.append(f"Bulk Incompatibility: {dg1.un_number} (Class {dg1.hazard_class}) vs {dg2.un_number} (Class {dg2.hazard_class}) when both are bulk.")
+    
+    # Check for Class 1 (Explosives) special legislation
+    dg1_all_classes = get_all_hazard_classes_for_dg(dg1)
+    dg2_all_classes = get_all_hazard_classes_for_dg(dg2)
+    if any(c.startswith("1") for c in dg1_all_classes) or any(c.startswith("1") for c in dg2_all_classes):
+        # Check against rules with condition_type CLASS_1_LEGISLATION
+        class1_rules = SegregationRule.objects.filter(condition_type=SegregationRule.ConditionType.CLASS_1_LEGISLATION)
+        for rule in class1_rules:
+            # This logic needs to be more specific based on how Class 1 rules are defined.
+            # For example, if any other item is fire risk when a Class 1 is present.
+            item1_is_fire_risk = item1.fire_risk_override if item1.fire_risk_override is not None else dg1.is_fire_risk
+            item2_is_fire_risk = item2.fire_risk_override if item2.fire_risk_override is not None else dg2.is_fire_risk
+            if item1_is_fire_risk or item2_is_fire_risk: # Example: If any Class 1 is with a fire risk item
+                 reasons_for_incompatibility.append(f"Explosive (Class 1) with Fire Risk Item: Segregation must comply with specific explosive legislation. Rule: {rule.notes or ''}")
+
+
+    return {
+        "compatible": not reasons_for_incompatibility, 
+        "reasons": list(set(reasons_for_incompatibility)) # Ensure unique reasons
+    }
+
+# --- Utility function similar to check_compatibility_by_id, but using ConsignmentItems ---
+# This would typically live in a test script or a utility module, not directly in services.py
+# unless it's a common service operation.
+
+# def check_compatibility_for_consignment_item_ids(item1_id: int, item2_id: int):
+#     try:
+#         item1 = ConsignmentItem.objects.select_related('dangerous_good_master__segregation_groups').get(id=item1_id)
+#         item2 = ConsignmentItem.objects.select_related('dangerous_good_master__segregation_groups').get(id=item2_id)
+#     except ConsignmentItem.DoesNotExist:
+#         return {"compatible": False, "reasons": ["One or both consignment items not found."]}
+#     return check_dg_compatibility(item1, item2)
+
