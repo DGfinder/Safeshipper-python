@@ -1,52 +1,81 @@
 # users/models.py
 from django.contrib.auth.models import AbstractUser
 from django.db import models
-from django.utils.translation import gettext_lazy as _ # For choices
+from django.utils.translation import gettext_lazy as _
+# We need to import LocationType for limit_choices_to, assuming it's defined in locations.models
+# To avoid circular imports if locations also imports users, use string reference or careful import order.
+# For now, we'll use a string reference for LocationType in limit_choices_to.
+# from locations.models import LocationType # Ideal if no circularity
 
 class User(AbstractUser):
     """
     Custom User model extending Django's AbstractUser.
-    Includes fields for role, depot, and area specific to SafeShipper.
+    Includes fields for role, depot, and region specific to SafeShipper.
     """
     class Role(models.TextChoices):
-        ADMIN = 'ADMIN', _('Admin') # Platform administrator
-        DISPATCHER = 'DISPATCHER', _('Dispatcher') # Manages shipments, drivers for a depot/area
-        WAREHOUSE_STAFF = 'WAREHOUSE', _('Warehouse Staff') # Handles goods in warehouse
-        DRIVER = 'DRIVER', _('Driver') # Transports shipments
-        # Consider adding a general 'CUSTOMER_USER' or 'CLIENT_USER' if external users access the system
-        # Consider a 'MANAGER' role if different from 'ADMIN' or 'DISPATCHER'
-    
-    # Keep username, email, first_name, last_name, is_staff, is_active, date_joined from AbstractUser.
-    # is_superuser will typically be for the highest level of admin.
-    # is_staff can be used for users who can access the Django admin site.
+        ADMIN = 'ADMIN', _('Admin')
+        COMPLIANCE_OFFICER = 'COMPLIANCE_OFFICER', _('Compliance Officer')
+        DISPATCHER = 'DISPATCHER', _('Dispatcher')
+        WAREHOUSE_STAFF = 'WAREHOUSE', _('Warehouse Staff')
+        DRIVER = 'DRIVER', _('Driver')
+        CUSTOMER = 'CUSTOMER', _('Customer') # Added from schema
+        READONLY = 'READONLY', _('Read-Only User')
+
+    class LogisticsModel(models.TextChoices): # From schema for users_user
+        ONE_PL = '1PL', _('1PL (1st Party Logistics)')
+        THREE_PL = '3PL', _('3PL (3rd Party Logistics)')
+        BROKER = 'BROKER', _('Broker')
+        FORWARDER = 'FORWARDER', _('Forwarder')
 
     role = models.CharField(
         max_length=20, 
         choices=Role.choices, 
-        default=Role.DRIVER, # Sensible default, or perhaps another role
+        default=Role.DRIVER, 
         help_text=_("User's role within the system.")
     )
     
-    # For depot and area, consider if these should eventually be ForeignKeys 
-    # to 'locations.Depot' and 'locations.Area' models once those are defined.
-    # Using CharField for now is acceptable for initial development.
-    depot = models.CharField(
-        max_length=100, 
-        blank=True, 
-        null=True, 
-        help_text=_("The primary depot or operational center the user is associated with.")
+    depot = models.ForeignKey(
+        'locations.GeoLocation', # String reference to avoid circular imports initially
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='staff_users', # Users associated with this depot
+        limit_choices_to={'location_type': 'DEPOT'}, # Ensure it's a depot type GeoLocation
+        help_text=_("The primary depot the user is associated with.")
     )
-    area = models.CharField(
-        max_length=100, 
-        blank=True, 
-        null=True, 
-        help_text=_("The geographical or operational area the user is responsible for or belongs to.")
+    
+    region = models.ForeignKey(
+        'locations.Region', # String reference
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='staff_users', # Users associated with this region
+        help_text=_("The operational region the user belongs to.")
     )
 
-    # You might want to override the default email field to be unique and required if it's a primary identifier.
-    # email = models.EmailField(_('email address'), unique=True)
-    # USERNAME_FIELD = 'email' # if using email as username
-    # REQUIRED_FIELDS = ['username'] # if using email as username, username might still be required by AbstractUser
+    logistics_model = models.CharField(
+        _("Logistics Model"),
+        max_length=15,
+        choices=LogisticsModel.choices,
+        null=True, blank=True, # Making it optional for now
+        help_text=_("The logistics model this user operates under (e.g., 1PL, 3PL).")
+    )
+    
+    company = models.ForeignKey( # Adding based on common need, schema might imply via role
+        'companies.Company',
+        on_delete=models.SET_NULL, # Or models.CASCADE if user must belong to a company
+        null=True,
+        blank=True,
+        related_name='employees',
+        help_text=_("The company this user belongs to (if applicable, e.g., for carrier staff or customer users).")
+    )
+
+    # Ensure email is unique if it's the primary identifier
+    email = models.EmailField(_('email address'), unique=True) # Making email unique as per best practice
+
+    # If using email as the username field:
+    # USERNAME_FIELD = 'email'
+    # REQUIRED_FIELDS = ['username'] # Keep username if you want it separate, or remove if email is the only username
 
     def __str__(self):
         return f"{self.username} ({self.get_role_display()})"
@@ -55,12 +84,3 @@ class User(AbstractUser):
         verbose_name = _("User")
         verbose_name_plural = _("Users")
         ordering = ['username']
-
-    # Example properties for easier role checking, though permissions are better for logic:
-    # @property
-    # def is_admin_role(self):
-    #     return self.role == self.Role.ADMIN
-
-    # @property
-    # def is_dispatcher_role(self):
-    #     return self.role == self.Role.DISPATCHER

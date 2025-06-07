@@ -1,3 +1,15 @@
-from django.shortcuts import render
+    # locations/views.py
+    from django.shortcuts import render
+    from .services import list_all_countries # Import your service function
 
-# Create your views here.
+    def country_list_page(request):
+        """
+        A simple view to display a list of countries on a web page.
+        """
+        countries = list_all_countries()
+        context = {
+            'countries': countries,
+            'page_title': 'List of Countries (ISO 3166-1)'
+        }
+        return render(request, 'locations/country_list_page.html', context)
+    

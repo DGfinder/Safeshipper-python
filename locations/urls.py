@@ -1,9 +1,10 @@
-from django.urls import path, include
-from rest_framework.routers import DefaultRouter
+# locations/urls.py
+from django.urls import path
+from . import views # Import views from the current app
 
-router = DefaultRouter()
-# router.register(r'sample', LocationsViewSet)
+app_name = 'locations_web' # Namespace for these web URLs
 
 urlpatterns = [
-    path('', include(router.urls)),
+    path('countries/', views.country_list_page, name='country_list'),
+    # Add other web page URLs for the locations app here
 ]
