@@ -1,0 +1,9 @@
+{% extends 'admin/base_site.html' %}
+{% block content %}
+<h1>Country List</h1>
+<ul>
+  {% for country in countries %}
+    <li>{{ country.name }} ({{ country.code }})</li>
+  {% endfor %}
+</ul>
+{% endblock %} 

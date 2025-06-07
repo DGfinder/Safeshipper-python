@@ -12,4 +12,8 @@
             'page_title': 'List of Countries (ISO 3166-1)'
         }
         return render(request, 'locations/country_list_page.html', context)
+
+    def country_list_view(request):
+        countries = list_all_countries()
+        return render(request, 'locations/country_list.html', {'countries': countries})
     

@@ -3,10 +3,7 @@
     from .models import Country, Region, GeoLocation # Import your location models
     from typing import List # For type hinting
 
-    def list_all_countries() -> QuerySet[Country]:
-        """
-        Returns a queryset of all countries, ordered by name.
-        """
+    def list_all_countries():
         return Country.objects.all().order_by('name')
 
     # Add other location-related service functions here as needed:

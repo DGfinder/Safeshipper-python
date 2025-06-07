@@ -3,6 +3,9 @@ from django.db import models
 from django.conf import settings
 from django.forms import ValidationError
 from django.utils.translation import gettext_lazy as _
+from companies.models import Company
+from locations.models import GeoLocation
+from freight_types.models import FreightType
 
 class ShipmentStatus(models.TextChoices):
     PENDING = "PENDING", _("Pending")
@@ -26,26 +29,11 @@ class Shipment(models.Model):
         _("Reference Number"), max_length=100, blank=True, null=True, db_index=True,
         help_text=_("External reference (e.g., customer PO, booking ID).")
     )
-    customer = models.ForeignKey(
-        'companies.Company', related_name='customer_shipments', on_delete=models.PROTECT,
-        null=True, blank=True
-    )
-    carrier = models.ForeignKey(
-        'companies.Company', related_name='carried_shipments', on_delete=models.SET_NULL,
-        null=True, blank=True, verbose_name=_("Carrier")
-    )
-    origin_location = models.ForeignKey(
-        'locations.GeoLocation', related_name='originating_shipments', on_delete=models.PROTECT,
-        verbose_name=_("Origin Location"), null=True, blank=True
-    )
-    destination_location = models.ForeignKey(
-        'locations.GeoLocation', related_name='terminating_shipments', on_delete=models.PROTECT,
-        verbose_name=_("Destination Location"), null=True, blank=True
-    )
-    freight_type = models.ForeignKey(
-        'freight_types.FreightType', on_delete=models.PROTECT, verbose_name=_("Freight Type"),
-        null=True, blank=True
-    )
+    customer = models.ForeignKey(Company, on_delete=models.PROTECT, related_name='customer_shipments')
+    carrier = models.ForeignKey(Company, on_delete=models.PROTECT, related_name='carrier_shipments')
+    origin_location = models.ForeignKey(GeoLocation, on_delete=models.PROTECT, related_name='origin_shipments')
+    destination_location = models.ForeignKey(GeoLocation, on_delete=models.PROTECT, related_name='destination_shipments')
+    freight_type = models.ForeignKey(FreightType, on_delete=models.PROTECT, related_name='shipments')
     status = models.CharField(
         _("Shipment Status"), max_length=25, choices=ShipmentStatus.choices,
         default=ShipmentStatus.PENDING, db_index=True
@@ -99,7 +87,7 @@ class Shipment(models.Model):
         super().save(*args, **kwargs)
 
     def __str__(self):
-        return f"Shipment {self.tracking_number} ({self.get_status_display()})"
+        return f"Shipment {self.id}"
 
     class Meta:
         ordering = ['-created_at']
