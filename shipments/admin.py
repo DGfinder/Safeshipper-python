@@ -1,6 +1,7 @@
 # shipments/admin.py
 from django.contrib import admin
 from .models import Shipment, ConsignmentItem, ShipmentStatus # ShipmentStatus is used by model
+from simple_history.admin import SimpleHistoryAdmin
 
 @admin.action(description="Mark selected shipments as IN_TRANSIT")
 def mark_in_transit(modeladmin, request, queryset):
@@ -19,21 +20,12 @@ class ConsignmentItemInline(admin.TabularInline):
     autocomplete_fields = ['dangerous_good_entry'] # Good for selecting from many DGs
 
 @admin.register(Shipment)
-class ShipmentAdmin(admin.ModelAdmin):
-    list_display = (
-        'tracking_number', 
-        'reference_number',
-        'origin_address_summary', 
-        'destination_address_summary', 
-        'assigned_depot',
-        'status', 
-        'estimated_pickup_date', # Changed from estimated_departure_date
-        'created_at'
-    )
-    list_filter = ('status', 'assigned_depot', 'created_at', 'estimated_pickup_date') # Changed here too
-    search_fields = ('tracking_number', 'reference_number', 'origin_address', 'destination_address', 'assigned_depot', 'items__description')
-    ordering = ('-created_at',)
-    readonly_fields = ('tracking_number', 'created_at', 'updated_at')
+class ShipmentAdmin(SimpleHistoryAdmin):
+    list_display = ('id', 'reference_number', 'status', 'created_at', 'updated_at')
+    list_filter = ('status', 'created_at', 'updated_at')
+    search_fields = ('reference_number', 'id')
+    readonly_fields = ('created_at', 'updated_at')
+    history_list_display = ['status', 'reference_number']  # Fields to show in history view
     
     fieldsets = (
         (None, {

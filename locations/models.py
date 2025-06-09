@@ -1,6 +1,10 @@
 import uuid
 from django.db import models
 from django.utils.translation import gettext_lazy as _
+from django.contrib.gis.db import models as gis_models
+from django.contrib.gis.geos import GEOSGeometry
+from django.core.exceptions import ValidationError
+import json
 
 
 class Country(models.Model):
@@ -87,74 +91,134 @@ class LocationType(models.TextChoices):
 
 class GeoLocation(models.Model):
     """
-    Represents a specific geographic location (depot, customer site, port, etc.).
-    Consolidates `geo_location` and `depots_depot` from the schema.
+    Model for storing geographic locations with geofencing capabilities.
     """
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    name = models.CharField(
-        _("Location Name"),
-        max_length=255,
-        db_index=True,
-        help_text=_("Name of the location (e.g., 'Sydney Main Depot', 'Port Botany').")
-    )
+    name = models.CharField(max_length=255)
     location_type = models.CharField(
-        _("Location Type"),
-        max_length=20,
-        choices=LocationType.choices,
-        db_index=True
+        max_length=50,
+        choices=[
+            ('CUSTOMER_SITE', 'Customer Site'),
+            ('DEPOT', 'Depot'),
+            ('WAREHOUSE', 'Warehouse'),
+            ('PORT', 'Port'),
+            ('AIRPORT', 'Airport'),
+            ('CUSTOMS', 'Customs Facility'),
+            ('OTHER', 'Other'),
+        ]
     )
-    latitude = models.FloatField(
-        _("Latitude"),
+    address = models.TextField()
+    city = models.CharField(max_length=100)
+    state = models.CharField(max_length=100)
+    country = models.CharField(max_length=100)
+    postal_code = models.CharField(max_length=20)
+    
+    # Geographic coordinates (point)
+    coordinates = gis_models.PointField(
+        geography=True,
+        help_text="Center point of the location"
+    )
+    
+    # Geofence boundary (polygon)
+    geofence = models.JSONField(
         null=True,
         blank=True,
-        help_text=_("Latitude in decimal degrees (e.g., -33.8688).")
+        help_text="GeoJSON polygon defining the location boundary"
     )
-    longitude = models.FloatField(
-        _("Longitude"),
+    
+    # Demurrage settings
+    demurrage_enabled = models.BooleanField(
+        default=False,
+        help_text="Whether demurrage tracking is enabled for this location"
+    )
+    free_time_hours = models.PositiveIntegerField(
+        default=24,
+        help_text="Number of free hours before demurrage charges apply"
+    )
+    demurrage_rate_per_hour = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
         null=True,
         blank=True,
-        help_text=_("Longitude in decimal degrees (e.g., 151.2093).")
+        help_text="Hourly demurrage rate in the default currency"
     )
-    address_structured = models.JSONField(
-        _("Structured Address"),
-        blank=True,
-        null=True,
-        help_text=_("JSON: street, city, state/province, postal_code, etc.")
+    
+    # Metadata
+    company = models.ForeignKey(
+        'companies.Company',
+        on_delete=models.CASCADE,
+        related_name='locations'
     )
-    country = models.ForeignKey(
-        Country,
-        on_delete=models.PROTECT,
-        verbose_name=_("Country"),
-        db_index=True
-    )
-
-    safe_fill_limits = models.JSONField(
-        _("Safe Fill Limits (Depot)"),
-        blank=True,
-        null=True,
-        help_text=_("JSON field for safe fill limits if this location is a depot.")
-    )
-    operational_regions = models.ManyToManyField(
-        Region,
-        related_name='depots',
-        blank=True,
-        verbose_name=_("Operational Regions (if Depot)"),
-        help_text=_("Regions this depot serves or belongs to.")
-    )
-
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-
+    
     class Meta:
-        verbose_name = _("Geographic Location")
-        verbose_name_plural = _("Geographic Locations")
+        indexes = [
+            models.Index(fields=['location_type']),
+            models.Index(fields=['country', 'city']),
+            models.Index(fields=['is_active']),
+        ]
         ordering = ['name']
-        unique_together = [['name', 'country', 'location_type']]
-
+    
     def __str__(self):
         return f"{self.name} ({self.get_location_type_display()})"
-
-    @property
-    def is_depot(self):
-        return self.location_type == LocationType.DEPOT
+    
+    def clean(self):
+        """
+        Validate the geofence data if provided.
+        """
+        if self.geofence:
+            try:
+                # Validate GeoJSON structure
+                if not isinstance(self.geofence, dict):
+                    raise ValidationError("Geofence must be a valid GeoJSON object")
+                
+                if self.geofence.get('type') != 'Polygon':
+                    raise ValidationError("Geofence must be a GeoJSON Polygon")
+                
+                coordinates = self.geofence.get('coordinates')
+                if not coordinates or not isinstance(coordinates, list):
+                    raise ValidationError("Invalid coordinates in geofence")
+                
+                # Convert to GEOS geometry for validation
+                geos_geom = GEOSGeometry(json.dumps(self.geofence))
+                if not geos_geom.valid:
+                    raise ValidationError("Invalid polygon geometry")
+                
+                # Ensure polygon is closed (first and last points are the same)
+                if coordinates[0][0] != coordinates[0][-1]:
+                    raise ValidationError("Polygon must be closed (first and last points must match)")
+                
+            except (ValueError, TypeError, json.JSONDecodeError) as e:
+                raise ValidationError(f"Invalid geofence data: {str(e)}")
+    
+    def save(self, *args, **kwargs):
+        """
+        Ensure geofence is valid before saving.
+        """
+        self.full_clean()
+        super().save(*args, **kwargs)
+    
+    def is_point_inside(self, latitude: float, longitude: float) -> bool:
+        """
+        Check if a point is inside the geofence.
+        
+        Args:
+            latitude: Point latitude
+            longitude: Point longitude
+            
+        Returns:
+            bool: True if point is inside geofence, False otherwise
+        """
+        if not self.geofence:
+            return False
+        
+        try:
+            point = GEOSGeometry(f'POINT({longitude} {latitude})', srid=4326)
+            polygon = GEOSGeometry(json.dumps(self.geofence), srid=4326)
+            return polygon.contains(point)
+        except Exception as e:
+            # Log the error but return False to be safe
+            print(f"Error checking point in geofence: {str(e)}")
+            return False

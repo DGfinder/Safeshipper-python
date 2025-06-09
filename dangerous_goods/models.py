@@ -1,6 +1,8 @@
 # dangerous_goods/models.py
 from django.db import models
 from django.utils.translation import gettext_lazy as _
+from simple_history.models import HistoricalRecords
+from users.models import User
 
 class PackingGroup(models.TextChoices):
     I = 'I', _('I (High Danger)')
@@ -95,9 +97,12 @@ class DangerousGood(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
     # last_checked_at = models.DateTimeField(_("Last Regulatory Check"), null=True, blank=True) # For tracking when data was last verified against regs
 
+    # Add history tracking
+    history = HistoricalRecords()
+
     class Meta:
-        verbose_name = _("Dangerous Good / Hazardous Material")
-        verbose_name_plural = _("Dangerous Goods / Hazardous Materials")
+        verbose_name = _("Dangerous Good")
+        verbose_name_plural = _("Dangerous Goods")
         ordering = ['un_number']
         indexes = [
             models.Index(fields=['un_number']),
@@ -107,7 +112,11 @@ class DangerousGood(models.Model):
         ]
 
     def __str__(self):
-        return f"{self.un_number} - {self.proper_shipping_name} (Class: {self.hazard_class})"
+        return f"{self.un_number} - {self.proper_shipping_name}"
+
+    def save(self, *args, **kwargs):
+        # Add any pre-save logic here
+        super().save(*args, **kwargs)
 
 class DGProductSynonym(models.Model): # As defined before
     dangerous_good = models.ForeignKey(DangerousGood, related_name='synonyms', on_delete=models.CASCADE)

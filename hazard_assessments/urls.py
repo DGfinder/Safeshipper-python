@@ -1,9 +1,3 @@
-from django.urls import path, include
-from rest_framework.routers import DefaultRouter
+from django.urls import path
 
-router = DefaultRouter()
-# router.register(r'sample', Hazard_assessmentsViewSet)
-
-urlpatterns = [
-    path('', include(router.urls)),
-]
+urlpatterns = []

@@ -2,6 +2,7 @@
 from django.contrib.auth.models import AbstractUser
 from django.db import models
 from django.utils.translation import gettext_lazy as _
+from simple_history.models import HistoricalRecords
 # We need to import LocationType for limit_choices_to, assuming it's defined in locations.models
 # To avoid circular imports if locations also imports users, use string reference or careful import order.
 # For now, we'll use a string reference for LocationType in limit_choices_to.
@@ -77,8 +78,15 @@ class User(AbstractUser):
     # USERNAME_FIELD = 'email'
     # REQUIRED_FIELDS = ['username'] # Keep username if you want it separate, or remove if email is the only username
 
+    # Add history tracking
+    history = HistoricalRecords()
+
     def __str__(self):
-        return f"{self.username} ({self.get_role_display()})"
+        return self.email
+
+    def save(self, *args, **kwargs):
+        # Add any pre-save logic here
+        super().save(*args, **kwargs)
 
     class Meta:
         verbose_name = _("User")

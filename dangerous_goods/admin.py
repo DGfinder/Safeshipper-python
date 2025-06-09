@@ -1,9 +1,10 @@
 # dangerous_goods/admin.py
 from django.contrib import admin
+from simple_history.admin import SimpleHistoryAdmin
 from .models import DangerousGood, DGProductSynonym, SegregationGroup, SegregationRule
 
 @admin.register(DangerousGood)
-class DangerousGoodAdmin(admin.ModelAdmin):
+class DangerousGoodAdmin(SimpleHistoryAdmin):
     list_display = (
         'un_number', 
         'proper_shipping_name', 
@@ -12,7 +13,8 @@ class DangerousGoodAdmin(admin.ModelAdmin):
         'subsidiary_risks',
         'erg_guide_number',
         'is_marine_pollutant',
-        'is_environmentally_hazardous'
+        'is_environmentally_hazardous',
+        'updated_at'
     )
     search_fields = ('un_number', 'proper_shipping_name', 'simplified_name', 'hazard_class')
     list_filter = ('hazard_class', 'packing_group', 'is_marine_pollutant', 'is_environmentally_hazardous')

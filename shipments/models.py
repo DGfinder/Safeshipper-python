@@ -6,6 +6,10 @@ from django.utils.translation import gettext_lazy as _
 from companies.models import Company
 from locations.models import GeoLocation
 from freight_types.models import FreightType
+from simple_history.models import HistoricalRecords
+from users.models import User
+from vehicles.models import Vehicle
+from dangerous_goods.models import DangerousGood
 
 class ShipmentStatus(models.TextChoices):
     PENDING = "PENDING", _("Pending")
@@ -81,13 +85,16 @@ class Shipment(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    # Add history tracking
+    history = HistoricalRecords()
+
     def save(self, *args, **kwargs):
         if not self.tracking_number:
             self.tracking_number = str(uuid.uuid4()).replace("-", "").upper()[:16]
         super().save(*args, **kwargs)
 
     def __str__(self):
-        return f"Shipment {self.id}"
+        return f"Shipment {self.id} - {self.reference_number}"
 
     class Meta:
         ordering = ['-created_at']

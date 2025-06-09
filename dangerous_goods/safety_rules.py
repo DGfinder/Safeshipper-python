@@ -1,5 +1,7 @@
 # dangerous_goods/safety_rules.py
-from typing import List, Dict, Optional # Make sure List and others are imported
+from typing import List, Dict, Optional, Tuple
+from django.utils.translation import gettext_lazy as _
+from .models import DangerousGood, SegregationGroup
 
 # It's good practice to import your models under TYPE_CHECKING if only used for type hints,
 # or directly if used in runtime logic within this module.
@@ -9,6 +11,39 @@ from typing import List, Dict, Optional # Make sure List and others are imported
 # from django.db.models import Q
 
 # print("dangerous_goods/safety_rules.py loaded") # Optional: for debugging import
+
+class DGClass:
+    """Constants for Dangerous Goods classes and divisions."""
+    CLASS_3 = '3'      # Flammable Liquids
+    CLASS_4_1 = '4.1'  # Flammable Solids
+    CLASS_4_2 = '4.2'  # Spontaneously Combustible
+    CLASS_4_3 = '4.3'  # Dangerous When Wet
+    CLASS_5_1 = '5.1'  # Oxidizing Substances
+    CLASS_6_1 = '6.1'  # Toxic Substances
+    CLASS_6_2 = '6.2'  # Infectious Substances
+    CLASS_8 = '8'      # Corrosive Substances
+    CLASS_9 = '9'      # Miscellaneous
+
+def get_fire_risk_classes() -> List[str]:
+    """Get list of DG classes that pose fire risk."""
+    return [
+        DGClass.CLASS_3,    # Flammable Liquids
+        DGClass.CLASS_4_1,  # Flammable Solids
+        DGClass.CLASS_4_2,  # Spontaneously Combustible
+        DGClass.CLASS_4_3,  # Dangerous When Wet
+    ]
+
+def get_oxidizer_classes() -> List[str]:
+    """Get list of DG classes that are oxidizers."""
+    return [DGClass.CLASS_5_1]  # Oxidizing Substances
+
+def get_food_sensitive_classes() -> List[str]:
+    """Get list of DG classes that are incompatible with foodstuffs."""
+    return [
+        DGClass.CLASS_6_1,  # Toxic Substances
+        DGClass.CLASS_6_2,  # Infectious Substances
+        DGClass.CLASS_8,    # Corrosive Substances
+    ]
 
 def get_all_hazard_classes_for_dg(dangerous_good_instance) -> List[str]:
     """
@@ -33,81 +68,166 @@ def get_all_hazard_classes_for_dg(dangerous_good_instance) -> List[str]:
             
     return list(set(classes)) # Return unique classes
 
-
-def check_item_fire_risk_conflict_with_oxidizer(dg1, dg2) -> bool:
+def check_item_fire_risk_conflict_with_oxidizer(
+    item: DangerousGood,
+    other_items: List[DangerousGood]
+) -> Tuple[bool, Optional[str]]:
     """
-    Checks if one item poses a fire risk that conflicts with another item being an oxidizer.
-    dg1 and dg2 are expected to be DangerousGood model instances.
-    Returns True if a conflict exists, False otherwise.
+    Check if a DG item with fire risk is incompatible with oxidizers.
+    
+    Args:
+        item: The DG item to check
+        other_items: List of other DG items to check against
+        
+    Returns:
+        Tuple of (is_incompatible, reason)
     """
-    # Placeholder logic - this needs to be implemented based on actual rules.
-    # This will require identifying which DG classes/substances are fire risks
-    # (e.g., Class 3, Class 4.1, 4.2, 4.3) and which are oxidizers (Class 5.1).
+    # Check if the item is a fire risk
+    if item.dg_class not in get_fire_risk_classes():
+        return False, None
     
-    # Example (very simplified - consult actual regulations for real rules):
-    # dg1_classes = get_all_hazard_classes_for_dg(dg1)
-    # dg2_classes = get_all_hazard_classes_for_dg(dg2)
-
-    # is_dg1_fire_risk = any(c in ['3', '4.1', '4.2', '4.3'] for c in dg1_classes)
-    # is_dg2_oxidizer = '5.1' in dg2_classes
+    # Check for oxidizers in other items
+    oxidizers = [
+        other for other in other_items
+        if other.dg_class in get_oxidizer_classes()
+    ]
     
-    # is_dg2_fire_risk = any(c in ['3', '4.1', '4.2', '4.3'] for c in dg2_classes)
-    # is_dg1_oxidizer = '5.1' in dg1_classes
+    if oxidizers:
+        oxidizer_names = ", ".join(ox.un_number for ox in oxidizers)
+        return True, _(
+            "Incompatible: {item} (Class {cls}) cannot be transported with "
+            "oxidizing substances (UN Numbers: {oxidizers})"
+        ).format(
+            item=item.un_number,
+            cls=item.dg_class,
+            oxidizers=oxidizer_names
+        )
+    
+    return False, None
 
-    # if (is_dg1_fire_risk and is_dg2_oxidizer) or \
-    #    (is_dg2_fire_risk and is_dg1_oxidizer):
-    #     # Further checks might be needed based on specific UN numbers or packing groups
-    #     # e.g., some oxidizers are incompatible with *all* flammable materials.
-    #     # Some might be conditionally compatible based on segregation rules.
-    #     print(f"Potential fire/oxidizer conflict: {dg1.un_number} and {dg2.un_number}")
-    #     return True # Conflict found (example)
-            
-    # For now, default to no conflict until specific rules are built.
-    # print(f"Checking fire/oxidizer: {dg1.un_number if dg1 else 'N/A'} vs {dg2.un_number if dg2 else 'N/A'} - No specific rule implemented yet.")
-    return False 
-
-def check_item_food_sensitivity_conflict(dangerous_good_item, segregation_group_food_pk: Optional[int] = None) -> bool:
+def check_item_food_sensitivity_conflict(
+    item: DangerousGood,
+    other_items: List[DangerousGood]
+) -> Tuple[bool, Optional[str]]:
     """
-    Checks if a dangerous good item is incompatible with foodstuffs based on segregation rules.
-    'dangerous_good_item' is a DangerousGood model instance.
-    'segregation_group_food_pk' is the primary key of the 'Foodstuffs' SegregationGroup.
-    Returns True if a conflict exists (e.g., DG should not be near food), False otherwise.
+    Check if a DG item is incompatible with foodstuffs.
+    
+    Args:
+        item: The DG item to check
+        other_items: List of other DG items to check against
+        
+    Returns:
+        Tuple of (is_incompatible, reason)
     """
-    # Placeholder logic:
-    # This would involve checking SegregationRules where one item is the DG
-    # and the other is a SegregationGroup representing "Foodstuffs".
+    # Check if any other item is in the foodstuffs group
+    food_items = [
+        other for other in other_items
+        if other.segregation_groups.filter(name__icontains='food').exists()
+    ]
     
-    # from .models import SegregationRule, SegregationGroup, DangerousGood # Import here to avoid circularity if called from models.py
+    if not food_items:
+        return False, None
     
-    # if not dangerous_good_item or not segregation_group_food_pk:
-    #     return False
+    # Check if the item is food-sensitive
+    if item.dg_class in get_food_sensitive_classes():
+        food_item_names = ", ".join(fi.un_number for fi in food_items)
+        return True, _(
+            "Incompatible: {item} (Class {cls}) cannot be transported with "
+            "foodstuffs (UN Numbers: {food_items})"
+        ).format(
+            item=item.un_number,
+            cls=item.dg_class,
+            food_items=food_item_names
+        )
+    
+    return False, None
 
-    # food_group = SegregationGroup.objects.get(pk=segregation_group_food_pk) # Or pass the object
+def check_item_water_sensitivity_conflict(
+    item: DangerousGood,
+    other_items: List[DangerousGood]
+) -> Tuple[bool, Optional[str]]:
+    """
+    Check if a water-sensitive DG item is incompatible with other items.
     
-    # # Check rules where the DG's class is primary and food group is secondary
-    # conflict_rule_exists = SegregationRule.objects.filter(
-    #     models.Q(primary_hazard_class=dangerous_good_item.hazard_class, secondary_segregation_group=food_group) |
-    #     models.Q(secondary_hazard_class=dangerous_good_item.hazard_class, primary_segregation_group=food_group), # If symmetric rules
-    #     rule_type=SegregationRule.RuleType.CLASS_TO_GROUP,
-    #     compatibility_status=SegregationRule.Compatibility.INCOMPATIBLE_PROHIBITED
-    # ).exists()
-
-    # if conflict_rule_exists:
-    #    return True
+    Args:
+        item: The DG item to check
+        other_items: List of other DG items to check against
+        
+    Returns:
+        Tuple of (is_incompatible, reason)
+    """
+    if item.dg_class != DGClass.CLASS_4_3:  # Dangerous When Wet
+        return False, None
     
-    # Additionally, check if the DG itself belongs to a group that is incompatible with food_group
-    # for dg_group in dangerous_good_item.segregation_groups.all():
-    #     group_conflict_exists = SegregationRule.objects.filter(
-    #         models.Q(primary_segregation_group=dg_group, secondary_segregation_group=food_group) |
-    #         models.Q(secondary_segregation_group=dg_group, primary_segregation_group=food_group),
-    #         rule_type=SegregationRule.RuleType.GROUP_TO_GROUP,
-    #         compatibility_status=SegregationRule.Compatibility.INCOMPATIBLE_PROHIBITED
-    #     ).exists()
-    #     if group_conflict_exists:
-    #         return True
+    # Check for items that might contain water or release water
+    water_risk_items = [
+        other for other in other_items
+        if other.dg_class in [DGClass.CLASS_8]  # Corrosive substances
+        or other.segregation_groups.filter(name__icontains='water').exists()
+    ]
+    
+    if water_risk_items:
+        risk_item_names = ", ".join(wi.un_number for wi in water_risk_items)
+        return True, _(
+            "Incompatible: {item} (Class 4.3) cannot be transported with "
+            "water-sensitive items (UN Numbers: {risk_items})"
+        ).format(
+            item=item.un_number,
+            risk_items=risk_item_names
+        )
+    
+    return False, None
 
-    # print(f"Checking food sensitivity for {dangerous_good_item.un_number if dangerous_good_item else 'N/A'} - No specific rule implemented yet.")
-    return False # Default to no conflict
+def check_item_toxicity_conflict(
+    item: DangerousGood,
+    other_items: List[DangerousGood]
+) -> Tuple[bool, Optional[str]]:
+    """
+    Check if a toxic DG item is incompatible with other items.
+    
+    Args:
+        item: The DG item to check
+        other_items: List of other DG items to check against
+        
+    Returns:
+        Tuple of (is_incompatible, reason)
+    """
+    if item.dg_class != DGClass.CLASS_6_1:  # Toxic Substances
+        return False, None
+    
+    # Check for items that might be affected by toxic substances
+    sensitive_items = [
+        other for other in other_items
+        if other.segregation_groups.filter(
+            name__in=['Foodstuffs', 'Pharmaceuticals', 'Medical Supplies']
+        ).exists()
+    ]
+    
+    if sensitive_items:
+        sensitive_item_names = ", ".join(si.un_number for si in sensitive_items)
+        return True, _(
+            "Incompatible: {item} (Class 6.1) cannot be transported with "
+            "sensitive items (UN Numbers: {sensitive_items})"
+        ).format(
+            item=item.un_number,
+            sensitive_items=sensitive_item_names
+        )
+    
+    return False, None
+
+def get_all_compatibility_checks() -> List[callable]:
+    """
+    Get all compatibility check functions.
+    
+    Returns:
+        List of compatibility check functions
+    """
+    return [
+        check_item_fire_risk_conflict_with_oxidizer,
+        check_item_food_sensitivity_conflict,
+        check_item_water_sensitivity_conflict,
+        check_item_toxicity_conflict,
+    ]
 
 def check_item_bulk_incompatibility(dg1, dg2, vehicle_type_or_compartment_details=None) -> bool:
     """

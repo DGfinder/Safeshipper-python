@@ -1,5 +1,5 @@
 # dangerous_goods/services.py
-from typing import List, Optional, Dict, Union
+from typing import List, Optional, Dict, Union, Set
 from .models import DangerousGood, DGProductSynonym, SegregationGroup, SegregationRule, PackingGroup
 from shipments.models import ConsignmentItem # Import ConsignmentItem
 from django.db.models import Q
@@ -42,27 +42,148 @@ def lookup_packing_instruction(un_number: str, mode: str = 'air_passenger') -> O
     elif mode == 'air_cargo': return dg.packing_instruction_cargo_aircraft
     return "Packing instruction not available for the specified mode."
 
-
-def check_dg_compatibility(dg1: DangerousGood, dg2: DangerousGood) -> Dict:
+def check_dg_compatibility(dg1: DangerousGood, dg2: DangerousGood) -> Dict[str, Union[bool, List[str]]]:
+    """
+    Checks compatibility between two dangerous goods items based on their hazard classes
+    and segregation groups.
+    
+    Args:
+        dg1: First DangerousGood instance
+        dg2: Second DangerousGood instance
+        
+    Returns:
+        Dict containing:
+            - compatible: bool indicating if the items are compatible
+            - reasons: List of strings explaining any incompatibilities
+    """
     reasons: List[str] = []
-    # Check class-to-class rules
-    class_rules = SegregationRule.objects.filter(
-        from_class=dg1.dg_class, to_class=dg2.dg_class
-    )
-    for rule in class_rules:
-        if not rule.is_compatible:
-            reasons.append(f"Class {dg1.dg_class} is incompatible with class {dg2.dg_class}: {rule.reason}")
+    
+    # Get all hazard classes for both DGs (including subsidiary risks)
+    dg1_classes: Set[str] = set(get_all_hazard_classes_for_dg(dg1))
+    dg2_classes: Set[str] = set(get_all_hazard_classes_for_dg(dg2))
+    
+    # Check class-to-class rules for all combinations of hazard classes
+    for class1 in dg1_classes:
+        for class2 in dg2_classes:
+            # Check both directions (A vs B and B vs A)
+            rules = SegregationRule.objects.filter(
+                Q(
+                    rule_type=SegregationRule.RuleType.CLASS_TO_CLASS,
+                    primary_hazard_class=class1,
+                    secondary_hazard_class=class2
+                ) |
+                Q(
+                    rule_type=SegregationRule.RuleType.CLASS_TO_CLASS,
+                    primary_hazard_class=class2,
+                    secondary_hazard_class=class1
+                )
+            ).select_related('primary_segregation_group', 'secondary_segregation_group')
+            
+            for rule in rules:
+                if rule.compatibility_status == SegregationRule.Compatibility.INCOMPATIBLE_PROHIBITED:
+                    reasons.append(
+                        f"Class {class1} is incompatible with class {class2} "
+                        f"({rule.get_compatibility_status_display()}): {rule.notes or 'No specific reason provided'}"
+                    )
+                elif rule.compatibility_status == SegregationRule.Compatibility.CONDITIONAL_NOTES:
+                    reasons.append(
+                        f"Class {class1} vs class {class2} requires special consideration: {rule.notes}"
+                    )
+                elif rule.compatibility_status in [
+                    SegregationRule.Compatibility.AWAY_FROM,
+                    SegregationRule.Compatibility.SEPARATED_FROM
+                ]:
+                    reasons.append(
+                        f"Class {class1} must be {rule.get_compatibility_status_display().lower()} "
+                        f"class {class2}: {rule.notes or 'No specific reason provided'}"
+                    )
+    
     # Check group-to-group rules
     dg1_groups = dg1.segregation_groups.all()
     dg2_groups = dg2.segregation_groups.all()
+    
     for group1 in dg1_groups:
         for group2 in dg2_groups:
+            # Check both directions (A vs B and B vs A)
             group_rules = SegregationRule.objects.filter(
-                from_group=group1, to_group=group2
-            )
+                Q(
+                    rule_type=SegregationRule.RuleType.GROUP_TO_GROUP,
+                    primary_segregation_group=group1,
+                    secondary_segregation_group=group2
+                ) |
+                Q(
+                    rule_type=SegregationRule.RuleType.GROUP_TO_GROUP,
+                    primary_segregation_group=group2,
+                    secondary_segregation_group=group1
+                )
+            ).select_related('primary_segregation_group', 'secondary_segregation_group')
+            
             for rule in group_rules:
-                if not rule.is_compatible:
-                    reasons.append(f"Group {group1.name} is incompatible with group {group2.name}: {rule.reason}")
+                if rule.compatibility_status == SegregationRule.Compatibility.INCOMPATIBLE_PROHIBITED:
+                    reasons.append(
+                        f"Group {group1.name} is incompatible with group {group2.name} "
+                        f"({rule.get_compatibility_status_display()}): {rule.notes or 'No specific reason provided'}"
+                    )
+                elif rule.compatibility_status == SegregationRule.Compatibility.CONDITIONAL_NOTES:
+                    reasons.append(
+                        f"Group {group1.name} vs group {group2.name} requires special consideration: {rule.notes}"
+                    )
+                elif rule.compatibility_status in [
+                    SegregationRule.Compatibility.AWAY_FROM,
+                    SegregationRule.Compatibility.SEPARATED_FROM
+                ]:
+                    reasons.append(
+                        f"Group {group1.name} must be {rule.get_compatibility_status_display().lower()} "
+                        f"group {group2.name}: {rule.notes or 'No specific reason provided'}"
+                    )
+    
+    # Check class-to-group rules
+    for class1 in dg1_classes:
+        for group2 in dg2_groups:
+            class_group_rules = SegregationRule.objects.filter(
+                Q(
+                    rule_type=SegregationRule.RuleType.CLASS_TO_GROUP,
+                    primary_hazard_class=class1,
+                    secondary_segregation_group=group2
+                ) |
+                Q(
+                    rule_type=SegregationRule.RuleType.CLASS_TO_GROUP,
+                    primary_segregation_group=group2,
+                    secondary_hazard_class=class1
+                )
+            ).select_related('primary_segregation_group', 'secondary_segregation_group')
+            
+            for rule in class_group_rules:
+                if rule.compatibility_status == SegregationRule.Compatibility.INCOMPATIBLE_PROHIBITED:
+                    reasons.append(
+                        f"Class {class1} is incompatible with group {group2.name} "
+                        f"({rule.get_compatibility_status_display()}): {rule.notes or 'No specific reason provided'}"
+                    )
+                elif rule.compatibility_status == SegregationRule.Compatibility.CONDITIONAL_NOTES:
+                    reasons.append(
+                        f"Class {class1} vs group {group2.name} requires special consideration: {rule.notes}"
+                    )
+                elif rule.compatibility_status in [
+                    SegregationRule.Compatibility.AWAY_FROM,
+                    SegregationRule.Compatibility.SEPARATED_FROM
+                ]:
+                    reasons.append(
+                        f"Class {class1} must be {rule.get_compatibility_status_display().lower()} "
+                        f"group {group2.name}: {rule.notes or 'No specific reason provided'}"
+                    )
+    
+    # Check for special conditions
+    for rule in SegregationRule.objects.filter(
+        Q(condition_type__isnull=False) & ~Q(condition_type=SegregationRule.ConditionType.NONE)
+    ).select_related('primary_segregation_group', 'secondary_segregation_group'):
+        if rule.condition_type == SegregationRule.ConditionType.BOTH_BULK:
+            if dg1.is_bulk_transport_allowed and dg2.is_bulk_transport_allowed:
+                reasons.append(f"Both items are bulk: {rule.notes}")
+        elif rule.condition_type == SegregationRule.ConditionType.EITHER_BULK:
+            if dg1.is_bulk_transport_allowed or dg2.is_bulk_transport_allowed:
+                reasons.append(f"One or both items are bulk: {rule.notes}")
+        # Add more condition type checks as needed
+    
     return {
         'compatible': len(reasons) == 0,
         'reasons': reasons

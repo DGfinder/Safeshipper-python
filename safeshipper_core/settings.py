@@ -25,69 +25,48 @@ SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
 # Applications
 INSTALLED_APPS = [
-    # Django built-in apps
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'django.contrib.sites',  # Required for allauth
-
+    
     # Third-party apps
     'rest_framework',
-    'rest_framework_simplejwt',
-    'django_filters',
-    'django_elasticsearch_dsl',
-    'django_elasticsearch_dsl_drf',
-    'corsheaders',
-    'django_cleanup.apps.CleanupConfig',
-    'django_prometheus',
-    'health_check',
-    'health_check.db',
-    'health_check.cache',
-    'health_check.storage',
-    'health_check.contrib.redis',
-    'health_check.contrib.celery',
     'drf_spectacular',
-    'allauth',
-    'allauth.account',
-    'allauth.socialaccount',
-    'guardian',
-
-    # Your Safeshipper applications
-    'shipments.apps.ShipmentsConfig',
-    'companies.apps.CompaniesConfig',
-    'freight_types.apps.FreightTypesConfig',
-    'users.apps.UsersConfig',  # Ensure this line exists
-    'dangerous_goods.apps.DangerousGoodsConfig',
-    'documents.apps.DocumentsConfig',
-    'sds.apps.SdsConfig',  
-    'epg.apps.EpgConfig',    # Similar to SDS, usually 'epg'
-    'vehicles.apps.VehiclesConfig',
-    'locations.apps.LocationsConfig',
-    'tracking.apps.TrackingConfig',
-    'hazard_assessments.apps.HazardAssessmentsConfig',
-    'audits.apps.AuditsConfig',
-    'load_plans.apps.LoadPlansConfig',
-    'manifests.apps.ManifestsConfig',  # Ensure this line exists
-    'emergency_procedures.apps.EmergencyProceduresConfig',
-    'handling_unit_types.apps.HandlingUnitTypesConfig'
+    'simple_history',
+    
+    # Local apps
+    'users',
+    'companies',
+    'shipments',
+    'dangerous_goods',
+    'vehicles',
+    'documents',
+    'manifests',
+    'locations',
+    'freight_types',
+    'tracking',
+    'hazard_assessments',
+    'audits',
+    'load_plans',
+    'handling_unit_types',
+    'sds',
+    'epg',
+    'emergency_procedures',
 ]
 
 # Middleware
 MIDDLEWARE = [
-    'django_prometheus.middleware.PrometheusBeforeMiddleware',
     'django.middleware.security.SecurityMiddleware',
-    'corsheaders.middleware.CorsMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
-    'django.middleware.locale.LocaleMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'django_prometheus.middleware.PrometheusAfterMiddleware',
+    'simple_history.middleware.HistoryRequestMiddleware',
 ]
 
 ROOT_URLCONF = 'safeshipper_core.urls'
@@ -227,19 +206,33 @@ CORS_ALLOW_METHODS = [
     'PUT',
 ]
 
-# Celery settings
-CELERY_BROKER_URL = config('CELERY_BROKER_URL', default='redis://localhost:6379/0')
-CELERY_RESULT_BACKEND = config('CELERY_RESULT_BACKEND', default='redis://localhost:6379/0')
+# Celery Configuration
+CELERY_BROKER_URL = 'redis://localhost:6379/0'
+CELERY_RESULT_BACKEND = 'redis://localhost:6379/0'
 CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TIMEZONE = TIME_ZONE
-CELERY_TASK_TRACK_STARTED = True
-CELERY_TASK_TIME_LIMIT = 30 * 60
+
+# Celery Beat Settings (for periodic tasks)
 CELERY_BEAT_SCHEDULE = {
-    'cleanup-expired-tokens': {
-        'task': 'users.tasks.cleanup_expired_tokens',
-        'schedule': timedelta(days=1),
+    # Add periodic tasks here if needed
+}
+
+# Celery Task Settings
+CELERY_TASK_ROUTES = {
+    'manifests.tasks.process_manifest_validation': {'queue': 'manifests'},
+}
+
+CELERY_TASK_DEFAULT_QUEUE = 'default'
+CELERY_TASK_QUEUES = {
+    'default': {
+        'exchange': 'default',
+        'routing_key': 'default',
+    },
+    'manifests': {
+        'exchange': 'manifests',
+        'routing_key': 'manifests',
     },
 }
 
@@ -317,3 +310,16 @@ SPECTACULAR_SETTINGS = {
 
 # Create logs directory if it doesn't exist
 os.makedirs(os.path.join(BASE_DIR, 'logs'), exist_ok=True)
+
+# Celery Configuration Options
+CELERY_TIMEZONE = "UTC"
+CELERY_TASK_TRACK_STARTED = True
+CELERY_TASK_TIME_LIMIT = 30 * 60
+CELERY_RESULT_BACKEND = "redis://localhost:6379/0"
+CELERY_BROKER_URL = "redis://localhost:6379/0"
+CELERY_ACCEPT_CONTENT = ["json"]
+CELERY_TASK_SERIALIZER = "json"
+CELERY_RESULT_SERIALIZER = "json"
+
+# Celery Beat Settings (if you later add periodic tasks)
+# CELERY_BEAT_SCHEDULE = {}
