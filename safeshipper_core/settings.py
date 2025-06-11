@@ -55,6 +55,10 @@ INSTALLED_APPS = [
     'sds',
     'epg',
     'emergency_procedures',
+    'capacity_marketplace',
+    'routes',
+    'dashboards',
+    'pricing',
 ]
 
 # Middleware
