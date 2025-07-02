@@ -18,10 +18,11 @@ import {
   BellIcon,
   UsersIcon,
   CogIcon,
-  LocationMarkerIcon,
+  MapPinIcon,
   DocumentTextIcon,
   LockClosedIcon,
-  ExclamationTriangleIcon
+  ExclamationTriangleIcon,
+  DocumentMagnifyingGlassIcon
 } from '@heroicons/react/24/outline'
 
 interface DashboardLayoutProps {
@@ -47,7 +48,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     // Operations
     { name: 'Load Planning', href: '/load-planning', icon: CubeIcon, current: pathname === '/load-planning' },
     { name: 'Route Optimization', href: '/routes', icon: MapIcon, current: pathname === '/routes' },
-    { name: 'Tracking', href: '/tracking', icon: LocationMarkerIcon, current: pathname === '/tracking' },
+    { name: 'Tracking', href: '/tracking', icon: MapPinIcon, current: pathname === '/tracking' },
     
     // Security & Audit
     { name: 'Security Dashboard', href: '/security', icon: ShieldCheckIcon, current: pathname === '/security' },
@@ -56,6 +57,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     
     // Compliance
     { name: 'DG Compliance', href: '/compliance', icon: ExclamationTriangleIcon, current: pathname === '/compliance' },
+    { name: 'Manifest Analyzer', href: '/manifest-analyzer', icon: DocumentMagnifyingGlassIcon, current: pathname === '/manifest-analyzer' },
     { name: 'Reports', href: '/reports', icon: ChartBarIcon, current: pathname === '/reports' },
   ]
 
@@ -213,6 +215,12 @@ function SidebarContent({ pathname }: { pathname: string }) {
               icon={ShieldCheckIcon}
               label="Compliance"
               isActive={pathname === '/compliance'}
+            />
+            <SidebarItem
+              href="/manifest-analyzer"
+              icon={DocumentMagnifyingGlassIcon}
+              label="Manifest Analyzer"
+              isActive={pathname === '/manifest-analyzer'}
             />
           </div>
         </div>
