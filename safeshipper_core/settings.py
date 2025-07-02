@@ -37,28 +37,28 @@ INSTALLED_APPS = [
     'drf_spectacular',
     'simple_history',
     
-    # Local apps
+    # Local apps (minimal set for frontend)
     'users',
     'companies',
     'shipments',
     'dangerous_goods',
     'vehicles',
-    'documents',
-    'manifests',
-    'locations',
     'freight_types',
-    'tracking',
-    'hazard_assessments',
-    'audits',
-    'load_plans',
-    'handling_unit_types',
-    'sds',
-    'epg',
-    'emergency_procedures',
-    'capacity_marketplace',
-    'routes',
-    'dashboards',
-    'pricing',
+    # 'documents',
+    # 'manifests',
+    # 'locations',  # Temporarily disabled due to GIS dependencies
+    # 'tracking',  # Temporarily disabled due to GIS dependencies
+    # 'hazard_assessments',
+    # 'audits',
+    # 'load_plans',
+    # 'handling_unit_types',
+    # 'sds',
+    # 'epg',
+    # 'emergency_procedures',
+    # 'capacity_marketplace',
+    # 'routes',
+    # 'dashboards',
+    # 'pricing',
 ]
 
 # Middleware
@@ -96,12 +96,12 @@ WSGI_APPLICATION = 'safeshipper_core.wsgi.application'
 # Database
 DATABASES = {
     'default': {
-        'ENGINE': config('DB_ENGINE', default='django.db.backends.postgresql'),
-        'NAME': config('DB_NAME'),
-        'USER': config('DB_USER'),
-        'PASSWORD': config('DB_PASSWORD'),
-        'HOST': config('DB_HOST', default='127.0.0.1'),
-        'PORT': config('DB_PORT', default='5432'),
+        'ENGINE': config('DB_ENGINE', default='django.db.backends.sqlite3'),
+        'NAME': config('DB_NAME', default=BASE_DIR / 'db.sqlite3'),
+        'USER': config('DB_USER', default=''),
+        'PASSWORD': config('DB_PASSWORD', default=''),
+        'HOST': config('DB_HOST', default=''),
+        'PORT': config('DB_PORT', default=''),
     }
 }
 

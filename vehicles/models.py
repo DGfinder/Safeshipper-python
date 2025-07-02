@@ -1,7 +1,7 @@
 import uuid
 from django.db import models
 from django.utils import timezone
-from locations.models import GeoLocation
+# from locations.models import GeoLocation  # Temporarily disabled
 from companies.models import Company
 
 class Vehicle(models.Model):
@@ -25,14 +25,15 @@ class Vehicle(models.Model):
     vehicle_type = models.CharField(max_length=16, choices=VehicleType.choices)
     capacity_kg = models.FloatField(null=True, blank=True)
     status = models.CharField(max_length=16, choices=Status.choices, default=Status.AVAILABLE)
-    assigned_depot = models.ForeignKey(
-        GeoLocation,
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name='vehicles',
-        limit_choices_to={'type': 'DEPOT'}
-    )
+    # assigned_depot = models.ForeignKey(
+    #     GeoLocation,
+    #     on_delete=models.SET_NULL,
+    #     null=True,
+    #     blank=True,
+    #     related_name='vehicles',
+    #     limit_choices_to={'type': 'DEPOT'}
+    # )
+    assigned_depot = models.CharField(max_length=255, blank=True, null=True, help_text="Depot name (temporary)")
     owning_company = models.ForeignKey(
         Company,
         on_delete=models.SET_NULL,

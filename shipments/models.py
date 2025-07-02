@@ -4,7 +4,7 @@ from django.conf import settings
 from django.forms import ValidationError
 from django.utils.translation import gettext_lazy as _
 from companies.models import Company
-from locations.models import GeoLocation
+# from locations.models import GeoLocation  # Temporarily disabled
 from freight_types.models import FreightType
 from simple_history.models import HistoricalRecords
 from users.models import User
@@ -35,8 +35,10 @@ class Shipment(models.Model):
     )
     customer = models.ForeignKey(Company, on_delete=models.PROTECT, related_name='customer_shipments')
     carrier = models.ForeignKey(Company, on_delete=models.PROTECT, related_name='carrier_shipments')
-    origin_location = models.ForeignKey(GeoLocation, on_delete=models.PROTECT, related_name='origin_shipments')
-    destination_location = models.ForeignKey(GeoLocation, on_delete=models.PROTECT, related_name='destination_shipments')
+    # origin_location = models.ForeignKey(GeoLocation, on_delete=models.PROTECT, related_name='origin_shipments')
+    # destination_location = models.ForeignKey(GeoLocation, on_delete=models.PROTECT, related_name='destination_shipments')
+    origin_location = models.CharField(max_length=255, help_text="Origin location name (temporary)")
+    destination_location = models.CharField(max_length=255, help_text="Destination location name (temporary)")
     freight_type = models.ForeignKey(FreightType, on_delete=models.PROTECT, related_name='shipments')
     status = models.CharField(
         _("Shipment Status"), max_length=25, choices=ShipmentStatus.choices,
