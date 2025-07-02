@@ -1,12 +1,14 @@
-# Byte-compiled / optimized / DLL files
+# Monorepo .gitignore for Django + Next.js
+
+# ================================================
+# PYTHON / DJANGO (Backend)
+# ================================================
+
+# Python
 __pycache__/
 *.py[cod]
 *$py.class
-
-# C extensions
 *.so
-
-# Distribution / packaging
 .Python
 build/
 develop-eggs/
@@ -20,7 +22,6 @@ parts/
 sdist/
 var/
 wheels/
-pip-wheel-metadata/
 share/python-wheels/
 *.egg-info/
 .installed.cfg
@@ -48,28 +49,19 @@ coverage.xml
 *.py,cover
 .hypothesis/
 .pytest_cache/
+cover/
 
-# Translations
-*.mo
-*.pot
-
-# Django stuff:
+# Django
 *.log
 local_settings.py
 db.sqlite3
 db.sqlite3-journal
-instance/
 media/
 staticfiles/
-static/
 
-# PostgreSQL
-*.psql
-*.pgsql
-
-# Virtual Environments
+# Virtual environments
 .env
-*.env
+.env.*
 .venv/
 env/
 venv/
@@ -77,53 +69,109 @@ ENV/
 env.bak/
 venv.bak/
 
-# MyPy
-.mypy_cache/
-.dmypy.json
-.pyre/
+# Celery
+celerybeat-schedule
+celerybeat.pid
 
-# Editor-specific
-.idea/
-.vscode/
-*.swp
-*.swo
+# ================================================
+# NODE.JS / NEXT.JS (Frontend)
+# ================================================
 
-# macOS/Windows files
-.DS_Store
-Thumbs.db
-
-# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
-
-# dependencies
-/node_modules
+# Dependencies
+node_modules/
 /.pnp
 .pnp.js
+.yarn/cache
+.yarn/unplugged
+.yarn/build-state.yml
+.yarn/install-state.gz
 
-# testing
-/coverage
+# Next.js
+.next/
+out/
+build/
 
-# next.js
-/.next/
-/out/
-
-# production
+# Production
 /build
 
-# misc
+# Misc
 .DS_Store
 *.pem
 
-# debug
+# Debug
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-# local env files
+# Local env files
 .env*.local
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
 
-# vercel
+# Vercel
 .vercel
 
-# typescript
+# TypeScript
 *.tsbuildinfo
 next-env.d.ts
+
+# ================================================
+# GENERAL / SHARED
+# ================================================
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+
+# Temporary files
+*.tmp
+*.temp
+
+# Archives
+*.zip
+*.tar.gz
+*.rar
+
+# Docker
+Dockerfile.prod
+docker-compose.override.yml
+
+# Backup files
+*.bak
+*.backup
+*.old
+
+# Local configuration
+config.local.js
+config.local.json
+
+# Testing
+/coverage/
+/.nyc_output
+
+# Miscellaneous
+.sass-cache/
+*.css.map
+*.js.map
