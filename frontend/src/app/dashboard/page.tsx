@@ -74,10 +74,10 @@ export default function DashboardPage() {
         <div className="flex justify-between items-center">
           <div>
             <h1 className="text-2xl font-bold text-gray-900 font-poppins">
-              Dashboard Overview
+              Dashboard Overview - LIVE RELOAD TEST
             </h1>
             <p className="text-gray-600 font-poppins">
-              Welcome back! Here's what's happening with your fleet today.
+              Welcome back! Here's what's happening with your fleet today. (Updated)
             </p>
           </div>
           <div className="flex items-center space-x-3">
