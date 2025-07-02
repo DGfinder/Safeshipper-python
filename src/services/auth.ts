@@ -1,5 +1,12 @@
-import { User } from '@/types'
-import { apiClient } from './api'
+// Define User type locally
+interface User {
+  id: string
+  email: string
+  first_name: string
+  last_name: string
+  is_active: boolean
+  role?: string
+}
 
 interface LoginResponse {
   access: string

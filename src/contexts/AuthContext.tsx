@@ -1,7 +1,15 @@
 'use client'
 
 import React, { createContext, useContext, useEffect, useState } from 'react'
-import { User } from '@/types'
+// Define User type locally for now
+interface User {
+  id: string
+  email: string
+  first_name: string
+  last_name: string
+  is_active: boolean
+  role?: string
+}
 import { authService } from '@/services/auth'
 import { toast } from 'react-hot-toast'
 
@@ -27,30 +35,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const initializeAuth = async () => {
     try {
+      // Check if we're in the browser
+      if (typeof window === 'undefined') {
+        setIsLoading(false)
+        return
+      }
+
       const savedToken = localStorage.getItem('safeshipper_token')
       const savedRefreshToken = localStorage.getItem('safeshipper_refresh_token')
       
       if (savedToken && savedRefreshToken) {
-        // Verify token is still valid
-        try {
-          const userData = await authService.getCurrentUser(savedToken)
-          setUser(userData)
-          setToken(savedToken)
-        } catch (error) {
-          // Token expired, try to refresh
-          try {
-            const newTokens = await authService.refreshToken(savedRefreshToken)
-            setToken(newTokens.access)
-            localStorage.setItem('safeshipper_token', newTokens.access)
-            localStorage.setItem('safeshipper_refresh_token', newTokens.refresh)
-            
-            const userData = await authService.getCurrentUser(newTokens.access)
-            setUser(userData)
-          } catch (refreshError) {
-            // Refresh failed, clear auth
-            logout()
-          }
+        // For development, skip actual auth verification
+        // In production, this would verify against the real API
+        const mockUser: User = {
+          id: '1',
+          email: 'demo@safeshipper.com',
+          first_name: 'Demo',
+          last_name: 'User',
+          is_active: true,
+          role: 'admin'
         }
+        setUser(mockUser)
+        setToken(savedToken)
       }
     } catch (error) {
       console.error('Auth initialization error:', error)
@@ -62,16 +68,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const login = async (email: string, password: string) => {
     try {
       setIsLoading(true)
-      const response = await authService.login(email, password)
       
-      setToken(response.access)
-      localStorage.setItem('safeshipper_token', response.access)
-      localStorage.setItem('safeshipper_refresh_token', response.refresh)
-      
-      const userData = await authService.getCurrentUser(response.access)
-      setUser(userData)
-      
-      toast.success('Welcome back!')
+      // Mock login for development
+      if (email === 'demo@safeshipper.com' && password === 'demo123') {
+        const mockToken = 'mock-jwt-token-' + Date.now()
+        const mockRefreshToken = 'mock-refresh-token-' + Date.now()
+        
+        setToken(mockToken)
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('safeshipper_token', mockToken)
+          localStorage.setItem('safeshipper_refresh_token', mockRefreshToken)
+        }
+        
+        const mockUser: User = {
+          id: '1',
+          email: 'demo@safeshipper.com',
+          first_name: 'Demo',
+          last_name: 'User',
+          is_active: true,
+          role: 'admin'
+        }
+        setUser(mockUser)
+        
+        toast.success('Welcome back!')
+      } else {
+        throw new Error('Invalid credentials. Use demo@safeshipper.com / demo123')
+      }
     } catch (error: any) {
       toast.error(error.message || 'Login failed')
       throw error
@@ -83,13 +105,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const logout = () => {
     setUser(null)
     setToken(null)
-    localStorage.removeItem('safeshipper_token')
-    localStorage.removeItem('safeshipper_refresh_token')
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('safeshipper_token')
+      localStorage.removeItem('safeshipper_refresh_token')
+    }
     toast.success('Logged out successfully')
   }
 
   const refreshToken = async () => {
     try {
+      if (typeof window === 'undefined') throw new Error('Not in browser')
+      
       const savedRefreshToken = localStorage.getItem('safeshipper_refresh_token')
       if (!savedRefreshToken) throw new Error('No refresh token')
       

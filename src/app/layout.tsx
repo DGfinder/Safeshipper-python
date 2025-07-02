@@ -1,5 +1,4 @@
-import './globals.css'
-import { Providers } from './providers'
+// import './globals.css' // Temporarily disabled
 
 export const metadata = {
   title: 'SafeShipper - Dangerous Goods Transportation Management',
@@ -14,9 +13,8 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
-        <Providers>
-          {children}
-        </Providers>
+        <div>SafeShipper - Development Mode</div>
+        {children}
       </body>
     </html>
   )

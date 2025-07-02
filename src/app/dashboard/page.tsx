@@ -1,86 +1,122 @@
 'use client'
 
-import { useQuery } from 'react-query'
+import { useState, useEffect } from 'react'
 import DashboardLayout from '@/components/DashboardLayout'
 import { vehicleService, shipmentService } from '@/services/api'
-import { 
-  TruckIcon, 
-  CubeIcon, 
-  ExclamationTriangleIcon,
-  CheckCircleIcon 
-} from '@heroicons/react/24/outline'
 import DGHazardLabel from '@/components/DGHazardLabel'
 
 export default function DashboardPage() {
-  const { data: vehicles, isLoading: vehiclesLoading } = useQuery(
-    'vehicles',
-    () => vehicleService.getAll()
-  )
+  const [vehicles, setVehicles] = useState<any[]>([])
+  const [shipments, setShipments] = useState<any[]>([])
+  const [isLoading, setIsLoading] = useState(true)
 
-  const { data: shipments, isLoading: shipmentsLoading } = useQuery(
-    'shipments',
-    () => shipmentService.getAll()
-  )
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        const [vehiclesRes, shipmentsRes] = await Promise.all([
+          vehicleService.getAll(),
+          shipmentService.getAll()
+        ])
+        setVehicles(vehiclesRes.data || [])
+        setShipments(shipmentsRes.data || [])
+      } catch (error) {
+        console.error('Error loading dashboard data:', error)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+    loadData()
+  }, [])
 
   const stats = [
     {
       name: 'Total Vehicles',
-      value: vehicles?.data?.length || 0,
-      icon: TruckIcon,
-      color: 'bg-blue-500',
-      loading: vehiclesLoading
+      value: vehicles.length,
+      color: '#3b82f6'
     },
     {
       name: 'Active Shipments',
-      value: shipments?.data?.filter((s: any) => s.status === 'IN_TRANSIT').length || 0,
-      icon: CubeIcon,
-      color: 'bg-green-500',
-      loading: shipmentsLoading
+      value: shipments.filter(s => s.status === 'IN_TRANSIT').length,
+      color: '#10b981'
     },
     {
-      name: 'Pending Shipments',
-      value: shipments?.data?.filter((s: any) => s.status === 'PENDING').length || 0,
-      icon: ExclamationTriangleIcon,
-      color: 'bg-yellow-500',
-      loading: shipmentsLoading
+      name: 'DG Shipments',
+      value: shipments.filter(s => 
+        s.items?.some((item: any) => item.is_dangerous_good)
+      ).length,
+      color: '#f59e0b'
     },
     {
       name: 'Completed Today',
-      value: shipments?.data?.filter((s: any) => s.status === 'DELIVERED').length || 0,
-      icon: CheckCircleIcon,
-      color: 'bg-green-600',
-      loading: shipmentsLoading
+      value: shipments.filter(s => s.status === 'DELIVERED').length,
+      color: '#8b5cf6'
     }
   ]
 
-  const recentShipments = shipments?.data?.slice(0, 5) || []
-  const recentVehicles = vehicles?.data?.slice(0, 5) || []
+  if (isLoading) {
+    return (
+      <DashboardLayout>
+        <div style={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          justifyContent: 'center', 
+          minHeight: '400px' 
+        }}>
+          <div style={{ color: '#6b7280' }}>Loading dashboard data...</div>
+        </div>
+      </DashboardLayout>
+    )
+  }
 
   return (
     <DashboardLayout>
-      <div className="space-y-6">
-        {/* Header */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
-          <p className="text-gray-600">Welcome to SafeShipper dangerous goods management</p>
+          <h1 style={{ fontSize: '1.875rem', fontWeight: 'bold', color: '#111827', marginBottom: '0.5rem' }}>
+            Dashboard
+          </h1>
+          <p style={{ color: '#6b7280' }}>
+            Overview of your dangerous goods transportation operations
+          </p>
         </div>
 
         {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div style={{ 
+          display: 'grid', 
+          gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', 
+          gap: '1.5rem' 
+        }}>
           {stats.map((stat) => (
-            <div key={stat.name} className="card">
-              <div className="flex items-center">
-                <div className={`${stat.color} p-3 rounded-lg`}>
-                  <stat.icon className="w-6 h-6 text-white" />
-                </div>
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600">{stat.name}</p>
-                  <p className="text-2xl font-bold text-gray-900">
-                    {stat.loading ? (
-                      <div className="w-8 h-6 bg-gray-200 animate-pulse rounded"></div>
-                    ) : (
-                      stat.value
-                    )}
+            <div key={stat.name} style={{
+              backgroundColor: 'white',
+              borderRadius: '0.5rem',
+              padding: '1.5rem',
+              border: '1px solid #e5e7eb',
+              boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center' }}>
+                <div style={{
+                  padding: '0.75rem',
+                  borderRadius: '0.5rem',
+                  backgroundColor: stat.color,
+                  width: '3rem',
+                  height: '3rem'
+                }} />
+                <div style={{ marginLeft: '1rem' }}>
+                  <p style={{ 
+                    fontSize: '0.875rem', 
+                    fontWeight: '500', 
+                    color: '#6b7280',
+                    marginBottom: '0.25rem'
+                  }}>
+                    {stat.name}
+                  </p>
+                  <p style={{ 
+                    fontSize: '1.875rem', 
+                    fontWeight: 'bold', 
+                    color: '#111827' 
+                  }}>
+                    {stat.value}
                   </p>
                 </div>
               </div>
@@ -88,114 +124,119 @@ export default function DashboardPage() {
           ))}
         </div>
 
-        {/* Content Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Recent Activity */}
+        <div style={{ 
+          display: 'grid', 
+          gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', 
+          gap: '1.5rem' 
+        }}>
+          {/* Recent Vehicles */}
+          <div style={{
+            backgroundColor: 'white',
+            borderRadius: '0.5rem',
+            padding: '1.5rem',
+            border: '1px solid #e5e7eb',
+            boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)'
+          }}>
+            <h3 style={{ 
+              fontSize: '1.125rem', 
+              fontWeight: '600', 
+              color: '#111827', 
+              marginBottom: '1rem' 
+            }}>
+              Recent Vehicles
+            </h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+              {vehicles.slice(0, 5).map((vehicle: any) => (
+                <div key={vehicle.id} style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: '0.75rem',
+                  backgroundColor: '#f9fafb',
+                  borderRadius: '0.5rem'
+                }}>
+                  <div>
+                    <p style={{ fontWeight: '500', color: '#111827' }}>
+                      {vehicle.registration_number}
+                    </p>
+                    <p style={{ fontSize: '0.875rem', color: '#6b7280' }}>
+                      {vehicle.make} {vehicle.model}
+                    </p>
+                  </div>
+                  <span style={{
+                    padding: '0.25rem 0.5rem',
+                    fontSize: '0.75rem',
+                    fontWeight: '500',
+                    borderRadius: '9999px',
+                    backgroundColor: vehicle.status === 'AVAILABLE' ? '#dcfce7' : '#fef3c7',
+                    color: vehicle.status === 'AVAILABLE' ? '#166534' : '#92400e'
+                  }}>
+                    {vehicle.status}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+
           {/* Recent Shipments */}
-          <div className="card">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Recent Shipments</h3>
-            {shipmentsLoading ? (
-              <div className="space-y-3">
-                {[...Array(3)].map((_, i) => (
-                  <div key={i} className="h-16 bg-gray-100 animate-pulse rounded"></div>
-                ))}
-              </div>
-            ) : recentShipments.length > 0 ? (
-              <div className="space-y-3">
-                {recentShipments.map((shipment: any) => (
-                  <div key={shipment.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                    <div className="flex items-center space-x-3">
-                      {shipment.items?.some((item: any) => item.is_dangerous_good) && (
-                        <DGHazardLabel 
-                          unNumber="UN1203" 
-                          hazardClass="3" 
-                          size="sm" 
-                        />
-                      )}
-                      <div>
-                        <p className="text-sm font-medium text-gray-900">
-                          {shipment.tracking_number}
-                        </p>
-                        <p className="text-xs text-gray-500">
-                          {shipment.reference_number || 'No reference'}
-                        </p>
-                      </div>
+          <div style={{
+            backgroundColor: 'white',
+            borderRadius: '0.5rem',
+            padding: '1.5rem',
+            border: '1px solid #e5e7eb',
+            boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)'
+          }}>
+            <h3 style={{ 
+              fontSize: '1.125rem', 
+              fontWeight: '600', 
+              color: '#111827', 
+              marginBottom: '1rem' 
+            }}>
+              Recent Shipments
+            </h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+              {shipments.slice(0, 5).map((shipment: any) => (
+                <div key={shipment.id} style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: '0.75rem',
+                  backgroundColor: '#f9fafb',
+                  borderRadius: '0.5rem'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                    <div>
+                      <p style={{ fontWeight: '500', color: '#111827' }}>
+                        {shipment.tracking_number}
+                      </p>
+                      <p style={{ fontSize: '0.875rem', color: '#6b7280' }}>
+                        {shipment.origin_location} → {shipment.destination_location}
+                      </p>
                     </div>
-                    <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                      shipment.status === 'DELIVERED' ? 'bg-green-100 text-green-800' :
-                      shipment.status === 'IN_TRANSIT' ? 'bg-blue-100 text-blue-800' :
-                      shipment.status === 'PENDING' ? 'bg-yellow-100 text-yellow-800' :
-                      'bg-gray-100 text-gray-800'
-                    }`}>
-                      {shipment.status.replace('_', ' ')}
-                    </span>
+                    {shipment.items?.some((item: any) => item.is_dangerous_good) && (
+                      <DGHazardLabel 
+                        hazardClass={shipment.items.find((item: any) => item.is_dangerous_good)?.dangerous_good_entry?.hazard_class || '3'}
+                        unNumber={shipment.items.find((item: any) => item.is_dangerous_good)?.dangerous_good_entry?.un_number}
+                        size="sm"
+                      />
+                    )}
                   </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-gray-500 text-center py-8">No shipments found</p>
-            )}
-          </div>
-
-          {/* Vehicle Status */}
-          <div className="card">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Vehicle Status</h3>
-            {vehiclesLoading ? (
-              <div className="space-y-3">
-                {[...Array(3)].map((_, i) => (
-                  <div key={i} className="h-16 bg-gray-100 animate-pulse rounded"></div>
-                ))}
-              </div>
-            ) : recentVehicles.length > 0 ? (
-              <div className="space-y-3">
-                {recentVehicles.map((vehicle: any) => (
-                  <div key={vehicle.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                    <div className="flex items-center space-x-3">
-                      <TruckIcon className="w-5 h-5 text-gray-400" />
-                      <div>
-                        <p className="text-sm font-medium text-gray-900">
-                          {vehicle.registration_number}
-                        </p>
-                        <p className="text-xs text-gray-500">
-                          {vehicle.make} {vehicle.model}
-                        </p>
-                      </div>
-                    </div>
-                    <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                      vehicle.status === 'AVAILABLE' ? 'bg-green-100 text-green-800' :
-                      vehicle.status === 'IN_TRANSIT' ? 'bg-blue-100 text-blue-800' :
-                      vehicle.status === 'MAINTENANCE' ? 'bg-red-100 text-red-800' :
-                      'bg-gray-100 text-gray-800'
-                    }`}>
-                      {vehicle.status.replace('_', ' ')}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-gray-500 text-center py-8">No vehicles found</p>
-            )}
-          </div>
-        </div>
-
-        {/* Quick Actions */}
-        <div className="card">
-          <h3 className="text-lg font-medium text-gray-900 mb-4">Quick Actions</h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <button className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors text-left">
-              <CubeIcon className="w-6 h-6 text-blue-500 mb-2" />
-              <h4 className="font-medium text-gray-900">Create Shipment</h4>
-              <p className="text-sm text-gray-600">Add a new dangerous goods shipment</p>
-            </button>
-            <button className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors text-left">
-              <TruckIcon className="w-6 h-6 text-green-500 mb-2" />
-              <h4 className="font-medium text-gray-900">Add Vehicle</h4>
-              <p className="text-sm text-gray-600">Register a new transport vehicle</p>
-            </button>
-            <button className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors text-left">
-              <ExclamationTriangleIcon className="w-6 h-6 text-orange-500 mb-2" />
-              <h4 className="font-medium text-gray-900">Safety Check</h4>
-              <p className="text-sm text-gray-600">Run compliance verification</p>
-            </button>
+                  <span style={{
+                    padding: '0.25rem 0.5rem',
+                    fontSize: '0.75rem',
+                    fontWeight: '500',
+                    borderRadius: '9999px',
+                    backgroundColor: shipment.status === 'DELIVERED' ? '#dcfce7' : 
+                                   shipment.status === 'IN_TRANSIT' ? '#dbeafe' : '#f3f4f6',
+                    color: shipment.status === 'DELIVERED' ? '#166534' :
+                           shipment.status === 'IN_TRANSIT' ? '#1e40af' : '#374151'
+                  }}>
+                    {shipment.status.replace('_', ' ')}
+                  </span>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </div>
