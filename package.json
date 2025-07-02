@@ -1,0 +1,36 @@
+{
+  "name": "safeshipper-monorepo",
+  "version": "1.0.0",
+  "description": "Comprehensive logistics and dangerous goods management platform",
+  "private": true,
+  "scripts": {
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "dev:backend": "cd backend && python manage.py runserver",
+    "dev:frontend": "cd frontend && npm run dev",
+    "install:frontend": "cd frontend && npm install",
+    "install:backend": "cd backend && pip install -r requirements.txt",
+    "install:all": "npm run install:backend && npm run install:frontend",
+    "build:frontend": "cd frontend && npm run build",
+    "test:backend": "cd backend && python manage.py test",
+    "test:frontend": "cd frontend && npm test",
+    "test": "npm run test:backend && npm run test:frontend",
+    "lint:frontend": "cd frontend && npm run lint",
+    "format:frontend": "cd frontend && npm run format",
+    "clean": "npm run clean:frontend && npm run clean:backend",
+    "clean:frontend": "cd frontend && rm -rf .next node_modules",
+    "clean:backend": "cd backend && find . -name '*.pyc' -delete && find . -name '__pycache__' -delete"
+  },
+  "devDependencies": {
+    "concurrently": "^8.0.0"
+  },
+  "keywords": [
+    "logistics",
+    "dangerous-goods",
+    "shipping",
+    "django",
+    "nextjs",
+    "typescript"
+  ],
+  "license": "PROPRIETARY",
+  "author": "Safeshipper Team"
+} 

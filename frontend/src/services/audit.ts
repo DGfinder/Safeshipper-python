@@ -1,4 +1,5 @@
-import winston from 'winston'
+// Winston is not compatible with browser environments
+// Using console for client-side logging instead
 import { encryptData } from './auth'
 
 // Audit log levels
@@ -82,38 +83,26 @@ const RISK_SCORES = {
   [AuditEventType.MFA_DISABLED]: 5
 }
 
-// Configure Winston logger
-const auditLogger = winston.createLogger({
-  level: 'info',
-  format: winston.format.combine(
-    winston.format.timestamp(),
-    winston.format.errors({ stack: true }),
-    winston.format.json(),
-    winston.format.prettyPrint()
-  ),
-  defaultMeta: { service: 'safeshipper-audit' },
-  transports: [
-    // File transport for audit logs
-    new winston.transports.File({ 
-      filename: 'logs/audit-error.log', 
-      level: 'error',
-      maxsize: 5242880, // 5MB
-      maxFiles: 10
-    }),
-    new winston.transports.File({ 
-      filename: 'logs/audit-combined.log',
-      maxsize: 5242880, // 5MB
-      maxFiles: 20
-    }),
-    // Console transport for development
-    new winston.transports.Console({
-      format: winston.format.combine(
-        winston.format.colorize(),
-        winston.format.simple()
-      )
-    })
-  ]
-})
+// Browser-compatible logger using console
+const auditLogger = {
+  log: (level: string, message: string, data: any) => {
+    const timestamp = new Date().toISOString()
+    if (level === 'error') {
+      console.error(`[AUDIT ERROR] ${timestamp}`, message, data)
+    } else {
+      console.log(`[AUDIT ${level.toUpperCase()}] ${timestamp}`, message, data)
+    }
+  },
+  info: (message: string, data?: any) => {
+    console.log(`[AUDIT INFO] ${new Date().toISOString()}`, message, data || '')
+  },
+  error: (message: string, data?: any) => {
+    console.error(`[AUDIT ERROR] ${new Date().toISOString()}`, message, data || '')
+  },
+  warn: (message: string, data?: any) => {
+    console.warn(`[AUDIT WARN] ${new Date().toISOString()}`, message, data || '')
+  }
+}
 
 // In-memory storage for recent audit events (for monitoring dashboard)
 const recentAuditEvents: AuditLogEntry[] = []

@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useMemo } from 'react'
 import { 
   UserIcon,
   PlusIcon,
@@ -12,40 +12,55 @@ import {
   EyeIcon
 } from '@heroicons/react/24/outline'
 import DashboardLayout from '@/components/DashboardLayout'
-import { usersApi, User, UserRole, UserStatus } from '@/services/users'
+import Modal from '@/components/ui/Modal'
+import UserCreateForm from '@/components/users/UserCreateForm'
+import UserEditForm from '@/components/users/UserEditForm'
+import DeleteConfirmation from '@/components/ui/DeleteConfirmation'
+import { User, UserRole, UserStatus } from '@/services/users'
+import { useUsers, useDeleteUser } from '@/hooks/useUsers'
 
 export default function UsersPage() {
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedRole, setSelectedRole] = useState<UserRole | 'all'>('all')
   const [selectedStatus, setSelectedStatus] = useState<UserStatus | 'all'>('all')
-  const [users, setUsers] = useState<User[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
+  const [editingUser, setEditingUser] = useState<User | null>(null)
+  const [deletingUser, setDeletingUser] = useState<User | null>(null)
 
-  // Fetch users from API
-  useEffect(() => {
-    const fetchUsers = async () => {
-      try {
-        setLoading(true)
-        setError(null)
-        
-        const params: any = {}
-        if (searchTerm) params.search = searchTerm
-        if (selectedRole !== 'all') params.role = selectedRole
-        if (selectedStatus !== 'all') params.is_active = selectedStatus === 'active'
-        
-        const response = await usersApi.getUsers(params)
-        setUsers(response.data)
-      } catch (err: any) {
-        setError(err.message || 'Failed to fetch users')
-        console.error('Error fetching users:', err)
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    fetchUsers()
+  // Build query parameters based on filters
+  const queryParams = useMemo(() => {
+    const params: any = {}
+    if (searchTerm) params.search = searchTerm
+    if (selectedRole !== 'all') params.role = selectedRole
+    if (selectedStatus !== 'all') params.is_active = selectedStatus === 'active'
+    return params
   }, [searchTerm, selectedRole, selectedStatus])
+
+  // Fetch users using TanStack Query
+  const { 
+    data: users = [], 
+    isLoading: loading, 
+    isError, 
+    error 
+  } = useUsers(queryParams)
+
+  // Delete user mutation
+  const deleteUserMutation = useDeleteUser()
+
+  // Handle delete confirmation
+  const handleDeleteUser = async () => {
+    if (!deletingUser) return
+    
+    try {
+      await deleteUserMutation.mutateAsync({
+        id: deletingUser.id,
+        username: deletingUser.username
+      })
+      setDeletingUser(null)
+    } catch (error) {
+      // Error is handled by the mutation hook with toast
+    }
+  }
 
   const filteredUsers = users.filter(user => {
     const matchesSearch = `${user.first_name} ${user.last_name} ${user.email}`.toLowerCase().includes(searchTerm.toLowerCase())
@@ -88,7 +103,10 @@ export default function UsersPage() {
               Manage users, roles, and permissions
             </p>
           </div>
-          <button className="btn-primary">
+          <button 
+            className="btn-primary"
+            onClick={() => setIsCreateModalOpen(true)}
+          >
             <PlusIcon className="w-4 h-4 mr-2" />
             Add User
           </button>
@@ -147,12 +165,12 @@ export default function UsersPage() {
         </div>
 
         {/* Error State */}
-        {error && (
+        {isError && (
           <div className="card">
             <div className="p-6">
               <div className="text-red-600 text-center">
                 <p className="font-medium">Error loading users</p>
-                <p className="text-sm">{error}</p>
+                <p className="text-sm">{error?.message || 'Failed to fetch users'}</p>
               </div>
             </div>
           </div>
@@ -227,13 +245,24 @@ export default function UsersPage() {
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                           <div className="flex items-center justify-end space-x-2">
-                            <button className="text-gray-400 hover:text-gray-600">
+                            <button 
+                              className="text-gray-400 hover:text-gray-600"
+                              title="View user details"
+                            >
                               <EyeIcon className="w-4 h-4" />
                             </button>
-                            <button className="text-gray-400 hover:text-blue-600">
+                            <button 
+                              className="text-gray-400 hover:text-blue-600"
+                              onClick={() => setEditingUser(user)}
+                              title="Edit user"
+                            >
                               <PencilIcon className="w-4 h-4" />
                             </button>
-                            <button className="text-gray-400 hover:text-red-600">
+                            <button 
+                              className="text-gray-400 hover:text-red-600"
+                              onClick={() => setDeletingUser(user)}
+                              title="Delete user"
+                            >
                               <TrashIcon className="w-4 h-4" />
                             </button>
                             <button className="text-gray-400 hover:text-gray-600">
@@ -285,6 +314,54 @@ export default function UsersPage() {
           </div>
         </div>
       </div>
+
+      {/* Create User Modal */}
+      <Modal
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+        title="Create New User"
+        size="lg"
+      >
+        <UserCreateForm
+          onSuccess={() => setIsCreateModalOpen(false)}
+          onCancel={() => setIsCreateModalOpen(false)}
+        />
+      </Modal>
+
+      {/* Edit User Modal */}
+      <Modal
+        isOpen={!!editingUser}
+        onClose={() => setEditingUser(null)}
+        title={`Edit User: ${editingUser?.username}`}
+        size="lg"
+      >
+        {editingUser && (
+          <UserEditForm
+            user={editingUser}
+            onSuccess={() => setEditingUser(null)}
+            onCancel={() => setEditingUser(null)}
+          />
+        )}
+      </Modal>
+
+      {/* Delete User Confirmation Modal */}
+      <Modal
+        isOpen={!!deletingUser}
+        onClose={() => setDeletingUser(null)}
+        title="Delete User"
+        size="sm"
+      >
+        {deletingUser && (
+          <DeleteConfirmation
+            title="Delete User?"
+            message={`Are you sure you want to delete user "${deletingUser.username}"? This action cannot be undone.`}
+            confirmText="Delete User"
+            onConfirm={handleDeleteUser}
+            onCancel={() => setDeletingUser(null)}
+            isLoading={deleteUserMutation.isPending}
+          />
+        )}
+      </Modal>
     </DashboardLayout>
   )
 } 
