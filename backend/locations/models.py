@@ -1,8 +1,9 @@
 import uuid
 from django.db import models
 from django.utils.translation import gettext_lazy as _
-from django.contrib.gis.db import models as gis_models
-from django.contrib.gis.geos import GEOSGeometry
+# Temporarily disabled GIS functionality to avoid GDAL dependency
+# from django.contrib.gis.db import models as gis_models
+# from django.contrib.gis.geos import GEOSGeometry
 from django.core.exceptions import ValidationError
 import json
 
@@ -113,10 +114,20 @@ class GeoLocation(models.Model):
     country = models.CharField(max_length=100)
     postal_code = models.CharField(max_length=20)
     
-    # Geographic coordinates (point)
-    coordinates = gis_models.PointField(
-        geography=True,
-        help_text="Center point of the location"
+    # Geographic coordinates (temporarily using simple fields instead of GIS)
+    latitude = models.DecimalField(
+        max_digits=10, 
+        decimal_places=7,
+        null=True,
+        blank=True,
+        help_text="Latitude coordinate"
+    )
+    longitude = models.DecimalField(
+        max_digits=10, 
+        decimal_places=7,
+        null=True,
+        blank=True,
+        help_text="Longitude coordinate"
     )
     
     # Geofence boundary (polygon)
@@ -170,7 +181,7 @@ class GeoLocation(models.Model):
         """
         if self.geofence:
             try:
-                # Validate GeoJSON structure
+                # Basic validation of GeoJSON structure (without GIS library)
                 if not isinstance(self.geofence, dict):
                     raise ValidationError("Geofence must be a valid GeoJSON object")
                 
@@ -181,10 +192,9 @@ class GeoLocation(models.Model):
                 if not coordinates or not isinstance(coordinates, list):
                     raise ValidationError("Invalid coordinates in geofence")
                 
-                # Convert to GEOS geometry for validation
-                geos_geom = GEOSGeometry(json.dumps(self.geofence))
-                if not geos_geom.valid:
-                    raise ValidationError("Invalid polygon geometry")
+                # Basic validation without GIS functionality
+                if len(coordinates) == 0 or len(coordinates[0]) < 3:
+                    raise ValidationError("Polygon must have at least 3 coordinate pairs")
                 
                 # Ensure polygon is closed (first and last points are the same)
                 if coordinates[0][0] != coordinates[0][-1]:
@@ -215,9 +225,30 @@ class GeoLocation(models.Model):
             return False
         
         try:
-            point = GEOSGeometry(f'POINT({longitude} {latitude})', srid=4326)
-            polygon = GEOSGeometry(json.dumps(self.geofence), srid=4326)
-            return polygon.contains(point)
+            # Simplified point-in-polygon algorithm (ray casting)
+            # This is a basic implementation without full GIS functionality
+            coordinates = self.geofence.get('coordinates', [])
+            if not coordinates:
+                return False
+            
+            polygon = coordinates[0]  # Get the outer ring
+            x, y = longitude, latitude
+            n = len(polygon)
+            inside = False
+            
+            p1x, p1y = polygon[0]
+            for i in range(1, n + 1):
+                p2x, p2y = polygon[i % n]
+                if y > min(p1y, p2y):
+                    if y <= max(p1y, p2y):
+                        if x <= max(p1x, p2x):
+                            if p1y != p2y:
+                                xinters = (y - p1y) * (p2x - p1x) / (p2y - p1y) + p1x
+                            if p1x == p2x or x <= xinters:
+                                inside = not inside
+                p1x, p1y = p2x, p2y
+            
+            return inside
         except Exception as e:
             # Log the error but return False to be safe
             print(f"Error checking point in geofence: {str(e)}")
