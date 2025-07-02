@@ -197,10 +197,8 @@ class LocationVisit(models.Model):
         Calculate the duration of the visit in hours.
         Returns None if the visit is still active (no exit time).
         """
-        if not self.exit_time:
-            return None
-        duration = self.exit_time - self.entry_time
-        return duration.total_seconds() / 3600  # Convert to hours
+        from .services import calculate_visit_duration
+        return calculate_visit_duration(self)
     
     @property
     def is_active(self) -> bool:
@@ -214,22 +212,5 @@ class LocationVisit(models.Model):
         Calculate demurrage for this visit.
         Returns a dict with hours and charge.
         """
-        if not self.exit_time or not self.location.demurrage_enabled:
-            return None
-        
-        duration = self.duration_hours
-        if duration is None:
-            return None
-        
-        # Subtract free time
-        chargeable_hours = max(0, duration - self.location.free_time_hours)
-        
-        # Calculate charge if there are chargeable hours
-        charge = None
-        if chargeable_hours > 0 and self.location.demurrage_rate_per_hour:
-            charge = chargeable_hours * self.location.demurrage_rate_per_hour
-        
-        return {
-            'hours': chargeable_hours,
-            'charge': charge
-        }
+        from .services import calculate_demurrage_for_visit
+        return calculate_demurrage_for_visit(self)

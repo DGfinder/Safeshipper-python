@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { 
   TruckIcon,
   PlusIcon,
@@ -14,100 +14,44 @@ import {
   MapPinIcon
 } from '@heroicons/react/24/outline'
 import DashboardLayout from '@/components/DashboardLayout'
-
-// Simplified types
-type VehicleType = 'rigid-truck' | 'semi-trailer' | 'b-double' | 'road-train' | 'van' | 'other'
-type VehicleStatus = 'available' | 'in-transit' | 'loading' | 'maintenance' | 'out-of-service'
-
-interface SimpleVehicle {
-  id: string
-  registration: string
-  type: VehicleType
-  make: string
-  model: string
-  year: number
-  status: VehicleStatus
-  payloadCapacity: number // kg
-  palletSpaces: number
-  isDGCertified: boolean
-  location?: {
-    latitude: number
-    longitude: number
-  }
-}
+import { vehiclesApi, Vehicle, VehicleType, VehicleStatus } from '@/services/vehicles'
 
 export default function VehiclesPage() {
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedType, setSelectedType] = useState<VehicleType | 'all'>('all')
   const [selectedStatus, setSelectedStatus] = useState<VehicleStatus | 'all'>('all')
+  const [vehicles, setVehicles] = useState<Vehicle[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
-  // Mock vehicle data
-  const [vehicles] = useState<SimpleVehicle[]>([
-    {
-      id: '1',
-      registration: 'WA123ABC',
-      type: 'rigid-truck',
-      make: 'Volvo',
-      model: 'FH540',
-      year: 2020,
-      status: 'available',
-      payloadCapacity: 16500,
-      palletSpaces: 16,
-      isDGCertified: true,
-      location: {
-        latitude: -31.9505,
-        longitude: 115.8605
-      }
-    },
-    {
-      id: '2',
-      registration: 'WA456DEF',
-      type: 'semi-trailer',
-      make: 'Kenworth',
-      model: 'T610',
-      year: 2019,
-      status: 'in-transit',
-      payloadCapacity: 27500,
-      palletSpaces: 28,
-      isDGCertified: true,
-      location: {
-        latitude: -32.0569,
-        longitude: 115.7470
-      }
-    },
-    {
-      id: '3',
-      registration: 'WA789GHI',
-      type: 'van',
-      make: 'Mercedes',
-      model: 'Sprinter',
-      year: 2021,
-      status: 'maintenance',
-      payloadCapacity: 1300,
-      palletSpaces: 4,
-      isDGCertified: false
-    },
-    {
-      id: '4',
-      registration: 'WA101JKL',
-      type: 'b-double',
-      make: 'Mack',
-      model: 'Anthem',
-      year: 2022,
-      status: 'loading',
-      payloadCapacity: 35000,
-      palletSpaces: 36,
-      isDGCertified: true,
-      location: {
-        latitude: -31.9277,
-        longitude: 115.8627
+  // Fetch vehicles from API
+  useEffect(() => {
+    const fetchVehicles = async () => {
+      try {
+        setLoading(true)
+        setError(null)
+        
+        const params: any = {}
+        if (searchTerm) params.search = searchTerm
+        if (selectedType !== 'all') params.vehicle_type = selectedType
+        if (selectedStatus !== 'all') params.status = selectedStatus
+        
+        const response = await vehiclesApi.getVehicles(params)
+        setVehicles(response.data)
+      } catch (err: any) {
+        setError(err.message || 'Failed to fetch vehicles')
+        console.error('Error fetching vehicles:', err)
+      } finally {
+        setLoading(false)
       }
     }
-  ])
+
+    fetchVehicles()
+  }, [searchTerm, selectedType, selectedStatus])
 
   const filteredVehicles = vehicles.filter(vehicle => {
-    const matchesSearch = `${vehicle.registration} ${vehicle.make} ${vehicle.model}`.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesType = selectedType === 'all' || vehicle.type === selectedType
+    const matchesSearch = `${vehicle.registration_number} ${vehicle.make} ${vehicle.model}`.toLowerCase().includes(searchTerm.toLowerCase())
+    const matchesType = selectedType === 'all' || vehicle.vehicle_type === selectedType
     const matchesStatus = selectedStatus === 'all' || vehicle.status === selectedStatus
     return matchesSearch && matchesType && matchesStatus
   })
@@ -219,86 +163,108 @@ export default function VehiclesPage() {
           </div>
         </div>
 
-        {/* Vehicles Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-          {filteredVehicles.map((vehicle) => (
-            <div key={vehicle.id} className="card hover:shadow-lg transition-shadow">
-              <div className="p-6">
-                {/* Header */}
-                <div className="flex justify-between items-start mb-4">
-                  <div className="flex items-center space-x-3">
-                    <TruckIcon className="w-8 h-8 text-[#153F9F]" />
-                    <div>
-                      <h3 className="text-lg font-semibold text-gray-900">
-                        {vehicle.registration}
-                      </h3>
-                      <p className="text-sm text-gray-600">
-                        {vehicle.year} {vehicle.make} {vehicle.model}
-                      </p>
-                    </div>
-                  </div>
-                  <button className="text-gray-400 hover:text-gray-600">
-                    <EllipsisVerticalIcon className="w-5 h-5" />
-                  </button>
-                </div>
-
-                {/* Status and Type */}
-                <div className="flex items-center space-x-2 mb-4">
-                  <span className={`inline-flex items-center px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(vehicle.status)}`}>
-                    <span className="mr-1">{getStatusIcon(vehicle.status)}</span>
-                    {vehicle.status.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase())}
-                  </span>
-                  <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getTypeColor(vehicle.type)}`}>
-                    {vehicle.type.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase())}
-                  </span>
-                  {vehicle.isDGCertified && (
-                    <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-orange-100 text-orange-800">
-                      DG Certified
-                    </span>
-                  )}
-                </div>
-
-                {/* Specifications */}
-                <div className="space-y-2 text-sm">
-                  <div className="grid grid-cols-2 gap-2">
-                    <div>
-                      <span className="text-gray-600">Payload:</span>
-                      <span className="ml-1 font-medium">{(vehicle.payloadCapacity / 1000).toFixed(1)}t</span>
-                    </div>
-                    <div>
-                      <span className="text-gray-600">Pallet Spaces:</span>
-                      <span className="ml-1 font-medium">{vehicle.palletSpaces}</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Location */}
-                {vehicle.location && (
-                  <div className="mt-4 flex items-center text-sm text-gray-600">
-                    <MapPinIcon className="w-4 h-4 mr-1" />
-                    <span>
-                      {vehicle.location.latitude.toFixed(4)}, {vehicle.location.longitude.toFixed(4)}
-                    </span>
-                  </div>
-                )}
-
-                {/* Actions */}
-                <div className="mt-6 flex space-x-2">
-                  <button className="flex-1 btn-secondary text-sm">
-                    <EyeIcon className="w-4 h-4 mr-1" />
-                    View
-                  </button>
-                  <button className="flex-1 btn-secondary text-sm">
-                    <PencilIcon className="w-4 h-4 mr-1" />
-                    Edit
-                  </button>
-                  <button className="btn-secondary text-sm">
-                    <WrenchScrewdriverIcon className="w-4 h-4" />
-                  </button>
-                </div>
+        {/* Error State */}
+        {error && (
+          <div className="card">
+            <div className="p-6">
+              <div className="text-red-600 text-center">
+                <p className="font-medium">Error loading vehicles</p>
+                <p className="text-sm">{error}</p>
               </div>
             </div>
-          ))}
+          </div>
+        )}
+
+        {/* Vehicles Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+          {loading ? (
+            <div className="col-span-full p-6 text-center">
+              <div className="text-gray-600">Loading vehicles...</div>
+            </div>
+          ) : filteredVehicles.length === 0 ? (
+            <div className="col-span-full p-6 text-center text-gray-500">
+              No vehicles found
+            </div>
+          ) : (
+            filteredVehicles.map((vehicle) => (
+              <div key={vehicle.id} className="card hover:shadow-lg transition-shadow">
+                <div className="p-6">
+                  {/* Header */}
+                  <div className="flex justify-between items-start mb-4">
+                    <div className="flex items-center space-x-3">
+                      <TruckIcon className="w-8 h-8 text-[#153F9F]" />
+                      <div>
+                        <h3 className="text-lg font-semibold text-gray-900">
+                          {vehicle.registration_number}
+                        </h3>
+                        <p className="text-sm text-gray-600">
+                          {vehicle.year} {vehicle.make} {vehicle.model}
+                        </p>
+                      </div>
+                    </div>
+                    <button className="text-gray-400 hover:text-gray-600">
+                      <EllipsisVerticalIcon className="w-5 h-5" />
+                    </button>
+                  </div>
+
+                  {/* Status and Type */}
+                  <div className="flex items-center space-x-2 mb-4">
+                    <span className={`inline-flex items-center px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(vehicle.status)}`}>
+                      <span className="mr-1">{getStatusIcon(vehicle.status)}</span>
+                      {vehicle.status.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                    </span>
+                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getTypeColor(vehicle.vehicle_type)}`}>
+                      {vehicle.vehicle_type.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                    </span>
+                    {vehicle.is_dg_certified && (
+                      <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-orange-100 text-orange-800">
+                        DG Certified
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Specifications */}
+                  <div className="space-y-2 text-sm">
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <span className="text-gray-600">Payload:</span>
+                        <span className="ml-1 font-medium">{(vehicle.payload_capacity / 1000).toFixed(1)}t</span>
+                      </div>
+                      <div>
+                        <span className="text-gray-600">Pallet Spaces:</span>
+                        <span className="ml-1 font-medium">{vehicle.pallet_spaces}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Location */}
+                  {vehicle.current_location && (
+                    <div className="mt-4 flex items-center text-sm text-gray-600">
+                      <MapPinIcon className="w-4 h-4 mr-1" />
+                      <span>
+                        {vehicle.current_location.latitude.toFixed(4)}, {vehicle.current_location.longitude.toFixed(4)}
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Actions */}
+                  <div className="mt-6 flex space-x-2">
+                    <button className="flex-1 btn-secondary text-sm">
+                      <EyeIcon className="w-4 h-4 mr-1" />
+                      View
+                    </button>
+                    <button className="flex-1 btn-secondary text-sm">
+                      <PencilIcon className="w-4 h-4 mr-1" />
+                      Edit
+                    </button>
+                    <button className="btn-secondary text-sm">
+                      <WrenchScrewdriverIcon className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
         </div>
 
         {/* Summary Cards */}
@@ -337,7 +303,7 @@ export default function VehiclesPage() {
           <div className="card text-center">
             <div className="p-6">
               <div className="text-2xl font-bold text-purple-600">
-                {vehicles.filter(v => v.isDGCertified).length}
+                {vehicles.filter(v => v.is_dg_certified).length}
               </div>
               <div className="text-sm text-gray-600">DG Certified</div>
             </div>

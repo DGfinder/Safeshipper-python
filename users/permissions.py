@@ -35,16 +35,18 @@ class CanManageUsers(permissions.BasePermission):
         
         if view.action == 'create':
             # Allow admins to create any role.
-            # Dispatchers might only create certain roles, e.g., DRIVER, WAREHOUSE_STAFF.
-            # This logic can be more granular if needed.
             if request.user.role == User.Role.ADMIN or request.user.is_superuser:
                 return True
-            # Example: if request.user.role == User.Role.DISPATCHER:
-            #    # Check data being posted to ensure they are not creating an admin etc.
-            #    # For simplicity now, only admins can create.
-            #    return False 
+            # Non-admins cannot create privileged users
+            data = request.data
+            target_role = data.get('role')
+            privileged_roles = [User.Role.ADMIN, User.Role.COMPLIANCE_OFFICER, User.Role.DISPATCHER]
+            if target_role in privileged_roles:
+                return False
+            # Optionally allow dispatchers to create drivers/warehouse only
+            # if request.user.role == User.Role.DISPATCHER:
+            #     return target_role in [User.Role.DRIVER, User.Role.WAREHOUSE_STAFF]
             return False # By default, non-admins cannot create users via this generic endpoint.
-                         # Specific services might allow it with more constraints.
 
         # For retrieve, update, partial_update, destroy, has_object_permission will be called.
         return True 
@@ -60,8 +62,15 @@ class CanManageUsers(permissions.BasePermission):
         
         # Users can view/modify their own profile.
         if obj == request.user:
+            # Prevent self-escalation of role or staff status in update actions
+            if request.method in ['PUT', 'PATCH']:
+                data = request.data
+                if 'role' in data and data['role'] != obj.role:
+                    return False
+                if 'is_staff' in data and bool(data['is_staff']) != obj.is_staff:
+                    return False
             return True
-            
+        
         # Example: A dispatcher might be able to manage users within their own depot.
         # This requires more complex object-level logic, possibly involving django-guardian
         # or custom checks here if obj.depot and request.user.depot are involved.
@@ -73,5 +82,5 @@ class CanManageUsers(permissions.BasePermission):
         #        if new_role and new_role not in [User.Role.DRIVER, User.Role.WAREHOUSE_STAFF]:
         #            return False
         #    return True
-            
+        
         return False # Default deny

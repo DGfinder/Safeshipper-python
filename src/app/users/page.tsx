@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { 
   UserIcon,
   PlusIcon,
@@ -12,80 +12,45 @@ import {
   EyeIcon
 } from '@heroicons/react/24/outline'
 import DashboardLayout from '@/components/DashboardLayout'
-
-// Simplified types for now
-type UserRole = 'admin' | 'manager' | 'dispatcher' | 'driver' | 'operator' | 'viewer'
-type UserStatus = 'active' | 'inactive' | 'suspended'
-
-interface SimpleUser {
-  id: string
-  email: string
-  firstName: string
-  lastName: string
-  role: UserRole
-  status: UserStatus
-  phone?: string
-  createdAt: Date
-  lastLogin?: Date
-}
+import { usersApi, User, UserRole, UserStatus } from '@/services/users'
 
 export default function UsersPage() {
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedRole, setSelectedRole] = useState<UserRole | 'all'>('all')
   const [selectedStatus, setSelectedStatus] = useState<UserStatus | 'all'>('all')
+  const [users, setUsers] = useState<User[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
-  // Mock user data
-  const [users] = useState<SimpleUser[]>([
-    {
-      id: '1',
-      email: 'admin@safeshipper.com',
-      firstName: 'John',
-      lastName: 'Anderson',
-      role: 'admin',
-      status: 'active',
-      phone: '+61 400 123 456',
-      createdAt: new Date('2024-01-15'),
-      lastLogin: new Date('2024-01-20')
-    },
-    {
-      id: '2',
-      email: 'dispatch@safeshipper.com',
-      firstName: 'Sarah',
-      lastName: 'Mitchell',
-      role: 'dispatcher',
-      status: 'active',
-      phone: '+61 400 234 567',
-      createdAt: new Date('2024-01-16'),
-      lastLogin: new Date('2024-01-20')
-    },
-    {
-      id: '3',
-      email: 'driver1@safeshipper.com',
-      firstName: 'Mike',
-      lastName: 'Johnson',
-      role: 'driver',
-      status: 'active',
-      phone: '+61 400 345 678',
-      createdAt: new Date('2024-01-17'),
-      lastLogin: new Date('2024-01-19')
-    },
-    {
-      id: '4',
-      email: 'manager@safeshipper.com',
-      firstName: 'Emma',
-      lastName: 'Wilson',
-      role: 'manager',
-      status: 'active',
-      phone: '+61 400 456 789',
-      createdAt: new Date('2024-01-18'),
-      lastLogin: new Date('2024-01-20')
+  // Fetch users from API
+  useEffect(() => {
+    const fetchUsers = async () => {
+      try {
+        setLoading(true)
+        setError(null)
+        
+        const params: any = {}
+        if (searchTerm) params.search = searchTerm
+        if (selectedRole !== 'all') params.role = selectedRole
+        if (selectedStatus !== 'all') params.is_active = selectedStatus === 'active'
+        
+        const response = await usersApi.getUsers(params)
+        setUsers(response.data)
+      } catch (err: any) {
+        setError(err.message || 'Failed to fetch users')
+        console.error('Error fetching users:', err)
+      } finally {
+        setLoading(false)
+      }
     }
-  ])
+
+    fetchUsers()
+  }, [searchTerm, selectedRole, selectedStatus])
 
   const filteredUsers = users.filter(user => {
-    const matchesSearch = `${user.firstName} ${user.lastName} ${user.email}`.toLowerCase().includes(searchTerm.toLowerCase())
+    const matchesSearch = `${user.first_name} ${user.last_name} ${user.email}`.toLowerCase().includes(searchTerm.toLowerCase())
     const matchesRole = selectedRole === 'all' || user.role === selectedRole
-    const matchesStatus = selectedStatus === 'all' || user.status === selectedStatus
+    const matchesStatus = selectedStatus === 'all' || (selectedStatus === 'active' ? user.is_active : !user.is_active)
     return matchesSearch && matchesRole && matchesStatus
   })
 
@@ -181,81 +146,107 @@ export default function UsersPage() {
           </div>
         </div>
 
+        {/* Error State */}
+        {error && (
+          <div className="card">
+            <div className="p-6">
+              <div className="text-red-600 text-center">
+                <p className="font-medium">Error loading users</p>
+                <p className="text-sm">{error}</p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Users Table */}
         <div className="card">
           <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    User
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Role
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Status
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Last Login
-                  </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {filteredUsers.map((user) => (
-                  <tr key={user.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center">
-                        <div className="w-10 h-10 bg-[#153F9F] rounded-full flex items-center justify-center text-white font-medium">
-                          {user.firstName[0]}{user.lastName[0]}
-                        </div>
-                        <div className="ml-4">
-                          <div className="text-sm font-medium text-gray-900">
-                            {user.firstName} {user.lastName}
-                          </div>
-                          <div className="text-sm text-gray-500">{user.email}</div>
-                          {user.phone && (
-                            <div className="text-sm text-gray-500">{user.phone}</div>
-                          )}
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getRoleColor(user.role)}`}>
-                        {user.role.charAt(0).toUpperCase() + user.role.slice(1)}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(user.status)}`}>
-                        {user.status.charAt(0).toUpperCase() + user.status.slice(1)}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {user.lastLogin ? user.lastLogin.toLocaleDateString() : 'Never'}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      <div className="flex items-center justify-end space-x-2">
-                        <button className="text-gray-400 hover:text-gray-600">
-                          <EyeIcon className="w-4 h-4" />
-                        </button>
-                        <button className="text-gray-400 hover:text-blue-600">
-                          <PencilIcon className="w-4 h-4" />
-                        </button>
-                        <button className="text-gray-400 hover:text-red-600">
-                          <TrashIcon className="w-4 h-4" />
-                        </button>
-                        <button className="text-gray-400 hover:text-gray-600">
-                          <EllipsisVerticalIcon className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </td>
+            {loading ? (
+              <div className="p-6 text-center">
+                <div className="text-gray-600">Loading users...</div>
+              </div>
+            ) : (
+              <table className="w-full">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      User
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Role
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Status
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Last Login
+                    </th>
+                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Actions
+                    </th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {filteredUsers.length === 0 ? (
+                    <tr>
+                      <td colSpan={5} className="px-6 py-4 text-center text-gray-500">
+                        No users found
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredUsers.map((user) => (
+                      <tr key={user.id} className="hover:bg-gray-50">
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex items-center">
+                            <div className="w-10 h-10 bg-[#153F9F] rounded-full flex items-center justify-center text-white font-medium">
+                              {user.first_name[0]}{user.last_name[0]}
+                            </div>
+                            <div className="ml-4">
+                              <div className="text-sm font-medium text-gray-900">
+                                {user.first_name} {user.last_name}
+                              </div>
+                              <div className="text-sm text-gray-500">{user.email}</div>
+                              {user.phone && (
+                                <div className="text-sm text-gray-500">{user.phone}</div>
+                              )}
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getRoleColor(user.role)}`}>
+                            {user.role.charAt(0).toUpperCase() + user.role.slice(1)}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(user.is_active ? 'active' : 'inactive')}`}>
+                            {user.is_active ? 'Active' : 'Inactive'}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {user.last_login ? new Date(user.last_login).toLocaleDateString() : 'Never'}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                          <div className="flex items-center justify-end space-x-2">
+                            <button className="text-gray-400 hover:text-gray-600">
+                              <EyeIcon className="w-4 h-4" />
+                            </button>
+                            <button className="text-gray-400 hover:text-blue-600">
+                              <PencilIcon className="w-4 h-4" />
+                            </button>
+                            <button className="text-gray-400 hover:text-red-600">
+                              <TrashIcon className="w-4 h-4" />
+                            </button>
+                            <button className="text-gray-400 hover:text-gray-600">
+                              <EllipsisVerticalIcon className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            )}
           </div>
         </div>
 
@@ -271,7 +262,7 @@ export default function UsersPage() {
           <div className="card text-center">
             <div className="p-6">
               <div className="text-2xl font-bold text-green-600">
-                {users.filter(u => u.status === 'active').length}
+                {users.filter(u => u.is_active).length}
               </div>
               <div className="text-sm text-gray-600">Active Users</div>
             </div>

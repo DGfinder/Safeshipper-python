@@ -15,7 +15,13 @@ import {
   Cog6ToothIcon,
   Bars3Icon,
   XMarkIcon,
-  BellIcon
+  BellIcon,
+  UsersIcon,
+  CogIcon,
+  LocationMarkerIcon,
+  DocumentTextIcon,
+  LockClosedIcon,
+  ExclamationTriangleIcon
 } from '@heroicons/react/24/outline'
 
 interface DashboardLayoutProps {
@@ -30,6 +36,28 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     localStorage.removeItem('safeshipper_auth')
     window.location.href = '/login'
   }
+
+  const navigationItems = [
+    // Management
+    { name: 'Dashboard', href: '/dashboard', icon: HomeIcon, current: pathname === '/dashboard' },
+    { name: 'Users', href: '/users', icon: UsersIcon, current: pathname === '/users' },
+    { name: 'Vehicles', href: '/vehicles', icon: TruckIcon, current: pathname === '/vehicles' },
+    { name: 'Settings', href: '/settings', icon: CogIcon, current: pathname === '/settings' },
+    
+    // Operations
+    { name: 'Load Planning', href: '/load-planning', icon: CubeIcon, current: pathname === '/load-planning' },
+    { name: 'Route Optimization', href: '/routes', icon: MapIcon, current: pathname === '/routes' },
+    { name: 'Tracking', href: '/tracking', icon: LocationMarkerIcon, current: pathname === '/tracking' },
+    
+    // Security & Audit
+    { name: 'Security Dashboard', href: '/security', icon: ShieldCheckIcon, current: pathname === '/security' },
+    { name: 'Audit Logs', href: '/audit', icon: DocumentTextIcon, current: pathname === '/audit' },
+    { name: 'Access Control', href: '/access-control', icon: LockClosedIcon, current: pathname === '/access-control' },
+    
+    // Compliance
+    { name: 'DG Compliance', href: '/compliance', icon: ExclamationTriangleIcon, current: pathname === '/compliance' },
+    { name: 'Reports', href: '/reports', icon: ChartBarIcon, current: pathname === '/reports' },
+  ]
 
   return (
     <div className="min-h-screen bg-gray-50">

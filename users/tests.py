@@ -192,3 +192,49 @@ class UserAPITests(APITestCase):
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data['username'], self.user1.username)
+
+    def test_dispatcher_cannot_create_admin(self):
+        # Create a dispatcher user and authenticate
+        dispatcher = UserRuntime.objects.create_user(
+            username='dispatch', email='dispatch@example.com', password='password123', role=UserRuntime.Role.DISPATCHER
+        )
+        self.client.force_authenticate(user=dispatcher)
+        url = reverse('user-list')
+        payload = {
+            'username': 'newadmin',
+            'email': 'newadmin@example.com',
+            'password': 'Password123!',
+            'password2': 'Password123!',
+            'role': UserRuntime.Role.ADMIN,
+            'depot': 'Depot X'
+        }
+        response = self.client.post(url, payload, format='json')
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_non_staff_cannot_escalate_own_role_or_staff_status(self):
+        # Authenticate as a normal user
+        self.client.force_authenticate(user=self.user1)
+        url = reverse('user-me')
+        # Try to escalate role
+        payload = {'role': UserRuntime.Role.ADMIN}
+        response = self.client.patch(url, payload, format='json')
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        # Try to escalate staff status
+        payload = {'is_staff': True}
+        response = self.client.patch(url, payload, format='json')
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_admin_can_create_privileged_user(self):
+        self.client.force_authenticate(user=self.admin_user)
+        url = reverse('user-list')
+        payload = {
+            'username': 'newmanager',
+            'email': 'newmanager@example.com',
+            'password': 'Password123!',
+            'password2': 'Password123!',
+            'role': UserRuntime.Role.DISPATCHER,
+            'depot': 'Depot Y'
+        }
+        response = self.client.post(url, payload, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data['role'], UserRuntime.Role.DISPATCHER)

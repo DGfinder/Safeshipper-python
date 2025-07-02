@@ -137,7 +137,7 @@ def check_geofence_entry_exit(gps_event: GPSEvent) -> List[LocationVisit]:
                 
                 # Calculate demurrage if enabled
                 if location.demurrage_enabled:
-                    demurrage = active_visit.calculate_demurrage()
+                    demurrage = calculate_demurrage_for_visit(active_visit)
                     if demurrage:
                         active_visit.demurrage_hours = demurrage['hours']
                         active_visit.demurrage_charge = demurrage['charge']
@@ -187,27 +187,54 @@ def get_active_visits(
         'entry_event'
     )
 
-def calculate_demurrage_for_visit(visit: LocationVisit) -> Dict:
+def calculate_visit_duration(visit: LocationVisit) -> Optional[float]:
+    """
+    Calculate the duration of a location visit in hours.
+    
+    Args:
+        visit: The location visit to calculate duration for
+    
+    Returns:
+        Duration in hours, or None if visit is still active
+    """
+    if not visit.exit_time:
+        return None
+    
+    duration = visit.exit_time - visit.entry_time
+    return duration.total_seconds() / 3600  # Convert to hours
+
+def calculate_demurrage_for_visit(visit: LocationVisit) -> Optional[Dict]:
     """
     Calculate demurrage charges for a location visit.
-    This is a placeholder function that can be extended with more complex
-    demurrage rules in the future.
     
     Args:
         visit: The location visit to calculate demurrage for
     
     Returns:
-        Dict containing demurrage hours and charge
+        Dict containing demurrage hours and charge, or None if not applicable
     """
     if not visit.exit_time or not visit.location.demurrage_enabled:
         return None
     
-    # Use the visit's built-in calculation method
-    return visit.calculate_demurrage()
+    duration = calculate_visit_duration(visit)
+    if duration is None:
+        return None
+    
+    # Subtract free time
+    chargeable_hours = max(0, duration - visit.location.free_time_hours)
+    
+    # Calculate charge if there are chargeable hours
+    charge = None
+    if chargeable_hours > 0 and visit.location.demurrage_rate_per_hour:
+        charge = chargeable_hours * visit.location.demurrage_rate_per_hour
+    
+    return {
+        'hours': chargeable_hours,
+        'charge': charge
+    }
 
 def get_vehicle_location_history(
     vehicle: Vehicle,
-    *,
     start_time: Optional[timezone.datetime] = None,
     end_time: Optional[timezone.datetime] = None,
     limit: int = 1000

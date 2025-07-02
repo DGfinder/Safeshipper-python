@@ -9,7 +9,7 @@ from dataclasses import dataclass
 from .models import LoadPlan, LoadPlanItem, LoadingConstraint
 from shipments.models import Shipment, ConsignmentItem
 from vehicles.models import Vehicle
-from dangerous_goods.services import check_dg_compatibility
+from dangerous_goods.services import check_dg_compatibility_multiple
 
 logger = logging.getLogger(__name__)
 
@@ -266,8 +266,8 @@ def create_load_plan_for_shipments(
         if len(dg_items) > 1:
             dg_objects = [item.dangerous_good_entry for item in dg_items if item.dangerous_good_entry]
             if dg_objects:
-                compatibility_result = check_dg_compatibility(dg_objects)
-                if not compatibility_result['is_compatible']:
+                compatibility_result = check_dg_compatibility_multiple(dg_objects)
+                if not compatibility_result['compatible']:
                     load_plan.dg_compliance_status = 'VIOLATIONS'
                     load_plan.dg_violations = compatibility_result['reasons']
                     load_plan.contains_dangerous_goods = True
