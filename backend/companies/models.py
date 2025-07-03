@@ -206,12 +206,14 @@ class CompanyRelationship(models.Model):
     company_a = models.ForeignKey(
         Company,
         on_delete=models.CASCADE,
-        related_name='relationships_as_a'
+        related_name='relationships_as_a',
+        null=True
     )
     company_b = models.ForeignKey(
         Company,
         on_delete=models.CASCADE,
-        related_name='relationships_as_b'
+        related_name='relationships_as_b',
+        null=True
     )
     relationship_type = models.CharField(
         _("Relationship Type"),

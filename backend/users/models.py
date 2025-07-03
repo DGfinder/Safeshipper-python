@@ -35,26 +35,7 @@ class User(AbstractUser):
         help_text=_("User's role within the system.")
     )
     
-    # depot = models.ForeignKey(
-    #     'locations.GeoLocation', # String reference to avoid circular imports initially
-    #     on_delete=models.SET_NULL,
-    #     null=True,
-    #     blank=True,
-    #     related_name='staff_users', # Users associated with this depot
-    #     limit_choices_to={'location_type': 'DEPOT'}, # Ensure it's a depot type GeoLocation
-    #     help_text=_("The primary depot the user is associated with.")
-    # )
-    depot = models.CharField(max_length=255, blank=True, null=True, help_text="Depot name (temporary)")
     
-    # region = models.ForeignKey(
-    #     'locations.Region', # String reference
-    #     on_delete=models.SET_NULL,
-    #     null=True,
-    #     blank=True,
-    #     related_name='staff_users', # Users associated with this region
-    #     help_text=_("The operational region the user belongs to.")
-    # )
-    region = models.CharField(max_length=255, blank=True, null=True, help_text="Region name (temporary)")
 
     logistics_model = models.CharField(
         _("Logistics Model"),

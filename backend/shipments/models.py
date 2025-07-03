@@ -48,11 +48,11 @@ class Shipment(models.Model):
         settings.AUTH_USER_MODEL, related_name='requested_shipments', on_delete=models.SET_NULL,
         null=True, blank=True, verbose_name=_("Requested By User")
     )
-    assigned_depot = models.ForeignKey(
-        'locations.GeoLocation', related_name='depot_managed_shipments', on_delete=models.SET_NULL,
-        null=True, blank=True, limit_choices_to={'location_type': 'DEPOT'},
-        verbose_name=_("Assigned Depot")
-    )
+    # assigned_depot = models.ForeignKey(
+    #     'locations.GeoLocation', related_name='depot_managed_shipments', on_delete=models.SET_NULL,
+    #     null=True, blank=True, limit_choices_to={'location_type': 'DEPOT'},
+    #     verbose_name=_("Assigned Depot")
+    # )
 
     class ContractType(models.TextChoices):
         SPOT = 'SPOT', _('Spot Rate')
@@ -105,7 +105,6 @@ class Shipment(models.Model):
         indexes = [
             models.Index(fields=['tracking_number']),
             models.Index(fields=['status']),
-            models.Index(fields=['assigned_depot']),
             models.Index(fields=['reference_number']),
             models.Index(fields=['customer']),
             models.Index(fields=['carrier']),

@@ -9,9 +9,9 @@ class UserAdmin(BaseUserAdmin):
     form = CustomUserChangeForm
     add_form = CustomUserCreationForm
 
-    list_display = ('username', 'email', 'first_name', 'last_name', 'is_staff', 
-                    'role', 'company', 'depot', 'region', 'logistics_model', 'is_active')
-    list_filter = ('is_staff', 'is_superuser', 'is_active', 'role', 'depot', 'region', 'company', 'logistics_model')
+    list_display = ('username', 'email', 'first_name', 'last_name', 'is_staff',
+                    'role', 'company', 'logistics_model', 'is_active')
+    list_filter = ('is_staff', 'is_superuser', 'is_active', 'role', 'company', 'logistics_model')
     
     search_fields = BaseUserAdmin.search_fields + ('role', 'depot__name', 'region__name', 'company__name')
 
@@ -22,7 +22,7 @@ class UserAdmin(BaseUserAdmin):
         (None, {
             'classes': ('wide',),
             'fields': ('email', 'first_name', 'last_name', 
-                       'role', 'company', 'depot', 'region', 'logistics_model', 
+                       'role', 'company', 'logistics_model', 
                        'is_staff', 'is_active'),
         }),
     )
@@ -31,4 +31,4 @@ class UserAdmin(BaseUserAdmin):
     # Use filter_horizontal for groups and user_permissions, which is standard for UserAdmin.
     # Remove them from autocomplete_fields if they cause issues with default Permission admin.
     filter_horizontal = ('groups', 'user_permissions',)
-    autocomplete_fields = ['depot', 'region', 'company'] 
+    autocomplete_fields = ['company'] 

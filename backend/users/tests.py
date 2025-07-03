@@ -66,7 +66,7 @@ class UserServiceTests(TestCase):
         self.assertEqual(updated_user.last_name, 'NewLast')
 
         # Test admin update
-        admin_update_data: Dict = {'role': UserRuntime.Role.DISPATCHER, 'depot': 'New Depot'} 
+        admin_update_data: Dict = {'role': UserRuntime.Role.DISPATCHER} 
         admin_updated_user: 'User' = update_user_profile(user_to_update=user_to_update, data=admin_update_data, performing_user=self.admin_user)
         self.assertEqual(admin_updated_user.role, UserRuntime.Role.DISPATCHER)
         self.assertEqual(admin_updated_user.depot, 'New Depot')
@@ -89,7 +89,6 @@ class UserAPITests(APITestCase):
             'email': 'user1_api@example.com', 
             'password': 'password123', 
             'role': UserRuntime.Role.DRIVER, 
-            'depot': 'Depot Alpha'
             }
         self.user1: 'User' = UserRuntime.objects.create_user(**self.user1_data)
 
@@ -206,7 +205,6 @@ class UserAPITests(APITestCase):
             'password': 'Password123!',
             'password2': 'Password123!',
             'role': UserRuntime.Role.ADMIN,
-            'depot': 'Depot X'
         }
         response = self.client.post(url, payload, format='json')
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
@@ -233,7 +231,6 @@ class UserAPITests(APITestCase):
             'password': 'Password123!',
             'password2': 'Password123!',
             'role': UserRuntime.Role.DISPATCHER,
-            'depot': 'Depot Y'
         }
         response = self.client.post(url, payload, format='json')
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)

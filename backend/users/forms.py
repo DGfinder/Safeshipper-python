@@ -9,7 +9,7 @@ class CustomUserCreationForm(UserCreationForm):
         # Ensure all fields listed here exist on your User model
         # Replaced 'area' with 'region'. Added 'logistics_model' and 'company'.
         fields = ('username', 'email', 'first_name', 'last_name', 
-                  'role', 'depot', 'region', 'logistics_model', 'company')
+                  'role', 'logistics_model', 'company')
 
 class CustomUserChangeForm(UserChangeForm):
     class Meta(UserChangeForm.Meta):
@@ -17,7 +17,7 @@ class CustomUserChangeForm(UserChangeForm):
         # Ensure all fields listed here exist on your User model
         # Replaced 'area' with 'region'. Added 'logistics_model' and 'company'.
         fields = ('username', 'email', 'first_name', 'last_name', 
-                  'role', 'depot', 'region', 'logistics_model', 'company',
+                  'role', 'logistics_model', 'company',
                   'is_active', 'is_staff', 
                   # 'is_superuser', # Usually managed separately
                   'groups', 'user_permissions')

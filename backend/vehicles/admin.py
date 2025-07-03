@@ -9,7 +9,7 @@ class VehicleAdmin(admin.ModelAdmin):
     search_fields = ('registration_number', 'assigned_depot__name', 'owning_company__name')
     ordering = ('registration_number',)
     readonly_fields = ('id', 'created_at', 'updated_at')
-    autocomplete_fields = ['assigned_depot', 'owning_company']
+    autocomplete_fields = ['owning_company']
 
     fieldsets = (
         ('Basic Information', {

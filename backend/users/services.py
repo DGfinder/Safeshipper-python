@@ -58,9 +58,6 @@ def create_user_account(data: Dict, performing_user: Optional['User'] = None) ->
         first_name=data.get('first_name', ''),
         last_name=data.get('last_name', ''),
         role=data.get('role', UserRuntime.Role.DRIVER), 
-        depot=data.get('depot'),
-        area=data.get('area'),
-        is_staff=data.get('is_staff', False),
         is_active=data.get('is_active', True)
     )
     return user
@@ -76,7 +73,7 @@ def update_user_profile(user_to_update: 'User', data: Dict, performing_user: 'Us
         raise PermissionDenied("You do not have permission to update this profile.")
 
     allowed_self_update_fields = ['first_name', 'last_name', 'email']
-    admin_only_fields = ['username', 'role', 'depot', 'area', 'is_active', 'is_staff', 'is_superuser']
+    admin_only_fields = ['username', 'role', 'is_active', 'is_staff', 'is_superuser']
 
     for field, value in data.items():
         if performing_user.is_staff or performing_user.is_superuser:

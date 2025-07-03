@@ -29,7 +29,7 @@ class ShipmentAdmin(SimpleHistoryAdmin):
     
     fieldsets = (
         (None, {
-            'fields': ('reference_number', ('origin_location', 'destination_location'), ('assigned_depot', 'status'), ('customer', 'carrier'), 'freight_type')
+            'fields': ('reference_number', 'status', ('customer', 'carrier'), 'freight_type')
         }),
         ('Dates & Times', { # Changed names here to match model
             'fields': (('estimated_pickup_date', 'actual_pickup_date'), ('estimated_delivery_date', 'actual_delivery_date'))
@@ -48,23 +48,21 @@ class ShipmentAdmin(SimpleHistoryAdmin):
         }),
     )
     inlines = [ConsignmentItemInline]
-    autocomplete_fields = ['customer', 'carrier', 'origin_location', 'destination_location', 'freight_type', 'requested_by', 'assigned_depot']
+    autocomplete_fields = ['customer', 'carrier', 'freight_type', 'requested_by']
 
 
     def origin_address_summary(self, obj):
         return obj.origin_location.name if obj.origin_location else "N/A" # Assuming GeoLocation has a name
     origin_address_summary.short_description = "Origin"
 
-    def destination_address_summary(self, obj):
-        return obj.destination_location.name if obj.destination_location else "N/A" # Assuming GeoLocation has a name
-    destination_address_summary.short_description = "Destination"
+    
 
 @admin.register(ConsignmentItem)
 class ConsignmentItemAdmin(admin.ModelAdmin):
     list_display = ('id', 'shipment_info', 'description_summary', 'quantity', 
                     'weight_kg', 'is_dangerous_good', 
                     'get_un_number', 'get_hazard_class') # Changed to methods
-    list_filter = ('is_dangerous_good', 'shipment__status', 'shipment__assigned_depot', 'dangerous_good_entry__hazard_class') # Filter by linked DG's class
+    list_filter = ('is_dangerous_good', 'shipment__status', 'dangerous_good_entry__hazard_class') # Filter by linked DG's class
     search_fields = ('description', 'dangerous_good_entry__un_number', 'dangerous_good_entry__proper_shipping_name', 'shipment__tracking_number')
     ordering = ('-shipment__created_at', 'shipment__id', 'id')
     list_select_related = ['shipment', 'dangerous_good_entry'] 
