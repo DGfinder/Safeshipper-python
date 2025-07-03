@@ -5,7 +5,6 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { 
   ChevronDownIcon,
-  ChevronRightIcon,
   TruckIcon,
   ShieldCheckIcon,
   MapIcon,
@@ -189,7 +188,7 @@ export default function Navigation({ className = '' }: NavigationProps) {
           </button>
         )}
         
-        {hasChildren && itemIsExpanded && (
+        {hasChildren && itemIsExpanded && item.children && (
           <div className="mt-1 ml-4 space-y-1">
             {item.children.map(child => renderNavItem(child, level + 1))}
           </div>

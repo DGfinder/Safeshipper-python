@@ -158,7 +158,6 @@ const directoryItems = [
 ];
 
 export default function Dashboard() {
-  const [currentPage] = useState(1);
 
   return (
     <div className="min-h-screen bg-[#F8F7FA]">
