@@ -3,16 +3,30 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const router = useRouter();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Handle login logic here
+    setIsLoading(true);
+    
+    // Simulate a brief loading delay (you can remove this when connecting to real auth)
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
+    // For now, just navigate to dashboard without validation
+    // In the future, you'll add actual authentication logic here
     console.log('Login attempt:', { email, password, rememberMe });
+    
+    // Navigate to dashboard
+    router.push('/dashboard');
+    
+    setIsLoading(false);
   };
 
   return (
@@ -159,13 +173,18 @@ export default function LoginPage() {
                 {/* Sign In Button */}
                 <button
                   type="submit"
-                  className="flex flex-row justify-center items-center p-0 w-full h-[38px] bg-[#153F9F] rounded-md shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#153F9F] transition-all duration-200"
+                  disabled={isLoading}
+                  className="flex flex-row justify-center items-center p-0 w-full h-[38px] bg-[#153F9F] rounded-md shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#153F9F] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                   style={{ boxShadow: '0px 2px 4px rgba(165, 163, 174, 0.3)' }}
                 >
                   <div className="flex flex-row justify-center items-center py-2.5 px-5 gap-3 w-[94px] h-[38px]">
-                    <span className="w-[54px] h-[18px] font-poppins font-medium text-[15px] leading-[18px] flex items-center text-white tracking-[0.43px]">
-                      Sign in
-                    </span>
+                    {isLoading ? (
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                    ) : (
+                      <span className="w-[54px] h-[18px] font-poppins font-medium text-[15px] leading-[18px] flex items-center text-white tracking-[0.43px]">
+                        Sign in
+                      </span>
+                    )}
                   </div>
                 </button>
               </form>
