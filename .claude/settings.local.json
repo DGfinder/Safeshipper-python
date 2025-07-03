@@ -20,7 +20,20 @@
       "Bash(sed:*)",
       "Bash(rg:*)",
       "Bash(timeout 60 npm run build)",
-      "Bash(timeout 30 npm run build)"
+      "Bash(timeout 30 npm run build)",
+      "Bash(for file in src/app/dg-compliance/*/page.tsx)",
+      "Bash(do echo \"Processing $file\")",
+      "Bash(done)",
+      "Bash(for file in src/app/*/*/page.tsx)",
+      "Bash(do echo \"Fixing 3-level file: $file\")",
+      "Bash(do echo \"Checking: $file\")",
+      "Bash(echo:*)",
+      "Bash(do if grep -q \"@/components\" \"$file\")",
+      "Bash(then echo \"Fixing: $file\")",
+      "Bash(fi)",
+      "Bash(for file in src/app/*/*/*/page.tsx)",
+      "Bash(then echo \"Fixing 4-level: $file\")",
+      "Bash(npx tsc:*)"
     ],
     "deny": []
   }

@@ -1,5 +1,5 @@
-import PageTemplate from '@/components/layout/PageTemplate';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import PageTemplate from '../../../components/layout/PageTemplate';
+import { Card, CardContent, CardHeader, CardTitle } from '../../../components/ui/card';
 
 export default function DgComplianceSdsDatabasePage() {
   return (

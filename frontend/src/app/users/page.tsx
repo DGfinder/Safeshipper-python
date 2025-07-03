@@ -4,10 +4,10 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'react-hot-toast';
 import { PencilIcon, TrashIcon, PlusIcon, XMarkIcon } from '@heroicons/react/24/outline';
-import Modal from '../../../components/ui/Modal';
-import UserCreateForm from '../../../components/users/UserCreateForm';
-import UserEditForm from '../../../components/users/UserEditForm';
-import DeleteConfirmation from '../../../components/ui/DeleteConfirmation';
+import Modal from '../../components/ui/Modal';
+import UserCreateForm from '../../components/users/UserCreateForm';
+import UserEditForm from '../../components/users/UserEditForm';
+import DeleteConfirmation from '../../components/ui/DeleteConfirmation';
 
 // Placeholder for API service functions
 const usersService = {
