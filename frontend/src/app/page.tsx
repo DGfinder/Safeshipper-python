@@ -15,7 +15,7 @@ export default function Home() {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center p-24">
       <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#153F9F]"></div>
-      <p className="mt-4 text-gray-600">Redirecting to login...</p>
+      <p className="mt-4 text-gray-600">Redirecting to login... (Updated)</p>
     </div>
   );
 }
