@@ -2,7 +2,13 @@ backend/
 docker-compose.yml
 *.bat
 *.ps1
-*.md
+README.md
+MANIFEST_ANALYZER_IMPLEMENTATION_SUMMARY.md
+MODAL_AND_FORMS_IMPLEMENTATION_SUMMARY.md
+MONOREPO_MIGRATION_SUMMARY.md
+TANSTACK_QUERY_REFACTOR_SUMMARY.md
+USER_CRUD_COMPLETION_SUMMARY.md
+VEHICLE_CRUD_IMPLEMENTATION_SUMMARY.md
 .git/
 .dockerignore
 db.sqlite3
@@ -10,4 +16,5 @@ db.sqlite3
 logs/
 __pycache__/
 *.pyc
-.pytest_cache/ 
+.pytest_cache/
+audits/ 
