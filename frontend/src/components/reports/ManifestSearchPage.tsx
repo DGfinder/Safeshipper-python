@@ -159,8 +159,7 @@ export default function ManifestSearchPage(): JSX.Element {
         </Button>
       }
     >
-
-            {/* Upload Card */}
+      {/* Upload Card */}
             <div className="bg-white shadow-[0px_4px_18px_rgba(75,70,92,0.1)] rounded-md">
               <div className="flex justify-between items-center p-6 pb-0">
                 <h2 className="font-['Poppins'] font-bold text-[18px] leading-[24px] flex-1">
@@ -426,15 +425,6 @@ export default function ManifestSearchPage(): JSX.Element {
               </div>
             </div>
 
-            {/* Footer */}
-            <div className="text-center py-3">
-              <p className="font-['Poppins'] font-normal text-[15px] leading-[22px] text-gray-600">
-                © 2023, made with ❤️ by SafeShipper Team
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
+    </PageTemplate>
   );
 }
