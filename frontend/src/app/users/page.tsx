@@ -33,7 +33,7 @@ const usersService = {
   },
   deleteUser: async (userId: string) => {
     // Simulate API call
-    return new Promise((resolve) => setTimeout(() => resolve({ success: true }), 500));
+    return new Promise((resolve) => setTimeout(() => resolve({ success: true, deletedUserId: userId }), 500));
   },
   deleteUsers: async (userIds: string[]) => {
     // Simulate API call for bulk delete
