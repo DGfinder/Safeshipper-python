@@ -48,11 +48,11 @@ Make sure your Django backend is running on `http://localhost:8000`
 
 ## 📁 Structure
 
-- `/src/app` - Next.js pages
-- `/src/components` - Reusable components  
-- `/src/services` - API services
-- `/src/types` - TypeScript types
-- `/src/contexts` - React contexts
+- `/frontend/src/app` - Next.js pages
+- `/frontend/src/components` - Reusable components  
+- `/frontend/src/services` - API services
+- `/frontend/src/types` - TypeScript types
+- `/frontend/src/contexts` - React contexts
 
 ## 🎨 Features Included
 

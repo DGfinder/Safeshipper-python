@@ -28,7 +28,7 @@ This document summarizes the changes made during the two refactoring tasks:
   - Included special endpoints for driver assignment and depot-specific queries
 
 #### 4. Refactored Users Page
-- **File**: `src/app/users/page.tsx`
+- **File**: `frontend/src/app/users/page.tsx`
   - Removed hardcoded mock data array
   - Added `useEffect` hook to fetch data from `/api/v1/users/` endpoint
   - Implemented loading and error states
@@ -37,7 +37,7 @@ This document summarizes the changes made during the two refactoring tasks:
   - Updated filtering logic to work with API parameters
 
 #### 5. Refactored Vehicles Page
-- **File**: `src/app/vehicles/page.tsx`
+- **File**: `frontend/src/app/vehicles/page.tsx`
   - Removed hardcoded mock data array
   - Added `useEffect` hook to fetch data from `/api/v1/vehicles/` endpoint
   - Implemented loading and error states
