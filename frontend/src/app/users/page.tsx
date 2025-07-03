@@ -23,19 +23,19 @@ const usersService = {
       1000)
     );
   },
-  createUser: async (userData) => {
+  createUser: async (userData: any) => {
     // Simulate API call
     return new Promise((resolve) => setTimeout(() => resolve({ id: Date.now().toString(), ...userData }), 500));
   },
-  updateUser: async (userId, userData) => {
+  updateUser: async (userId: string, userData: any) => {
     // Simulate API call
     return new Promise((resolve) => setTimeout(() => resolve({ id: userId, ...userData }), 500));
   },
-  deleteUser: async (userId) => {
+  deleteUser: async (userId: string) => {
     // Simulate API call
     return new Promise((resolve) => setTimeout(() => resolve({ success: true }), 500));
   },
-  deleteUsers: async (userIds) => {
+  deleteUsers: async (userIds: string[]) => {
     // Simulate API call for bulk delete
     return new Promise((resolve) => setTimeout(() => resolve({ success: true, deletedCount: userIds.length }), 500));
   },
@@ -43,31 +43,31 @@ const usersService = {
 
 export default function UsersPage() {
   const queryClient = useQueryClient();
-  const { data: users, isLoading, error } = useQuery({
+  const { data: users, isPending, error } = useQuery({
     queryKey: ['users'],
     queryFn: usersService.getUsers,
   });
 
   const createUserMutation = useMutation({
     mutationFn: usersService.createUser,
-    onSuccess: (newUser) => {
-      queryClient.invalidateQueries(['users']);
+    onSuccess: (newUser: any) => {
+      queryClient.invalidateQueries({ queryKey: ['users'] });
       toast.success(`User "${newUser.username}" created successfully!`);
       setIsCreateModalOpen(false);
     },
-    onError: (err) => {
+    onError: (err: any) => {
       toast.error(`Failed to create user: ${err.message}`);
     },
   });
 
   const updateUserMutation = useMutation({
-    mutationFn: ({ userId, userData }) => usersService.updateUser(userId, userData),
-    onSuccess: (updatedUser) => {
-      queryClient.invalidateQueries(['users']);
+    mutationFn: ({ userId, userData }: { userId: string; userData: any }) => usersService.updateUser(userId, userData),
+    onSuccess: (updatedUser: any) => {
+      queryClient.invalidateQueries({ queryKey: ['users'] });
       toast.success(`User "${updatedUser.username}" updated successfully!`);
       setEditingUser(null);
     },
-    onError: (err) => {
+    onError: (err: any) => {
       toast.error(`Failed to update user: ${err.message}`);
     },
   });
@@ -75,34 +75,34 @@ export default function UsersPage() {
   const deleteUserMutation = useMutation({
     mutationFn: usersService.deleteUser,
     onSuccess: () => {
-      queryClient.invalidateQueries(['users']);
+      queryClient.invalidateQueries({ queryKey: ['users'] });
       toast.success('User deleted successfully!');
       setDeletingUser(null);
     },
-    onError: (err) => {
+    onError: (err: any) => {
       toast.error(`Failed to delete user: ${err.message}`);
     },
   });
 
   const bulkDeleteUsersMutation = useMutation({
     mutationFn: usersService.deleteUsers,
-    onSuccess: (data) => {
-      queryClient.invalidateQueries(['users']);
+    onSuccess: (data: any) => {
+      queryClient.invalidateQueries({ queryKey: ['users'] });
       toast.success(`${data.deletedCount} users deleted successfully!`);
       setSelectedUsers([]);
     },
-    onError: (err) => {
+    onError: (err: any) => {
       toast.error(`Failed to delete users: ${err.message}`);
     },
   });
 
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [editingUser, setEditingUser] = useState(null);
-  const [deletingUser, setDeletingUser] = useState(null);
-  const [selectedUsers, setSelectedUsers] = useState([]);
+  const [editingUser, setEditingUser] = useState<any>(null);
+  const [deletingUser, setDeletingUser] = useState<any>(null);
+  const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
   const [filters, setFilters] = useState({ role: '', search: '' });
 
-  const handleCheckboxChange = (userId) => {
+  const handleCheckboxChange = (userId: string) => {
     setSelectedUsers((prevSelected) =>
       prevSelected.includes(userId)
         ? prevSelected.filter((id) => id !== userId)
@@ -110,9 +110,9 @@ export default function UsersPage() {
     );
   };
 
-  const handleSelectAllChange = (e) => {
+  const handleSelectAllChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.checked) {
-      setSelectedUsers(users.map((user) => user.id));
+      setSelectedUsers((users as any[])?.map((user) => user.id) || []);
     } else {
       setSelectedUsers([]);
     }
@@ -127,10 +127,10 @@ export default function UsersPage() {
   const handleClearFilters = () => {
     setFilters({ role: '', search: '' });
     // Optionally, re-fetch data if filters are applied on the backend
-    queryClient.invalidateQueries(['users']);
+    queryClient.invalidateQueries({ queryKey: ['users'] });
   };
 
-  const filteredUsers = users?.filter(user => {
+  const filteredUsers = (users as any[])?.filter((user: any) => {
     const matchesRole = filters.role ? user.role === filters.role : true;
     const matchesSearch = filters.search ? 
       user.username.includes(filters.search) || 
@@ -138,7 +138,7 @@ export default function UsersPage() {
     return matchesRole && matchesSearch;
   });
 
-  if (isLoading) return <div>Loading users...</div>;
+  if (isPending) return <div>Loading users...</div>;
   if (error) return <div>Error loading users: {error.message}</div>;
 
   return (
@@ -156,7 +156,7 @@ export default function UsersPage() {
           </button>
           <button
             onClick={handleDeleteSelected}
-            disabled={selectedUsers.length === 0 || bulkDeleteUsersMutation.isLoading}
+            disabled={selectedUsers.length === 0 || bulkDeleteUsersMutation.isPending}
             className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded flex items-center disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <TrashIcon className="h-5 w-5 mr-2" />
@@ -199,7 +199,7 @@ export default function UsersPage() {
                 <input
                   type="checkbox"
                   onChange={handleSelectAllChange}
-                  checked={selectedUsers.length === users?.length && users?.length > 0}
+                  checked={selectedUsers.length === (users as any[])?.length && (users as any[])?.length > 0}
                 />
               </th>
               <th className="py-3 px-6 text-left">Username</th>
@@ -257,7 +257,7 @@ export default function UsersPage() {
 
       {/* Create User Modal */}
       <Modal isOpen={isCreateModalOpen} onClose={() => setIsCreateModalOpen(false)} title="Create New User">
-        <UserCreateForm onSubmit={createUserMutation.mutate} isLoading={createUserMutation.isLoading} />
+                    <UserCreateForm onSubmit={createUserMutation.mutate} isLoading={createUserMutation.isPending} />
       </Modal>
 
       {/* Edit User Modal */}
@@ -266,7 +266,7 @@ export default function UsersPage() {
           <UserEditForm
             user={editingUser}
             onSubmit={(userData) => updateUserMutation.mutate({ userId: editingUser.id, userData })}
-            isLoading={updateUserMutation.isLoading}
+            isLoading={updateUserMutation.isPending}
           />
         )}
       </Modal>
@@ -279,7 +279,7 @@ export default function UsersPage() {
             message={`Are you sure you want to delete user "${deletingUser.username}"? This action cannot be undone.`}
             onConfirm={() => deleteUserMutation.mutate(deletingUser.id)}
             onCancel={() => setDeletingUser(null)}
-            isLoading={deleteUserMutation.isLoading}
+            isLoading={deleteUserMutation.isPending}
           />
         )}
       </Modal>
