@@ -192,4 +192,4 @@ For technical support or questions:
 
 ---
 
-**Built with ❤️ for safe and efficient logistics management** 
+**Built with ❤️ for safe and efficient logistics management** # Force rebuild Thu Jul  3 23:22:31 AWST 2025
