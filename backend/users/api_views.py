@@ -19,9 +19,9 @@ class UserViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated, CanManageUsers] # Overall permission for the viewset
 
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
-    filterset_fields = ['role', 'depot', 'area', 'is_active', 'is_staff']
+    filterset_fields = ['role', 'is_active', 'is_staff']
     search_fields = ['username', 'first_name', 'last_name', 'email']
-    ordering_fields = ['username', 'email', 'role', 'depot', 'date_joined']
+    ordering_fields = ['username', 'email', 'role', 'date_joined']
 
     def get_serializer_class(self):
         if self.action == 'create':

@@ -43,8 +43,6 @@ class UserCreateSerializer(serializers.ModelSerializer):
             'first_name', 
             'last_name', 
             'role', 
-            'depot', 
-            'area',
             'is_staff', # Allow setting is_staff during creation by admin if needed
             'is_active',
         ]
@@ -77,8 +75,6 @@ class UserCreateSerializer(serializers.ModelSerializer):
             first_name=validated_data.get('first_name', ''),
             last_name=validated_data.get('last_name', ''),
             role=validated_data.get('role', User.Role.DRIVER), # Default role if not provided
-            depot=validated_data.get('depot'),
-            area=validated_data.get('area'),
             is_staff=validated_data.get('is_staff', False),
             is_active=validated_data.get('is_active', True)
         )

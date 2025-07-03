@@ -92,7 +92,7 @@ class Shipment(models.Model):
 
     def save(self, *args, **kwargs):
         if not self.tracking_number:
-            self.tracking_number = str(uuid.uuid4()).replace("-", "").upper()[:16]
+            self.tracking_number = f"SS{str(uuid.uuid4()).replace('-', '').upper()[:14]}"
         super().save(*args, **kwargs)
 
     def __str__(self):

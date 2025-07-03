@@ -64,6 +64,7 @@ INSTALLED_APPS = [
 # Middleware
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'safeshipper_core.middleware.SecurityHeadersMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -71,6 +72,8 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'simple_history.middleware.HistoryRequestMiddleware',
+    'safeshipper_core.middleware.RequestLoggingMiddleware',
+    'safeshipper_core.middleware.APIErrorHandlingMiddleware',
 ]
 
 ROOT_URLCONF = 'safeshipper_core.urls'
@@ -139,8 +142,8 @@ CACHES = {
             'SOCKET_CONNECT_TIMEOUT': 5,
             'SOCKET_TIMEOUT': 5,
             'RETRY_ON_TIMEOUT': True,
-            'MAX_CONNECTIONS': 1000,
-            'CONNECTION_POOL_KWARGS': {'max_connections': 100}
+            'MAX_CONNECTIONS': 50,
+            'CONNECTION_POOL_KWARGS': {'max_connections': 20}
         }
     }
 }
@@ -211,8 +214,8 @@ CORS_ALLOW_METHODS = [
 ]
 
 # Celery Configuration
-CELERY_BROKER_URL = 'redis://localhost:6379/0'
-CELERY_RESULT_BACKEND = 'redis://localhost:6379/0'
+CELERY_BROKER_URL = config('CELERY_BROKER_URL', default='redis://localhost:6379/0')
+CELERY_RESULT_BACKEND = config('CELERY_RESULT_BACKEND', default='redis://localhost:6379/0')
 CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
@@ -315,15 +318,13 @@ SPECTACULAR_SETTINGS = {
 # Create logs directory if it doesn't exist
 os.makedirs(os.path.join(BASE_DIR, 'logs'), exist_ok=True)
 
-# Celery Configuration Options
-CELERY_TIMEZONE = "UTC"
+# Additional Celery Configuration Options
 CELERY_TASK_TRACK_STARTED = True
 CELERY_TASK_TIME_LIMIT = 30 * 60
-CELERY_RESULT_BACKEND = "redis://localhost:6379/0"
-CELERY_BROKER_URL = "redis://localhost:6379/0"
-CELERY_ACCEPT_CONTENT = ["json"]
-CELERY_TASK_SERIALIZER = "json"
-CELERY_RESULT_SERIALIZER = "json"
+CELERY_TASK_SOFT_TIME_LIMIT = 25 * 60
+CELERY_WORKER_PREFETCH_MULTIPLIER = 1
+CELERY_TASK_ACKS_LATE = True
+CELERY_WORKER_MAX_TASKS_PER_CHILD = 1000
 
 # Celery Beat Settings (if you later add periodic tasks)
 # CELERY_BEAT_SCHEDULE = {}

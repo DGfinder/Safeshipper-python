@@ -29,7 +29,7 @@ interface StatCard {
   description: string;
   change: string;
   trend: string;
-  icon: React.ComponentType<any>;
+  icon: React.ComponentType<React.SVGProps<SVGSVGElement>>;
   color: string;
   borderColor: string;
 }
@@ -158,7 +158,7 @@ const directoryItems = [
 ];
 
 export default function Dashboard() {
-  const [currentPage, setCurrentPage] = useState(1);
+  const [currentPage] = useState(1);
 
   return (
     <div className="min-h-screen bg-[#F8F7FA]">
