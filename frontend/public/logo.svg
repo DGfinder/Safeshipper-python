@@ -1,0 +1,10 @@
+<svg width="120" height="40" viewBox="0 0 120 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect x="0" y="0" width="40" height="40" rx="8" fill="#153F9F"/>
+  <path d="M20 10L30 20L20 30L10 20L20 10Z" fill="white"/>
+  <text x="50" y="16" font-family="Poppins" font-weight="700" font-size="14" fill="#2D3748">
+    Safeshipper
+  </text>
+  <text x="50" y="28" font-family="Poppins" font-weight="400" font-size="10" fill="#718096">
+    Logistics & Safety
+  </text>
+</svg>
