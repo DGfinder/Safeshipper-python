@@ -29,7 +29,7 @@ interface SearchHistory {
   date: string;
 }
 
-export default function ManifestSearchPage(): JSX.Element {
+export default function ManifestSearchPage() {
   const [file, setFile] = useState<File | null>(null);
   const [results, setResults] = useState<Match[]>([]);
   const [loading, setLoading] = useState(false);
