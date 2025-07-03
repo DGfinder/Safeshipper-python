@@ -3,7 +3,7 @@ import React from 'react';
 interface AlertProps {
   className?: string;
   children: React.ReactNode;
-  variant?: 'default' | 'info' | 'warning' | 'error' | 'success';
+  variant?: 'default' | 'info' | 'warning' | 'error' | 'success' | 'destructive';
 }
 
 interface AlertDescriptionProps {
@@ -23,7 +23,8 @@ export function Alert({
     info: 'bg-blue-50 border-blue-200 text-blue-900',
     warning: 'bg-yellow-50 border-yellow-200 text-yellow-900',
     error: 'bg-red-50 border-red-200 text-red-900',
-    success: 'bg-green-50 border-green-200 text-green-900'
+    success: 'bg-green-50 border-green-200 text-green-900',
+    destructive: 'bg-red-50 border-red-200 text-red-900'
   };
 
   return (
