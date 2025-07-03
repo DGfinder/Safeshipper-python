@@ -3,7 +3,7 @@ import React from 'react';
 interface BadgeProps {
   className?: string;
   children: React.ReactNode;
-  variant?: 'default' | 'secondary' | 'success' | 'warning' | 'danger';
+  variant?: 'default' | 'secondary' | 'success' | 'warning' | 'danger' | 'outline';
 }
 
 export function Badge({ 
@@ -18,7 +18,8 @@ export function Badge({
     secondary: 'bg-gray-100 text-gray-600',
     success: 'bg-green-100 text-green-800',
     warning: 'bg-yellow-100 text-yellow-800',
-    danger: 'bg-red-100 text-red-800'
+    danger: 'bg-red-100 text-red-800',
+    outline: 'border border-gray-300 bg-white text-gray-700'
   };
 
   return (
