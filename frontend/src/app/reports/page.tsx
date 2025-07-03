@@ -102,7 +102,7 @@ export default function ReportsPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             <button className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors text-left">
               <h4 className="font-medium text-gray-900 mb-1">Daily Operations Summary</h4>
-              <p className="text-sm text-gray-600">Generate today's operational overview</p>
+              <p className="text-sm text-gray-600">Generate today&apos;s operational overview</p>
             </button>
             <button className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors text-left">
               <h4 className="font-medium text-gray-900 mb-1">Weekly Safety Report</h4>

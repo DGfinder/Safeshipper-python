@@ -4,7 +4,6 @@ import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import PageTemplate from '@/components/layout/PageTemplate';
 import { 
   DocumentMagnifyingGlassIcon, 
@@ -118,7 +117,7 @@ export default function ManifestSearchPage(): JSX.Element {
       } else {
         setError(data.error || 'Search failed');
       }
-    } catch (err) {
+    } catch {
       setError('Network error occurred. Please try again.');
     } finally {
       setLoading(false);
@@ -271,7 +270,7 @@ export default function ManifestSearchPage(): JSX.Element {
                           </Badge>
                         </div>
                         <p className="text-sm text-gray-600 bg-gray-50 p-2 rounded border-l-4 border-[#153F9F]">
-                          "{match.line_snippet}"
+                          &quot;{match.line_snippet}&quot;
                         </p>
                       </div>
                     </div>
