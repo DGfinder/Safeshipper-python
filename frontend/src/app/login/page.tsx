@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,7 +10,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useAuthStore } from '@/stores/auth-store';
 import { Shield, Loader2, AlertCircle, CheckCircle } from 'lucide-react';
 
-export default function LoginPage() {
+function LoginForm() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
@@ -216,5 +216,15 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-white flex items-center justify-center">
+      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#153F9F]"></div>
+    </div>}>
+      <LoginForm />
+    </Suspense>
   );
 } 
