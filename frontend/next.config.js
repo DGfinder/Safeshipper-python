@@ -50,6 +50,16 @@ const nextConfig = {
     return config
   },
   
+  // API proxy for development - route frontend API calls to Django backend
+  async rewrites() {
+    return [
+      {
+        source: '/api/:path*',
+        destination: process.env.BACKEND_URL ? `${process.env.BACKEND_URL}/api/:path*` : 'http://localhost:8000/api/:path*',
+      },
+    ];
+  },
+  
   // Configure headers for better security and caching
   async headers() {
     return [

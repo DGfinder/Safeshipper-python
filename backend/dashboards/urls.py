@@ -6,10 +6,16 @@ from .api_views import (
     RouteOptimizationDashboardView,
     ComprehensiveDashboardView
 )
+from .stats_views import DashboardStatsView, RecentShipmentsView
 
 app_name = 'dashboards'
 
 urlpatterns = [
+    # Main dashboard endpoints for frontend
+    path('stats/', DashboardStatsView.as_view(), name='dashboard-stats'),
+    path('recent-shipments/', RecentShipmentsView.as_view(), name='recent-shipments'),
+    
+    # Existing specialized dashboard endpoints
     path(
         'compliance-summary/',
         ComplianceDashboardView.as_view(),

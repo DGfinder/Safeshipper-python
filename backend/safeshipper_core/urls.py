@@ -56,6 +56,7 @@ urlpatterns = [
     path('api/v1/', include([
         path('shipments/', include('shipments.urls')),
         path('users/', include('users.urls')),
+        path('dashboard/', include('dashboards.urls')),
         path('dangerous-goods/', include('dangerous_goods.urls')),
         path('companies/', include('companies.urls')),
         path('freight-types/', include('freight_types.urls')),

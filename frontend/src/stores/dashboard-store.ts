@@ -26,20 +26,46 @@ export const useDashboardStore = create<DashboardState>((set) => ({
     set({ isLoading: true, error: null });
     
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 800));
+      const token = localStorage.getItem('access_token');
       
-      // Mock data - in real app, this would come from API
-      const mockStats = {
+      if (!token) {
+        throw new Error('No authentication token found');
+      }
+      
+      const response = await fetch('/api/v1/dashboard/stats/', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Failed to fetch stats: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      
+      const stats = {
+        totalShipments: data.totalShipments,
+        pendingReviews: data.pendingReviews,
+        complianceRate: data.complianceRate,
+        activeRoutes: data.activeRoutes,
+      };
+      
+      set({ stats, isLoading: false });
+    } catch (error) {
+      console.error('Dashboard stats error:', error);
+      
+      // Fallback to mock data if API fails
+      const fallbackStats = {
         totalShipments: 2847,
         pendingReviews: 43,
         complianceRate: 98.7,
         activeRoutes: 156,
       };
       
-      set({ stats: mockStats, isLoading: false });
-    } catch (error) {
       set({ 
+        stats: fallbackStats,
         error: error instanceof Error ? error.message : 'Failed to fetch stats',
         isLoading: false 
       });

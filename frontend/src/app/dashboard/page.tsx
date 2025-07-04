@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { 
   Truck, 
   FileSearch, 
@@ -17,19 +17,20 @@ import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { DashboardLayout } from '@/components/layout/dashboard-layout';
+import { useDashboardStore } from '@/stores/dashboard-store';
 
-// Types for our data
-interface StatCard {
-  id: string;
-  title: string;
-  value: string;
-  description: string;
-  change: string;
-  trend: string;
-  icon: React.ComponentType<{ className?: string; color?: string }>;
-  color: string;
-  borderColor: string;
-}
+// Types for our data (keeping for future use)
+// interface StatCard {
+//   id: string;
+//   title: string;
+//   value: string;
+//   description: string;
+//   change: string;
+//   trend: string;
+//   icon: React.ComponentType<{ className?: string; color?: string }>;
+//   color: string;
+//   borderColor: string;
+// }
 
 interface ShipmentRow {
   id: string;
@@ -41,53 +42,7 @@ interface ShipmentRow {
   progress: number;
 }
 
-// Sample data
-const statCards: StatCard[] = [
-  {
-    id: '1',
-    title: 'Total Shipments',
-    value: '2,847',
-    description: 'Active shipments in transit',
-    change: '+12.5%',
-    trend: 'up',
-    icon: Truck,
-    color: 'rgba(21, 63, 159, 0.08)',
-    borderColor: '#153F9F'
-  },
-  {
-    id: '2',
-    title: 'Pending Reviews',
-    value: '43',
-    description: 'Documents requiring approval',
-    change: '-8.2%',
-    trend: 'down',
-    icon: FileSearch,
-    color: 'rgba(255, 159, 67, 0.08)',
-    borderColor: '#FF9F43'
-  },
-  {
-    id: '3',
-    title: 'Compliance Rate',
-    value: '98.7%',
-    description: 'Safety compliance score',
-    change: '+2.1%',
-    trend: 'up',
-    icon: BarChart3,
-    color: 'rgba(234, 84, 85, 0.08)',
-    borderColor: '#EA5455'
-  },
-  {
-    id: '4',
-    title: 'Active Routes',
-    value: '156',
-    description: 'Currently operating routes',
-    change: '+5.3%',
-    trend: 'up',
-    icon: MapPin,
-    color: 'rgba(0, 207, 232, 0.08)',
-    borderColor: '#00CFE8'
-  }
-];
+// Sample data for shipments table
 
 const shipmentData: ShipmentRow[] = [
   {
@@ -139,13 +94,71 @@ const shipmentData: ShipmentRow[] = [
 
 
 export default function Dashboard() {
+  const { stats, error, fetchStats } = useDashboardStore();
+
+  useEffect(() => {
+    fetchStats();
+  }, [fetchStats]);
+
+  // Update stat cards with real data
+  const statCardsData = [
+    {
+      id: '1',
+      title: 'Total Shipments',
+      value: stats.totalShipments.toLocaleString(),
+      description: 'Active shipments in transit',
+      change: '+12.5%',
+      trend: 'up',
+      icon: Truck,
+      color: 'rgba(21, 63, 159, 0.08)',
+      borderColor: '#153F9F'
+    },
+    {
+      id: '2',
+      title: 'Pending Reviews',
+      value: stats.pendingReviews.toString(),
+      description: 'Documents requiring approval',
+      change: '-8.2%',
+      trend: 'down',
+      icon: FileSearch,
+      color: 'rgba(255, 159, 67, 0.08)',
+      borderColor: '#FF9F43'
+    },
+    {
+      id: '3',
+      title: 'Compliance Rate',
+      value: `${stats.complianceRate}%`,
+      description: 'Safety compliance score',
+      change: '+2.1%',
+      trend: 'up',
+      icon: BarChart3,
+      color: 'rgba(234, 84, 85, 0.08)',
+      borderColor: '#EA5455'
+    },
+    {
+      id: '4',
+      title: 'Active Routes',
+      value: stats.activeRoutes.toString(),
+      description: 'Currently operating routes',
+      change: '+5.3%',
+      trend: 'up',
+      icon: MapPin,
+      color: 'rgba(0, 207, 232, 0.08)',
+      borderColor: '#00CFE8'
+    }
+  ];
+
+  if (error) {
+    console.warn('Dashboard error:', error);
+  }
+
   return (
     <DashboardLayout>
       <div className="space-y-6">
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {statCards.map((card, index) => {
+          {statCardsData.map((card, index) => {
             const Icon = card.icon;
             return (
               <Card key={card.id} className={index === 0 ? 'border-b-4' : ''} style={index === 0 ? { borderBottomColor: card.borderColor } : {}}>
