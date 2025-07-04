@@ -1,25 +1,20 @@
 'use client';
 
 import React from 'react';
-import {
-  HomeIcon,
-  UsersIcon,
-  ChartBarIcon,
-  DocumentMagnifyingGlassIcon,
-  CommandLineIcon,
-  MagnifyingGlassIcon,
-  CircleStackIcon,
-  TruckIcon,
-  BellIcon,
-  EyeIcon,
-  MapIcon,
-  ChevronDownIcon,
-  ChevronUpIcon,
-  EllipsisVerticalIcon
-} from '@heroicons/react/24/outline';
-import {
-  StarIcon,
-} from '@heroicons/react/24/solid';
+
+// Simple icons using text/emojis instead of @heroicons
+const HomeIcon = ({ className }: { className?: string }) => <span className={className}>🏠</span>;
+const UsersIcon = ({ className }: { className?: string }) => <span className={className}>👥</span>;
+const TruckIcon = ({ className }: { className?: string }) => <span className={className}>🚛</span>;
+const ChartBarIcon = ({ className }: { className?: string }) => <span className={className}>📊</span>;
+const DocumentMagnifyingGlassIcon = ({ className }: { className?: string }) => <span className={className}>🔍</span>;
+const MapIcon = ({ className }: { className?: string }) => <span className={className}>🗺️</span>;
+const BellIcon = ({ className }: { className?: string }) => <span className={className}>🔔</span>;
+const EyeIcon = ({ className }: { className?: string }) => <span className={className}>👁️</span>;
+const StarIcon = ({ className }: { className?: string }) => <span className={className}>⭐</span>;
+const ChevronDownIcon = ({ className }: { className?: string }) => <span className={className}>▼</span>;
+const ChevronUpIcon = ({ className }: { className?: string }) => <span className={className}>▲</span>;
+const EllipsisVerticalIcon = ({ className }: { className?: string }) => <span className={className}>⋮</span>;
 
 // Types for our data
 interface StatCard {
@@ -145,93 +140,66 @@ const menuItems = [
   { name: 'Users', icon: UsersIcon, active: false, href: '/users' }
 ];
 
-const reportsItems = [
-  { name: 'Complete Report', icon: ChartBarIcon, href: '/reports/complete' },
-  { name: 'Manifest Search', icon: DocumentMagnifyingGlassIcon, href: '/reports/manifest' },
-  { name: 'Compatibility', icon: CommandLineIcon, href: '/reports/compatibility' },
-  { name: 'EPG Search', icon: MagnifyingGlassIcon, href: '/reports/epg' }
-];
-
-const directoryItems = [
-  { name: 'SDS Directory', icon: CircleStackIcon, href: '/directory/sds' },
-  { name: 'EPG Directory', icon: CircleStackIcon, href: '/directory/epg' }
-];
-
 export default function Dashboard() {
 
   return (
     <div className="min-h-screen bg-[#F8F7FA]">
       <div className="flex">
         {/* Sidebar */}
-        <div className="w-[260px] bg-white shadow-md min-h-screen">
+        <div style={{ width: '260px', backgroundColor: 'white', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', minHeight: '100vh' }}>
           {/* Logo */}
-          <div className="flex justify-center items-center p-6 border-b border-gray-100">
-            <div className="text-xl font-bold text-[#153F9F]">
+          <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '1.5rem', borderBottom: '1px solid #f3f4f6' }}>
+            <div style={{ fontSize: '1.25rem', fontWeight: 'bold', color: '#3b82f6' }}>
               SafeShipper
             </div>
           </div>
 
           {/* Navigation */}
-          <nav className="p-4">
+          <nav style={{ padding: '1rem' }}>
             {/* Main Menu */}
-            <div className="mb-6">
+            <div style={{ marginBottom: '1.5rem' }}>
               {menuItems.map((item) => {
                 const Icon = item.icon;
                 return (
                   <a
                     key={item.name}
                     href={item.href}
-                    className={`flex items-center gap-3 px-4 py-2 rounded-md mb-1 transition-colors ${
-                      item.active
-                        ? 'bg-gradient-to-r from-[#153F9F] to-[rgba(21,63,159,0.7)] text-white shadow-lg'
-                        : 'text-gray-700 hover:bg-gray-100'
-                    }`}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.75rem',
+                      padding: '0.5rem 1rem',
+                      borderRadius: '0.375rem',
+                      marginBottom: '0.25rem',
+                      textDecoration: 'none',
+                      transition: 'background-color 0.2s',
+                      backgroundColor: item.active ? '#3b82f6' : 'transparent',
+                      color: item.active ? 'white' : '#374151'
+                    }}
+                    onMouseEnter={(e) => {
+                      if (!item.active) e.currentTarget.style.backgroundColor = '#f3f4f6'
+                    }}
+                    onMouseLeave={(e) => {
+                      if (!item.active) e.currentTarget.style.backgroundColor = 'transparent'
+                    }}
                   >
-                    <Icon className="w-5 h-5" />
-                    <span className="font-medium">{item.name}</span>
+                    <Icon className="text-lg" />
+                    <span style={{ fontWeight: '500' }}>{item.name}</span>
                   </a>
                 );
               })}
             </div>
 
-            {/* Reports Section */}
-            <div className="mb-6">
-              <div className="px-4 py-2 text-xs font-medium text-gray-500 uppercase tracking-wide">
-                Reports
-              </div>
-              {reportsItems.map((item) => {
-                const Icon = item.icon;
-                return (
-                  <a
-                    key={item.name}
-                    href={item.href}
-                    className="flex items-center gap-3 px-4 py-2 rounded-md mb-1 text-gray-700 hover:bg-gray-100 transition-colors"
-                  >
-                    <Icon className="w-5 h-5" />
-                    <span className="font-medium">{item.name}</span>
-                  </a>
-                );
-              })}
-            </div>
-
-            {/* Directory Section */}
-            <div>
-              <div className="px-4 py-2 text-xs font-medium text-gray-500 uppercase tracking-wide">
-                Directory
-              </div>
-              {directoryItems.map((item) => {
-                const Icon = item.icon;
-                return (
-                  <a
-                    key={item.name}
-                    href={item.href}
-                    className="flex items-center gap-3 px-4 py-2 rounded-md mb-1 text-gray-700 hover:bg-gray-100 transition-colors"
-                  >
-                    <Icon className="w-5 h-5" />
-                    <span className="font-medium">{item.name}</span>
-                  </a>
-                );
-              })}
+            {/* Simple Links */}
+            <div style={{ borderTop: '1px solid #f3f4f6', paddingTop: '1rem' }}>
+              <a href="/users" style={{ display: 'block', padding: '0.5rem 1rem', color: '#6b7280', textDecoration: 'none', fontSize: '0.875rem' }}>Users</a>
+              <a href="/shipments" style={{ display: 'block', padding: '0.5rem 1rem', color: '#6b7280', textDecoration: 'none', fontSize: '0.875rem' }}>Shipments</a>
+              <a href="/fleet" style={{ display: 'block', padding: '0.5rem 1rem', color: '#6b7280', textDecoration: 'none', fontSize: '0.875rem' }}>Fleet</a>
+              <a href="/dg-compliance" style={{ display: 'block', padding: '0.5rem 1rem', color: '#6b7280', textDecoration: 'none', fontSize: '0.875rem' }}>DG Compliance</a>
+              <a href="/customers" style={{ display: 'block', padding: '0.5rem 1rem', color: '#6b7280', textDecoration: 'none', fontSize: '0.875rem' }}>Customers</a>
+              <a href="/safety" style={{ display: 'block', padding: '0.5rem 1rem', color: '#6b7280', textDecoration: 'none', fontSize: '0.875rem' }}>Safety</a>
+              <a href="/reports" style={{ display: 'block', padding: '0.5rem 1rem', color: '#6b7280', textDecoration: 'none', fontSize: '0.875rem' }}>Reports</a>
+              <a href="/settings" style={{ display: 'block', padding: '0.5rem 1rem', color: '#6b7280', textDecoration: 'none', fontSize: '0.875rem' }}>Settings</a>
             </div>
           </nav>
         </div>
@@ -241,15 +209,27 @@ export default function Dashboard() {
           {/* Header */}
           <div className="bg-white rounded-lg shadow-sm mb-6 p-4">
             <div className="flex items-center justify-between">
-              <div className="flex-1 max-w-lg">
-                <div className="relative">
-                  <MagnifyingGlassIcon className="w-5 h-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-                  <input
-                    type="text"
-                    placeholder="Search (Ctrl+/)"
-                    className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#153F9F] focus:border-transparent"
-                  />
-                </div>
+              <div style={{ flex: 1, maxWidth: '32rem' }}>
+                <input
+                  type="text"
+                  placeholder="🔍 Search (Ctrl+/)"
+                  style={{
+                    width: '100%',
+                    padding: '0.5rem 1rem',
+                    border: '1px solid #e5e7eb',
+                    borderRadius: '0.5rem',
+                    outline: 'none',
+                    fontSize: '0.875rem'
+                  }}
+                  onFocus={(e) => {
+                    e.target.style.borderColor = '#3b82f6'
+                    e.target.style.boxShadow = '0 0 0 3px rgba(59, 130, 246, 0.1)'
+                  }}
+                  onBlur={(e) => {
+                    e.target.style.borderColor = '#e5e7eb'
+                    e.target.style.boxShadow = 'none'
+                  }}
+                />
               </div>
               <div className="flex items-center gap-4">
                 <button className="relative p-2">
