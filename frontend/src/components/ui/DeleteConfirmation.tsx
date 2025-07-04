@@ -1,88 +1,66 @@
-import * as React from "react"
-import { Modal } from "./Modal"
-import { Button } from "./button"
+import Modal from './Modal'
+import Button from './button'
 
 interface DeleteConfirmationProps {
   isOpen: boolean
   onClose: () => void
   onConfirm: () => void
-  title: string
-  message: string
-  isLoading?: boolean
-  confirmText?: string
-  cancelText?: string
+  title?: string
+  message?: string
+  loading?: boolean
 }
 
-export const DeleteConfirmation = React.forwardRef<HTMLDivElement, DeleteConfirmationProps>(
-  ({ 
-    isOpen, 
-    onClose, 
-    onConfirm, 
-    title, 
-    message, 
-    isLoading = false,
-    confirmText = "Delete",
-    cancelText = "Cancel"
-  }, ref) => {
-    const handleConfirm = () => {
-      onConfirm()
-    }
-
-    return (
-      <Modal
-        ref={ref}
-        isOpen={isOpen}
-        onClose={onClose}
-        title={title}
-        className="max-w-md"
-      >
-        <div className="space-y-4">
-          {/* Warning Icon */}
-          <div className="flex items-center justify-center w-12 h-12 mx-auto bg-red-100 rounded-full">
-            <svg
-              className="w-6 h-6 text-red-600"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16c-.77.833.192 2.5 1.732 2.5z"
-              />
-            </svg>
-          </div>
-          
-          {/* Message */}
-          <div className="text-center">
-            <p className="text-sm text-gray-500">{message}</p>
-          </div>
-          
-          {/* Actions */}
-          <div className="flex space-x-3 justify-end">
-            <Button
-              variant="outline"
-              onClick={onClose}
-              disabled={isLoading}
-            >
-              {cancelText}
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={handleConfirm}
-              loading={isLoading}
-              disabled={isLoading}
-            >
-              {confirmText}
-            </Button>
-          </div>
+export function DeleteConfirmation({
+  isOpen,
+  onClose,
+  onConfirm,
+  title = 'Confirm Delete',
+  message = 'Are you sure you want to delete this item? This action cannot be undone.',
+  loading = false,
+}: DeleteConfirmationProps) {
+  return (
+    <Modal isOpen={isOpen} onClose={onClose} title={title}>
+      <div style={{ textAlign: 'center' }}>
+        <div style={{ 
+          fontSize: '3rem', 
+          color: '#ef4444', 
+          marginBottom: '1rem',
+          display: 'flex',
+          justifyContent: 'center'
+        }}>
+          ⚠️
         </div>
-      </Modal>
-    )
-  }
-)
-
-DeleteConfirmation.displayName = "DeleteConfirmation"
+        <p style={{ 
+          marginBottom: '1.5rem', 
+          color: '#374151',
+          fontSize: '1rem',
+          lineHeight: '1.5'
+        }}>
+          {message}
+        </p>
+        <div style={{ 
+          display: 'flex', 
+          gap: '0.75rem', 
+          justifyContent: 'center' 
+        }}>
+          <Button
+            variant="outline"
+            onClick={onClose}
+            disabled={loading}
+          >
+            Cancel
+          </Button>
+          <Button
+            variant="destructive"
+            onClick={onConfirm}
+            loading={loading}
+          >
+            Delete
+          </Button>
+        </div>
+      </div>
+    </Modal>
+  )
+}
 
 export default DeleteConfirmation

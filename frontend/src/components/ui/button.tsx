@@ -1,78 +1,82 @@
 import * as React from "react"
-import { cn } from "../../lib/utils"
-import { ButtonVariant, ButtonSize } from "../../lib/types"
 
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: ButtonVariant
-  size?: ButtonSize
+  variant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'destructive'
+  size?: 'sm' | 'md' | 'lg'
   loading?: boolean
   children: React.ReactNode
+  className?: string
 }
 
-const buttonVariants = {
-  primary: "bg-blue-600 hover:bg-blue-700 text-white shadow-md",
-  secondary: "bg-gray-600 hover:bg-gray-700 text-white shadow-md",
-  outline: "border border-gray-300 bg-white hover:bg-gray-50 text-gray-700",
-  ghost: "hover:bg-gray-100 text-gray-700",
-  destructive: "bg-red-600 hover:bg-red-700 text-white shadow-md",
-}
-
-const buttonSizes = {
-  sm: "px-3 py-1.5 text-sm",
-  md: "px-4 py-2 text-sm",
-  lg: "px-6 py-3 text-base",
-}
-
-export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ 
-  className,
-    variant = "primary", 
-    size = "md", 
-    loading = false,
-    disabled,
-    children,
-  ...props
-  }, ref) => {
-  return (
-      <button
-        className={cn(
-          "inline-flex items-center justify-center font-medium rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed",
-          buttonVariants[variant],
-          buttonSizes[size],
-          className
-        )}
-        disabled={disabled || loading}
-        ref={ref}
-      {...props}
-      >
-        {loading && (
-          <svg
-            className="animate-spin -ml-1 mr-2 h-4 w-4"
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-            viewBox="0 0 24 24"
-          >
-            <circle
-              className="opacity-25"
-              cx="12"
-              cy="12"
-              r="10"
-              stroke="currentColor"
-              strokeWidth="4"
-            />
-            <path
-              className="opacity-75"
-              fill="currentColor"
-              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-            />
-          </svg>
-        )}
-        {children}
-      </button>
-    )
+const getButtonStyles = (variant: string, size: string) => {
+  const variants = {
+    primary: 'background-color: #3b82f6; color: white; border: none;',
+    secondary: 'background-color: #6b7280; color: white; border: none;',
+    outline: 'background-color: white; color: #374151; border: 1px solid #d1d5db;',
+    ghost: 'background-color: transparent; color: #374151; border: none;',
+    destructive: 'background-color: #ef4444; color: white; border: none;',
   }
-)
 
-Button.displayName = "Button"
+  const sizes = {
+    sm: 'padding: 0.375rem 0.75rem; font-size: 0.875rem;',
+    md: 'padding: 0.5rem 1rem; font-size: 0.875rem;',
+    lg: 'padding: 0.75rem 1.5rem; font-size: 1rem;',
+  }
+
+  return `
+    ${variants[variant as keyof typeof variants]}
+    ${sizes[size as keyof typeof sizes]}
+    border-radius: 0.375rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+  `
+}
+
+export function Button({ 
+  variant = 'primary', 
+  size = 'md', 
+  loading = false,
+  disabled,
+  children,
+  style,
+  className,
+  ...props
+}: ButtonProps) {
+  const buttonStyles = getButtonStyles(variant, size)
+  
+  return (
+    <button
+      style={{
+        ...Object.fromEntries(
+          buttonStyles.split(';').map(s => s.split(':').map(p => p.trim())).filter(p => p.length === 2)
+        ),
+        opacity: disabled || loading ? '0.5' : '1',
+        cursor: disabled || loading ? 'not-allowed' : 'pointer',
+        ...style
+      }}
+      className={className}
+      disabled={disabled || loading}
+      {...props}
+    >
+      {loading && (
+        <span style={{ 
+          display: 'inline-block',
+          width: '1rem',
+          height: '1rem',
+          border: '2px solid currentColor',
+          borderRightColor: 'transparent',
+          borderRadius: '50%',
+          animation: 'spin 1s linear infinite'
+        }} />
+      )}
+      {children}
+    </button>
+  )
+}
 
 export default Button

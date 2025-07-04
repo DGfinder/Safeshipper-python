@@ -1,10 +1,10 @@
-// UI Components Barrel Export
-export { Button } from "./button"
-export { Alert, AlertDescription } from "./alert"
-export { Badge } from "./badge"
-export { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "./card"
-export { Modal } from "./Modal"
-export { DeleteConfirmation } from "./DeleteConfirmation"
+// Export all UI components
+export { default as Button } from './button'
+export { default as Alert, AlertDescription } from './alert'
+export { default as Badge } from './badge'
+export { default as Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from './card'
+export { default as Modal } from './Modal'
+export { default as DeleteConfirmation } from './DeleteConfirmation'
 
 // Re-export default exports for backward compatibility
 export { default as ButtonDefault } from "./button"

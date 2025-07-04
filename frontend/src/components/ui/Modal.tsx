@@ -1,82 +1,87 @@
-import * as React from "react"
-import { cn } from "../../lib/utils"
-import { ModalProps } from "../../lib/types"
+import { useEffect } from 'react'
 
-export const Modal = React.forwardRef<HTMLDivElement, ModalProps>(
-  ({ isOpen, onClose, title, children, className, ...props }, ref) => {
-    // Handle escape key
-    React.useEffect(() => {
-      const handleEscape = (event: KeyboardEvent) => {
-        if (event.key === 'Escape' && isOpen) {
-          onClose()
-        }
+interface ModalProps {
+  isOpen: boolean
+  onClose: () => void
+  title?: string
+  children: React.ReactNode
+}
+
+export function Modal({ isOpen, onClose, title, children }: ModalProps) {
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose()
       }
+    }
 
-      if (isOpen) {
-        document.addEventListener('keydown', handleEscape)
-        // Prevent body scroll when modal is open
-        document.body.style.overflow = 'hidden'
-      }
+    if (isOpen) {
+      document.addEventListener('keydown', handleKeyDown)
+      document.body.style.overflow = 'hidden'
+    }
 
-      return () => {
-        document.removeEventListener('keydown', handleEscape)
-        document.body.style.overflow = 'unset'
-      }
-    }, [isOpen, onClose])
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown)
+      document.body.style.overflow = 'unset'
+    }
+  }, [isOpen, onClose])
 
-    if (!isOpen) return null
+  if (!isOpen) return null
 
-    return (
+  return (
+    <div
+      style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        zIndex: 50,
+      }}
+      onClick={onClose}
+    >
       <div
-        className="fixed inset-0 z-50 flex items-center justify-center p-4"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="modal-title"
-        {...props}
+        style={{
+          backgroundColor: 'white',
+          borderRadius: '0.5rem',
+          padding: '1.5rem',
+          maxWidth: '32rem',
+          width: '90%',
+          maxHeight: '90vh',
+          overflowY: 'auto',
+          boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+        }}
+        onClick={(e) => e.stopPropagation()}
       >
-        {/* Backdrop */}
-        <div
-          className="fixed inset-0 bg-black bg-opacity-50 transition-opacity"
-          onClick={onClose}
-          aria-hidden="true"
-        />
-        
-        {/* Modal */}
-        <div
-          ref={ref}
-          className={cn(
-            "relative bg-white rounded-lg shadow-xl max-w-md w-full max-h-[90vh] overflow-hidden",
-            "transform transition-all duration-300 ease-out",
-            className
-          )}
-        >
-          {/* Header */}
-          <div className="flex items-center justify-between p-6 border-b border-gray-200">
-            <h2 id="modal-title" className="text-lg font-semibold text-gray-900">
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+          {title && (
+            <h2 style={{ fontSize: '1.25rem', fontWeight: 'bold', margin: 0 }}>
               {title}
             </h2>
-            <button
-              type="button"
-              onClick={onClose}
-              className="text-gray-400 hover:text-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 rounded-md p-1"
-              aria-label="Close modal"
-            >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-          </div>
-          
-          {/* Content */}
-          <div className="p-6 overflow-y-auto max-h-[calc(90vh-8rem)]">
-            {children}
-          </div>
+          )}
+          <button
+            onClick={onClose}
+            style={{
+              background: 'none',
+              border: 'none',
+              fontSize: '1.5rem',
+              cursor: 'pointer',
+              padding: '0.25rem',
+              color: '#6b7280',
+              marginLeft: 'auto',
+            }}
+          >
+            ×
+          </button>
         </div>
+        <div>{children}</div>
       </div>
-    )
-  }
-)
-
-Modal.displayName = "Modal"
+    </div>
+  )
+}
 
 export default Modal

@@ -1,39 +1,56 @@
 import * as React from "react"
-import { cn } from "../../lib/utils"
-import { BadgeVariant } from "../../lib/types"
 
 interface BadgeProps extends React.HTMLAttributes<HTMLSpanElement> {
-  variant?: BadgeVariant
+  variant?: 'default' | 'success' | 'warning' | 'error' | 'info' | 'outline'
   children: React.ReactNode
+  className?: string
 }
 
-const badgeVariants = {
-  default: "bg-gray-100 text-gray-800 border-gray-200",
-  success: "bg-green-100 text-green-800 border-green-200",
-  warning: "bg-yellow-100 text-yellow-800 border-yellow-200",
-  error: "bg-red-100 text-red-800 border-red-200",
-  info: "bg-blue-100 text-blue-800 border-blue-200",
-  outline: "border-gray-300 bg-white text-gray-700",
+const getBadgeStyles = (variant: string) => {
+  const variants = {
+    default: 'background-color: #374151; color: white;',
+    success: 'background-color: #10b981; color: white;',
+    warning: 'background-color: #f59e0b; color: white;',
+    error: 'background-color: #ef4444; color: white;',
+    info: 'background-color: #3b82f6; color: white;',
+    outline: 'background-color: transparent; color: #374151; border: 1px solid #d1d5db;',
+  }
+
+  return `
+    ${variants[variant as keyof typeof variants]}
+    padding: 0.25rem 0.5rem;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    display: inline-flex;
+    align-items: center;
+    white-space: nowrap;
+  `
 }
 
-export const Badge = React.forwardRef<HTMLSpanElement, BadgeProps>(
-  ({ className, variant = "default", children, ...props }, ref) => {
-    return (
-      <span
-        ref={ref}
-        className={cn(
-          "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border",
-          badgeVariants[variant],
-          className
-        )}
+export function Badge({ 
+  variant = 'default', 
+  children, 
+  style,
+  className,
+  ...props 
+}: BadgeProps) {
+  const badgeStyles = getBadgeStyles(variant)
+  
+  return (
+    <span
+      style={{
+        ...Object.fromEntries(
+          badgeStyles.split(';').map(s => s.split(':').map(p => p.trim())).filter(p => p.length === 2)
+        ),
+        ...style
+      }}
+      className={className}
       {...props}
-      >
-        {children}
-      </span>
+    >
+      {children}
+    </span>
   )
 }
-)
-
-Badge.displayName = "Badge"
 
 export default Badge
