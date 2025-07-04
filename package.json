@@ -6,8 +6,7 @@
     "build": "cd frontend && npm run build",
     "dev": "cd frontend && npm run dev",
     "start": "cd frontend && npm run start", 
-    "lint": "cd frontend && npm run lint",
-    "vercel-build": "cd frontend && npm ci && npm run build"
+    "lint": "cd frontend && npm run lint"
   },
   "dependencies": {
     "next": "15.3.4",
