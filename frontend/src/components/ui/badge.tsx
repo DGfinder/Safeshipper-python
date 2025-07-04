@@ -1,6 +1,6 @@
 import * as React from "react"
-import { cn } from "@/lib/utils"
-import { BadgeVariant } from "@/lib/types"
+import { cn } from "../../lib/utils"
+import { BadgeVariant } from "../../lib/types"
 
 interface BadgeProps extends React.HTMLAttributes<HTMLSpanElement> {
   variant?: BadgeVariant
@@ -26,12 +26,12 @@ export const Badge = React.forwardRef<HTMLSpanElement, BadgeProps>(
           badgeVariants[variant],
           className
         )}
-        {...props}
+      {...props}
       >
         {children}
       </span>
-    )
-  }
+  )
+}
 )
 
 Badge.displayName = "Badge"

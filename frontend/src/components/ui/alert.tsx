@@ -1,6 +1,6 @@
 import * as React from "react"
-import { cn } from "@/lib/utils"
-import { AlertVariant } from "@/lib/types"
+import { cn } from "../../lib/utils"
+import { AlertVariant } from "../../lib/types"
 
 interface AlertProps extends React.HTMLAttributes<HTMLDivElement> {
   variant?: AlertVariant
@@ -61,7 +61,7 @@ const alertIcons = {
 
 export const Alert = React.forwardRef<HTMLDivElement, AlertProps>(
   ({ className, variant = "info", title, children, onClose, ...props }, ref) => {
-    return (
+  return (
       <div
         ref={ref}
         className={cn(
@@ -83,8 +83,8 @@ export const Alert = React.forwardRef<HTMLDivElement, AlertProps>(
               </h3>
             )}
             <div className="text-sm">
-              {children}
-            </div>
+      {children}
+    </div>
           </div>
           {onClose && (
             <div className="ml-auto pl-3">
@@ -112,14 +112,14 @@ export const Alert = React.forwardRef<HTMLDivElement, AlertProps>(
 
 export const AlertDescription = React.forwardRef<HTMLDivElement, AlertDescriptionProps>(
   ({ className, children, ...props }, ref) => {
-    return (
+  return (
       <div
         ref={ref}
         className={cn("text-sm", className)}
         {...props}
       >
-        {children}
-      </div>
+      {children}
+    </div>
     )
   }
 )

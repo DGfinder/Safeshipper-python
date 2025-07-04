@@ -181,9 +181,9 @@ export default function LoginPage() {
                     {isLoading ? (
                       <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
                     ) : (
-                      <span className="w-[54px] h-[18px] font-poppins font-medium text-[15px] leading-[18px] flex items-center text-white tracking-[0.43px]">
-                        Sign in
-                      </span>
+                    <span className="w-[54px] h-[18px] font-poppins font-medium text-[15px] leading-[18px] flex items-center text-white tracking-[0.43px]">
+                      Sign in
+                    </span>
                     )}
                   </div>
                 </button>

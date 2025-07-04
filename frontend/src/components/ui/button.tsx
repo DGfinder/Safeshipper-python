@@ -1,6 +1,6 @@
 import * as React from "react"
-import { cn } from "@/lib/utils"
-import { ButtonVariant, ButtonSize } from "@/lib/types"
+import { cn } from "../../lib/utils"
+import { ButtonVariant, ButtonSize } from "../../lib/types"
 
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: ButtonVariant
@@ -25,15 +25,15 @@ const buttonSizes = {
 
 export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
   ({ 
-    className, 
+  className,
     variant = "primary", 
     size = "md", 
     loading = false,
     disabled,
     children,
-    ...props 
+  ...props
   }, ref) => {
-    return (
+  return (
       <button
         className={cn(
           "inline-flex items-center justify-center font-medium rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed",
@@ -43,7 +43,7 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
         )}
         disabled={disabled || loading}
         ref={ref}
-        {...props}
+      {...props}
       >
         {loading && (
           <svg

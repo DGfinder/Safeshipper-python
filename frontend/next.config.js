@@ -20,6 +20,12 @@ const nextConfig = {
   
   // Configure webpack for better bundle optimization
   webpack: (config, { dev, isServer }) => {
+    // Add path aliases for better module resolution
+    config.resolve.alias = {
+      ...config.resolve.alias,
+      '@': require('path').resolve(__dirname, 'src'),
+    }
+    
     // Optimize bundle size
     if (!dev && !isServer) {
       config.optimization.splitChunks = {
@@ -57,7 +63,7 @@ const nextConfig = {
           {
             key: 'X-Frame-Options',
             value: 'DENY',
-          },
+  },
           {
             key: 'X-XSS-Protection',
             value: '1; mode=block',

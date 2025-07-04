@@ -1,6 +1,6 @@
 import * as React from "react"
-import { cn } from "@/lib/utils"
-import { ModalProps } from "@/lib/types"
+import { cn } from "../../lib/utils"
+import { ModalProps } from "../../lib/types"
 
 export const Modal = React.forwardRef<HTMLDivElement, ModalProps>(
   ({ isOpen, onClose, title, children, className, ...props }, ref) => {

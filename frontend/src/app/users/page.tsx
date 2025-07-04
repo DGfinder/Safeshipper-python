@@ -272,15 +272,15 @@ export default function UsersPage() {
       </Modal>
 
       {/* Delete Confirmation Modal */}
-      {deletingUser && (
-        <DeleteConfirmation
+        {deletingUser && (
+          <DeleteConfirmation
           isOpen={!!deletingUser}
           onClose={() => setDeletingUser(null)}
-          title="Delete User"
-          message={`Are you sure you want to delete user "${deletingUser.username}"? This action cannot be undone.`}
-          onConfirm={() => deleteUserMutation.mutate(deletingUser.id)}
-        />
-      )}
+            title="Delete User"
+            message={`Are you sure you want to delete user "${deletingUser.username}"? This action cannot be undone.`}
+            onConfirm={() => deleteUserMutation.mutate(deletingUser.id)}
+          />
+        )}
     </div>
   );
 }

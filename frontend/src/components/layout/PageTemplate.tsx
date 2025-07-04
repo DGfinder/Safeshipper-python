@@ -19,23 +19,23 @@ export default function PageTemplate({
     <div className="min-h-screen bg-[#F8F7FA] p-6">
       <div className="max-w-7xl mx-auto space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
+            <div className="flex items-center justify-between">
+              <div>
             <h1 className="text-2xl font-bold text-gray-900">{title}</h1>
-            {description && (
+                {description && (
               <p className="mt-1 text-sm text-gray-600">{description}</p>
-            )}
-          </div>
-          {actions && (
+                )}
+              </div>
+              {actions && (
             <div className="flex items-center gap-3">
-              {actions}
+                  {actions}
+                </div>
+              )}
             </div>
-          )}
-        </div>
 
         {/* Content */}
         <div className="space-y-6">
-          {children}
+            {children}
         </div>
       </div>
     </div>
