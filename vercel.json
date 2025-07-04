@@ -1,6 +1,10 @@
 {
   "version": 2,
   "name": "safeshipper-frontend",
+  "buildCommand": "cd frontend && npm run build",
+  "outputDirectory": "frontend/.next",
+  "installCommand": "npm install && cd frontend && npm install",
+  "framework": "nextjs",
   "builds": [
     {
       "src": "frontend/package.json",
@@ -12,11 +16,5 @@
       "src": "/(.*)",
       "dest": "frontend/$1"
     }
-  ],
-  "projectSettings": {
-    "framework": "nextjs",
-    "buildCommand": "npm run build",
-    "installCommand": "npm install",
-    "outputDirectory": ".next"
-  }
+  ]
 }
