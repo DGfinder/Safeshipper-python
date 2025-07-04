@@ -33,7 +33,8 @@
       "Bash(fi)",
       "Bash(for file in src/app/*/*/*/page.tsx)",
       "Bash(then echo \"Fixing 4-level: $file\")",
-      "Bash(npx tsc:*)"
+      "Bash(npx tsc:*)",
+      "Bash(npm install:*)"
     ],
     "deny": []
   }

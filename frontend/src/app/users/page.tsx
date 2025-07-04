@@ -1,94 +1,153 @@
 'use client';
 
+import { DashboardLayout } from '@/components/layout/dashboard-layout';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Plus, Search, MoreHorizontal, Edit2, Trash2 } from 'lucide-react';
+
+const users = [
+  {
+    id: 1,
+    username: 'john.doe',
+    email: 'john@example.com',
+    role: 'Driver',
+    status: 'Active',
+    avatar: 'JD',
+    lastLogin: '2 hours ago'
+  },
+  {
+    id: 2,
+    username: 'jane.smith',
+    email: 'jane@example.com',
+    role: 'Dispatcher',
+    status: 'Active',
+    avatar: 'JS',
+    lastLogin: '1 day ago'
+  },
+  {
+    id: 3,
+    username: 'admin.user',
+    email: 'admin@example.com',
+    role: 'Admin',
+    status: 'Active',
+    avatar: 'AU',
+    lastLogin: '5 minutes ago'
+  },
+  {
+    id: 4,
+    username: 'mike.wilson',
+    email: 'mike@example.com',
+    role: 'Safety Officer',
+    status: 'Inactive',
+    avatar: 'MW',
+    lastLogin: '3 days ago'
+  }
+];
+
 export default function UsersPage() {
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: '#f8f9fa' }}>
-      <div style={{ display: 'flex' }}>
-        {/* Simple Sidebar */}
-        <div style={{ width: '260px', backgroundColor: 'white', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', minHeight: '100vh' }}>
-          <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '1.5rem', borderBottom: '1px solid #f3f4f6' }}>
-            <div style={{ fontSize: '1.25rem', fontWeight: 'bold', color: '#3b82f6' }}>
-              SafeShipper
-            </div>
+    <DashboardLayout>
+      <div className="space-y-6">
+        {/* Page Header */}
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">User Management</h1>
+            <p className="text-gray-600 mt-1">Manage system users, roles, and permissions</p>
           </div>
-          
-          <nav style={{ padding: '1rem' }}>
-            <div style={{ marginBottom: '1rem' }}>
-              <a href="/dashboard" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.5rem 1rem', borderRadius: '0.375rem', textDecoration: 'none', color: '#6b7280' }}>
-                <span>🏠</span>
-                <span>Dashboard</span>
-              </a>
-              <a href="/users" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.5rem 1rem', borderRadius: '0.375rem', textDecoration: 'none', backgroundColor: '#3b82f6', color: 'white' }}>
-                <span>👥</span>
-                <span>Users</span>
-              </a>
-            </div>
-          </nav>
+          <Button className="bg-[#153F9F] hover:bg-blue-700">
+            <Plus className="w-4 h-4 mr-2" />
+            Add User
+          </Button>
         </div>
 
-        {/* Main Content */}
-        <div style={{ flex: 1, padding: '1.5rem' }}>
-          <div style={{ backgroundColor: 'white', borderRadius: '0.5rem', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', padding: '2rem' }}>
-            <h1 style={{ fontSize: '1.875rem', fontWeight: 'bold', marginBottom: '1rem', color: '#1f2937' }}>
-              User Management
-            </h1>
-            <p style={{ color: '#6b7280', marginBottom: '2rem' }}>
-              Manage system users, roles, and permissions.
-            </p>
-            
-            {/* Simple Users Table */}
-            <div style={{ backgroundColor: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: '0.5rem', overflow: 'hidden' }}>
-              <div style={{ backgroundColor: '#f3f4f6', padding: '1rem', borderBottom: '1px solid #e5e7eb' }}>
-                <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: '600', color: '#374151' }}>Users</h3>
+        {/* Search and Filters */}
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center space-x-4">
+              <div className="flex-1 max-w-sm">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                  <Input
+                    placeholder="Search users..."
+                    className="pl-10"
+                  />
+                </div>
               </div>
-              <div style={{ padding: '1rem' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                  <thead>
-                    <tr style={{ backgroundColor: '#f9fafb' }}>
-                      <th style={{ padding: '0.75rem', textAlign: 'left', borderBottom: '1px solid #e5e7eb', color: '#6b7280', fontSize: '0.875rem' }}>Username</th>
-                      <th style={{ padding: '0.75rem', textAlign: 'left', borderBottom: '1px solid #e5e7eb', color: '#6b7280', fontSize: '0.875rem' }}>Email</th>
-                      <th style={{ padding: '0.75rem', textAlign: 'left', borderBottom: '1px solid #e5e7eb', color: '#6b7280', fontSize: '0.875rem' }}>Role</th>
-                      <th style={{ padding: '0.75rem', textAlign: 'left', borderBottom: '1px solid #e5e7eb', color: '#6b7280', fontSize: '0.875rem' }}>Status</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr>
-                      <td style={{ padding: '0.75rem', borderBottom: '1px solid #e5e7eb' }}>john.doe</td>
-                      <td style={{ padding: '0.75rem', borderBottom: '1px solid #e5e7eb' }}>john@example.com</td>
-                      <td style={{ padding: '0.75rem', borderBottom: '1px solid #e5e7eb' }}>Driver</td>
-                      <td style={{ padding: '0.75rem', borderBottom: '1px solid #e5e7eb' }}>
-                        <span style={{ backgroundColor: '#dcfce7', color: '#166534', padding: '0.25rem 0.5rem', borderRadius: '9999px', fontSize: '0.75rem' }}>
-                          Active
-                        </span>
-                      </td>
-                    </tr>
-                    <tr>
-                      <td style={{ padding: '0.75rem', borderBottom: '1px solid #e5e7eb' }}>jane.smith</td>
-                      <td style={{ padding: '0.75rem', borderBottom: '1px solid #e5e7eb' }}>jane@example.com</td>
-                      <td style={{ padding: '0.75rem', borderBottom: '1px solid #e5e7eb' }}>Dispatcher</td>
-                      <td style={{ padding: '0.75rem', borderBottom: '1px solid #e5e7eb' }}>
-                        <span style={{ backgroundColor: '#dcfce7', color: '#166534', padding: '0.25rem 0.5rem', borderRadius: '9999px', fontSize: '0.75rem' }}>
-                          Active
-                        </span>
-                      </td>
-                    </tr>
-                    <tr>
-                      <td style={{ padding: '0.75rem' }}>admin.user</td>
-                      <td style={{ padding: '0.75rem' }}>admin@example.com</td>
-                      <td style={{ padding: '0.75rem' }}>Admin</td>
-                      <td style={{ padding: '0.75rem' }}>
-                        <span style={{ backgroundColor: '#dcfce7', color: '#166534', padding: '0.25rem 0.5rem', borderRadius: '9999px', fontSize: '0.75rem' }}>
-                          Active
-                        </span>
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
+              <Button variant="outline">
+                Filter
+              </Button>
             </div>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
+
+        {/* Users Table */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Users</CardTitle>
+            <CardDescription>A list of all users in the system</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b">
+                    <th className="text-left py-3 px-4 font-medium text-gray-900">User</th>
+                    <th className="text-left py-3 px-4 font-medium text-gray-900">Role</th>
+                    <th className="text-left py-3 px-4 font-medium text-gray-900">Status</th>
+                    <th className="text-left py-3 px-4 font-medium text-gray-900">Last Login</th>
+                    <th className="text-left py-3 px-4 font-medium text-gray-900">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y">
+                  {users.map((user) => (
+                    <tr key={user.id} className="hover:bg-gray-50">
+                      <td className="py-3 px-4">
+                        <div className="flex items-center space-x-3">
+                          <div className="w-10 h-10 bg-[#153F9F] rounded-full flex items-center justify-center text-white font-medium">
+                            {user.avatar}
+                          </div>
+                          <div>
+                            <div className="font-medium text-gray-900">{user.username}</div>
+                            <div className="text-sm text-gray-500">{user.email}</div>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="py-3 px-4">
+                        <Badge variant="secondary">
+                          {user.role}
+                        </Badge>
+                      </td>
+                      <td className="py-3 px-4">
+                        <Badge variant={user.status === 'Active' ? 'success' : 'secondary'}>
+                          {user.status}
+                        </Badge>
+                      </td>
+                      <td className="py-3 px-4 text-sm text-gray-600">
+                        {user.lastLogin}
+                      </td>
+                      <td className="py-3 px-4">
+                        <div className="flex items-center space-x-2">
+                          <Button variant="ghost" size="sm">
+                            <Edit2 className="w-4 h-4" />
+                          </Button>
+                          <Button variant="ghost" size="sm">
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                          <Button variant="ghost" size="sm">
+                            <MoreHorizontal className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
       </div>
-    </div>
+    </DashboardLayout>
   );
 }

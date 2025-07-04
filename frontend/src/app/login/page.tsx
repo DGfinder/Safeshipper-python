@@ -1,32 +1,33 @@
 'use client';
 
-import Image from 'next/image';
 import Link from 'next/link';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { useAuthStore } from '@/stores/auth-store';
+import { Shield, Loader2, AlertCircle } from 'lucide-react';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
   const router = useRouter();
+  const { login, isLoading } = useAuthStore();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
+    setError('');
     
-    // Simulate a brief loading delay (you can remove this when connecting to real auth)
-    await new Promise(resolve => setTimeout(resolve, 500));
-    
-    // For now, just navigate to dashboard without validation
-    // In the future, you'll add actual authentication logic here
-    console.log('Login attempt:', { email, password, rememberMe });
-    
-    // Navigate to dashboard
-    router.push('/dashboard');
-    
-    setIsLoading(false);
+    try {
+      await login(email, password);
+      router.push('/dashboard');
+    } catch {
+      setError('Invalid email or password. Please try again.');
+    }
   };
 
   return (
@@ -58,14 +59,9 @@ export default function LoginPage() {
           <div className="w-full lg:w-[700px] h-full flex flex-col justify-center items-center p-0 gap-6 bg-white">
             
             {/* Logo */}
-            <div className="flex flex-row items-center p-0 gap-2.5 w-[400px] h-12">
-              <Image
-                src="/logo.svg"
-                alt="Safeshipper Logo"
-                width={400}
-                height={48}
-                className="w-full h-12"
-              />
+            <div className="flex items-center justify-center space-x-2 w-[400px] h-12">
+              <Shield className="h-8 w-8 text-[#153F9F]" />
+              <span className="text-2xl font-bold text-[#153F9F]">SafeShipper</span>
             </div>
 
             {/* Form Section */}
@@ -85,8 +81,16 @@ export default function LoginPage() {
                 </p>
               </div>
 
+              {/* Error Alert */}
+              {error && (
+                <Alert variant="destructive">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>{error}</AlertDescription>
+                </Alert>
+              )}
+
               {/* Form */}
-              <form className="flex flex-col items-start p-0 gap-4 w-full h-[232px]" onSubmit={handleSubmit}>
+              <form className="flex flex-col items-start p-0 gap-4 w-full" onSubmit={handleSubmit}>
                 
                 {/* Email Field */}
                 <div className="flex flex-row items-start p-0 gap-4 w-full h-[62px]">
@@ -101,19 +105,16 @@ export default function LoginPage() {
                       </label>
                     </div>
                     {/* Form Input */}
-                    <div className="w-full h-[38px] bg-white border border-[#F4F4F4] rounded-md">
-                      <input
-                        id="email"
-                        name="email"
-                        type="email"
-                        autoComplete="email"
-                        required
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        className="w-full h-[38px] px-3.5 py-1.5 font-poppins font-normal text-[15px] leading-6 border-none outline-none rounded-md placeholder-gray-400"
-                        placeholder="Enter your email"
-                      />
-                    </div>
+                    <Input
+                      id="email"
+                      name="email"
+                      type="email"
+                      autoComplete="email"
+                      required
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="Enter your email"
+                    />
                   </div>
                 </div>
 
@@ -136,57 +137,49 @@ export default function LoginPage() {
                       </Link>
                     </div>
                     {/* Form Input */}
-                    <div className="w-full h-[38px] bg-white border border-[#F4F4F4] rounded-md">
-                      <input
-                        id="password"
-                        name="password"
-                        type="password"
-                        autoComplete="current-password"
-                        required
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        className="w-full h-[38px] px-3.5 py-1.5 font-poppins font-normal text-[15px] leading-6 border-none outline-none rounded-md placeholder-gray-400"
-                        placeholder="Enter your password"
-                      />
-                    </div>
+                    <Input
+                      id="password"
+                      name="password"
+                      type="password"
+                      autoComplete="current-password"
+                      required
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="Enter your password"
+                    />
                   </div>
                 </div>
 
                 {/* Checkbox */}
-                <div className="flex flex-row items-center p-0 gap-1.5 w-[134px] h-[22px]">
-                  <input
+                <div className="flex items-center space-x-2">
+                  <Checkbox
                     id="remember-me"
-                    name="remember-me"
-                    type="checkbox"
                     checked={rememberMe}
-                    onChange={(e) => setRememberMe(e.target.checked)}
-                    className="w-[18px] h-[18px] rounded border-2 border-gray-300 text-[#153F9F] focus:ring-[#153F9F]"
+                    onCheckedChange={(checked) => setRememberMe(checked === true)}
                   />
                   <label 
                     htmlFor="remember-me" 
-                    className="w-[110px] h-[22px] font-poppins font-normal text-[15px] leading-[22px] flex items-center text-gray-700"
+                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
                   >
                     Remember Me
                   </label>
                 </div>
 
                 {/* Sign In Button */}
-                <button
+                <Button
                   type="submit"
                   disabled={isLoading}
-                  className="flex flex-row justify-center items-center p-0 w-full h-[38px] bg-[#153F9F] rounded-md shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#153F9F] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                  style={{ boxShadow: '0px 2px 4px rgba(165, 163, 174, 0.3)' }}
+                  className="w-full bg-[#153F9F] hover:bg-blue-700"
                 >
-                  <div className="flex flex-row justify-center items-center py-2.5 px-5 gap-3 w-[94px] h-[38px]">
-                    {isLoading ? (
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                    ) : (
-                    <span className="w-[54px] h-[18px] font-poppins font-medium text-[15px] leading-[18px] flex items-center text-white tracking-[0.43px]">
-                      Sign in
-                    </span>
-                    )}
-                  </div>
-                </button>
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Signing in...
+                    </>
+                  ) : (
+                    'Sign in'
+                  )}
+                </Button>
               </form>
             </div>
 

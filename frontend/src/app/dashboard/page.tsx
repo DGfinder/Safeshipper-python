@@ -1,20 +1,22 @@
 'use client';
 
 import React from 'react';
-
-// Simple icons using text/emojis instead of @heroicons
-const HomeIcon = ({ className }: { className?: string }) => <span className={className}>🏠</span>;
-const UsersIcon = ({ className }: { className?: string }) => <span className={className}>👥</span>;
-const TruckIcon = ({ className }: { className?: string }) => <span className={className}>🚛</span>;
-const ChartBarIcon = ({ className }: { className?: string }) => <span className={className}>📊</span>;
-const DocumentMagnifyingGlassIcon = ({ className }: { className?: string }) => <span className={className}>🔍</span>;
-const MapIcon = ({ className }: { className?: string }) => <span className={className}>🗺️</span>;
-const BellIcon = ({ className }: { className?: string }) => <span className={className}>🔔</span>;
-const EyeIcon = ({ className }: { className?: string }) => <span className={className}>👁️</span>;
-const StarIcon = ({ className }: { className?: string }) => <span className={className}>⭐</span>;
-const ChevronDownIcon = ({ className }: { className?: string }) => <span className={className}>▼</span>;
-const ChevronUpIcon = ({ className }: { className?: string }) => <span className={className}>▲</span>;
-const EllipsisVerticalIcon = ({ className }: { className?: string }) => <span className={className}>⋮</span>;
+import { 
+  Truck, 
+  FileSearch, 
+  BarChart3, 
+  MapPin, 
+  Eye, 
+  Star, 
+  ChevronDown, 
+  ChevronUp, 
+  MoreVertical 
+} from 'lucide-react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Progress } from '@/components/ui/progress';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { DashboardLayout } from '@/components/layout/dashboard-layout';
 
 // Types for our data
 interface StatCard {
@@ -24,7 +26,7 @@ interface StatCard {
   description: string;
   change: string;
   trend: string;
-  icon: React.ComponentType<React.SVGProps<SVGSVGElement>>;
+  icon: React.ComponentType<{ className?: string; color?: string }>;
   color: string;
   borderColor: string;
 }
@@ -48,7 +50,7 @@ const statCards: StatCard[] = [
     description: 'Active shipments in transit',
     change: '+12.5%',
     trend: 'up',
-    icon: TruckIcon,
+    icon: Truck,
     color: 'rgba(21, 63, 159, 0.08)',
     borderColor: '#153F9F'
   },
@@ -59,7 +61,7 @@ const statCards: StatCard[] = [
     description: 'Documents requiring approval',
     change: '-8.2%',
     trend: 'down',
-    icon: DocumentMagnifyingGlassIcon,
+    icon: FileSearch,
     color: 'rgba(255, 159, 67, 0.08)',
     borderColor: '#FF9F43'
   },
@@ -70,7 +72,7 @@ const statCards: StatCard[] = [
     description: 'Safety compliance score',
     change: '+2.1%',
     trend: 'up',
-    icon: ChartBarIcon,
+    icon: BarChart3,
     color: 'rgba(234, 84, 85, 0.08)',
     borderColor: '#EA5455'
   },
@@ -81,7 +83,7 @@ const statCards: StatCard[] = [
     description: 'Currently operating routes',
     change: '+5.3%',
     trend: 'up',
-    icon: MapIcon,
+    icon: MapPin,
     color: 'rgba(0, 207, 232, 0.08)',
     borderColor: '#00CFE8'
   }
@@ -135,134 +137,25 @@ const shipmentData: ShipmentRow[] = [
   }
 ];
 
-const menuItems = [
-  { name: 'Dashboard', icon: HomeIcon, active: true, href: '/dashboard' },
-  { name: 'Users', icon: UsersIcon, active: false, href: '/users' }
-];
 
 export default function Dashboard() {
-
   return (
-    <div className="min-h-screen bg-[#F8F7FA]">
-      <div className="flex">
-        {/* Sidebar */}
-        <div style={{ width: '260px', backgroundColor: 'white', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', minHeight: '100vh' }}>
-          {/* Logo */}
-          <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '1.5rem', borderBottom: '1px solid #f3f4f6' }}>
-            <div style={{ fontSize: '1.25rem', fontWeight: 'bold', color: '#3b82f6' }}>
-              SafeShipper
-            </div>
-          </div>
+    <DashboardLayout>
+      <div className="space-y-6">
 
-          {/* Navigation */}
-          <nav style={{ padding: '1rem' }}>
-            {/* Main Menu */}
-            <div style={{ marginBottom: '1.5rem' }}>
-              {menuItems.map((item) => {
-                const Icon = item.icon;
-                return (
-                  <a
-                    key={item.name}
-                    href={item.href}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.75rem',
-                      padding: '0.5rem 1rem',
-                      borderRadius: '0.375rem',
-                      marginBottom: '0.25rem',
-                      textDecoration: 'none',
-                      transition: 'background-color 0.2s',
-                      backgroundColor: item.active ? '#3b82f6' : 'transparent',
-                      color: item.active ? 'white' : '#374151'
-                    }}
-                    onMouseEnter={(e) => {
-                      if (!item.active) e.currentTarget.style.backgroundColor = '#f3f4f6'
-                    }}
-                    onMouseLeave={(e) => {
-                      if (!item.active) e.currentTarget.style.backgroundColor = 'transparent'
-                    }}
-                  >
-                    <Icon className="text-lg" />
-                    <span style={{ fontWeight: '500' }}>{item.name}</span>
-                  </a>
-                );
-              })}
-            </div>
-
-            {/* Simple Links */}
-            <div style={{ borderTop: '1px solid #f3f4f6', paddingTop: '1rem' }}>
-              <a href="/users" style={{ display: 'block', padding: '0.5rem 1rem', color: '#6b7280', textDecoration: 'none', fontSize: '0.875rem' }}>Users</a>
-              <a href="/shipments" style={{ display: 'block', padding: '0.5rem 1rem', color: '#6b7280', textDecoration: 'none', fontSize: '0.875rem' }}>Shipments</a>
-              <a href="/fleet" style={{ display: 'block', padding: '0.5rem 1rem', color: '#6b7280', textDecoration: 'none', fontSize: '0.875rem' }}>Fleet</a>
-              <a href="/dg-compliance" style={{ display: 'block', padding: '0.5rem 1rem', color: '#6b7280', textDecoration: 'none', fontSize: '0.875rem' }}>DG Compliance</a>
-              <a href="/customers" style={{ display: 'block', padding: '0.5rem 1rem', color: '#6b7280', textDecoration: 'none', fontSize: '0.875rem' }}>Customers</a>
-              <a href="/safety" style={{ display: 'block', padding: '0.5rem 1rem', color: '#6b7280', textDecoration: 'none', fontSize: '0.875rem' }}>Safety</a>
-              <a href="/reports" style={{ display: 'block', padding: '0.5rem 1rem', color: '#6b7280', textDecoration: 'none', fontSize: '0.875rem' }}>Reports</a>
-              <a href="/settings" style={{ display: 'block', padding: '0.5rem 1rem', color: '#6b7280', textDecoration: 'none', fontSize: '0.875rem' }}>Settings</a>
-            </div>
-          </nav>
-        </div>
-
-        {/* Main Content */}
-        <div className="flex-1 p-6">
-          {/* Header */}
-          <div className="bg-white rounded-lg shadow-sm mb-6 p-4">
-            <div className="flex items-center justify-between">
-              <div style={{ flex: 1, maxWidth: '32rem' }}>
-                <input
-                  type="text"
-                  placeholder="🔍 Search (Ctrl+/)"
-                  style={{
-                    width: '100%',
-                    padding: '0.5rem 1rem',
-                    border: '1px solid #e5e7eb',
-                    borderRadius: '0.5rem',
-                    outline: 'none',
-                    fontSize: '0.875rem'
-                  }}
-                  onFocus={(e) => {
-                    e.target.style.borderColor = '#3b82f6'
-                    e.target.style.boxShadow = '0 0 0 3px rgba(59, 130, 246, 0.1)'
-                  }}
-                  onBlur={(e) => {
-                    e.target.style.borderColor = '#e5e7eb'
-                    e.target.style.boxShadow = 'none'
-                  }}
-                />
-              </div>
-              <div className="flex items-center gap-4">
-                <button className="relative p-2">
-                  <BellIcon className="w-6 h-6 text-gray-600" />
-                  <span className="absolute -top-1 -right-1 w-5 h-5 bg-[#EA5455] rounded-full text-white text-xs flex items-center justify-center">
-                    4
-                  </span>
-                </button>
-                <div className="w-10 h-10 bg-[#153F9F] rounded-full flex items-center justify-center">
-                  <span className="text-white font-medium">JD</span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Stats Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
-            {statCards.map((card, index) => {
-              const Icon = card.icon;
-              return (
-                <div
-                  key={card.id}
-                  className={`bg-white rounded-lg p-6 shadow-sm ${
-                    index === 0 ? 'border-b-4' : ''
-                  }`}
-                  style={index === 0 ? { borderBottomColor: card.borderColor } : {}}
-                >
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {statCards.map((card, index) => {
+            const Icon = card.icon;
+            return (
+              <Card key={card.id} className={index === 0 ? 'border-b-4' : ''} style={index === 0 ? { borderBottomColor: card.borderColor } : {}}>
+                <CardContent className="p-6">
                   <div className="flex items-center justify-between mb-4">
                     <div
                       className="w-10 h-10 rounded-lg flex items-center justify-center"
                       style={{ backgroundColor: card.color }}
                     >
-                      <Icon className="w-6 h-6" style={{ color: card.borderColor }} />
+                      <Icon className="w-6 h-6" color={card.borderColor} />
                     </div>
                     <div className="text-right">
                       <div className="text-2xl font-bold text-gray-900">{card.value}</div>
@@ -281,72 +174,73 @@ export default function Dashboard() {
                       <span className="text-gray-500 text-xs">this month</span>
                     </div>
                   </div>
-                </div>
-              );
-            })}
-          </div>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
 
-          {/* Analytics Row */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-            {/* Review Analytics */}
-            <div className="lg:col-span-2 bg-white rounded-lg shadow-sm p-6">
-              <div className="flex items-center justify-between mb-6">
+        {/* Analytics Row */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Review Analytics */}
+          <Card className="lg:col-span-2">
+            <CardHeader>
+              <div className="flex items-center justify-between">
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-900">Customer Reviews</h3>
-                  <p className="text-sm text-gray-600">Weekly review analytics</p>
+                  <CardTitle>Customer Reviews</CardTitle>
+                  <CardDescription>Weekly review analytics</CardDescription>
                 </div>
-                <span className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm font-medium">
-                  +12.5%
-                </span>
+                <Badge variant="success">+12.5%</Badge>
               </div>
+            </CardHeader>
+            <CardContent>
               <div className="flex items-center justify-between">
                 <div className="space-y-6">
                   <div className="flex items-center gap-2">
                     <span className="text-3xl font-bold text-[#153F9F]">4.89</span>
-                    <StarIcon className="w-6 h-6 text-[#153F9F]" />
+                    <Star className="w-6 h-6 text-[#153F9F] fill-current" />
                   </div>
                   <p className="text-gray-600 font-semibold">Total 187 reviews</p>
                   <p className="text-gray-500">All reviews are from genuine customers</p>
-                  <span className="px-3 py-1 bg-blue-100 text-[#153F9F] rounded text-sm font-medium">
-                    +5 This week
-                  </span>
+                  <Badge variant="info">+5 This week</Badge>
                 </div>
                 <div className="w-px h-32 bg-gray-200"></div>
                 <div className="space-y-3 flex-1 ml-6">
                   {[
-                    { stars: 5, count: 124, width: '80%' },
-                    { stars: 4, count: 40, width: '30%' },
-                    { stars: 3, count: 12, width: '19%' },
-                    { stars: 2, count: 7, width: '9%' },
-                    { stars: 1, count: 2, width: '5%' }
+                    { stars: 5, count: 124, width: 80 },
+                    { stars: 4, count: 40, width: 30 },
+                    { stars: 3, count: 12, width: 19 },
+                    { stars: 2, count: 7, width: 9 },
+                    { stars: 1, count: 2, width: 5 }
                   ].map((item) => (
                     <div key={item.stars} className="flex items-center gap-3">
                       <span className="text-sm text-gray-600 w-12">{item.stars} Star</span>
-                      <div className="flex-1 bg-gray-100 rounded-full h-2">
-                        <div
-                          className="bg-[#153F9F] h-2 rounded-full"
-                          style={{ width: item.width }}
-                        ></div>
+                      <div className="flex-1">
+                        <Progress value={item.width} className="h-2" />
                       </div>
                       <span className="text-sm text-gray-600 w-8">{item.count}</span>
                     </div>
                   ))}
                 </div>
               </div>
-            </div>
+            </CardContent>
+          </Card>
 
-            {/* Earning Reports */}
-            <div className="bg-white rounded-lg shadow-sm p-6">
-              <div className="flex items-center justify-between mb-6">
+          {/* Earning Reports */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-900">Earning Reports</h3>
-                  <p className="text-sm text-gray-600">Monthly revenue breakdown</p>
+                  <CardTitle>Earning Reports</CardTitle>
+                  <CardDescription>Monthly revenue breakdown</CardDescription>
                 </div>
-                <button className="px-4 py-2 bg-blue-50 text-[#153F9F] rounded-lg font-medium flex items-center gap-2">
+                <Button variant="outline" size="sm">
                   2023
-                  <ChevronDownIcon className="w-4 h-4" />
-                </button>
+                  <ChevronDown className="w-4 h-4 ml-1" />
+                </Button>
               </div>
+            </CardHeader>
+            <CardContent>
               <div className="flex items-center justify-center mb-6">
                 <div className="relative w-48 h-48">
                   <svg className="w-full h-full" viewBox="0 0 200 200">
@@ -392,15 +286,21 @@ export default function Dashboard() {
                   </div>
                 ))}
               </div>
-            </div>
-          </div>
+            </CardContent>
+          </Card>
+        </div>
 
-          {/* Shipments Table */}
-          <div className="bg-white rounded-lg shadow-sm">
-            <div className="flex items-center justify-between p-6 border-b border-gray-200">
-              <h3 className="text-lg font-semibold text-gray-900">Shipments in Transit</h3>
-              <EllipsisVerticalIcon className="w-5 h-5 text-gray-400" />
+        {/* Shipments Table */}
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle>Shipments in Transit</CardTitle>
+              <Button variant="ghost" size="icon">
+                <MoreVertical className="w-4 h-4" />
+              </Button>
             </div>
+          </CardHeader>
+          <CardContent>
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead className="bg-gray-50">
@@ -421,8 +321,8 @@ export default function Dashboard() {
                         <div className="flex items-center gap-2">
                           {header}
                           <div className="flex flex-col">
-                            <ChevronUpIcon className="w-3 h-3 text-gray-400" />
-                            <ChevronDownIcon className="w-3 h-3 text-gray-400 -mt-1" />
+                            <ChevronUp className="w-3 h-3 text-gray-400" />
+                            <ChevronDown className="w-3 h-3 text-gray-400 -mt-1" />
                           </div>
                         </div>
                       </th>
@@ -435,7 +335,7 @@ export default function Dashboard() {
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center gap-3">
                           <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center">
-                            <TruckIcon className="w-5 h-5 text-gray-600" />
+                            <Truck className="w-5 h-5 text-gray-600" />
                           </div>
                           <span className="font-semibold text-gray-900">
                             {shipment.identifier}
@@ -450,18 +350,15 @@ export default function Dashboard() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex -space-x-2">
-                          {shipment.dangerousGoods.slice(0, 3).map((_, index) => (
-                            <div
-                              key={index}
-                              className="w-8 h-8 bg-gray-300 border-2 border-white rounded-full flex items-center justify-center text-xs font-medium"
-                            >
+                          {shipment.dangerousGoods.slice(0, 3).map((dg, index) => (
+                            <Badge key={index} variant="secondary" className="w-8 h-8 rounded-full p-0 text-xs border-2 border-white">
                               DG
-                            </div>
+                            </Badge>
                           ))}
                           {shipment.dangerousGoods.length > 3 && (
-                            <div className="w-8 h-8 bg-gray-100 border-2 border-white rounded-full flex items-center justify-center text-xs font-medium">
+                            <Badge variant="outline" className="w-8 h-8 rounded-full p-0 text-xs border-2 border-white">
                               +{shipment.dangerousGoods.length - 3}
-                            </div>
+                            </Badge>
                           )}
                         </div>
                       </td>
@@ -470,25 +367,20 @@ export default function Dashboard() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center gap-3">
-                          <div className="flex-1 bg-gray-200 rounded-full h-2">
-                            <div
-                              className="bg-[#153F9F] h-2 rounded-full"
-                              style={{ width: `${shipment.progress}%` }}
-                            ></div>
-                          </div>
+                          <Progress value={shipment.progress} className="flex-1" />
                           <span className="text-sm text-gray-600 w-12">
                             {shipment.progress}%
                           </span>
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center gap-3">
-                          <button className="text-gray-400 hover:text-gray-600">
-                            <EyeIcon className="w-5 h-5" />
-                          </button>
-                          <button className="text-gray-400 hover:text-gray-600">
-                            <MapIcon className="w-5 h-5" />
-                          </button>
+                        <div className="flex items-center gap-2">
+                          <Button variant="ghost" size="icon">
+                            <Eye className="w-4 h-4" />
+                          </Button>
+                          <Button variant="ghost" size="icon">
+                            <MapPin className="w-4 h-4" />
+                          </Button>
                         </div>
                       </td>
                     </tr>
@@ -496,44 +388,37 @@ export default function Dashboard() {
                 </tbody>
               </table>
             </div>
-            <div className="px-6 py-4 border-t border-gray-200 flex items-center justify-between">
+            <div className="flex items-center justify-between pt-4">
               <p className="text-sm text-gray-700">
                 Showing 1 to 5 of 100 entries
               </p>
               <div className="flex items-center gap-2">
-                <button className="px-3 py-2 bg-gray-100 text-gray-700 rounded-md text-sm font-medium">
+                <Button variant="outline" size="sm">
                   Previous
-                </button>
-                <button className="px-3 py-2 bg-[#153F9F] text-white rounded-md text-sm font-medium">
+                </Button>
+                <Button size="sm">
                   1
-                </button>
-                <button className="px-3 py-2 bg-gray-100 text-gray-700 rounded-md text-sm font-medium">
+                </Button>
+                <Button variant="outline" size="sm">
                   2
-                </button>
-                <button className="px-3 py-2 bg-gray-200 text-gray-700 rounded-md text-sm font-medium">
+                </Button>
+                <Button variant="outline" size="sm">
                   3
-                </button>
-                <button className="px-3 py-2 bg-gray-100 text-gray-700 rounded-md text-sm font-medium">
+                </Button>
+                <Button variant="outline" size="sm">
                   4
-                </button>
-                <button className="px-3 py-2 bg-gray-100 text-gray-700 rounded-md text-sm font-medium">
+                </Button>
+                <Button variant="outline" size="sm">
                   5
-                </button>
-                <button className="px-3 py-2 bg-gray-100 text-gray-700 rounded-md text-sm font-medium">
+                </Button>
+                <Button variant="outline" size="sm">
                   Next
-                </button>
+                </Button>
               </div>
             </div>
-          </div>
-
-          {/* Footer */}
-          <div className="mt-8 text-center">
-            <p className="text-gray-600">
-              © 2023, made with ❤️ by SafeShipper Team
-            </p>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
       </div>
-    </div>
+    </DashboardLayout>
   );
 } 
