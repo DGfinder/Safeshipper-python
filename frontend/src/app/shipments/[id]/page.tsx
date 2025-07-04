@@ -16,9 +16,15 @@ import {
   Edit,
   Settings,
   Box,
-  ArrowRight
+  ArrowRight,
+  MessageSquare,
+  Shield,
+  CheckCircle
 } from 'lucide-react';
 import { AuthGuard } from '@/components/auth/auth-guard';
+import { ActivityLog } from '@/components/communications/ActivityLog';
+import { HazardInspection } from '@/components/inspections/HazardInspection';
+import { ProofOfDelivery } from '@/components/delivery/ProofOfDelivery';
 import Link from 'next/link';
 
 interface ShipmentDetailPageProps {
@@ -118,6 +124,7 @@ const getDGClassColor = (dgClass: string) => {
 export default function ShipmentDetailPage({ params }: ShipmentDetailPageProps) {
   const [shipmentId, setShipmentId] = useState<string | null>(null);
   const [shipment, setShipment] = useState<any>(null);
+  const [activeTab, setActiveTab] = useState<'overview' | 'activity' | 'inspection' | 'delivery'>('overview');
 
   useEffect(() => {
     params.then(p => {
@@ -220,8 +227,35 @@ export default function ShipmentDetailPage({ params }: ShipmentDetailPageProps) 
           </Card>
         </div>
 
-        {/* Main Content Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Tab Navigation */}
+        <div className="border-b border-gray-200">
+          <nav className="flex space-x-8">
+            {[
+              { key: 'overview', label: 'Overview', icon: Package },
+              { key: 'activity', label: 'Activity Log', icon: MessageSquare },
+              { key: 'inspection', label: 'Inspections', icon: Shield },
+              { key: 'delivery', label: 'Proof of Delivery', icon: CheckCircle }
+            ].map(({ key, label, icon: Icon }) => (
+              <button
+                key={key}
+                onClick={() => setActiveTab(key as any)}
+                className={`flex items-center gap-2 py-2 px-1 border-b-2 font-medium text-sm ${
+                  activeTab === key
+                    ? 'border-blue-500 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                <Icon className="h-4 w-4" />
+                {label}
+              </button>
+            ))}
+          </nav>
+        </div>
+
+        {/* Tab Content */}
+        <div className="mt-6">
+          {activeTab === 'overview' && (
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Left Column - Shipment Info */}
           <div className="lg:col-span-2 space-y-6">
             {/* Customer & Route */}
@@ -397,7 +431,42 @@ export default function ShipmentDetailPage({ params }: ShipmentDetailPageProps) 
                 </div>
               </CardContent>
             </Card>
-          </div>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'activity' && (
+            <div className="max-w-4xl">
+              <ActivityLog shipmentId={shipmentId || 'demo-shipment'} />
+            </div>
+          )}
+
+          {activeTab === 'inspection' && (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <HazardInspection 
+                shipmentId={shipmentId || 'demo-shipment'} 
+                inspectionType="PRE_TRIP"
+              />
+              <HazardInspection 
+                shipmentId={shipmentId || 'demo-shipment'} 
+                inspectionType="POST_TRIP"
+              />
+            </div>
+          )}
+
+          {activeTab === 'delivery' && (
+            <div className="max-w-2xl mx-auto">
+              <ProofOfDelivery
+                shipmentId={shipmentId || 'demo-shipment'}
+                customerName={shipment?.customer?.name || 'Global Manufacturing Inc.'}
+                deliveryAddress={shipment?.destination_location || 'Melbourne, VIC, Australia'}
+                onComplete={(podData) => {
+                  console.log('POD completed:', podData);
+                  // Update shipment status to DELIVERED
+                }}
+              />
+            </div>
+          )}
         </div>
       </div>
     </AuthGuard>

@@ -24,6 +24,7 @@ import {
   Calendar
 } from 'lucide-react';
 import { usePublicShipmentTracking } from '@/hooks/usePublicTracking';
+import { useMockPublicTracking } from '@/hooks/useMockAPI';
 
 // Dynamically import map component to avoid SSR issues
 const ShipmentTrackingMap = dynamic(
@@ -87,13 +88,14 @@ export default function TrackingPage({ params }: TrackingPageProps) {
   }, [params]);
   const refreshInterval = 30000; // 30 seconds
   
+  // Use mock API for demo
   const { 
     data: shipmentData, 
     isLoading, 
     error, 
     refetch, 
     isRefetching 
-  } = usePublicShipmentTracking(trackingNumber, refreshInterval);
+  } = useMockPublicTracking(trackingNumber || 'demo-tracking');
 
   const handleRefresh = () => {
     refetch();
@@ -247,7 +249,7 @@ export default function TrackingPage({ params }: TrackingPageProps) {
               <Alert className="border-green-200 bg-green-50">
                 <MapPin className="h-4 w-4 text-green-600" />
                 <AlertDescription className="text-green-800">
-                  <strong>Live tracking active:</strong> {shipmentData.route_info.privacy_note}
+                  <strong>Live tracking active:</strong> {(shipmentData.route_info as any).privacy_note || 'Location updated in real-time'}
                   <br />
                   <span className="text-sm">
                     Last updated: {new Date(shipmentData.vehicle_location.last_updated).toLocaleString()}
@@ -276,7 +278,7 @@ export default function TrackingPage({ params }: TrackingPageProps) {
                   <div className="text-center">
                     <MapPin className="h-12 w-12 mx-auto mb-4 text-gray-400" />
                     <p className="text-gray-600 font-medium">Tracking Not Available</p>
-                    <p className="text-sm text-gray-500 mt-2">{shipmentData.route_info.note}</p>
+                    <p className="text-sm text-gray-500 mt-2">{(shipmentData.route_info as any).note || 'Tracking will be available when shipment is in transit'}</p>
                   </div>
                 </CardContent>
               </Card>
@@ -324,6 +326,69 @@ export default function TrackingPage({ params }: TrackingPageProps) {
             </CardContent>
           </Card>
         </div>
+
+        {/* Proof of Delivery - Only show for delivered shipments */}
+        {shipmentData.status === 'DELIVERED' && shipmentData.proof_of_delivery && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-green-700">
+                <CheckCircle className="h-5 w-5" />
+                Proof of Delivery
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <Alert className="border-green-200 bg-green-50">
+                <CheckCircle className="h-4 w-4 text-green-600" />
+                <AlertDescription className="text-green-800">
+                  Your shipment was successfully delivered on {new Date(shipmentData.proof_of_delivery.timestamp).toLocaleDateString()}
+                </AlertDescription>
+              </Alert>
+
+              {/* Delivery Details */}
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <p><span className="font-medium">Received by:</span> {shipmentData.proof_of_delivery.recipient}</p>
+                  <p><span className="font-medium">Driver:</span> {shipmentData.proof_of_delivery.driver}</p>
+                </div>
+                <div>
+                  <p><span className="font-medium">Time:</span> {new Date(shipmentData.proof_of_delivery.timestamp).toLocaleTimeString()}</p>
+                  <p><span className="font-medium">Photos:</span> {shipmentData.proof_of_delivery.photos.length}</p>
+                </div>
+              </div>
+
+              {/* Signature */}
+              {shipmentData.proof_of_delivery.signature && (
+                <div>
+                  <h4 className="font-medium text-sm mb-2">Recipient Signature</h4>
+                  <div className="border rounded p-2 bg-white">
+                    <img 
+                      src={shipmentData.proof_of_delivery.signature} 
+                      alt="Recipient signature"
+                      className="h-16 w-full object-contain"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Delivery Photos */}
+              {shipmentData.proof_of_delivery.photos && shipmentData.proof_of_delivery.photos.length > 0 && (
+                <div>
+                  <h4 className="font-medium text-sm mb-2">Delivery Photos</h4>
+                  <div className="grid grid-cols-2 gap-2">
+                    {shipmentData.proof_of_delivery.photos.map((photo: string, index: number) => (
+                      <img 
+                        key={index}
+                        src={photo} 
+                        alt={`Delivery photo ${index + 1}`}
+                        className="w-full h-32 object-cover rounded border"
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
 
         {/* Customer Support */}
         <Card>

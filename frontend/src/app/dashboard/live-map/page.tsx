@@ -19,6 +19,7 @@ import {
   AlertTriangle
 } from 'lucide-react';
 import { useFleetStatus, type FleetVehicle } from '@/hooks/useFleetTracking';
+import { useMockFleetStatus } from '@/hooks/useMockAPI';
 import { AuthGuard } from '@/components/auth/auth-guard';
 
 // Dynamically import FleetMap to avoid SSR issues
@@ -43,13 +44,14 @@ export default function LiveMapPage() {
   const [selectedVehicle, setSelectedVehicle] = useState<FleetVehicle | null>(null);
   const [refreshInterval, setRefreshInterval] = useState(10000); // 10 seconds
   
+  // Use mock API for demo
   const { 
     data: fleetData, 
     isLoading, 
     error, 
     refetch, 
     isRefetching 
-  } = useFleetStatus(refreshInterval);
+  } = useMockFleetStatus(refreshInterval);
 
   const handleRefresh = () => {
     refetch();
