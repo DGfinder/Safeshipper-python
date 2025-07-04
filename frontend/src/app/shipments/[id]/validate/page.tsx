@@ -1,7 +1,7 @@
 // app/shipments/[id]/validate/page.tsx
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { DashboardLayout } from '@/components/layout/dashboard-layout';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -13,7 +13,6 @@ import {
   FileText, 
   CheckCircle, 
   AlertTriangle,
-  Package,
   Loader2,
   Eye,
   Download,
@@ -46,8 +45,8 @@ export default function ShipmentValidationPage() {
   // Queries and mutations
   const { data: shipment, isLoading: shipmentLoading, error: shipmentError } = useShipment(shipmentId);
   const uploadManifestMutation = useUploadManifest();
-  const { data: documentStatus, isLoading: statusLoading } = useDocumentStatus(uploadedDocumentId);
-  const { data: validationResults, isLoading: validationLoading } = useValidationResults(
+  const { data: documentStatus } = useDocumentStatus(uploadedDocumentId);
+  const { data: validationResults } = useValidationResults(
     documentStatus?.is_validated ? uploadedDocumentId : null
   );
   const finalizeShipmentMutation = useFinalizeShipmentFromManifest();
@@ -346,7 +345,7 @@ export default function ShipmentValidationPage() {
                       <div className="text-sm text-gray-600 space-y-1 max-h-32 overflow-y-auto">
                         {validationResults.unmatched_text.slice(0, 5).map((text, index) => (
                           <div key={index} className="truncate">
-                            "{text}"
+                            &ldquo;{text}&rdquo;
                           </div>
                         ))}
                         {validationResults.unmatched_text.length > 5 && (

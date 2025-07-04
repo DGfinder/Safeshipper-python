@@ -226,9 +226,9 @@ export function useDocumentStatus(documentId: string | null, pollingInterval = 3
       return getDocumentStatus(documentId, token);
     },
     enabled: !!documentId && !!getToken(),
-    refetchInterval: (data) => {
+    refetchInterval: (query) => {
       // Stop polling if document is no longer processing
-      if (data?.is_processing) {
+      if (query.state.data?.is_processing) {
         return pollingInterval;
       }
       return false;

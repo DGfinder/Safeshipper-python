@@ -13,7 +13,6 @@ import {
   Package,
   Edit,
   Trash2,
-  Plus,
   Eye,
   Target
 } from 'lucide-react';
@@ -285,7 +284,7 @@ export function DangerousGoodsConfirmation({
                                 </Badge>
                               </div>
                               <p className="font-mono text-green-700 bg-green-100 px-2 py-1 rounded">
-                                "{originalMatch.matched_term}"
+                                &ldquo;{originalMatch.matched_term}&rdquo;
                               </p>
                             </div>
                           )}
@@ -296,7 +295,7 @@ export function DangerousGoodsConfirmation({
                               <Eye className="h-3 w-3" />
                               <span className="font-medium">Found in manifest:</span>
                             </div>
-                            <p className="italic">"{confirmedDG.found_text}"</p>
+                            <p className="italic">&ldquo;{confirmedDG.found_text}&rdquo;</p>
                             {confirmedDG.page_number && (
                               <p className="text-xs text-gray-500 mt-1">
                                 Page {confirmedDG.page_number}
