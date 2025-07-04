@@ -341,6 +341,53 @@ class ShipmentViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
+    @action(detail=False, methods=['get'], url_path='my-shipments', permission_classes=[permissions.IsAuthenticated])
+    def my_shipments(self, request):
+        """
+        Driver endpoint to get only shipments assigned to the authenticated driver.
+        Restricted to users with DRIVER role.
+        """
+        # Check if user is a driver
+        if request.user.role != 'DRIVER':
+            return Response(
+                {"detail": "This endpoint is only accessible to drivers."}, 
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
+        try:
+            # Get shipments assigned to this driver
+            queryset = Shipment.objects.filter(
+                assigned_driver=request.user
+            ).select_related(
+                'customer',
+                'carrier', 
+                'assigned_vehicle',
+                'freight_type'
+            ).prefetch_related(
+                'consignment_items'
+            ).order_by('-created_at')
+            
+            # Filter by status if provided
+            status_filter = request.query_params.get('status')
+            if status_filter:
+                queryset = queryset.filter(status=status_filter)
+                
+            # Paginate results
+            page = self.paginate_queryset(queryset)
+            if page is not None:
+                serializer = ShipmentListSerializer(page, many=True)
+                return self.get_paginated_response(serializer.data)
+            
+            serializer = ShipmentListSerializer(queryset, many=True)
+            return Response(serializer.data)
+            
+        except Exception as e:
+            logger.error(f"Error getting driver shipments for {request.user.email}: {str(e)}")
+            return Response(
+                {"detail": "An error occurred while retrieving your shipments."}, 
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
 
 class ConsignmentItemViewSet(viewsets.ModelViewSet):
     """

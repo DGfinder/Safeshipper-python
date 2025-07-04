@@ -61,16 +61,16 @@ urlpatterns = [
         path('companies/', include('companies.urls')),
         path('freight-types/', include('freight_types.urls')),
         path('vehicles/', include('vehicles.urls')),
+        path('tracking/', include('tracking.urls')),  # Enabled for mobile app
+        path('documents/', include('documents.urls')),  # Enabled for manifest functionality
         # Temporarily disabled apps:
         # path('locations/', include('locations.urls')),
-        # path('tracking/', include('tracking.urls')),
         # path('hazard-assessments/', include('hazard_assessments.urls')),
         # path('audits/', include('audits.urls')),
         # path('load-plans/', include('load_plans.urls')),
         # path('manifests/', include('manifests.urls')),
         # path('emergency-procedures/', include('emergency_procedures.urls')),
         # path('handling-unit-types/', include('handling_unit_types.urls')),
-        # path('documents/', include('documents.urls')),
         # path('sds/', include('sds.urls')),
         # path('epg/', include('epg.urls')),
     ])),

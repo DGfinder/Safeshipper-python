@@ -286,3 +286,92 @@ def get_vehicle_location_history(
         })
     
     return history
+
+def update_vehicle_location(
+    vehicle: Vehicle,
+    latitude: float,
+    longitude: float,
+    accuracy: Optional[float] = None,
+    speed: Optional[float] = None,
+    heading: Optional[float] = None,
+    timestamp: Optional[timezone.datetime] = None,
+    source: str = 'MOBILE_APP'
+) -> Dict:
+    """
+    Update a vehicle's location and create GPS event record.
+    This is the main service function for the mobile app location updates.
+    
+    Args:
+        vehicle: Vehicle to update
+        latitude: GPS latitude
+        longitude: GPS longitude
+        accuracy: GPS accuracy in meters (optional)
+        speed: Speed in km/h (optional)
+        heading: Heading in degrees (optional)
+        timestamp: GPS timestamp (optional, defaults to now)
+        source: Source of the location update
+    
+    Returns:
+        Dict containing result information
+    """
+    try:
+        if timestamp is None:
+            timestamp = timezone.now()
+        
+        with transaction.atomic():
+            # Update vehicle's last known location
+            vehicle.update_location(latitude, longitude, timestamp)
+            
+            # Get active shipment for this vehicle
+            active_shipment = vehicle.assigned_shipments.filter(
+                status__in=['IN_TRANSIT', 'OUT_FOR_DELIVERY', 'READY_FOR_DISPATCH']
+            ).first()
+            
+            # Create GPS event record
+            gps_event = GPSEvent.objects.create(
+                vehicle=vehicle,
+                shipment=active_shipment,
+                latitude=latitude,
+                longitude=longitude,
+                timestamp=timestamp,
+                speed=speed,
+                heading=heading,
+                accuracy=accuracy,
+                source=source,
+                raw_data={
+                    'latitude': latitude,
+                    'longitude': longitude,
+                    'accuracy': accuracy,
+                    'speed': speed,
+                    'heading': heading,
+                    'timestamp': timestamp.isoformat(),
+                    'source': source
+                }
+            )
+            
+            # Check for geofence entry/exit
+            affected_visits = check_geofence_entry_exit(gps_event)
+            
+            result = {
+                'success': True,
+                'vehicle_id': str(vehicle.id),
+                'gps_event_id': str(gps_event.id),
+                'timestamp': timestamp.isoformat(),
+                'active_shipment_id': str(active_shipment.id) if active_shipment else None,
+                'geofence_events': len(affected_visits),
+                'location': {
+                    'latitude': latitude,
+                    'longitude': longitude
+                }
+            }
+            
+            logger.info(
+                f"Location updated for vehicle {vehicle.registration_number}: "
+                f"({latitude}, {longitude}) at {timestamp}"
+            )
+            
+            return result
+            
+    except Exception as e:
+        logger.error(f"Error updating vehicle location: {str(e)}")
+        raise

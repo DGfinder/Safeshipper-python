@@ -1,5 +1,6 @@
 import uuid
 from django.db import models
+from django.contrib.gis.db import models as gis_models
 from django.utils import timezone
 # from locations.models import GeoLocation  # Temporarily disabled
 from companies.models import Company
@@ -41,11 +42,64 @@ class Vehicle(models.Model):
         blank=True,
         related_name='vehicles'
     )
+    
+    # Live tracking fields
+    last_known_location = gis_models.PointField(
+        geography=True,
+        null=True,
+        blank=True,
+        help_text="Last reported GPS location of the vehicle"
+    )
+    last_reported_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="Timestamp of the last location report"
+    )
+    
+    # Driver assignment for mobile app
+    assigned_driver = models.ForeignKey(
+        'users.User',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='assigned_vehicles',
+        limit_choices_to={'role': 'DRIVER'},
+        help_text="Currently assigned driver"
+    )
+    
     created_at = models.DateTimeField(default=timezone.now, editable=False)
     updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
         return f"{self.registration_number} ({self.get_vehicle_type_display()})"
+    
+    @property
+    def current_location(self):
+        """Get the current location as lat/lng dictionary"""
+        if self.last_known_location:
+            return {
+                'latitude': self.last_known_location.y,
+                'longitude': self.last_known_location.x,
+                'last_updated': self.last_reported_at.isoformat() if self.last_reported_at else None
+            }
+        return None
+    
+    @property
+    def is_location_stale(self):
+        """Check if the last location report is older than 30 minutes"""
+        if not self.last_reported_at:
+            return True
+        from django.utils import timezone
+        return (timezone.now() - self.last_reported_at).total_seconds() > 1800  # 30 minutes
+    
+    def update_location(self, latitude, longitude, timestamp=None):
+        """Update the vehicle's location"""
+        if timestamp is None:
+            timestamp = timezone.now()
+        
+        self.last_known_location = gis_models.Point(longitude, latitude, srid=4326)
+        self.last_reported_at = timestamp
+        self.save(update_fields=['last_known_location', 'last_reported_at', 'updated_at'])
 
     class Meta:
         ordering = ["registration_number"]

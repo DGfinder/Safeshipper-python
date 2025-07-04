@@ -84,6 +84,25 @@ class Shipment(models.Model):
     actual_delivery_date = models.DateTimeField(_("Actual Delivery Date/Time"), null=True, blank=True)
 
     instructions = models.TextField(_("Special Instructions"), blank=True, null=True)
+    
+    # Vehicle and driver assignment for mobile tracking
+    assigned_vehicle = models.ForeignKey(
+        Vehicle,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='assigned_shipments',
+        help_text=_("Vehicle assigned to transport this shipment")
+    )
+    assigned_driver = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='assigned_shipments',
+        limit_choices_to={'role': 'DRIVER'},
+        help_text=_("Driver assigned to transport this shipment")
+    )
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
