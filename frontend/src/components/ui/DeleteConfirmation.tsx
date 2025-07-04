@@ -1,66 +1,88 @@
-import React from 'react';
+import * as React from "react"
+import { Modal } from "./Modal"
+import { Button } from "./button"
 
 interface DeleteConfirmationProps {
-  isOpen: boolean;
-  onClose: () => void;
-  onConfirm: () => void;
-  title?: string;
-  message?: string;
-  confirmText?: string;
-  cancelText?: string;
+  isOpen: boolean
+  onClose: () => void
+  onConfirm: () => void
+  title: string
+  message: string
+  isLoading?: boolean
+  confirmText?: string
+  cancelText?: string
 }
 
-export default function DeleteConfirmation({
-  isOpen,
-  onClose,
-  onConfirm,
-  title = "Confirm Delete",
-  message = "Are you sure you want to delete this item? This action cannot be undone.",
-  confirmText = "Delete",
-  cancelText = "Cancel"
-}: DeleteConfirmationProps) {
-  if (!isOpen) return null;
+export const DeleteConfirmation = React.forwardRef<HTMLDivElement, DeleteConfirmationProps>(
+  ({ 
+    isOpen, 
+    onClose, 
+    onConfirm, 
+    title, 
+    message, 
+    isLoading = false,
+    confirmText = "Delete",
+    cancelText = "Cancel"
+  }, ref) => {
+    const handleConfirm = () => {
+      onConfirm()
+    }
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
-      {/* Backdrop */}
-      <div 
-        className="fixed inset-0 bg-black bg-opacity-50 transition-opacity"
-        onClick={onClose}
-      />
-      
-      {/* Modal */}
-      <div className="relative bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
-        {/* Header */}
-        <div className="flex items-center gap-3 p-6 border-b border-gray-200">
-          <div className="flex-shrink-0">
-            <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+    return (
+      <Modal
+        ref={ref}
+        isOpen={isOpen}
+        onClose={onClose}
+        title={title}
+        className="max-w-md"
+      >
+        <div className="space-y-4">
+          {/* Warning Icon */}
+          <div className="flex items-center justify-center w-12 h-12 mx-auto bg-red-100 rounded-full">
+            <svg
+              className="w-6 h-6 text-red-600"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16c-.77.833.192 2.5 1.732 2.5z"
+              />
             </svg>
           </div>
-          <h2 className="text-lg font-semibold text-gray-900">{title}</h2>
-        </div>
-        
-        {/* Content */}
-        <div className="p-6">
-          <p className="text-gray-600 mb-6">{message}</p>
           
-          <div className="flex justify-end gap-3">
-            <button
+          {/* Message */}
+          <div className="text-center">
+            <p className="text-sm text-gray-500">{message}</p>
+          </div>
+          
+          {/* Actions */}
+          <div className="flex space-x-3 justify-end">
+            <Button
+              variant="outline"
               onClick={onClose}
-              className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
+              disabled={isLoading}
             >
               {cancelText}
-            </button>
-            <button
-              onClick={onConfirm}
-              className="px-4 py-2 text-sm font-medium text-white bg-red-600 border border-transparent rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleConfirm}
+              loading={isLoading}
+              disabled={isLoading}
             >
               {confirmText}
-            </button>
+            </Button>
           </div>
         </div>
-      </div>
-    </div>
-  );
-}
+      </Modal>
+    )
+  }
+)
+
+DeleteConfirmation.displayName = "DeleteConfirmation"
+
+export default DeleteConfirmation

@@ -1,16 +1,81 @@
+/** @type {import('next').NextConfig} */
 const nextConfig = {
-  experimental: {
-    optimizePackageImports: ['@heroicons/react'],
-  },
+  // Enable React 18 features
+  reactStrictMode: true,
+  
+  // Optimize images
   images: {
-    domains: ['localhost'],
+    domains: [],
+    formats: ['image/avif', 'image/webp'],
   },
-  eslint: {
-    ignoreDuringBuilds: false,
+  
+  // Optimize build output
+  poweredByHeader: false,
+  compress: true,
+  
+  // Enable experimental features for better performance
+  experimental: {
+    optimizePackageImports: ['@heroicons/react', 'lucide-react'],
   },
+  
+  // Configure webpack for better bundle optimization
+  webpack: (config, { dev, isServer }) => {
+    // Optimize bundle size
+    if (!dev && !isServer) {
+      config.optimization.splitChunks = {
+        chunks: 'all',
+        cacheGroups: {
+          vendor: {
+            test: /[\\/]node_modules[\\/]/,
+            name: 'vendors',
+            priority: 10,
+            reuseExistingChunk: true,
+          },
+          common: {
+            name: 'common',
+            minChunks: 2,
+            priority: 5,
+            reuseExistingChunk: true,
+          },
+        },
+      }
+    }
+    
+    return config
+  },
+  
+  // Configure headers for better security and caching
+  async headers() {
+    return [
+      {
+        source: '/(.*)',
+        headers: [
+          {
+            key: 'X-Content-Type-Options',
+            value: 'nosniff',
+          },
+          {
+            key: 'X-Frame-Options',
+            value: 'DENY',
+          },
+          {
+            key: 'X-XSS-Protection',
+            value: '1; mode=block',
+          },
+        ],
+      },
+    ]
+  },
+  
+  // Enable TypeScript strict mode
   typescript: {
     ignoreBuildErrors: false,
   },
-};
+  
+  // Configure ESLint
+  eslint: {
+    ignoreDuringBuilds: false,
+  },
+}
 
-module.exports = nextConfig;
+module.exports = nextConfig

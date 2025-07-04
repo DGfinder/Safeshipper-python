@@ -10,6 +10,11 @@ import {
   ChevronDownIcon
 } from '@heroicons/react/24/outline';
 
+import { Button } from '@/components/ui/button';
+import { Alert } from '@/components/ui/alert';
+import { Badge } from '@/components/ui/badge';
+import { PageTemplate } from '@/components/layout';
+
 interface Match {
   keyword: string;
   dg_class: string;
@@ -24,104 +29,6 @@ interface SearchHistory {
   results_found: number;
   date: string;
 }
-
-// Simple inline Button component
-const Button = ({ children, onClick, disabled = false, variant = 'default', className = '' }: {
-  children: React.ReactNode;
-  onClick?: () => void;
-  disabled?: boolean;
-  variant?: 'default' | 'outline';
-  className?: string;
-}) => {
-  const baseStyles = "px-4 py-2 rounded-md font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2";
-  const variants = {
-    default: "bg-[#153F9F] hover:bg-[#1230a0] text-white focus:ring-[#153F9F]",
-    outline: "border border-gray-300 bg-white hover:bg-gray-50 text-gray-700 focus:ring-gray-500"
-  };
-  
-  return (
-    <button
-      onClick={onClick}
-      disabled={disabled}
-      className={`${baseStyles} ${variants[variant]} ${disabled ? 'opacity-50 cursor-not-allowed' : ''} ${className}`}
-    >
-      {children}
-    </button>
-  );
-};
-
-// Simple inline Alert component
-const Alert = ({ children, variant = 'default', className = '' }: {
-  children: React.ReactNode;
-  variant?: 'default' | 'destructive';
-  className?: string;
-}) => {
-  const variants = {
-    default: "bg-blue-50 border-blue-200 text-blue-800",
-    destructive: "bg-red-50 border-red-200 text-red-800"
-  };
-  
-  return (
-    <div className={`border rounded-lg p-4 flex items-start gap-3 ${variants[variant]} ${className}`}>
-      {children}
-    </div>
-  );
-};
-
-const AlertDescription = ({ children }: { children: React.ReactNode }) => (
-  <div className="text-sm">{children}</div>
-);
-
-// Simple inline Badge component
-const Badge = ({ children, variant = 'default', className = '' }: {
-  children: React.ReactNode;
-  variant?: 'default' | 'outline';
-  className?: string;
-}) => {
-  const baseStyles = "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium";
-  const variants = {
-    default: "bg-gray-100 text-gray-800",
-    outline: "border border-gray-300 bg-white text-gray-700"
-  };
-  
-  return (
-    <span className={`${baseStyles} ${variants[variant]} ${className}`}>
-      {children}
-    </span>
-  );
-};
-
-// Simple inline PageTemplate component
-const PageTemplate = ({ title, description, actions, children }: {
-  title: string;
-  description?: string;
-  actions?: React.ReactNode;
-  children: React.ReactNode;
-}) => (
-  <div className="min-h-screen bg-[#F8F7FA] p-6">
-    <div className="max-w-7xl mx-auto space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">{title}</h1>
-          {description && (
-            <p className="mt-1 text-sm text-gray-600">{description}</p>
-          )}
-        </div>
-        {actions && (
-          <div className="flex items-center gap-4">
-            {actions}
-          </div>
-        )}
-      </div>
-      
-      {/* Content */}
-      <div className="space-y-6">
-        {children}
-      </div>
-    </div>
-  </div>
-);
 
 export default function ManifestSearchPage() {
   const [file, setFile] = useState<File | null>(null);
@@ -308,17 +215,10 @@ export default function ManifestSearchPage() {
                 <div className="flex gap-2">
                   <Button
                     onClick={handleSearch}
-                    disabled={loading}
+                    loading={loading}
                     className="bg-[#153F9F] hover:bg-[#1230a0] text-white"
                   >
-                    {loading ? (
-                      <>
-                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                        Analyzing...
-                      </>
-                    ) : (
-                      'Search for Dangerous Goods'
-                    )}
+                    Search for Dangerous Goods
                   </Button>
                   <Button variant="outline" onClick={handleClear}>
                     Clear
@@ -332,9 +232,9 @@ export default function ManifestSearchPage() {
 
       {/* Error Display */}
       {error && (
-        <Alert variant="destructive" className="border-red-300">
+        <Alert variant="error" title="Error" className="border-red-300">
           <ExclamationTriangleIcon className="h-4 w-4" />
-          <AlertDescription>{error}</AlertDescription>
+          <div className="text-sm">{error}</div>
         </Alert>
       )}
 
@@ -352,7 +252,7 @@ export default function ManifestSearchPage() {
                     <span className="font-semibold text-gray-900 capitalize">
                       {match.keyword}
                     </span>
-                    <Badge variant="outline" className="text-xs">
+                    <Badge variant="default" className="text-xs">
                       Page {match.page_number}
                     </Badge>
                   </div>

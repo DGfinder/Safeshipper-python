@@ -1,7 +1,22 @@
 {
-  "buildCommand": "npm run build",
-  "outputDirectory": ".next",
-  "installCommand": "npm install",
-  "framework": "nextjs",
-  "projectRoot": "frontend"
+  "version": 2,
+  "name": "safeshipper-frontend",
+  "builds": [
+    {
+      "src": "frontend/package.json",
+      "use": "@vercel/next"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "frontend/$1"
+    }
+  ],
+  "projectSettings": {
+    "framework": "nextjs",
+    "buildCommand": "npm run build",
+    "installCommand": "npm install",
+    "outputDirectory": ".next"
+  }
 }
