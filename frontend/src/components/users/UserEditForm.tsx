@@ -183,7 +183,7 @@ export function UserEditForm({ user, onClose, onSuccess }: UserEditFormProps) {
           {/* Password Change Note */}
           <div className="bg-blue-50 border border-blue-200 rounded-md p-3">
             <p className="text-sm text-blue-800">
-              <strong>Note:</strong> To change this user's password, please contact a system administrator.
+              <strong>Note:</strong> To change this user&apos;s password, please contact a system administrator.
             </p>
           </div>
 

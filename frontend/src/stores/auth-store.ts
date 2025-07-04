@@ -14,19 +14,22 @@ interface AuthState {
   isAuthenticated: boolean;
   isLoading: boolean;
   isHydrated: boolean;
+  token: string | null;
   login: (email: string, password: string) => Promise<void>;
   logout: () => void;
   setUser: (user: User) => void;
   setHydrated: (hydrated: boolean) => void;
+  getToken: () => string | null;
 }
 
 export const useAuthStore = create<AuthState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       user: null,
       isAuthenticated: false,
       isLoading: false,
       isHydrated: false,
+      token: null,
 
       login: async (email: string, password: string) => {
         set({ isLoading: true });
@@ -64,7 +67,8 @@ export const useAuthStore = create<AuthState>()(
           set({ 
             user, 
             isAuthenticated: true, 
-            isLoading: false 
+            isLoading: false,
+            token: data.access_token
           });
           
         } catch (error) {
@@ -95,7 +99,8 @@ export const useAuthStore = create<AuthState>()(
           
           set({ 
             user: null, 
-            isAuthenticated: false 
+            isAuthenticated: false,
+            token: null
           });
         }
       },
@@ -106,6 +111,10 @@ export const useAuthStore = create<AuthState>()(
 
       setHydrated: (hydrated: boolean) => {
         set({ isHydrated: hydrated });
+      },
+
+      getToken: () => {
+        return get().token || localStorage.getItem('access_token');
       }
     }),
     {

@@ -22,8 +22,7 @@ import {
 import { 
   DangerousGood, 
   useSearchDangerousGoods, 
-  useCheckCompatibility,
-  CompatibilityConflict 
+  useCheckCompatibility
 } from '@/hooks/useDangerousGoods';
 import { useDebounce } from '@/hooks/useDebounce';
 import { toast } from 'react-hot-toast';
@@ -72,7 +71,7 @@ export default function DGCheckerPage() {
         }
       );
     }
-  }, [selectedDGs]);
+  }, [selectedDGs, checkCompatibilityMutation]);
 
   const addDangerousGood = (dg: DangerousGood) => {
     // Check if already added
@@ -193,7 +192,7 @@ export default function DGCheckerPage() {
 
                   {searchResults?.length === 0 && !isSearching && (
                     <div className="text-center py-8 text-gray-500">
-                      No dangerous goods found matching "{searchTerm}"
+                      No dangerous goods found matching &quot;{searchTerm}&quot;
                     </div>
                   )}
 

@@ -35,7 +35,8 @@
       "Bash(then echo \"Fixing 4-level: $file\")",
       "Bash(npx tsc:*)",
       "Bash(npm install:*)",
-      "Bash(python3:*)"
+      "Bash(python3:*)",
+      "Bash(npm run type-check:*)"
     ],
     "deny": []
   }
