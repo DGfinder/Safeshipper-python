@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { persist, createJSONStorage } from 'zustand/middleware';
 
 interface User {
   id: string;
@@ -13,9 +13,11 @@ interface AuthState {
   user: User | null;
   isAuthenticated: boolean;
   isLoading: boolean;
+  isHydrated: boolean;
   login: (email: string, password: string) => Promise<void>;
   logout: () => void;
   setUser: (user: User) => void;
+  setHydrated: (hydrated: boolean) => void;
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -24,20 +26,27 @@ export const useAuthStore = create<AuthState>()(
       user: null,
       isAuthenticated: false,
       isLoading: false,
+      isHydrated: false,
 
-      login: async (email: string) => {
+      login: async (email: string, _password: string) => {
         set({ isLoading: true });
         
-        // Simulate API call
+        // Simulate API call with basic validation
         await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        // Simple email validation for demo
+        if (!email.includes('@')) {
+          set({ isLoading: false });
+          throw new Error('Invalid email');
+        }
         
         // Mock user data - in real app, this would come from API
         const mockUser: User = {
           id: '1',
-          username: 'john.doe',
+          username: email.split('@')[0],
           email: email,
           role: 'Admin',
-          avatar: 'JD'
+          avatar: email.split('@')[0].substring(0, 2).toUpperCase()
         };
         
         set({ 
@@ -56,11 +65,22 @@ export const useAuthStore = create<AuthState>()(
 
       setUser: (user: User) => {
         set({ user, isAuthenticated: true });
+      },
+
+      setHydrated: (hydrated: boolean) => {
+        set({ isHydrated: hydrated });
       }
     }),
     {
       name: 'auth-storage',
-      partialize: (state) => ({ user: state.user, isAuthenticated: state.isAuthenticated }),
+      storage: createJSONStorage(() => localStorage),
+      partialize: (state) => ({ 
+        user: state.user, 
+        isAuthenticated: state.isAuthenticated 
+      }),
+      onRehydrateStorage: () => (state) => {
+        state?.setHydrated(true);
+      },
     }
   )
 );

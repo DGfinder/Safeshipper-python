@@ -1,22 +1,31 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useAuthStore } from '@/stores/auth-store';
-import { Shield, Loader2, AlertCircle } from 'lucide-react';
+import { Shield, Loader2, AlertCircle, CheckCircle } from 'lucide-react';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
   const [error, setError] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { login, isLoading } = useAuthStore();
+
+  useEffect(() => {
+    const message = searchParams.get('message');
+    if (message) {
+      setSuccessMessage(message);
+    }
+  }, [searchParams]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -80,6 +89,14 @@ export default function LoginPage() {
                   Please sign in to your account and start the adventure
                 </p>
               </div>
+
+              {/* Success Alert */}
+              {successMessage && (
+                <Alert variant="success">
+                  <CheckCircle className="h-4 w-4" />
+                  <AlertDescription>{successMessage}</AlertDescription>
+                </Alert>
+              )}
 
               {/* Error Alert */}
               {error && (
