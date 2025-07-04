@@ -13,6 +13,7 @@ from dangerous_goods.models import DangerousGood
 
 class ShipmentStatus(models.TextChoices):
     PENDING = "PENDING", _("Pending")
+    AWAITING_VALIDATION = "AWAITING_VALIDATION", _("Awaiting Validation")
     PLANNING = "PLANNING", _("Planning")
     READY_FOR_DISPATCH = "READY_FOR_DISPATCH", _("Ready for Dispatch")
     IN_TRANSIT = "IN_TRANSIT", _("In Transit")

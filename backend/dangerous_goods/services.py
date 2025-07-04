@@ -35,6 +35,145 @@ def match_synonym_to_dg(text: str) -> Optional[DangerousGood]:
         return dg_match
     return None
 
+def find_dgs_by_text_search(text_content: str) -> List[Dict[str, Union[DangerousGood, str, float]]]:
+    """
+    Efficiently search for dangerous goods by analyzing text content using multi-pass scanning.
+    
+    Args:
+        text_content: The text content to analyze for dangerous goods
+        
+    Returns:
+        List of dictionaries containing:
+            - dangerous_good: DangerousGood object
+            - matched_term: The synonym or name that triggered the match
+            - confidence: Confidence score (0.0-1.0)
+            - match_type: Type of match ('un_number', 'proper_name', 'simplified_name', 'synonym')
+    """
+    import re
+    from difflib import SequenceMatcher
+    
+    results = []
+    text_lower = text_content.lower()
+    
+    # Pre-load all synonyms with their dangerous goods in a single query
+    synonyms_query = DGProductSynonym.objects.select_related('dangerous_good').all()
+    synonym_mapping = {}
+    for synonym_obj in synonyms_query:
+        synonym_mapping[synonym_obj.synonym.lower()] = {
+            'dangerous_good': synonym_obj.dangerous_good,
+            'original_synonym': synonym_obj.synonym
+        }
+    
+    # Pre-load all dangerous goods for direct name matching
+    dangerous_goods = DangerousGood.objects.all()
+    
+    # Pass 1: Exact UN number matching (highest confidence)
+    un_pattern = r'\bUN\s*(\d{4})\b'
+    un_matches = re.finditer(un_pattern, text_content, re.IGNORECASE)
+    found_un_numbers = set()
+    
+    for match in un_matches:
+        un_number = match.group(1)
+        if un_number in found_un_numbers:
+            continue
+        found_un_numbers.add(un_number)
+        
+        dg = get_dangerous_good_by_un_number(un_number)
+        if dg:
+            results.append({
+                'dangerous_good': dg,
+                'matched_term': f"UN{un_number}",
+                'confidence': 1.0,
+                'match_type': 'un_number'
+            })
+    
+    # Pass 2: Exact synonym matching (high confidence)
+    found_synonyms = set()
+    for synonym_lower, synonym_data in synonym_mapping.items():
+        if synonym_lower in found_synonyms:
+            continue
+        
+        # Check for exact word boundaries to avoid partial matches
+        pattern = r'\b' + re.escape(synonym_lower) + r'\b'
+        if re.search(pattern, text_lower):
+            found_synonyms.add(synonym_lower)
+            results.append({
+                'dangerous_good': synonym_data['dangerous_good'],
+                'matched_term': synonym_data['original_synonym'],
+                'confidence': 0.95,
+                'match_type': 'synonym'
+            })
+    
+    # Pass 3: Exact proper shipping name matching (high confidence)
+    found_proper_names = set()
+    for dg in dangerous_goods:
+        if dg.proper_shipping_name.lower() in found_proper_names:
+            continue
+        
+        proper_name_lower = dg.proper_shipping_name.lower()
+        pattern = r'\b' + re.escape(proper_name_lower) + r'\b'
+        if re.search(pattern, text_lower):
+            found_proper_names.add(proper_name_lower)
+            # Check if this DG is already found via UN number
+            already_found = any(r['dangerous_good'].id == dg.id for r in results)
+            if not already_found:
+                results.append({
+                    'dangerous_good': dg,
+                    'matched_term': dg.proper_shipping_name,
+                    'confidence': 0.9,
+                    'match_type': 'proper_name'
+                })
+    
+    # Pass 4: Fuzzy synonym matching (medium confidence)
+    found_fuzzy_synonyms = set()
+    for synonym_lower, synonym_data in synonym_mapping.items():
+        if len(synonym_lower) < 4:  # Skip very short synonyms for fuzzy matching
+            continue
+        if synonym_lower in found_synonyms or synonym_lower in found_fuzzy_synonyms:
+            continue
+        
+        # Calculate similarity ratio
+        similarity = SequenceMatcher(None, synonym_lower, text_lower).ratio()
+        if similarity > 0.8:  # 80% similarity threshold
+            found_fuzzy_synonyms.add(synonym_lower)
+            # Check if this DG is already found
+            already_found = any(r['dangerous_good'].id == synonym_data['dangerous_good'].id for r in results)
+            if not already_found:
+                results.append({
+                    'dangerous_good': synonym_data['dangerous_good'],
+                    'matched_term': synonym_data['original_synonym'],
+                    'confidence': similarity * 0.8,  # Reduce confidence for fuzzy matches
+                    'match_type': 'synonym'
+                })
+    
+    # Pass 5: Fuzzy proper name matching (medium confidence)
+    found_fuzzy_names = set()
+    for dg in dangerous_goods:
+        proper_name_lower = dg.proper_shipping_name.lower()
+        if len(proper_name_lower) < 4:  # Skip very short names
+            continue
+        if proper_name_lower in found_proper_names or proper_name_lower in found_fuzzy_names:
+            continue
+        
+        # Calculate similarity ratio
+        similarity = SequenceMatcher(None, proper_name_lower, text_lower).ratio()
+        if similarity > 0.8:  # 80% similarity threshold
+            found_fuzzy_names.add(proper_name_lower)
+            # Check if this DG is already found
+            already_found = any(r['dangerous_good'].id == dg.id for r in results)
+            if not already_found:
+                results.append({
+                    'dangerous_good': dg,
+                    'matched_term': dg.proper_shipping_name,
+                    'confidence': similarity * 0.7,  # Reduce confidence for fuzzy matches
+                    'match_type': 'proper_name'
+                })
+    
+    # Sort results by confidence score (highest first)
+    results.sort(key=lambda x: x['confidence'], reverse=True)
+    
+    return results
+
 def lookup_packing_instruction(un_number: str, mode: str = 'air_passenger') -> Optional[str]:
     dg = get_dangerous_good_by_un_number(un_number)
     if not dg: return None

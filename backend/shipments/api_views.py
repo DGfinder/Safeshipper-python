@@ -1,10 +1,14 @@
 # shipments/api_views.py
+import logging
 from rest_framework import viewsets, permissions, filters, status
 from rest_framework import serializers
 from rest_framework.response import Response
 from rest_framework.decorators import action
 from django_filters.rest_framework import DjangoFilterBackend
 from django.core.exceptions import ValidationError, PermissionDenied
+from django.utils import timezone
+
+logger = logging.getLogger(__name__)
 
 from .models import Shipment, ConsignmentItem
 from .serializers import ShipmentSerializer, ShipmentListSerializer, ConsignmentItemSerializer
@@ -136,6 +140,170 @@ class ShipmentViewSet(viewsets.ModelViewSet):
                 {"detail": str(e)}, 
                 status=status.HTTP_403_FORBIDDEN
             )
+    
+    @action(detail=True, methods=['post'], url_path='finalize-from-manifest')
+    def finalize_from_manifest(self, request, pk=None):
+        """
+        Finalize shipment with confirmed dangerous goods from manifest validation.
+        
+        Expected payload:
+        {
+            "document_id": "uuid",
+            "confirmed_dangerous_goods": [
+                {
+                    "un_number": "UN1090",
+                    "description": "ACETONE", 
+                    "quantity": 5,
+                    "weight_kg": 25.0
+                }
+            ]
+        }
+        """
+        from documents.models import Document, DocumentStatus
+        from documents.services import create_shipment_from_confirmed_dgs
+        from dangerous_goods.services import check_list_compatibility
+        
+        shipment = self.get_object()
+        
+        # Validate shipment is in correct status
+        if shipment.status != shipment.ShipmentStatus.AWAITING_VALIDATION:
+            return Response(
+                {"error": "Shipment must be in AWAITING_VALIDATION status to finalize from manifest"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        document_id = request.data.get('document_id')
+        confirmed_dgs = request.data.get('confirmed_dangerous_goods', [])
+        
+        if not document_id:
+            return Response(
+                {"error": "document_id is required"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        if not confirmed_dgs:
+            return Response(
+                {"error": "At least one confirmed dangerous good is required"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        try:
+            # Get and validate document
+            document = Document.objects.get(id=document_id, shipment=shipment)
+            
+            if document.status != DocumentStatus.VALIDATED_WITH_ERRORS:
+                return Response(
+                    {"error": "Document must be in VALIDATED_WITH_ERRORS status"},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            # Validate confirmed dangerous goods format
+            for dg in confirmed_dgs:
+                required_fields = ['un_number', 'description', 'quantity', 'weight_kg']
+                missing_fields = [field for field in required_fields if field not in dg]
+                if missing_fields:
+                    return Response(
+                        {"error": f"Missing required fields in dangerous goods: {missing_fields}"},
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+            
+            # Check compatibility of confirmed dangerous goods
+            un_numbers = [dg['un_number'] for dg in confirmed_dgs]
+            compatibility_result = check_list_compatibility(un_numbers)
+            
+            if not compatibility_result['is_compatible']:
+                return Response({
+                    "error": "Confirmed dangerous goods are not compatible for transport",
+                    "compatibility_result": compatibility_result
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            # Create consignment items from confirmed DGs
+            created_items = create_shipment_from_confirmed_dgs(
+                shipment, confirmed_dgs, request.user
+            )
+            
+            # Update document status to indicate completion
+            document.status = DocumentStatus.VALIDATED_OK
+            validation_results = document.validation_results or {}
+            validation_results.update({
+                'finalized_at': timezone.now().isoformat(),
+                'finalized_by': request.user.id,
+                'confirmed_dangerous_goods': confirmed_dgs,
+                'created_items_count': len(created_items),
+                'compatibility_check': compatibility_result
+            })
+            document.validation_results = validation_results
+            document.save()
+            
+            # Refresh shipment to get updated data
+            shipment.refresh_from_db()
+            
+            # Generate required documents (placeholder for now)
+            generated_docs = self._generate_transport_documents(shipment, created_items)
+            
+            serializer = self.get_serializer(shipment)
+            
+            return Response({
+                "message": f"Shipment finalized with {len(created_items)} dangerous goods items",
+                "shipment": serializer.data,
+                "created_items_count": len(created_items),
+                "compatibility_status": "compatible",
+                "generated_documents": generated_docs,
+                "document_status": document.status
+            }, status=status.HTTP_200_OK)
+            
+        except Document.DoesNotExist:
+            return Response(
+                {"error": "Document not found or not associated with this shipment"},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        except Exception as e:
+            logger.error(f"Error finalizing shipment {shipment.id} from manifest: {str(e)}")
+            return Response(
+                {"error": "An error occurred while finalizing the shipment"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+    
+    def _generate_transport_documents(self, shipment, dangerous_items):
+        """
+        Generate required transport documents for dangerous goods shipment.
+        This is a placeholder implementation - in production this would generate
+        actual PDF documents.
+        """
+        import logging
+        logger = logging.getLogger(__name__)
+        
+        try:
+            generated_docs = []
+            
+            if dangerous_items:
+                # DG Transport Document
+                dg_doc = {
+                    "type": "DG_TRANSPORT_DOCUMENT",
+                    "name": f"DG Transport Document - {shipment.tracking_number}",
+                    "description": "Dangerous Goods Transport Document with item details and compliance information",
+                    "items_included": len(dangerous_items),
+                    "status": "generated"
+                }
+                generated_docs.append(dg_doc)
+                
+                # Compatibility Report
+                compat_doc = {
+                    "type": "COMPATIBILITY_REPORT", 
+                    "name": f"Compatibility Report - {shipment.tracking_number}",
+                    "description": "Dangerous goods compatibility analysis report",
+                    "items_analyzed": len(dangerous_items),
+                    "status": "generated"
+                }
+                generated_docs.append(compat_doc)
+                
+                logger.info(f"Generated {len(generated_docs)} documents for shipment {shipment.id}")
+            
+            return generated_docs
+            
+        except Exception as e:
+            logger.error(f"Failed to generate transport documents: {str(e)}")
+            return []
 
     @action(detail=False, methods=['get'], url_path='search')
     def search(self, request):
