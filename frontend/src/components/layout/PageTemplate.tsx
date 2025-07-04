@@ -1,7 +1,6 @@
 "use client";
 
 import React from 'react';
-import Navigation from './Navigation';
 
 interface PageTemplateProps {
   title: string;
