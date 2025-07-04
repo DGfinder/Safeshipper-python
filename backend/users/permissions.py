@@ -20,6 +20,41 @@ class IsSelfOrAdmin(permissions.BasePermission):
         # obj is the User instance here
         return obj == request.user or request.user.is_staff or request.user.is_superuser
 
+
+class IsAdminOrSelf(permissions.BasePermission):
+    """
+    Admin Access: If request.user.is_staff or request.user.role == 'ADMIN', grant full access.
+    Self-Access: Authenticated users can view and update their own profile.
+    Users cannot list all users, create new users, or delete users unless admin.
+    """
+    
+    def has_permission(self, request, view):
+        if not request.user or not request.user.is_authenticated:
+            return False
+        
+        # Admin users have full access to all actions
+        if request.user.is_staff or request.user.role == 'ADMIN':
+            return True
+            
+        # Non-admin users can only access detail views (retrieve, update) of their own profile
+        # They cannot list, create, or destroy
+        if view.action in ['list', 'create', 'destroy']:
+            return False
+            
+        # For retrieve and update actions, check object permission
+        return True
+    
+    def has_object_permission(self, request, view, obj):
+        if not request.user or not request.user.is_authenticated:
+            return False
+            
+        # Admin users have full access
+        if request.user.is_staff or request.user.role == 'ADMIN':
+            return True
+            
+        # Users can only access their own profile
+        return obj == request.user
+
 class CanManageUsers(permissions.BasePermission):
     """
     Permission to define who can create, list, update users.

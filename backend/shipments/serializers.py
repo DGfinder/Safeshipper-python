@@ -1,13 +1,16 @@
 # shipments/serializers.py
 from rest_framework import serializers
+from django.db import transaction
 from .models import Shipment, ConsignmentItem, ShipmentStatus
+from dangerous_goods.models import DangerousGood
 
 class ConsignmentItemSerializer(serializers.ModelSerializer):
+    dangerous_good_details = serializers.SerializerMethodField()
+    
     class Meta:
         model = ConsignmentItem
         fields = [
             'id',
-            'shipment', # Included for explicitness, but often handled by nested context
             'description',
             'quantity',
             'weight_kg',
@@ -15,100 +18,173 @@ class ConsignmentItemSerializer(serializers.ModelSerializer):
             'width_cm',
             'height_cm',
             'is_dangerous_good',
-            'un_number',
-            'proper_shipping_name',
-            'hazard_class',
-            'packing_group',
+            'dangerous_good_entry',
+            'dangerous_good_details',
             'created_at',
             'updated_at',
         ]
-        read_only_fields = ['id', 'created_at', 'updated_at']
-        # If 'shipment' is always set by the parent ShipmentSerializer,
-        # you might make it read_only=True here or exclude it if it's only for response.
-        # For now, allowing it to be potentially writable if an item is created/updated standalone.
+        read_only_fields = ['id', 'created_at', 'updated_at', 'dangerous_good_details']
+
+    def get_dangerous_good_details(self, obj):
+        """Get dangerous good details if this item is a DG"""
+        if obj.is_dangerous_good and obj.dangerous_good_entry:
+            return {
+                'un_number': obj.dangerous_good_entry.un_number,
+                'proper_shipping_name': obj.dangerous_good_entry.proper_shipping_name,
+                'hazard_class': obj.dangerous_good_entry.hazard_class,
+                'packing_group': obj.dangerous_good_entry.packing_group,
+            }
+        return None
 
     def validate_weight_kg(self, value):
-        if value is not None and value > 5000: # Example limit
+        if value is not None and value > 5000:
             raise serializers.ValidationError("Weight per item must not exceed 5000 kg.")
         if value is not None and value < 0:
-             raise serializers.ValidationError("Weight must be a positive value.")
+            raise serializers.ValidationError("Weight must be a positive value.")
         return value
-
-    def validate_un_number(self, value):
-        # Model's clean method already handles some of this, but serializer validation is good for API clarity.
-        # This validation runs before model.clean() if called from serializer.save().
-        if self.initial_data.get('is_dangerous_good') and not value:
-            raise serializers.ValidationError("UN Number is required for dangerous goods.")
-        if value and not value.upper().startswith("UN"):
-            raise serializers.ValidationError("UN Number must start with 'UN'.")
-        return value.upper() if value else None
     
     def validate(self, data):
-        """
-        Object-level validation for dangerous goods fields.
-        """
-        is_dg = data.get('is_dangerous_good', getattr(self.instance, 'is_dangerous_good', False)) # Get current or new value
-
-        if is_dg:
-            if not data.get('un_number', getattr(self.instance, 'un_number', None)):
-                raise serializers.ValidationError({"un_number": "UN Number is required for dangerous goods."})
-            if not data.get('proper_shipping_name', getattr(self.instance, 'proper_shipping_name', None)):
-                raise serializers.ValidationError({"proper_shipping_name": "Proper Shipping Name is required for dangerous goods."})
-            if not data.get('hazard_class', getattr(self.instance, 'hazard_class', None)):
-                raise serializers.ValidationError({"hazard_class": "Hazard Class is required for dangerous goods."})
-            # Packing group validation could be added here if strictly required for all DG
+        """Object-level validation for dangerous goods fields."""
+        is_dg = data.get('is_dangerous_good', getattr(self.instance, 'is_dangerous_good', False))
+        
+        if is_dg and not data.get('dangerous_good_entry', getattr(self.instance, 'dangerous_good_entry', None)):
+            raise serializers.ValidationError({
+                "dangerous_good_entry": "A Dangerous Good entry must be selected for dangerous goods."
+            })
+        
         return data
 
 class ShipmentSerializer(serializers.ModelSerializer):
-    items = ConsignmentItemSerializer(many=True, required=False) # 'required=False' allows creating shipments without items initially
-    status = serializers.ChoiceField(choices=ShipmentStatus.choices, required=False) # Ensure status uses choices
+    items = ConsignmentItemSerializer(many=True, required=False)
+    status = serializers.ChoiceField(choices=ShipmentStatus.choices, required=False)
+    customer_name = serializers.SerializerMethodField()
+    carrier_name = serializers.SerializerMethodField()
+    freight_type_name = serializers.SerializerMethodField()
+    total_items = serializers.SerializerMethodField()
+    total_weight = serializers.SerializerMethodField()
 
     class Meta:
         model = Shipment
         fields = [
             'id',
-            'reference_number',
             'tracking_number',
-            'origin_address',
-            'destination_address',
-            'assigned_depot',
+            'reference_number',
+            'customer',
+            'customer_name',
+            'carrier',
+            'carrier_name',
+            'origin_location',
+            'destination_location',
+            'freight_type',
+            'freight_type_name',
             'status',
-            'estimated_departure_date',
-            'actual_departure_date',
-            'estimated_arrival_date',
-            'actual_arrival_date',
+            'contract_type',
+            'pricing_basis',
+            'dead_weight_kg',
+            'volumetric_weight_m3',
+            'chargeable_weight_kg',
+            'estimated_pickup_date',
+            'actual_pickup_date',
+            'estimated_delivery_date',
+            'actual_delivery_date',
+            'instructions',
+            'total_items',
+            'total_weight',
             'created_at',
             'updated_at',
             'items',
         ]
-        read_only_fields = ['id', 'tracking_number', 'created_at', 'updated_at']
+        read_only_fields = [
+            'id', 'tracking_number', 'created_at', 'updated_at',
+            'customer_name', 'carrier_name', 'freight_type_name',
+            'total_items', 'total_weight'
+        ]
 
+    def get_customer_name(self, obj):
+        return obj.customer.name if obj.customer else None
+
+    def get_carrier_name(self, obj):
+        return obj.carrier.name if obj.carrier else None
+
+    def get_freight_type_name(self, obj):
+        return obj.freight_type.name if obj.freight_type else None
+
+    def get_total_items(self, obj):
+        return obj.items.count()
+
+    def get_total_weight(self, obj):
+        return sum(
+            (item.weight_kg or 0) * item.quantity 
+            for item in obj.items.all()
+        )
+
+    @transaction.atomic
     def create(self, validated_data):
         items_data = validated_data.pop('items', [])
-        # Tracking number is auto-generated by the model's save method.
-        # Status defaults to PENDING if not provided.
+        
+        # Create shipment (tracking number auto-generated by model)
         shipment = Shipment.objects.create(**validated_data)
+        
+        # Create items
         for item_data in items_data:
-            # Remove shipment from item_data if present, as it's set below
-            item_data.pop('shipment', None)
+            item_data.pop('shipment', None)  # Remove if accidentally included
             ConsignmentItem.objects.create(shipment=shipment, **item_data)
+        
         return shipment
 
+    @transaction.atomic
     def update(self, instance, validated_data):
         items_data = validated_data.pop('items', None)
 
-        # Update shipment fields directly
+        # Update shipment fields
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
-        instance.save() # This will also trigger the model's save() method for tracking_number if it was somehow empty
+        instance.save()
 
-        # Handle nested updates for items
-        if items_data is not None: # Only modify items if 'items' data was provided in the request
-            # Simple strategy: delete existing items and recreate.
-            # For production, you might want a more sophisticated update (e.g., matching by ID).
-            instance.items.all().delete() 
+        # Handle nested item updates
+        if items_data is not None:
+            # Delete existing items and recreate (simpler approach)
+            # For production, consider more sophisticated matching by ID
+            instance.items.all().delete()
             for item_data in items_data:
                 item_data.pop('shipment', None)
                 ConsignmentItem.objects.create(shipment=instance, **item_data)
         
         return instance
+
+class ShipmentListSerializer(serializers.ModelSerializer):
+    """Lightweight serializer for list views"""
+    customer_name = serializers.SerializerMethodField()
+    carrier_name = serializers.SerializerMethodField()
+    total_items = serializers.SerializerMethodField()
+    has_dangerous_goods = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Shipment
+        fields = [
+            'id',
+            'tracking_number',
+            'reference_number',
+            'customer_name',
+            'carrier_name',
+            'origin_location',
+            'destination_location',
+            'status',
+            'total_items',
+            'has_dangerous_goods',
+            'estimated_pickup_date',
+            'estimated_delivery_date',
+            'created_at',
+        ]
+
+    def get_customer_name(self, obj):
+        return obj.customer.name if obj.customer else None
+
+    def get_carrier_name(self, obj):
+        return obj.carrier.name if obj.carrier else None
+
+    def get_total_items(self, obj):
+        return obj.items.count()
+
+    def get_has_dangerous_goods(self, obj):
+        return obj.items.filter(is_dangerous_good=True).exists()

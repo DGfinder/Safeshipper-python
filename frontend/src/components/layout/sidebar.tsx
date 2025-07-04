@@ -13,13 +13,15 @@ import {
   BarChart3, 
   Settings, 
   FileText,
-  Building2
+  Building2,
+  Search
 } from 'lucide-react';
 
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: Home },
   { name: 'Users', href: '/users', icon: Users },
   { name: 'Shipments', href: '/shipments', icon: Package },
+  { name: 'DG Checker', href: '/dg-checker', icon: Search },
   { name: 'Fleet', href: '/fleet', icon: Truck },
   { name: 'DG Compliance', href: '/dg-compliance', icon: Shield },
   { name: 'Customers', href: '/customers', icon: Building2 },

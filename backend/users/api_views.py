@@ -4,7 +4,7 @@ from rest_framework import viewsets, status, permissions
 from rest_framework.response import Response
 from rest_framework.decorators import action
 from .serializers import UserSerializer, UserCreateSerializer, UserUpdateSerializer
-from .permissions import IsSelfOrAdmin, CanManageUsers #, IsAdminUserOrReadOnly
+from .permissions import IsSelfOrAdmin, CanManageUsers, IsAdminOrSelf
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import SearchFilter, OrderingFilter
 
@@ -12,11 +12,11 @@ User = get_user_model()
 
 class UserViewSet(viewsets.ModelViewSet):
     """
-    API endpoint that allows users to be viewed or edited.
+    API endpoint for user management with role-based access control.
+    Admins can perform all operations. Users can view/update their own profiles only.
     """
     queryset = User.objects.all().order_by('username')
-    # serializer_class = UserSerializer # Default serializer
-    permission_classes = [permissions.IsAuthenticated, CanManageUsers] # Overall permission for the viewset
+    permission_classes = [permissions.IsAuthenticated, IsAdminOrSelf]
 
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     filterset_fields = ['role', 'is_active', 'is_staff']
@@ -24,22 +24,20 @@ class UserViewSet(viewsets.ModelViewSet):
     ordering_fields = ['username', 'email', 'role', 'date_joined']
 
     def get_serializer_class(self):
+        """Use dynamic serializer selection based on action."""
         if self.action == 'create':
             return UserCreateSerializer
         elif self.action in ['update', 'partial_update']:
             return UserUpdateSerializer
-        return UserSerializer # For list, retrieve
+        return UserSerializer
 
-    def get_permissions(self):
-        """
-        Instantiates and returns the list of permissions that this view requires.
-        """
-        if self.action in ['update', 'partial_update', 'destroy', 'retrieve']:
-            # For object-level actions, use IsSelfOrAdmin in conjunction with CanManageUsers
-            # CanManageUsers' has_object_permission will be primary for these.
-            return [permissions.IsAuthenticated(), CanManageUsers()] 
-        # For list, create, use permissions defined at class level or customize here.
-        return super().get_permissions()
+    def get_queryset(self):
+        """Admin users see all users, regular users see only themselves."""
+        if self.request.user.is_staff or self.request.user.role == 'ADMIN':
+            return User.objects.all().order_by('username')
+        else:
+            # Non-admin users should only see themselves
+            return User.objects.filter(id=self.request.user.id)
     
     # If you want a specific endpoint for the current user's profile
     @action(detail=False, methods=['get', 'put', 'patch'], permission_classes=[permissions.IsAuthenticated, IsSelfOrAdmin])

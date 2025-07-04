@@ -1,52 +1,99 @@
 'use client';
 
+import { useState, useMemo } from 'react';
 import { DashboardLayout } from '@/components/layout/dashboard-layout';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Plus, Search, MoreHorizontal, Edit2, Trash2 } from 'lucide-react';
-
-const users = [
-  {
-    id: 1,
-    username: 'john.doe',
-    email: 'john@example.com',
-    role: 'Driver',
-    status: 'Active',
-    avatar: 'JD',
-    lastLogin: '2 hours ago'
-  },
-  {
-    id: 2,
-    username: 'jane.smith',
-    email: 'jane@example.com',
-    role: 'Dispatcher',
-    status: 'Active',
-    avatar: 'JS',
-    lastLogin: '1 day ago'
-  },
-  {
-    id: 3,
-    username: 'admin.user',
-    email: 'admin@example.com',
-    role: 'Admin',
-    status: 'Active',
-    avatar: 'AU',
-    lastLogin: '5 minutes ago'
-  },
-  {
-    id: 4,
-    username: 'mike.wilson',
-    email: 'mike@example.com',
-    role: 'Safety Officer',
-    status: 'Inactive',
-    avatar: 'MW',
-    lastLogin: '3 days ago'
-  }
-];
+import { Skeleton } from '@/components/ui/skeleton';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Plus, Search, Edit2, Trash2, AlertCircle, Loader2 } from 'lucide-react';
+import { useUsers, User } from '@/hooks/useUsers';
+import { UserCreateForm } from '@/components/users/UserCreateForm';
+import { UserEditForm } from '@/components/users/UserEditForm';
+import { UserDeleteDialog } from '@/components/users/UserDeleteDialog';
 
 export default function UsersPage() {
+  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [deletingUser, setDeletingUser] = useState<User | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
+
+  const { data: users, isLoading, error, refetch } = useUsers();
+
+  // Filter users based on search term
+  const filteredUsers = useMemo(() => {
+    if (!users || !searchTerm) return users || [];
+    
+    return users.filter(user =>
+      user.username.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user.first_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user.last_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user.role_display?.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  }, [users, searchTerm]);
+
+  const formatLastLogin = (lastLogin: string | null) => {
+    if (!lastLogin) return 'Never';
+    
+    const date = new Date(lastLogin);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+    const diffMinutes = Math.floor(diffMs / (1000 * 60));
+
+    if (diffDays > 0) return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
+    if (diffHours > 0) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
+    if (diffMinutes > 0) return `${diffMinutes} minute${diffMinutes > 1 ? 's' : ''} ago`;
+    return 'Just now';
+  };
+
+  const getUserInitials = (user: User) => {
+    if (user.first_name && user.last_name) {
+      return `${user.first_name[0]}${user.last_name[0]}`.toUpperCase();
+    }
+    return user.username.slice(0, 2).toUpperCase();
+  };
+
+  const getUserDisplayName = (user: User) => {
+    if (user.first_name || user.last_name) {
+      return `${user.first_name || ''} ${user.last_name || ''}`.trim();
+    }
+    return user.username;
+  };
+
+  const handleFormSuccess = () => {
+    refetch();
+  };
+
+  if (error) {
+    return (
+      <DashboardLayout>
+        <div className="space-y-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900">User Management</h1>
+              <p className="text-gray-600 mt-1">Manage system users, roles, and permissions</p>
+            </div>
+          </div>
+
+          <Alert>
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>
+              Failed to load users: {error.message}
+              <Button variant="outline" size="sm" className="ml-2" onClick={() => refetch()}>
+                Try Again
+              </Button>
+            </AlertDescription>
+          </Alert>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
   return (
     <DashboardLayout>
       <div className="space-y-6">
@@ -56,7 +103,10 @@ export default function UsersPage() {
             <h1 className="text-3xl font-bold text-gray-900">User Management</h1>
             <p className="text-gray-600 mt-1">Manage system users, roles, and permissions</p>
           </div>
-          <Button className="bg-[#153F9F] hover:bg-blue-700">
+          <Button 
+            className="bg-[#153F9F] hover:bg-blue-700"
+            onClick={() => setShowCreateForm(true)}
+          >
             <Plus className="w-4 h-4 mr-2" />
             Add User
           </Button>
@@ -72,12 +122,22 @@ export default function UsersPage() {
                   <Input
                     placeholder="Search users..."
                     className="pl-10"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
                   />
                 </div>
               </div>
-              <Button variant="outline">
-                Filter
-              </Button>
+              {isLoading && (
+                <div className="flex items-center gap-2 text-gray-500">
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span className="text-sm">Loading...</span>
+                </div>
+              )}
+              {!isLoading && users && (
+                <span className="text-sm text-gray-500">
+                  {filteredUsers.length} of {users.length} users
+                </span>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -101,52 +161,122 @@ export default function UsersPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y">
-                  {users.map((user) => (
-                    <tr key={user.id} className="hover:bg-gray-50">
-                      <td className="py-3 px-4">
-                        <div className="flex items-center space-x-3">
-                          <div className="w-10 h-10 bg-[#153F9F] rounded-full flex items-center justify-center text-white font-medium">
-                            {user.avatar}
+                  {isLoading ? (
+                    // Loading skeletons
+                    Array.from({ length: 5 }).map((_, index) => (
+                      <tr key={index}>
+                        <td className="py-3 px-4">
+                          <div className="flex items-center space-x-3">
+                            <Skeleton className="w-10 h-10 rounded-full" />
+                            <div className="space-y-1">
+                              <Skeleton className="h-4 w-24" />
+                              <Skeleton className="h-3 w-32" />
+                            </div>
                           </div>
-                          <div>
-                            <div className="font-medium text-gray-900">{user.username}</div>
-                            <div className="text-sm text-gray-500">{user.email}</div>
+                        </td>
+                        <td className="py-3 px-4">
+                          <Skeleton className="h-6 w-16 rounded" />
+                        </td>
+                        <td className="py-3 px-4">
+                          <Skeleton className="h-6 w-16 rounded" />
+                        </td>
+                        <td className="py-3 px-4">
+                          <Skeleton className="h-4 w-20" />
+                        </td>
+                        <td className="py-3 px-4">
+                          <div className="flex items-center space-x-2">
+                            <Skeleton className="h-8 w-8" />
+                            <Skeleton className="h-8 w-8" />
                           </div>
-                        </div>
-                      </td>
-                      <td className="py-3 px-4">
-                        <Badge variant="secondary">
-                          {user.role}
-                        </Badge>
-                      </td>
-                      <td className="py-3 px-4">
-                        <Badge variant={user.status === 'Active' ? 'success' : 'secondary'}>
-                          {user.status}
-                        </Badge>
-                      </td>
-                      <td className="py-3 px-4 text-sm text-gray-600">
-                        {user.lastLogin}
-                      </td>
-                      <td className="py-3 px-4">
-                        <div className="flex items-center space-x-2">
-                          <Button variant="ghost" size="sm">
-                            <Edit2 className="w-4 h-4" />
-                          </Button>
-                          <Button variant="ghost" size="sm">
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                          <Button variant="ghost" size="sm">
-                            <MoreHorizontal className="w-4 h-4" />
-                          </Button>
-                        </div>
+                        </td>
+                      </tr>
+                    ))
+                  ) : filteredUsers.length === 0 ? (
+                    <tr>
+                      <td colSpan={5} className="py-8 text-center text-gray-500">
+                        {searchTerm ? 'No users found matching your search.' : 'No users found.'}
                       </td>
                     </tr>
-                  ))}
+                  ) : (
+                    filteredUsers.map((user) => (
+                      <tr key={user.id} className="hover:bg-gray-50">
+                        <td className="py-3 px-4">
+                          <div className="flex items-center space-x-3">
+                            <div className="w-10 h-10 bg-[#153F9F] rounded-full flex items-center justify-center text-white font-medium">
+                              {getUserInitials(user)}
+                            </div>
+                            <div>
+                              <div className="font-medium text-gray-900">
+                                {getUserDisplayName(user)}
+                              </div>
+                              <div className="text-sm text-gray-500">{user.email}</div>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="py-3 px-4">
+                          <Badge variant="secondary">
+                            {user.role_display}
+                          </Badge>
+                        </td>
+                        <td className="py-3 px-4">
+                          <Badge variant={user.is_active ? 'success' : 'secondary'}>
+                            {user.is_active ? 'Active' : 'Inactive'}
+                          </Badge>
+                        </td>
+                        <td className="py-3 px-4 text-sm text-gray-600">
+                          {formatLastLogin(user.last_login)}
+                        </td>
+                        <td className="py-3 px-4">
+                          <div className="flex items-center space-x-2">
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              onClick={() => setEditingUser(user)}
+                            >
+                              <Edit2 className="w-4 h-4" />
+                            </Button>
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              onClick={() => setDeletingUser(user)}
+                              className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </table>
             </div>
           </CardContent>
         </Card>
+
+        {/* Modals */}
+        {showCreateForm && (
+          <UserCreateForm
+            onClose={() => setShowCreateForm(false)}
+            onSuccess={handleFormSuccess}
+          />
+        )}
+
+        {editingUser && (
+          <UserEditForm
+            user={editingUser}
+            onClose={() => setEditingUser(null)}
+            onSuccess={handleFormSuccess}
+          />
+        )}
+
+        {deletingUser && (
+          <UserDeleteDialog
+            user={deletingUser}
+            onClose={() => setDeletingUser(null)}
+            onSuccess={handleFormSuccess}
+          />
+        )}
       </div>
     </DashboardLayout>
   );

@@ -1,5 +1,5 @@
 # dangerous_goods/api_views.py
-from rest_framework import viewsets, permissions, status
+from rest_framework import viewsets, permissions, status, views
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from django_filters.rest_framework import DjangoFilterBackend
@@ -12,42 +12,106 @@ from .serializers import (
     SegregationGroupSerializer,
     SegregationRuleSerializer
 )
-from .permissions import CanManageDGData # Corrected: Use the defined permission class
-from .services import get_dangerous_good_by_un_number, check_dg_compatibility, match_synonym_to_dg
+from .permissions import CanManageDGData
+from .services import (
+    get_dangerous_good_by_un_number, 
+    check_dg_compatibility, 
+    match_synonym_to_dg,
+    check_list_compatibility
+)
 
-class DangerousGoodViewSet(viewsets.ModelViewSet):
+class DangerousGoodViewSet(viewsets.ReadOnlyModelViewSet):
     """
-    API endpoint for Dangerous Goods information.
-    Allows viewing by authenticated users.
-    Allows creation, update, deletion by admin/staff users.
+    Read-only API endpoint for Dangerous Goods information.
+    Provides searchable list of all dangerous goods for frontend selection fields.
     """
     queryset = DangerousGood.objects.all().order_by('un_number')
     serializer_class = DangerousGoodSerializer
-    permission_classes = [permissions.IsAuthenticated, CanManageDGData] # Use CanManageDGData
+    permission_classes = [permissions.IsAuthenticated]
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     filterset_fields = {
         'un_number': ['exact', 'icontains', 'startswith'],
-        'proper_shipping_name': ['icontains', 'search'],
+        'proper_shipping_name': ['icontains'],
         'hazard_class': ['exact', 'in'],
         'packing_group': ['exact', 'in'],
         'is_marine_pollutant': ['exact'],
         'is_environmentally_hazardous': ['exact'],
-        'subsidiary_risks': ['icontains'],
     }
-    search_fields = ['un_number', 'proper_shipping_name', 'simplified_name', 'hazard_class', 'subsidiary_risks', 'hazard_labels_required']
+    search_fields = ['un_number', 'proper_shipping_name', 'simplified_name']
     ordering_fields = ['un_number', 'proper_shipping_name', 'hazard_class']
 
     @action(detail=False, methods=['get'], url_path='lookup-by-synonym')
     def lookup_by_synonym(self, request):
+        """Look up dangerous good by synonym or alternative name."""
         query = request.query_params.get('query', None)
         if not query:
             return Response({'error': 'Query parameter "query" is required.'}, status=status.HTTP_400_BAD_REQUEST)
 
         dg = match_synonym_to_dg(query)
         if dg:
-            serializer = self.get_serializer(dg) # Use self.get_serializer for context
+            serializer = self.get_serializer(dg)
             return Response(serializer.data)
         return Response({'message': 'No matching dangerous good found for the synonym.'}, status=status.HTTP_404_NOT_FOUND)
+
+
+class DGCompatibilityCheckView(views.APIView):
+    """
+    API endpoint for checking compatibility between multiple dangerous goods.
+    Accepts a POST request with a list of UN numbers and returns compatibility results.
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        """
+        Check compatibility between a list of UN numbers.
+        
+        Expected payload:
+        {
+            "un_numbers": ["1090", "1381", "1203"]
+        }
+        
+        Returns:
+        {
+            "is_compatible": false,
+            "conflicts": [
+                {
+                    "un_number_1": "1090",
+                    "un_number_2": "1381", 
+                    "reason": "Class 3 Flammable Liquids are incompatible with Class 4.2 Spontaneously Combustible materials."
+                }
+            ]
+        }
+        """
+        un_numbers = request.data.get('un_numbers', [])
+        
+        if not un_numbers:
+            return Response(
+                {"error": "Field 'un_numbers' is required and must be a non-empty list."}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        if not isinstance(un_numbers, list):
+            return Response(
+                {"error": "Field 'un_numbers' must be a list."}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        if len(un_numbers) < 2:
+            return Response(
+                {"error": "At least 2 UN numbers are required for compatibility checking."}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            # Use the service function to check compatibility
+            result = check_list_compatibility(un_numbers)
+            return Response(result, status=status.HTTP_200_OK)
+        
+        except Exception as e:
+            return Response(
+                {"error": f"An error occurred while checking compatibility: {str(e)}"}, 
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
 class DGProductSynonymViewSet(viewsets.ModelViewSet):
     """

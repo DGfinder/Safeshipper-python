@@ -1,20 +1,15 @@
 # shipments/services.py
-from django.db import transaction, models # Added models here
-# from django.utils import timezone # Not used as models handle timestamps
-from .models import Shipment, ConsignmentItem, ShipmentStatus
+from django.db import transaction, models
 from django.contrib.auth import get_user_model
 from django.core.exceptions import PermissionDenied, ValidationError as DjangoValidationError
-from django.conf import settings # Often useful, though not strictly needed for the fix below if path is known
-from typing import TYPE_CHECKING, List, Dict, Optional # Added List, Dict, Optional for better hinting
+from django.db.models import Q
+from typing import TYPE_CHECKING, List, Dict, Optional
 
-# This block is for static type checking (Pylance)
+from .models import Shipment, ConsignmentItem, ShipmentStatus
+
 if TYPE_CHECKING:
-    from users.models import User # Import your concrete User model
-    # If users.models is not the correct path to your custom User model, adjust it.
-    # This assumes AUTH_USER_MODEL = 'users.User'
+    from users.models import User
 
-# This is for runtime Django logic (e.g., if you were to do User.objects... directly here)
-# It's fine to keep, but the type hints in function signatures will refer to the 'User' imported above for TYPE_CHECKING.
 RuntimeUser = get_user_model()
 
 
@@ -55,50 +50,64 @@ def create_shipment_with_items(shipment_data: Dict, items_data: List[Dict], crea
     
     return new_shipment
 
-def get_shipments_for_user(user: 'User') -> models.QuerySet[Shipment]: # Changed to models.QuerySet
+def get_shipments_for_user(user: 'User') -> models.QuerySet[Shipment]:
     """
-    Returns a queryset of shipments scoped to the user.
-    Admins/staff see all shipments.
-    Other users see shipments assigned to their depot (if they have one).
+    Returns a queryset of shipments based on user role and permissions.
+    Enhanced to support role-based filtering as required by Phase 2.
     """
     if not user.is_authenticated:
         return Shipment.objects.none()
 
-    if user.is_staff or user.is_superuser:
-        return Shipment.objects.all() 
+    # ADMIN users see all shipments
+    if user.role == 'ADMIN' or user.is_superuser:
+        return Shipment.objects.all().select_related('customer', 'carrier', 'freight_type')
     
-    user_depot = getattr(user, 'depot', None)
-
-    if user_depot:
-        return Shipment.objects.filter(assigned_depot=user_depot)
+    # DISPATCHER and COMPLIANCE_OFFICER see shipments from their company
+    if user.role in ['DISPATCHER', 'COMPLIANCE_OFFICER']:
+        return Shipment.objects.filter(
+            Q(customer=user.company) | Q(carrier=user.company)
+        ).select_related('customer', 'carrier', 'freight_type')
     
+    # DRIVER sees only shipments assigned to vehicles they operate
+    if user.role == 'DRIVER':
+        return Shipment.objects.filter(
+            # Add vehicle assignment logic when Vehicle model is integrated
+            # For now, filter by company
+            Q(customer=user.company) | Q(carrier=user.company)
+        ).select_related('customer', 'carrier', 'freight_type')
+    
+    # CUSTOMER users see only their own shipments
+    if user.role == 'CUSTOMER':
+        return Shipment.objects.filter(
+            customer=user.company
+        ).select_related('customer', 'carrier', 'freight_type')
+    
+    # Default fallback - no access
     return Shipment.objects.none()
 
 @transaction.atomic
-def update_shipment_details(shipment: Shipment, shipment_data: Dict, updating_user: 'User', items_data: Optional[List[Dict]] = None) -> Shipment: # Reordered parameters
+def update_shipment_details(shipment: Shipment, shipment_data: Dict, updating_user: 'User', items_data: Optional[List[Dict]] = None) -> Shipment:
     """
     Updates a shipment and its related consignment items atomically.
-    Requires 'updating_user' for permission checks.
-    'items_data' is now an optional keyword argument.
+    Enhanced with role-based permission checks for Phase 2.
     """
     if not updating_user or not updating_user.is_authenticated:
         raise PermissionDenied("Authentication required to update shipment.")
 
-    can_update = False
-    if updating_user.is_staff or updating_user.is_superuser:
-        can_update = True
-    elif hasattr(updating_user, 'depot') and shipment.assigned_depot == updating_user.depot:
-        can_update = True
+    # Role-based permission checking
+    can_update = _can_user_modify_shipment(updating_user, shipment)
     
     if not can_update:
         raise PermissionDenied("You do not have permission to update this shipment.")
 
+    # Update shipment fields (excluding nested items)
     for attr, value in shipment_data.items():
-        if hasattr(Shipment, attr) and attr != 'items': 
+        if hasattr(Shipment, attr) and attr not in ['items', 'id', 'tracking_number']: 
             setattr(shipment, attr, value)
     
     shipment.save()
 
+    # Handle nested item updates if provided
     if items_data is not None: 
         shipment.items.all().delete() 
         new_items_list = []
@@ -118,23 +127,46 @@ def update_shipment_details(shipment: Shipment, shipment_data: Dict, updating_us
     return shipment
 
 
+def _can_user_modify_shipment(user: 'User', shipment: Shipment) -> bool:
+    """
+    Helper function to determine if a user can modify a specific shipment.
+    Implements role-based access control for shipment modifications.
+    """
+    # ADMIN users can modify all shipments
+    if user.role == 'ADMIN' or user.is_superuser:
+        return True
+    
+    # DISPATCHER and COMPLIANCE_OFFICER can modify shipments from their company
+    if user.role in ['DISPATCHER', 'COMPLIANCE_OFFICER']:
+        return (shipment.customer == user.company or 
+                shipment.carrier == user.company)
+    
+    # DRIVER users cannot modify shipment details (read-only access)
+    if user.role == 'DRIVER':
+        return False
+    
+    # CUSTOMER users cannot modify shipments after creation
+    if user.role == 'CUSTOMER':
+        return False
+    
+    return False
+
+
 def update_shipment_status_service(shipment: Shipment, new_status_value: str, updating_user: 'User') -> Shipment:
     """
-    Updates the status of a shipment with permission checks.
-    'new_status_value' should be a valid key from ShipmentStatus choices.
+    Updates the status of a shipment with role-based permission checks.
+    Enhanced for Phase 2 with proper role-based access control.
     """
     if not updating_user or not updating_user.is_authenticated:
         raise PermissionDenied("Authentication required.")
 
-    can_update_status = False
-    if updating_user.is_staff or updating_user.is_superuser:
-        can_update_status = True
-    elif hasattr(updating_user, 'depot') and shipment.assigned_depot == updating_user.depot:
-        can_update_status = True 
+    # Role-based permission checking for status updates
+    can_update_status = _can_user_update_status(updating_user, shipment, new_status_value)
     
     if not can_update_status:
         raise PermissionDenied("You do not have permission to update this shipment's status.")
 
+    # Validate status value
     if new_status_value not in ShipmentStatus.values:
         raise DjangoValidationError(f"'{new_status_value}' is not a valid shipment status. Valid choices are: {ShipmentStatus.labels}.")
 
@@ -142,3 +174,100 @@ def update_shipment_status_service(shipment: Shipment, new_status_value: str, up
     shipment.save(update_fields=['status', 'updated_at']) 
     
     return shipment
+
+
+def _can_user_update_status(user: 'User', shipment: Shipment, new_status: str) -> bool:
+    """
+    Helper function to determine if a user can update a shipment's status.
+    Implements role-specific status transition rules.
+    """
+    # ADMIN users can update any status
+    if user.role == 'ADMIN' or user.is_superuser:
+        return True
+    
+    # DISPATCHER can update most statuses for their company's shipments
+    if user.role == 'DISPATCHER':
+        if shipment.customer == user.company or shipment.carrier == user.company:
+            # Dispatchers can handle planning and dispatch-related statuses
+            allowed_statuses = [
+                ShipmentStatus.PLANNING,
+                ShipmentStatus.READY_FOR_DISPATCH,
+                ShipmentStatus.IN_TRANSIT,
+                ShipmentStatus.AT_HUB,
+                ShipmentStatus.EXCEPTION,
+                ShipmentStatus.CANCELLED
+            ]
+            return new_status in allowed_statuses
+        return False
+    
+    # DRIVER can update transit and delivery statuses
+    if user.role == 'DRIVER':
+        if shipment.customer == user.company or shipment.carrier == user.company:
+            # Drivers can update statuses related to transit and delivery
+            allowed_statuses = [
+                ShipmentStatus.IN_TRANSIT,
+                ShipmentStatus.OUT_FOR_DELIVERY,
+                ShipmentStatus.DELIVERED,
+                ShipmentStatus.EXCEPTION
+            ]
+            return new_status in allowed_statuses
+        return False
+    
+    # COMPLIANCE_OFFICER can update compliance-related statuses
+    if user.role == 'COMPLIANCE_OFFICER':
+        if shipment.customer == user.company or shipment.carrier == user.company:
+            # Compliance officers focus on validation and exception handling
+            allowed_statuses = [
+                ShipmentStatus.PENDING,
+                ShipmentStatus.PLANNING,
+                ShipmentStatus.EXCEPTION,
+                ShipmentStatus.CANCELLED
+            ]
+            return new_status in allowed_statuses
+        return False
+    
+    # CUSTOMER users cannot update status (read-only)
+    return False
+
+
+def search_shipments(user: 'User', search_params: Dict) -> models.QuerySet[Shipment]:
+    """
+    Search and filter shipments based on user permissions and search criteria.
+    New function for Phase 2 enhanced search capabilities.
+    """
+    base_queryset = get_shipments_for_user(user)
+    
+    # Apply search filters
+    queryset = base_queryset
+    
+    if 'tracking_number' in search_params:
+        queryset = queryset.filter(tracking_number__icontains=search_params['tracking_number'])
+    
+    if 'reference_number' in search_params:
+        queryset = queryset.filter(reference_number__icontains=search_params['reference_number'])
+    
+    if 'status' in search_params:
+        if isinstance(search_params['status'], list):
+            queryset = queryset.filter(status__in=search_params['status'])
+        else:
+            queryset = queryset.filter(status=search_params['status'])
+    
+    if 'customer_id' in search_params:
+        queryset = queryset.filter(customer_id=search_params['customer_id'])
+    
+    if 'carrier_id' in search_params:
+        queryset = queryset.filter(carrier_id=search_params['carrier_id'])
+    
+    if 'has_dangerous_goods' in search_params:
+        if search_params['has_dangerous_goods']:
+            queryset = queryset.filter(items__is_dangerous_good=True).distinct()
+        else:
+            queryset = queryset.exclude(items__is_dangerous_good=True).distinct()
+    
+    if 'date_from' in search_params:
+        queryset = queryset.filter(created_at__gte=search_params['date_from'])
+    
+    if 'date_to' in search_params:
+        queryset = queryset.filter(created_at__lte=search_params['date_to'])
+    
+    return queryset.prefetch_related('items__dangerous_good_entry')

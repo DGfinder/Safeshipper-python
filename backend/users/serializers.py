@@ -81,8 +81,10 @@ class UserCreateSerializer(serializers.ModelSerializer):
         return user
 
 class UserUpdateSerializer(serializers.ModelSerializer):
-    password = serializers.CharField(write_only=True, required=False, allow_blank=True, validators=[validate_password])
-    password2 = serializers.CharField(write_only=True, required=False, allow_blank=True, label="Confirm password")
+    """
+    Serializer for user updates - excludes password changes for security.
+    Password changes should be handled by a separate dedicated endpoint.
+    """
 
     class Meta:
         model = User
@@ -91,19 +93,14 @@ class UserUpdateSerializer(serializers.ModelSerializer):
             'first_name',
             'last_name',
             'role',
-            
             'is_active',
             'is_staff',
-            'password',
-            'password2',
         ]
         extra_kwargs = {
             'email': {'required': False},
             'role': {'required': False},
             'is_active': {'required': False},
             'is_staff': {'required': False},
-            'password': {'required': False},
-            'password2': {'required': False},
         }
 
     def validate_email(self, value):
@@ -112,31 +109,10 @@ class UserUpdateSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("A user with that email already exists.")
         return value
 
-    def validate(self, attrs):
-        password = attrs.get('password')
-        password2 = attrs.get('password2')
-
-        if password or password2:
-            if password != password2:
-                raise serializers.ValidationError({"password": "Password fields didn't match."})
-        
-        if 'password2' in attrs:
-            attrs.pop('password2')
-        return attrs
-
     def update(self, instance, validated_data):
-        password = validated_data.pop('password', None)
-
-        # This ensures we only update fields that are passed in the request
+        # Update only the fields that are provided
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
-
-        if password:
-            try:
-                validate_password(password, instance)
-                instance.set_password(password)
-            except DjangoValidationError as e:
-                raise serializers.ValidationError({'password': list(e.messages)})
-
+        
         instance.save()
         return instance
