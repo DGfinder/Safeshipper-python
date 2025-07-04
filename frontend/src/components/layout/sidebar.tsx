@@ -14,13 +14,15 @@ import {
   Settings, 
   FileText,
   Building2,
-  Search
+  Search,
+  MapPin
 } from 'lucide-react';
 
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: Home },
+  { name: 'Live Map', href: '/dashboard/live-map', icon: MapPin },
   { name: 'Users', href: '/users', icon: Users },
-  { name: 'Shipments', href: '/shipments', icon: Package },
+  { name: 'Shipments', href: '/shipments/demo-shipment', icon: Package },
   { name: 'DG Checker', href: '/dg-checker', icon: Search },
   { name: 'Fleet', href: '/fleet', icon: Truck },
   { name: 'DG Compliance', href: '/dg-compliance', icon: Shield },

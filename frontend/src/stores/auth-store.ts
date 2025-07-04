@@ -52,8 +52,10 @@ export const useAuthStore = create<AuthState>()(
           const data = await response.json();
           
           // Store tokens
-          localStorage.setItem('access_token', data.access_token);
-          localStorage.setItem('refresh_token', data.refresh_token);
+          if (typeof window !== 'undefined') {
+            localStorage.setItem('access_token', data.access_token);
+            localStorage.setItem('refresh_token', data.refresh_token);
+          }
           
           // Transform backend user data to frontend format
           const user: User = {
@@ -79,23 +81,27 @@ export const useAuthStore = create<AuthState>()(
 
       logout: async () => {
         try {
-          const refreshToken = localStorage.getItem('refresh_token');
-          
-          // Call backend logout endpoint
-          await fetch('/api/v1/users/auth/logout/', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
-            },
-            body: JSON.stringify({ refresh_token: refreshToken }),
-          });
+          if (typeof window !== 'undefined') {
+            const refreshToken = localStorage.getItem('refresh_token');
+            
+            // Call backend logout endpoint
+            await fetch('/api/v1/users/auth/logout/', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
+              },
+              body: JSON.stringify({ refresh_token: refreshToken }),
+            });
+          }
         } catch (error) {
           console.warn('Logout API call failed:', error);
         } finally {
           // Clear local storage and state regardless of API call result
-          localStorage.removeItem('access_token');
-          localStorage.removeItem('refresh_token');
+          if (typeof window !== 'undefined') {
+            localStorage.removeItem('access_token');
+            localStorage.removeItem('refresh_token');
+          }
           
           set({ 
             user: null, 
@@ -114,6 +120,7 @@ export const useAuthStore = create<AuthState>()(
       },
 
       getToken: () => {
+        if (typeof window === 'undefined') return null;
         return get().token || localStorage.getItem('access_token');
       }
     }),

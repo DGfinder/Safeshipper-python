@@ -10,15 +10,28 @@ interface AuthGuardProps {
 }
 
 export function AuthGuard({ children }: AuthGuardProps) {
-  const { isAuthenticated, user, isHydrated } = useAuthStore();
+  const { isAuthenticated, user, isHydrated, setUser } = useAuthStore();
   const router = useRouter();
 
   useEffect(() => {
-    // Only redirect if hydration is complete and user is not authenticated
+    // TEMPORARY: Bypass authentication for demo purposes
     if (isHydrated && !isAuthenticated && !user) {
-      router.push('/login');
+      // Set a demo user to bypass login
+      setUser({
+        id: 'demo-user',
+        username: 'demo@safeshipper.com',
+        email: 'demo@safeshipper.com',
+        role: 'DISPATCHER',
+        avatar: 'DE'
+      });
+      return;
     }
-  }, [isAuthenticated, user, router, isHydrated]);
+
+    // Original auth logic (commented out for demo)
+    // if (isHydrated && !isAuthenticated && !user) {
+    //   router.push('/login');
+    // }
+  }, [isAuthenticated, user, router, isHydrated, setUser]);
 
   // Show loading skeleton while hydrating
   if (!isHydrated) {
