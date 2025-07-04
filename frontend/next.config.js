@@ -15,7 +15,7 @@ const nextConfig = {
   
   // Enable experimental features for better performance
   experimental: {
-    optimizePackageImports: ['@heroicons/react', 'lucide-react'],
+    // optimizePackageImports: ['@heroicons/react', 'lucide-react'], // Removed - packages not installed
   },
   
   // Configure webpack for better bundle optimization
