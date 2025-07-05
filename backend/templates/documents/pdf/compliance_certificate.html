@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Compliance Certificate - {{ shipment.tracking_number }}</title>
+</head>
+<body>
+    <!-- Header Section -->
+    <div class="header">
+        <div class="company-logo">SafeShipper</div>
+        <div class="document-title">Dangerous Goods Compliance Certificate</div>
+        <div class="document-subtitle">
+            Certificate Number: {{ certificate_number }} | 
+            Issue Date: {{ issue_date|date:"F d, Y" }}
+        </div>
+    </div>
+
+    <!-- Certificate Information -->
+    <div class="section">
+        <h2 class="section-title">Certificate Information</h2>
+        <div class="info-grid">
+            <div>
+                <div class="info-item">
+                    <span class="info-label">Certificate Number:</span>
+                    <span class="info-value">{{ certificate_number }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Issue Date:</span>
+                    <span class="info-value">{{ issue_date|date:"F d, Y" }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Valid Until:</span>
+                    <span class="info-value">{{ valid_until|date:"F d, Y" }}</span>
+                </div>
+            </div>
+            <div>
+                <div class="info-item">
+                    <span class="info-label">Shipment Tracking:</span>
+                    <span class="info-value">{{ shipment.tracking_number }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Customer:</span>
+                    <span class="info-value">{{ shipment.customer.name }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Carrier:</span>
+                    <span class="info-value">{{ shipment.carrier.name }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Compliance Statement -->
+    <div class="section">
+        <div class="compliance-section">
+            <h2 class="section-title">Compliance Declaration</h2>
+            {% if compliance_status.is_compliant %}
+            <p style="font-size: 14pt; font-weight: bold; color: #047857; margin-bottom: 15px;">
+                ✓ This shipment has been assessed and is COMPLIANT with applicable dangerous goods regulations.
+            </p>
+            {% else %}
+            <p style="font-size: 14pt; font-weight: bold; color: #dc2626; margin-bottom: 15px;">
+                ⚠ This shipment has compliance issues that require attention.
+            </p>
+            {% endif %}
+            
+            <p>
+                We hereby certify that the dangerous goods described in this document have been properly 
+                classified, documented, packaged, marked, labeled, and are in proper condition for transport 
+                according to applicable regulations including:
+            </p>
+            <ul style="margin: 15px 0; padding-left: 30px;">
+                <li>IATA Dangerous Goods Regulations (DGR)</li>
+                <li>International Maritime Dangerous Goods (IMDG) Code</li>
+                <li>European Agreement concerning the International Carriage of Dangerous Goods by Road (ADR)</li>
+                <li>Local and national dangerous goods transport regulations</li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Shipment Details -->
+    <div class="section">
+        <h2 class="section-title">Shipment Details</h2>
+        <div class="info-grid">
+            <div>
+                <div class="info-item">
+                    <span class="info-label">Origin:</span>
+                    <span class="info-value">{{ shipment.origin_location }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Destination:</span>
+                    <span class="info-value">{{ shipment.destination_location }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Transport Mode:</span>
+                    <span class="info-value">{{ shipment.freight_type.name }}</span>
+                </div>
+            </div>
+            <div>
+                <div class="info-item">
+                    <span class="info-label">Total DG Items:</span>
+                    <span class="info-value">{{ dangerous_items|length }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Shipment Status:</span>
+                    <span class="info-value status-badge status-{{ shipment.status|lower }}">
+                        {{ shipment.get_status_display }}
+                    </span>
+                </div>
+                {% if latest_inspection %}
+                <div class="info-item">
+                    <span class="info-label">Last Inspection:</span>
+                    <span class="info-value">{{ latest_inspection.created_at|date:"M d, Y" }}</span>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Dangerous Goods Summary -->
+    <div class="section">
+        <h2 class="section-title">Dangerous Goods Summary</h2>
+        {% if dangerous_items %}
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>UN Number</th>
+                    <th>Proper Shipping Name</th>
+                    <th>Hazard Class</th>
+                    <th>Packing Group</th>
+                    <th>Quantity</th>
+                    <th>Net Weight</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in dangerous_items %}
+                <tr>
+                    <td>
+                        {% if item.dangerous_good_entry %}
+                            <strong>{{ item.dangerous_good_entry.un_number }}</strong>
+                        {% else %}
+                            <span style="color: #dc2626;">Not Classified</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if item.dangerous_good_entry %}
+                            {{ item.dangerous_good_entry.proper_shipping_name }}
+                        {% else %}
+                            {{ item.description }}
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if item.dangerous_good_entry %}
+                            <span class="hazard-class hazard-class-{{ item.dangerous_good_entry.hazard_class }}">
+                                {{ item.dangerous_good_entry.hazard_class }}
+                            </span>
+                        {% else %}
+                            <span style="color: #dc2626;">Unknown</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if item.dangerous_good_entry %}
+                            {{ item.dangerous_good_entry.packing_group|default:"N/A" }}
+                        {% else %}
+                            N/A
+                        {% endif %}
+                    </td>
+                    <td>{{ item.quantity }}</td>
+                    <td>
+                        {% if item.weight_kg %}
+                            {{ item.weight_kg|floatformat:2 }} kg
+                        {% else %}
+                            Not specified
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p>No dangerous goods items found in this shipment.</p>
+        {% endif %}
+    </div>
+
+    <!-- Compliance Status -->
+    <div class="section">
+        <h2 class="section-title">Compliance Assessment</h2>
+        
+        {% if compliance_status.is_compliant %}
+        <div style="background-color: #d1fae5; border: 1px solid #047857; padding: 15px; border-radius: 6px; margin-bottom: 20px;">
+            <h3 style="color: #047857; margin-top: 0;">✓ Compliance Status: APPROVED</h3>
+            <p>All dangerous goods in this shipment meet the required compliance standards for safe transport.</p>
+        </div>
+        {% else %}
+        <div class="warning-box">
+            <h3 style="color: #dc2626; margin-top: 0;">⚠ Compliance Status: REQUIRES ATTENTION</h3>
+            <p>The following issues must be resolved before transport:</p>
+        </div>
+        {% endif %}
+
+        {% if compliance_status.issues %}
+        <div class="warning-box">
+            <h4>Issues Identified:</h4>
+            <ul>
+                {% for issue in compliance_status.issues %}
+                <li>{{ issue }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+
+        {% if compliance_status.warnings %}
+        <div style="background-color: #fef3c7; border: 1px solid #f59e0b; padding: 15px; border-radius: 6px; margin-bottom: 20px;">
+            <h4 style="color: #92400e; margin-top: 0;">Warnings:</h4>
+            <ul>
+                {% for warning in compliance_status.warnings %}
+                <li>{{ warning }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Inspection Details -->
+    {% if latest_inspection %}
+    <div class="section">
+        <h2 class="section-title">Latest Inspection</h2>
+        <div class="compliance-section">
+            <div class="info-grid">
+                <div>
+                    <div class="info-item">
+                        <span class="info-label">Inspection Date:</span>
+                        <span class="info-value">{{ latest_inspection.created_at|date:"F d, Y - g:i A" }}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Inspector:</span>
+                        <span class="info-value">{{ latest_inspection.inspector.get_full_name }}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Inspection Type:</span>
+                        <span class="info-value">{{ latest_inspection.get_inspection_type_display }}</span>
+                    </div>
+                </div>
+                <div>
+                    <div class="info-item">
+                        <span class="info-label">Status:</span>
+                        <span class="info-value status-badge status-{{ latest_inspection.status|lower }}">
+                            {{ latest_inspection.get_status_display }}
+                        </span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Priority:</span>
+                        <span class="info-value">{{ latest_inspection.get_priority_display }}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Location:</span>
+                        <span class="info-value">{{ latest_inspection.location|default:"Not specified" }}</span>
+                    </div>
+                </div>
+            </div>
+            
+            {% if latest_inspection.notes %}
+            <div style="margin-top: 15px;">
+                <span class="info-label">Inspector Notes:</span>
+                <div style="margin-top: 5px; padding: 10px; background-color: #f9fafb; border-radius: 4px;">
+                    {{ latest_inspection.notes|linebreaks }}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Regulatory Framework -->
+    <div class="section page-break">
+        <h2 class="section-title">Applicable Regulations</h2>
+        <div class="compliance-section">
+            <p><strong>This certificate confirms compliance with the following regulatory frameworks:</strong></p>
+            
+            <h4>International Regulations:</h4>
+            <ul>
+                <li><strong>IATA DGR:</strong> International Air Transport Association Dangerous Goods Regulations</li>
+                <li><strong>IMDG Code:</strong> International Maritime Dangerous Goods Code</li>
+                <li><strong>UN Recommendations:</strong> UN Model Regulations on the Transport of Dangerous Goods</li>
+            </ul>
+            
+            <h4>Regional Regulations:</h4>
+            <ul>
+                <li><strong>ADR:</strong> European Agreement concerning the International Carriage of Dangerous Goods by Road</li>
+                <li><strong>RID:</strong> Regulations concerning the International Carriage of Dangerous Goods by Rail</li>
+                <li><strong>ADN:</strong> European Agreement concerning the International Carriage of Dangerous Goods by Inland Waterways</li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Certification Statement -->
+    <div class="section">
+        <h2 class="section-title">Certification Statement</h2>
+        <div class="compliance-section">
+            <p style="font-weight: bold; margin-bottom: 20px;">
+                I hereby declare that the contents of this consignment are fully and accurately described above 
+                by the proper shipping name, and are classified, packaged, marked and labeled/placarded, 
+                and are in all respects in proper condition for transport according to applicable international 
+                and national governmental regulations.
+            </p>
+            
+            <div style="margin-top: 40px;">
+                <div style="display: inline-block; width: 200px; border-bottom: 1px solid #000; margin-right: 50px;">
+                    <div style="text-align: center; margin-top: 5px; font-size: 9pt;">Authorized Signature</div>
+                </div>
+                <div style="display: inline-block; width: 150px; border-bottom: 1px solid #000;">
+                    <div style="text-align: center; margin-top: 5px; font-size: 9pt;">Date</div>
+                </div>
+            </div>
+            
+            <div style="margin-top: 30px;">
+                <p style="font-size: 9pt; color: #6b7280;">
+                    This certificate is issued by SafeShipper's automated compliance system based on 
+                    the information provided and applicable regulatory requirements. Manual verification 
+                    may be required for specific transport modes or destinations.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="footer">
+        <p>
+            <strong>Certificate ID:</strong> {{ certificate_number }} | 
+            <strong>Generated:</strong> {{ issue_date|date:"F d, Y \a\t g:i A" }} | 
+            <strong>Valid Until:</strong> {{ valid_until|date:"F d, Y" }}
+        </p>
+        <p>
+            This certificate is valid only for the shipment and dangerous goods described herein. 
+            Any changes to the shipment may require re-certification.
+        </p>
+    </div>
+</body>
+</html>

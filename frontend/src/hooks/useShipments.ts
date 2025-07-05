@@ -277,3 +277,151 @@ export function useDeleteShipment() {
     },
   });
 }
+
+// Document generation functions
+async function generateShipmentReport(
+  shipmentId: string, 
+  token: string, 
+  includeAudit: boolean = true
+): Promise<Blob> {
+  const response = await fetch(`${API_BASE_URL}/shipments/${shipmentId}/generate-report/?include_audit=${includeAudit}`, {
+    method: 'GET',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+    },
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.detail || 'Failed to generate shipment report');
+  }
+
+  return response.blob();
+}
+
+async function generateComplianceCertificate(shipmentId: string, token: string): Promise<Blob> {
+  const response = await fetch(`${API_BASE_URL}/shipments/${shipmentId}/generate-compliance-certificate/`, {
+    method: 'GET',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+    },
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.detail || 'Failed to generate compliance certificate');
+  }
+
+  return response.blob();
+}
+
+async function generateDGManifest(shipmentId: string, token: string): Promise<Blob> {
+  const response = await fetch(`${API_BASE_URL}/shipments/${shipmentId}/generate-dg-manifest/`, {
+    method: 'GET',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+    },
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.detail || 'Failed to generate DG manifest');
+  }
+
+  return response.blob();
+}
+
+async function generateBatchDocuments(
+  shipmentId: string, 
+  token: string, 
+  documentTypes: string[]
+): Promise<Blob> {
+  const response = await fetch(`${API_BASE_URL}/shipments/${shipmentId}/generate-batch-documents/`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ document_types: documentTypes }),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.detail || 'Failed to generate batch documents');
+  }
+
+  return response.blob();
+}
+
+// Utility function to download blob as file
+function downloadBlob(blob: Blob, filename: string) {
+  const url = window.URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  window.URL.revokeObjectURL(url);
+}
+
+// Document generation hooks
+export function useGenerateShipmentReport() {
+  const { getToken } = useAuthStore();
+
+  return useMutation({
+    mutationFn: ({ shipmentId, includeAudit = true }: { shipmentId: string; includeAudit?: boolean }) => {
+      const token = getToken();
+      if (!token) throw new Error('No authentication token');
+      return generateShipmentReport(shipmentId, token, includeAudit);
+    },
+    onSuccess: (blob, { shipmentId }) => {
+      downloadBlob(blob, `shipment_report_${shipmentId}.pdf`);
+    },
+  });
+}
+
+export function useGenerateComplianceCertificate() {
+  const { getToken } = useAuthStore();
+
+  return useMutation({
+    mutationFn: (shipmentId: string) => {
+      const token = getToken();
+      if (!token) throw new Error('No authentication token');
+      return generateComplianceCertificate(shipmentId, token);
+    },
+    onSuccess: (blob, shipmentId) => {
+      downloadBlob(blob, `compliance_cert_${shipmentId}.pdf`);
+    },
+  });
+}
+
+export function useGenerateDGManifest() {
+  const { getToken } = useAuthStore();
+
+  return useMutation({
+    mutationFn: (shipmentId: string) => {
+      const token = getToken();
+      if (!token) throw new Error('No authentication token');
+      return generateDGManifest(shipmentId, token);
+    },
+    onSuccess: (blob, shipmentId) => {
+      downloadBlob(blob, `dg_manifest_${shipmentId}.pdf`);
+    },
+  });
+}
+
+export function useGenerateBatchDocuments() {
+  const { getToken } = useAuthStore();
+
+  return useMutation({
+    mutationFn: ({ shipmentId, documentTypes }: { shipmentId: string; documentTypes: string[] }) => {
+      const token = getToken();
+      if (!token) throw new Error('No authentication token');
+      return generateBatchDocuments(shipmentId, token, documentTypes);
+    },
+    onSuccess: (blob, { shipmentId }) => {
+      downloadBlob(blob, `shipment_documents_${shipmentId}.zip`);
+    },
+  });
+}

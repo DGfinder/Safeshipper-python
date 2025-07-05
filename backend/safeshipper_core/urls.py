@@ -63,10 +63,12 @@ urlpatterns = [
         path('vehicles/', include('vehicles.urls')),
         path('tracking/', include('tracking.urls')),  # Enabled for mobile app
         path('documents/', include('documents.urls')),  # Enabled for manifest functionality
+        path('audits/', include('audits.urls')),  # Enabled for audit functionality
+        path('auth/', include('enterprise_auth.urls')),  # Enterprise authentication
+        path('iot/', include('iot_devices.urls')),  # IoT device management
         # Temporarily disabled apps:
         # path('locations/', include('locations.urls')),
         # path('hazard-assessments/', include('hazard_assessments.urls')),
-        # path('audits/', include('audits.urls')),
         # path('load-plans/', include('load_plans.urls')),
         # path('manifests/', include('manifests.urls')),
         # path('emergency-procedures/', include('emergency_procedures.urls')),

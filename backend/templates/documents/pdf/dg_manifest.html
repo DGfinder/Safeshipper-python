@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dangerous Goods Manifest - {{ shipment.tracking_number }}</title>
+</head>
+<body>
+    <!-- Header Section -->
+    <div class="header">
+        <div class="company-logo">SafeShipper</div>
+        <div class="document-title">Dangerous Goods Manifest</div>
+        <div class="document-subtitle">
+            Manifest Number: {{ manifest_number }} | 
+            Issue Date: {{ issue_date|date:"F d, Y" }}
+        </div>
+    </div>
+
+    <!-- Manifest Warning -->
+    <div class="manifest-header">
+        <div class="manifest-title">⚠ DANGEROUS GOODS MANIFEST ⚠</div>
+        <p style="margin: 0; font-weight: bold;">
+            This document contains information about dangerous goods transport.
+            Handle with care and ensure compliance with all applicable regulations.
+        </p>
+    </div>
+
+    <!-- Shipment Information -->
+    <div class="section">
+        <h2 class="section-title">Shipment Information</h2>
+        <div class="info-grid">
+            <div>
+                <div class="info-item">
+                    <span class="info-label">Tracking Number:</span>
+                    <span class="info-value">{{ shipment.tracking_number }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Reference Number:</span>
+                    <span class="info-value">{{ shipment.reference_number|default:"N/A" }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Shipper:</span>
+                    <span class="info-value">{{ shipment.customer.name }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Carrier:</span>
+                    <span class="info-value">{{ shipment.carrier.name }}</span>
+                </div>
+            </div>
+            <div>
+                <div class="info-item">
+                    <span class="info-label">Origin:</span>
+                    <span class="info-value">{{ shipment.origin_location }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Destination:</span>
+                    <span class="info-value">{{ shipment.destination_location }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Transport Mode:</span>
+                    <span class="info-value">{{ shipment.freight_type.name }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Manifest Date:</span>
+                    <span class="info-value">{{ issue_date|date:"F d, Y" }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Dangerous Goods Summary -->
+    <div class="section">
+        <h2 class="section-title">Dangerous Goods Summary</h2>
+        {% if dangerous_items %}
+        <table class="table">
+            <thead>
+                <tr>
+                    <th style="width: 10%;">UN No.</th>
+                    <th style="width: 30%;">Proper Shipping Name</th>
+                    <th style="width: 10%;">Class</th>
+                    <th style="width: 10%;">PG</th>
+                    <th style="width: 10%;">Qty</th>
+                    <th style="width: 15%;">Net Weight</th>
+                    <th style="width: 15%;">Package Type</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in dangerous_items %}
+                <tr>
+                    <td>
+                        {% if item.dangerous_good_entry %}
+                            <span class="un-number">{{ item.dangerous_good_entry.un_number }}</span>
+                        {% else %}
+                            <span style="color: #dc2626; font-weight: bold;">UNCLASSIFIED</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if item.dangerous_good_entry %}
+                            {{ item.dangerous_good_entry.proper_shipping_name }}
+                        {% else %}
+                            {{ item.description }}
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if item.dangerous_good_entry %}
+                            <span class="hazard-class hazard-class-{{ item.dangerous_good_entry.hazard_class }}">
+                                {{ item.dangerous_good_entry.hazard_class }}
+                            </span>
+                        {% else %}
+                            <span style="color: #dc2626;">N/A</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if item.dangerous_good_entry %}
+                            {{ item.dangerous_good_entry.packing_group|default:"-" }}
+                        {% else %}
+                            -
+                        {% endif %}
+                    </td>
+                    <td>{{ item.quantity }}</td>
+                    <td>
+                        {% if item.weight_kg %}
+                            {{ item.weight_kg|floatformat:2 }} kg
+                        {% else %}
+                            Not specified
+                        {% endif %}
+                    </td>
+                    <td>Package</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div class="warning-box">
+            <p><strong>Warning:</strong> No dangerous goods items found in this shipment.</p>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Detailed Dangerous Goods Information -->
+    {% if items_by_class %}
+    <div class="section page-break">
+        <h2 class="section-title">Detailed Dangerous Goods Information</h2>
+        {% for hazard_class, items in items_by_class.items %}
+        <div class="dg-item">
+            <h3 style="margin-top: 0; color: #dc2626;">
+                Hazard Class {{ hazard_class }} Items
+            </h3>
+            {% for item in items %}
+            <div style="margin-bottom: 15px; padding: 10px; border-left: 4px solid #dc2626; background-color: #fef2f2;">
+                <div class="info-grid">
+                    <div>
+                        <div class="info-item">
+                            <span class="info-label">UN Number:</span>
+                            <span class="info-value un-number">{{ item.dangerous_good_entry.un_number }}</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Proper Shipping Name:</span>
+                            <span class="info-value">{{ item.dangerous_good_entry.proper_shipping_name }}</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Technical Name:</span>
+                            <span class="info-value">{{ item.dangerous_good_entry.technical_name|default:"N/A" }}</span>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="info-item">
+                            <span class="info-label">Packing Group:</span>
+                            <span class="info-value">{{ item.dangerous_good_entry.packing_group|default:"Not assigned" }}</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Quantity:</span>
+                            <span class="info-value">{{ item.quantity }} units</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Net Weight:</span>
+                            <span class="info-value">
+                                {% if item.weight_kg %}
+                                    {{ item.weight_kg|floatformat:2 }} kg × {{ item.quantity }} = 
+                                    {% widthratio item.weight_kg 1 item.quantity %} kg total
+                                {% else %}
+                                    Not specified
+                                {% endif %}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                
+                {% if item.dangerous_good_entry.emergency_procedures %}
+                <div style="margin-top: 10px;">
+                    <span class="info-label">Emergency Procedures:</span>
+                    <div style="margin-top: 5px; font-size: 9pt; color: #374151;">
+                        {{ item.dangerous_good_entry.emergency_procedures|truncatewords:20 }}
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- Transport Requirements -->
+    <div class="section">
+        <h2 class="section-title">Transport Requirements</h2>
+        <div class="compliance-section">
+            <h4>Packaging Requirements:</h4>
+            <ul>
+                <li>All dangerous goods must be in UN specification packaging</li>
+                <li>Packages must display proper orientation arrows where required</li>
+                <li>Dangerous goods labels must be affixed to packages</li>
+                <li>Packages must not be damaged or leaking</li>
+            </ul>
+            
+            <h4>Documentation Requirements:</h4>
+            <ul>
+                <li>Dangerous Goods Declaration completed and signed</li>
+                <li>Air Waybill with dangerous goods notation (if applicable)</li>
+                <li>Emergency response information available</li>
+                <li>Training certificates for handling personnel</li>
+            </ul>
+            
+            <h4>Vehicle/Container Requirements:</h4>
+            <ul>
+                <li>Vehicle placarding as per regulations</li>
+                <li>Segregation requirements observed</li>
+                <li>Loading restrictions complied with</li>
+                <li>Fire extinguisher and emergency equipment available</li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Emergency Information -->
+    <div class="section">
+        <h2 class="section-title">Emergency Contact Information</h2>
+        <div class="warning-box">
+            <div class="info-grid">
+                <div>
+                    <div class="info-item">
+                        <span class="info-label">Emergency Hotline:</span>
+                        <span class="info-value" style="font-weight: bold; font-size: 12pt;">+1-800-SAFESHIPPER</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">24/7 Response Team:</span>
+                        <span class="info-value">emergency@safeshipper.com</span>
+                    </div>
+                </div>
+                <div>
+                    <div class="info-item">
+                        <span class="info-label">Carrier Emergency:</span>
+                        <span class="info-value">{{ shipment.carrier.emergency_contact|default:"Contact carrier directly" }}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Local Emergency:</span>
+                        <span class="info-value">Call local emergency services (911/112)</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Shipper's Declaration -->
+    <div class="section">
+        <h2 class="section-title">Shipper's Declaration</h2>
+        <div class="compliance-section">
+            <p style="font-weight: bold; margin-bottom: 15px;">
+                I hereby declare that the contents of this consignment are fully and accurately described 
+                above by the proper shipping name, and are classified, packaged, marked and labeled/placarded, 
+                and are in all respects in proper condition for transport according to applicable international 
+                and national governmental regulations.
+            </p>
+            
+            <div style="margin-top: 30px;">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 50px;">
+                    <div>
+                        <div style="border-bottom: 1px solid #000; height: 40px;"></div>
+                        <div style="text-align: center; margin-top: 5px; font-size: 9pt;">
+                            Shipper's Signature
+                        </div>
+                    </div>
+                    <div>
+                        <div style="border-bottom: 1px solid #000; height: 40px;"></div>
+                        <div style="text-align: center; margin-top: 5px; font-size: 9pt;">
+                            Date
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div style="margin-top: 20px;">
+                <div style="border-bottom: 1px solid #000; height: 20px; margin-bottom: 5px;"></div>
+                <div style="font-size: 9pt;">Name and Title (Print)</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="footer">
+        <p>
+            <strong>Manifest Number:</strong> {{ manifest_number }} | 
+            <strong>Generated:</strong> {{ issue_date|date:"F d, Y \a\t g:i A" }} | 
+            <strong>Tracking:</strong> {{ shipment.tracking_number }}
+        </p>
+        <p>
+            <strong>IMPORTANT:</strong> This manifest must accompany the shipment at all times during transport. 
+            Any discrepancies must be reported immediately to the carrier and SafeShipper emergency response team.
+        </p>
+    </div>
+</body>
+</html>

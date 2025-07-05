@@ -388,6 +388,246 @@ class ShipmentViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
+    @action(detail=True, methods=['get'], url_path='generate-report')
+    def generate_report(self, request, pk=None):
+        """
+        Generate comprehensive shipment report PDF
+        """
+        from django.http import HttpResponse
+        from documents.pdf_generators import generate_shipment_report
+        from audits.signals import log_custom_action
+        from audits.models import AuditActionType
+        
+        shipment = self.get_object()
+        
+        # Check if user has permission to generate reports
+        if request.user.role not in ['ADMIN', 'COMPLIANCE_OFFICER', 'DISPATCHER']:
+            # Regular users can only generate reports for their own shipments
+            if (shipment.requested_by != request.user and 
+                shipment.assigned_driver != request.user):
+                return Response(
+                    {"detail": "You don't have permission to generate reports for this shipment."},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+        
+        try:
+            # Check if audit trail should be included
+            include_audit = request.query_params.get('include_audit', 'true').lower() == 'true'
+            
+            # Generate PDF
+            pdf_bytes = generate_shipment_report(shipment, include_audit_trail=include_audit)
+            
+            # Log the report generation
+            log_custom_action(
+                action_type=AuditActionType.EXPORT,
+                description=f"Generated shipment report for {shipment.tracking_number}",
+                content_object=shipment,
+                request=request,
+                metadata={'include_audit_trail': include_audit}
+            )
+            
+            # Create HTTP response with PDF
+            response = HttpResponse(pdf_bytes, content_type='application/pdf')
+            response['Content-Disposition'] = f'attachment; filename="shipment_report_{shipment.tracking_number}.pdf"'
+            response['Content-Length'] = len(pdf_bytes)
+            
+            return response
+            
+        except Exception as e:
+            logger.error(f"Error generating shipment report for {shipment.id}: {str(e)}")
+            return Response(
+                {"detail": "An error occurred while generating the report."},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+    @action(detail=True, methods=['get'], url_path='generate-compliance-certificate')
+    def generate_compliance_certificate(self, request, pk=None):
+        """
+        Generate dangerous goods compliance certificate PDF
+        """
+        from django.http import HttpResponse
+        from documents.pdf_generators import generate_compliance_certificate
+        from audits.signals import log_custom_action
+        from audits.models import AuditActionType
+        
+        shipment = self.get_object()
+        
+        # Check if user has permission to generate compliance certificates
+        if request.user.role not in ['ADMIN', 'COMPLIANCE_OFFICER']:
+            return Response(
+                {"detail": "Only compliance officers and admins can generate compliance certificates."},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
+        # Check if shipment has dangerous goods
+        if not shipment.items.filter(is_dangerous_good=True).exists():
+            return Response(
+                {"detail": "This shipment does not contain dangerous goods."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        try:
+            # Generate PDF
+            pdf_bytes = generate_compliance_certificate(shipment)
+            
+            # Log the certificate generation
+            log_custom_action(
+                action_type=AuditActionType.EXPORT,
+                description=f"Generated compliance certificate for {shipment.tracking_number}",
+                content_object=shipment,
+                request=request
+            )
+            
+            # Create HTTP response with PDF
+            response = HttpResponse(pdf_bytes, content_type='application/pdf')
+            response['Content-Disposition'] = f'attachment; filename="compliance_cert_{shipment.tracking_number}.pdf"'
+            response['Content-Length'] = len(pdf_bytes)
+            
+            return response
+            
+        except Exception as e:
+            logger.error(f"Error generating compliance certificate for {shipment.id}: {str(e)}")
+            return Response(
+                {"detail": "An error occurred while generating the compliance certificate."},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+    @action(detail=True, methods=['get'], url_path='generate-dg-manifest')
+    def generate_dg_manifest(self, request, pk=None):
+        """
+        Generate dangerous goods manifest PDF
+        """
+        from django.http import HttpResponse
+        from documents.pdf_generators import generate_dg_manifest
+        from audits.signals import log_custom_action
+        from audits.models import AuditActionType
+        
+        shipment = self.get_object()
+        
+        # Check if user has permission to generate manifests
+        if request.user.role not in ['ADMIN', 'COMPLIANCE_OFFICER', 'DISPATCHER']:
+            return Response(
+                {"detail": "You don't have permission to generate dangerous goods manifests."},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
+        # Check if shipment has dangerous goods
+        if not shipment.items.filter(is_dangerous_good=True).exists():
+            return Response(
+                {"detail": "This shipment does not contain dangerous goods."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        try:
+            # Generate PDF
+            pdf_bytes = generate_dg_manifest(shipment)
+            
+            # Log the manifest generation
+            log_custom_action(
+                action_type=AuditActionType.EXPORT,
+                description=f"Generated DG manifest for {shipment.tracking_number}",
+                content_object=shipment,
+                request=request
+            )
+            
+            # Create HTTP response with PDF
+            response = HttpResponse(pdf_bytes, content_type='application/pdf')
+            response['Content-Disposition'] = f'attachment; filename="dg_manifest_{shipment.tracking_number}.pdf"'
+            response['Content-Length'] = len(pdf_bytes)
+            
+            return response
+            
+        except Exception as e:
+            logger.error(f"Error generating DG manifest for {shipment.id}: {str(e)}")
+            return Response(
+                {"detail": "An error occurred while generating the dangerous goods manifest."},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+    @action(detail=True, methods=['post'], url_path='generate-batch-documents')
+    def generate_batch_documents(self, request, pk=None):
+        """
+        Generate multiple documents for a shipment in a ZIP file
+        """
+        from django.http import HttpResponse
+        from documents.pdf_generators import BatchReportGenerator
+        from audits.signals import log_custom_action
+        from audits.models import AuditActionType
+        import zipfile
+        import io
+        
+        shipment = self.get_object()
+        
+        # Check permissions
+        if request.user.role not in ['ADMIN', 'COMPLIANCE_OFFICER', 'DISPATCHER']:
+            return Response(
+                {"detail": "You don't have permission to generate batch documents."},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
+        # Get requested document types
+        document_types = request.data.get('document_types', ['shipment_report'])
+        valid_types = ['shipment_report', 'compliance_certificate', 'dg_manifest']
+        
+        # Validate document types
+        invalid_types = [dt for dt in document_types if dt not in valid_types]
+        if invalid_types:
+            return Response(
+                {"detail": f"Invalid document types: {invalid_types}. Valid types: {valid_types}"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Check if dangerous goods are required for certain document types
+        has_dangerous_goods = shipment.items.filter(is_dangerous_good=True).exists()
+        if not has_dangerous_goods and ('compliance_certificate' in document_types or 'dg_manifest' in document_types):
+            return Response(
+                {"detail": "This shipment does not contain dangerous goods. Cannot generate compliance certificate or DG manifest."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        try:
+            # Generate documents
+            batch_generator = BatchReportGenerator()
+            reports = batch_generator.generate_batch_reports([shipment], document_types)
+            
+            if not reports:
+                return Response(
+                    {"detail": "No documents were generated."},
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                )
+            
+            # Create ZIP file
+            zip_buffer = io.BytesIO()
+            with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
+                for filename, pdf_bytes in reports.items():
+                    zip_file.writestr(filename, pdf_bytes)
+            
+            zip_buffer.seek(0)
+            zip_bytes = zip_buffer.getvalue()
+            
+            # Log the batch generation
+            log_custom_action(
+                action_type=AuditActionType.EXPORT,
+                description=f"Generated batch documents for {shipment.tracking_number}: {', '.join(document_types)}",
+                content_object=shipment,
+                request=request,
+                metadata={'document_types': document_types, 'files_count': len(reports)}
+            )
+            
+            # Create HTTP response with ZIP
+            response = HttpResponse(zip_bytes, content_type='application/zip')
+            response['Content-Disposition'] = f'attachment; filename="shipment_documents_{shipment.tracking_number}.zip"'
+            response['Content-Length'] = len(zip_bytes)
+            
+            return response
+            
+        except Exception as e:
+            logger.error(f"Error generating batch documents for {shipment.id}: {str(e)}")
+            return Response(
+                {"detail": "An error occurred while generating the batch documents."},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
 
 class ConsignmentItemViewSet(viewsets.ModelViewSet):
     """

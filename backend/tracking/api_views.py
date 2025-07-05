@@ -357,12 +357,97 @@ def public_shipment_tracking(request, tracking_number):
         response_data = {
             'tracking_number': shipment.tracking_number,
             'status': shipment.status,
-            'customer_reference': shipment.customer_reference,
+            'status_display': shipment.get_status_display(),
+            'customer_reference': shipment.reference_number,  # Fixed field name
             'origin_location': shipment.origin_location,
             'destination_location': shipment.destination_location,
+            'estimated_pickup_date': shipment.estimated_pickup_date.isoformat() if shipment.estimated_pickup_date else None,
+            'actual_pickup_date': shipment.actual_pickup_date.isoformat() if shipment.actual_pickup_date else None,
             'estimated_delivery_date': shipment.estimated_delivery_date.isoformat() if shipment.estimated_delivery_date else None,
+            'actual_delivery_date': shipment.actual_delivery_date.isoformat() if shipment.actual_delivery_date else None,
             'created_at': shipment.created_at.isoformat(),
             'updated_at': shipment.updated_at.isoformat(),
+        }
+        
+        # Add public documents (manifests, certificates, etc.)
+        from documents.models import Document
+        public_documents = Document.objects.filter(
+            shipment=shipment,
+            document_type__in=['DG_MANIFEST', 'DG_DECLARATION', 'COMMERCIAL_INVOICE']
+        ).values('id', 'document_type', 'original_filename', 'created_at', 'status')
+        
+        response_data['documents'] = [
+            {
+                'id': str(doc['id']),
+                'type': doc['document_type'],
+                'type_display': dict(Document.DocumentType.choices)[doc['document_type']],
+                'filename': doc['original_filename'],
+                'status': doc['status'],
+                'status_display': dict(Document.DocumentStatus.choices)[doc['status']],
+                'upload_date': doc['created_at'].isoformat(),
+                'download_url': f'/api/v1/public/tracking/{tracking_number}/documents/{doc["id"]}/'
+            }
+            for doc in public_documents
+        ]
+        
+        # Add communication log (customer-visible messages only)
+        try:
+            from communications.models import Communication
+            communications = Communication.objects.filter(
+                shipment=shipment,
+                communication_type__in=['SMS', 'EMAIL', 'NOTIFICATION'],
+                is_customer_visible=True
+            ).order_by('-created_at')[:10]
+            
+            response_data['communications'] = [
+                {
+                    'id': str(comm.id),
+                    'type': comm.communication_type,
+                    'type_display': comm.get_communication_type_display(),
+                    'subject': comm.subject,
+                    'message': comm.message[:200] + '...' if len(comm.message) > 200 else comm.message,
+                    'sent_at': comm.created_at.isoformat(),
+                    'sender': 'SafeShipper Team',
+                    'status': comm.status if hasattr(comm, 'status') else 'sent'
+                }
+                for comm in communications
+            ]
+        except ImportError:
+            # Communications app might not exist yet
+            response_data['communications'] = []
+        
+        # Add proof of delivery if shipment is delivered
+        if shipment.status == 'DELIVERED':
+            try:
+                from delivery.models import ProofOfDelivery
+                pod = ProofOfDelivery.objects.filter(shipment=shipment).first()
+                if pod:
+                    response_data['proof_of_delivery'] = {
+                        'delivery_date': pod.delivered_at.isoformat() if hasattr(pod, 'delivered_at') else shipment.actual_delivery_date.isoformat(),
+                        'recipient_name': pod.recipient_name if hasattr(pod, 'recipient_name') else None,
+                        'recipient_signature_url': f'/api/v1/public/tracking/{tracking_number}/signature/' if hasattr(pod, 'signature_image') else None,
+                        'delivery_photos': [
+                            f'/api/v1/public/tracking/{tracking_number}/photos/{i}/'
+                            for i in range(1, 4)  # Up to 3 photos
+                        ] if hasattr(pod, 'delivery_photos') else [],
+                        'delivery_notes': pod.delivery_notes if hasattr(pod, 'delivery_notes') else None,
+                        'delivered_by': shipment.assigned_driver.first_name if shipment.assigned_driver else 'SafeShipper Driver'
+                    }
+            except ImportError:
+                # Delivery app might not exist yet, use basic info
+                response_data['proof_of_delivery'] = {
+                    'delivery_date': shipment.actual_delivery_date.isoformat() if shipment.actual_delivery_date else None,
+                    'delivered_by': shipment.assigned_driver.first_name if shipment.assigned_driver else 'SafeShipper Driver',
+                    'status': 'delivered'
+                }
+        
+        # Add shipment items summary (non-sensitive info only)
+        items = shipment.items.all()
+        response_data['items_summary'] = {
+            'total_items': items.count(),
+            'total_weight_kg': sum((item.weight_kg or 0) * item.quantity for item in items),
+            'has_dangerous_goods': items.filter(is_dangerous_good=True).exists(),
+            'dangerous_goods_count': items.filter(is_dangerous_good=True).count()
         }
         
         # Add vehicle location if available and shipment is in transit
@@ -440,5 +525,325 @@ def public_shipment_tracking(request, tracking_number):
         logger.error(f"Public shipment tracking error for {tracking_number}: {str(e)}")
         return Response(
             {'error': 'An error occurred while retrieving tracking information'}, 
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def public_document_download(request, tracking_number, document_id):
+    """
+    Public endpoint for customers to download shipment documents
+    """
+    try:
+        from shipments.models import Shipment
+        from documents.models import Document
+        from django.http import HttpResponse, Http404
+        
+        # Find shipment and document
+        try:
+            shipment = Shipment.objects.get(tracking_number=tracking_number)
+            document = Document.objects.get(
+                id=document_id, 
+                shipment=shipment,
+                document_type__in=['DG_MANIFEST', 'DG_DECLARATION', 'COMMERCIAL_INVOICE']
+            )
+        except (Shipment.DoesNotExist, Document.DoesNotExist):
+            return Response(
+                {'error': 'Document not found or not accessible'}, 
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        # Check if document is validated and ready for public access
+        if document.status not in ['VALIDATED_OK', 'VALIDATED_WITH_ERRORS']:
+            return Response(
+                {'error': 'Document is not yet available for download'}, 
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
+        # Serve the file
+        try:
+            response = HttpResponse(document.file.read(), content_type=document.mime_type)
+            response['Content-Disposition'] = f'attachment; filename="{document.original_filename}"'
+            response['Content-Length'] = document.file_size
+            
+            logger.info(f"Public document download: {tracking_number}/{document_id}")
+            return response
+            
+        except Exception as e:
+            logger.error(f"Error serving document {document_id}: {str(e)}")
+            return Response(
+                {'error': 'Document temporarily unavailable'}, 
+                status=status.HTTP_503_SERVICE_UNAVAILABLE
+            )
+            
+    except Exception as e:
+        logger.error(f"Public document download error for {tracking_number}/{document_id}: {str(e)}")
+        return Response(
+            {'error': 'An error occurred while retrieving the document'}, 
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def public_delivery_signature(request, tracking_number):
+    """
+    Public endpoint for customers to view delivery signature
+    """
+    try:
+        from shipments.models import Shipment
+        from django.http import HttpResponse
+        
+        # Find shipment
+        try:
+            shipment = Shipment.objects.get(tracking_number=tracking_number)
+        except Shipment.DoesNotExist:
+            return Response(
+                {'error': 'Shipment not found'}, 
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        # Check if shipment is delivered
+        if shipment.status != 'DELIVERED':
+            return Response(
+                {'error': 'Signature not available - shipment not yet delivered'}, 
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        try:
+            from delivery.models import ProofOfDelivery
+            pod = ProofOfDelivery.objects.get(shipment=shipment)
+            
+            if not hasattr(pod, 'signature_image') or not pod.signature_image:
+                return Response(
+                    {'error': 'Signature not available'}, 
+                    status=status.HTTP_404_NOT_FOUND
+                )
+            
+            # Serve signature image
+            response = HttpResponse(pod.signature_image.read(), content_type='image/png')
+            response['Content-Disposition'] = f'inline; filename="signature_{tracking_number}.png"'
+            
+            logger.info(f"Public signature access: {tracking_number}")
+            return response
+            
+        except ImportError:
+            return Response(
+                {'error': 'Delivery signature feature not available'}, 
+                status=status.HTTP_404_NOT_FOUND
+            )
+        except Exception as e:
+            return Response(
+                {'error': 'Signature temporarily unavailable'}, 
+                status=status.HTTP_503_SERVICE_UNAVAILABLE
+            )
+            
+    except Exception as e:
+        logger.error(f"Public delivery signature error for {tracking_number}: {str(e)}")
+        return Response(
+            {'error': 'An error occurred while retrieving the signature'}, 
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def public_delivery_photos(request, tracking_number, photo_id):
+    """
+    Public endpoint for customers to view delivery photos
+    """
+    try:
+        from shipments.models import Shipment
+        from django.http import HttpResponse
+        
+        # Find shipment
+        try:
+            shipment = Shipment.objects.get(tracking_number=tracking_number)
+        except Shipment.DoesNotExist:
+            return Response(
+                {'error': 'Shipment not found'}, 
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        # Check if shipment is delivered
+        if shipment.status != 'DELIVERED':
+            return Response(
+                {'error': 'Delivery photos not available - shipment not yet delivered'}, 
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        try:
+            from delivery.models import ProofOfDelivery
+            pod = ProofOfDelivery.objects.get(shipment=shipment)
+            
+            # Get specific photo by ID
+            photo_field = f'delivery_photo_{photo_id}'
+            if not hasattr(pod, photo_field):
+                return Response(
+                    {'error': 'Photo not found'}, 
+                    status=status.HTTP_404_NOT_FOUND
+                )
+            
+            photo = getattr(pod, photo_field)
+            if not photo:
+                return Response(
+                    {'error': 'Photo not available'}, 
+                    status=status.HTTP_404_NOT_FOUND
+                )
+            
+            # Serve photo
+            response = HttpResponse(photo.read(), content_type='image/jpeg')
+            response['Content-Disposition'] = f'inline; filename="delivery_photo_{tracking_number}_{photo_id}.jpg"'
+            
+            logger.info(f"Public delivery photo access: {tracking_number}/{photo_id}")
+            return response
+            
+        except ImportError:
+            return Response(
+                {'error': 'Delivery photos feature not available'}, 
+                status=status.HTTP_404_NOT_FOUND
+            )
+        except Exception as e:
+            return Response(
+                {'error': 'Photo temporarily unavailable'}, 
+                status=status.HTTP_503_SERVICE_UNAVAILABLE
+            )
+            
+    except Exception as e:
+        logger.error(f"Public delivery photo error for {tracking_number}/{photo_id}: {str(e)}")
+        return Response(
+            {'error': 'An error occurred while retrieving the photo'}, 
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def public_shipment_timeline(request, tracking_number):
+    """
+    Public endpoint for detailed shipment timeline and events
+    """
+    try:
+        from shipments.models import Shipment
+        
+        # Find shipment
+        try:
+            shipment = Shipment.objects.get(tracking_number=tracking_number)
+        except Shipment.DoesNotExist:
+            return Response(
+                {'error': 'Shipment not found'}, 
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        # Build comprehensive timeline
+        timeline = []
+        
+        # Shipment created
+        timeline.append({
+            'event': 'SHIPMENT_CREATED',
+            'title': 'Shipment Created',
+            'description': 'Your shipment has been created and is being prepared for dispatch.',
+            'timestamp': shipment.created_at.isoformat(),
+            'location': shipment.origin_location,
+            'completed': True
+        })
+        
+        # Document validation (if available)
+        documents = shipment.documents.filter(status='VALIDATED_OK')
+        if documents.exists():
+            timeline.append({
+                'event': 'DOCUMENTS_VALIDATED',
+                'title': 'Documentation Validated',
+                'description': f'{documents.count()} document(s) have been validated and approved.',
+                'timestamp': documents.first().updated_at.isoformat(),
+                'location': shipment.origin_location,
+                'completed': True
+            })
+        
+        # Ready for dispatch
+        if shipment.status not in ['PENDING', 'AWAITING_VALIDATION']:
+            timeline.append({
+                'event': 'READY_FOR_DISPATCH',
+                'title': 'Ready for Pickup',
+                'description': 'Shipment is ready and scheduled for pickup.',
+                'timestamp': shipment.estimated_pickup_date.isoformat() if shipment.estimated_pickup_date else shipment.updated_at.isoformat(),
+                'location': shipment.origin_location,
+                'completed': shipment.status not in ['PENDING', 'AWAITING_VALIDATION', 'PLANNING']
+            })
+        
+        # Picked up
+        if shipment.actual_pickup_date or shipment.status in ['IN_TRANSIT', 'OUT_FOR_DELIVERY', 'DELIVERED']:
+            timeline.append({
+                'event': 'PICKUP_COMPLETED',
+                'title': 'Pickup Completed',
+                'description': 'Shipment has been picked up and is now in transit.',
+                'timestamp': shipment.actual_pickup_date.isoformat() if shipment.actual_pickup_date else shipment.updated_at.isoformat(),
+                'location': shipment.origin_location,
+                'completed': True
+            })
+        
+        # In transit
+        if shipment.status in ['IN_TRANSIT', 'OUT_FOR_DELIVERY', 'DELIVERED']:
+            timeline.append({
+                'event': 'IN_TRANSIT',
+                'title': 'In Transit',
+                'description': 'Shipment is on its way to the destination.',
+                'timestamp': shipment.updated_at.isoformat(),
+                'location': 'En route',
+                'completed': True
+            })
+        
+        # Out for delivery
+        if shipment.status in ['OUT_FOR_DELIVERY', 'DELIVERED']:
+            timeline.append({
+                'event': 'OUT_FOR_DELIVERY',
+                'title': 'Out for Delivery',
+                'description': 'Shipment is out for delivery and will arrive soon.',
+                'timestamp': shipment.updated_at.isoformat(),
+                'location': 'Near destination',
+                'completed': True
+            })
+        
+        # Delivered
+        if shipment.status == 'DELIVERED':
+            timeline.append({
+                'event': 'DELIVERED',
+                'title': 'Delivered',
+                'description': 'Shipment has been successfully delivered.',
+                'timestamp': shipment.actual_delivery_date.isoformat() if shipment.actual_delivery_date else shipment.updated_at.isoformat(),
+                'location': shipment.destination_location,
+                'completed': True
+            })
+        
+        # Future estimated delivery
+        elif shipment.estimated_delivery_date and shipment.status != 'DELIVERED':
+            timeline.append({
+                'event': 'ESTIMATED_DELIVERY',
+                'title': 'Estimated Delivery',
+                'description': 'Expected delivery date and time.',
+                'timestamp': shipment.estimated_delivery_date.isoformat(),
+                'location': shipment.destination_location,
+                'completed': False,
+                'estimated': True
+            })
+        
+        response_data = {
+            'tracking_number': shipment.tracking_number,
+            'current_status': shipment.status,
+            'current_status_display': shipment.get_status_display(),
+            'timeline': timeline,
+            'total_events': len(timeline),
+            'completed_events': len([event for event in timeline if event['completed']]),
+            'estimated_events': len([event for event in timeline if event.get('estimated', False)])
+        }
+        
+        logger.info(f"Public shipment timeline requested for {tracking_number}")
+        return Response(response_data, status=status.HTTP_200_OK)
+        
+    except Exception as e:
+        logger.error(f"Public shipment timeline error for {tracking_number}: {str(e)}")
+        return Response(
+            {'error': 'An error occurred while retrieving the timeline'}, 
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )

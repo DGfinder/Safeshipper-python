@@ -31,11 +31,22 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django.contrib.sites',
     
     # Third-party apps
     'rest_framework',
     'drf_spectacular',
     'simple_history',
+    'allauth',
+    'allauth.account',
+    'allauth.socialaccount',
+    'allauth.socialaccount.providers.google',
+    'allauth.socialaccount.providers.microsoft',
+    'allauth.socialaccount.providers.saml',
+    'django_otp',
+    'django_otp.plugins.otp_totp',
+    'django_otp.plugins.otp_static',
+    'corsheaders',
     
     # Local apps (minimal set for frontend)
     'users',
@@ -44,6 +55,10 @@ INSTALLED_APPS = [
     'dangerous_goods',
     'vehicles',
     'freight_types',
+    'enterprise_auth',
+    'incidents',
+    'training',
+    'iot_devices',
     # 'documents',
     # 'manifests',
     # 'locations',  # Temporarily disabled due to GIS dependencies
@@ -64,13 +79,16 @@ INSTALLED_APPS = [
 # Middleware
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
     'safeshipper_core.middleware.SecurityHeadersMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'django_otp.middleware.OTPMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'allauth.account.middleware.AccountMiddleware',
     'simple_history.middleware.HistoryRequestMiddleware',
     'safeshipper_core.middleware.RequestLoggingMiddleware',
     'safeshipper_core.middleware.APIErrorHandlingMiddleware',
@@ -317,6 +335,63 @@ SPECTACULAR_SETTINGS = {
 
 # Create logs directory if it doesn't exist
 os.makedirs(os.path.join(BASE_DIR, 'logs'), exist_ok=True)
+
+# Django Sites Framework (required for allauth)
+SITE_ID = 1
+
+# Django Allauth Configuration
+AUTHENTICATION_BACKENDS = [
+    'django.contrib.auth.backends.ModelBackend',
+    'allauth.account.auth_backends.AuthenticationBackend',
+]
+
+ACCOUNT_EMAIL_REQUIRED = True
+ACCOUNT_USERNAME_REQUIRED = True
+ACCOUNT_EMAIL_VERIFICATION = 'optional'
+ACCOUNT_AUTHENTICATION_METHOD = 'email'
+ACCOUNT_USER_MODEL_USERNAME_FIELD = 'username'
+ACCOUNT_USER_MODEL_EMAIL_FIELD = 'email'
+ACCOUNT_LOGIN_ON_EMAIL_CONFIRMATION = True
+
+# Social Account Configuration
+SOCIALACCOUNT_PROVIDERS = {
+    'google': {
+        'SCOPE': [
+            'profile',
+            'email',
+        ],
+        'AUTH_PARAMS': {
+            'access_type': 'online',
+        },
+        'OAUTH_PKCE_ENABLED': True,
+        'APP': {
+            'client_id': config('GOOGLE_CLIENT_ID', default=''),
+            'secret': config('GOOGLE_CLIENT_SECRET', default=''),
+        }
+    },
+    'microsoft': {
+        'APP': {
+            'client_id': config('MICROSOFT_CLIENT_ID', default=''),
+            'secret': config('MICROSOFT_CLIENT_SECRET', default=''),
+        },
+        'SCOPE': ['User.Read'],
+        'AUTH_PARAMS': {
+            'response_type': 'code',
+        }
+    },
+    'saml': {
+        'attribute_mapping': {
+            'uid': 'username',
+            'email_address': 'email',
+            'first_name': 'first_name',
+            'last_name': 'last_name',
+        }
+    }
+}
+
+# MFA Configuration (django-otp)
+OTP_TOTP_ISSUER = 'SafeShipper'
+OTP_LOGIN_URL = '/admin/login/'
 
 # Additional Celery Configuration Options
 CELERY_TASK_TRACK_STARTED = True

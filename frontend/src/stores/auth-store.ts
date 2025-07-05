@@ -15,11 +15,16 @@ interface AuthState {
   isLoading: boolean;
   isHydrated: boolean;
   token: string | null;
-  login: (email: string, password: string) => Promise<void>;
+  requiresMFA: boolean;
+  tempToken: string | null;
+  availableMFAMethods: any[];
+  login: (email: string, password: string) => Promise<any>;
+  loginWithMFA: (tempToken: string, deviceId: string, code: string) => Promise<void>;
   logout: () => void;
   setUser: (user: User) => void;
   setHydrated: (hydrated: boolean) => void;
   getToken: () => string | null;
+  clearMFAState: () => void;
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -30,23 +35,86 @@ export const useAuthStore = create<AuthState>()(
       isLoading: false,
       isHydrated: false,
       token: null,
+      requiresMFA: false,
+      tempToken: null,
+      availableMFAMethods: [],
 
       login: async (email: string, password: string) => {
-        set({ isLoading: true });
+        set({ isLoading: true, requiresMFA: false });
         
         try {
-          // Call the actual backend API
-          const response = await fetch('/api/v1/users/auth/login/', {
+          // First try MFA challenge endpoint
+          const response = await fetch('/api/v1/auth/mfa/challenge/', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
             },
-            body: JSON.stringify({ email, password }),
+            body: JSON.stringify({ username: email, password }),
           });
           
           if (!response.ok) {
             const errorData = await response.json();
             throw new Error(errorData.error || 'Login failed');
+          }
+          
+          const data = await response.json();
+          
+          if (data.requires_mfa) {
+            // User requires MFA verification
+            set({
+              isLoading: false,
+              requiresMFA: true,
+              tempToken: data.temp_token,
+              availableMFAMethods: data.available_methods
+            });
+            return { requiresMFA: true, availableMethods: data.available_methods };
+          } else {
+            // No MFA required, complete login
+            if (typeof window !== 'undefined') {
+              localStorage.setItem('access_token', data.access_token);
+              localStorage.setItem('refresh_token', data.refresh_token);
+            }
+            
+            const user: User = {
+              id: data.user.id.toString(),
+              username: data.user.username,
+              email: data.user.email,
+              role: data.user.role,
+              avatar: data.user.username.substring(0, 2).toUpperCase()
+            };
+            
+            set({ 
+              user, 
+              isAuthenticated: true, 
+              isLoading: false,
+              token: data.access_token,
+              requiresMFA: false
+            });
+            
+            return { requiresMFA: false, user };
+          }
+          
+        } catch (error) {
+          set({ isLoading: false, requiresMFA: false });
+          throw error;
+        }
+      },
+
+      loginWithMFA: async (tempToken: string, deviceId: string, code: string) => {
+        set({ isLoading: true });
+        
+        try {
+          const response = await fetch('/api/v1/auth/mfa/verify-login/', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ temp_token: tempToken, device_id: deviceId, code }),
+          });
+          
+          if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || 'MFA verification failed');
           }
           
           const data = await response.json();
@@ -57,7 +125,6 @@ export const useAuthStore = create<AuthState>()(
             localStorage.setItem('refresh_token', data.refresh_token);
           }
           
-          // Transform backend user data to frontend format
           const user: User = {
             id: data.user.id.toString(),
             username: data.user.username,
@@ -70,7 +137,10 @@ export const useAuthStore = create<AuthState>()(
             user, 
             isAuthenticated: true, 
             isLoading: false,
-            token: data.access_token
+            token: data.access_token,
+            requiresMFA: false,
+            tempToken: null,
+            availableMFAMethods: []
           });
           
         } catch (error) {
@@ -106,7 +176,10 @@ export const useAuthStore = create<AuthState>()(
           set({ 
             user: null, 
             isAuthenticated: false,
-            token: null
+            token: null,
+            requiresMFA: false,
+            tempToken: null,
+            availableMFAMethods: []
           });
         }
       },
@@ -122,6 +195,14 @@ export const useAuthStore = create<AuthState>()(
       getToken: () => {
         if (typeof window === 'undefined') return null;
         return get().token || localStorage.getItem('access_token');
+      },
+
+      clearMFAState: () => {
+        set({
+          requiresMFA: false,
+          tempToken: null,
+          availableMFAMethods: []
+        });
       }
     }),
     {

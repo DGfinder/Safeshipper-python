@@ -21,7 +21,13 @@ import {
   Mail,
   AlertTriangle,
   Shield,
-  Calendar
+  Calendar,
+  FileText,
+  Download,
+  MessageSquare,
+  Info,
+  Weight,
+  Box
 } from 'lucide-react';
 import { usePublicShipmentTracking } from '@/hooks/usePublicTracking';
 import { useMockPublicTracking } from '@/hooks/useMockAPI';
@@ -327,6 +333,140 @@ export default function TrackingPage({ params }: TrackingPageProps) {
           </Card>
         </div>
 
+        {/* Shipment Details */}
+        {shipmentData.items_summary && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Box className="h-5 w-5" />
+                Shipment Details
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                <div className="flex items-center gap-2">
+                  <Package className="h-4 w-4 text-gray-500" />
+                  <div>
+                    <p className="font-medium">Total Items</p>
+                    <p className="text-lg font-semibold">{shipmentData.items_summary.total_items}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Weight className="h-4 w-4 text-gray-500" />
+                  <div>
+                    <p className="font-medium">Total Weight</p>
+                    <p className="text-lg font-semibold">{shipmentData.items_summary.total_weight_kg.toFixed(1)} kg</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  {shipmentData.items_summary.has_dangerous_goods ? (
+                    <AlertTriangle className="h-4 w-4 text-orange-500" />
+                  ) : (
+                    <CheckCircle className="h-4 w-4 text-green-500" />
+                  )}
+                  <div>
+                    <p className="font-medium">Dangerous Goods</p>
+                    <p className="text-lg font-semibold">
+                      {shipmentData.items_summary.has_dangerous_goods 
+                        ? `${shipmentData.items_summary.dangerous_goods_count} items`
+                        : 'None'
+                      }
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Calendar className="h-4 w-4 text-gray-500" />
+                  <div>
+                    <p className="font-medium">Shipped</p>
+                    <p className="text-sm text-gray-600">
+                      {new Date(shipmentData.created_at).toLocaleDateString()}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Documents */}
+        {shipmentData.documents && shipmentData.documents.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <FileText className="h-5 w-5" />
+                Shipment Documents
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {shipmentData.documents.map((doc) => (
+                  <div key={doc.id} className="flex items-center justify-between p-3 border rounded-lg bg-gray-50">
+                    <div className="flex items-center gap-3">
+                      <FileText className="h-5 w-5 text-gray-600" />
+                      <div>
+                        <p className="font-medium text-sm">{doc.type_display}</p>
+                        <p className="text-xs text-gray-500">{doc.filename}</p>
+                        <div className="flex items-center gap-2 mt-1">
+                          <Badge variant="outline" className="text-xs">
+                            {doc.status_display}
+                          </Badge>
+                          <span className="text-xs text-gray-500">
+                            Uploaded {new Date(doc.upload_date).toLocaleDateString()}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                    <a
+                      href={doc.download_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 text-blue-600 hover:text-blue-800 text-sm"
+                    >
+                      <Download className="h-4 w-4" />
+                      Download
+                    </a>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Communications */}
+        {shipmentData.communications && shipmentData.communications.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <MessageSquare className="h-5 w-5" />
+                Updates & Communications
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {shipmentData.communications.map((comm) => (
+                  <div key={comm.id} className="border-l-4 border-blue-200 pl-4 py-2">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <h4 className="font-medium text-sm">{comm.subject}</h4>
+                          <Badge variant="outline" className="text-xs">
+                            {comm.type_display}
+                          </Badge>
+                        </div>
+                        <p className="text-sm text-gray-600 mb-2">{comm.message}</p>
+                        <div className="flex items-center gap-4 text-xs text-gray-500">
+                          <span>From: {comm.sender}</span>
+                          <span>{new Date(comm.sent_at).toLocaleString()}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Proof of Delivery - Only show for delivered shipments */}
         {shipmentData.status === 'DELIVERED' && shipmentData.proof_of_delivery && (
           <Card>
@@ -340,29 +480,43 @@ export default function TrackingPage({ params }: TrackingPageProps) {
               <Alert className="border-green-200 bg-green-50">
                 <CheckCircle className="h-4 w-4 text-green-600" />
                 <AlertDescription className="text-green-800">
-                  Your shipment was successfully delivered on {new Date(shipmentData.proof_of_delivery.timestamp).toLocaleDateString()}
+                  Your shipment was successfully delivered on {new Date(shipmentData.proof_of_delivery.delivery_date).toLocaleDateString()}
                 </AlertDescription>
               </Alert>
 
               {/* Delivery Details */}
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
-                  <p><span className="font-medium">Received by:</span> {shipmentData.proof_of_delivery.recipient}</p>
-                  <p><span className="font-medium">Driver:</span> {shipmentData.proof_of_delivery.driver}</p>
+                  {shipmentData.proof_of_delivery.recipient_name && (
+                    <p><span className="font-medium">Received by:</span> {shipmentData.proof_of_delivery.recipient_name}</p>
+                  )}
+                  <p><span className="font-medium">Delivered by:</span> {shipmentData.proof_of_delivery.delivered_by}</p>
                 </div>
                 <div>
-                  <p><span className="font-medium">Time:</span> {new Date(shipmentData.proof_of_delivery.timestamp).toLocaleTimeString()}</p>
-                  <p><span className="font-medium">Photos:</span> {shipmentData.proof_of_delivery.photos.length}</p>
+                  <p><span className="font-medium">Date & Time:</span> {new Date(shipmentData.proof_of_delivery.delivery_date).toLocaleString()}</p>
+                  {shipmentData.proof_of_delivery.delivery_photos.length > 0 && (
+                    <p><span className="font-medium">Photos:</span> {shipmentData.proof_of_delivery.delivery_photos.length}</p>
+                  )}
                 </div>
               </div>
 
+              {/* Delivery Notes */}
+              {shipmentData.proof_of_delivery.delivery_notes && (
+                <div>
+                  <h4 className="font-medium text-sm mb-2">Delivery Notes</h4>
+                  <p className="text-sm text-gray-600 p-3 bg-gray-50 rounded border">
+                    {shipmentData.proof_of_delivery.delivery_notes}
+                  </p>
+                </div>
+              )}
+
               {/* Signature */}
-              {shipmentData.proof_of_delivery.signature && (
+              {shipmentData.proof_of_delivery.recipient_signature_url && (
                 <div>
                   <h4 className="font-medium text-sm mb-2">Recipient Signature</h4>
                   <div className="border rounded p-2 bg-white">
                     <img 
-                      src={shipmentData.proof_of_delivery.signature} 
+                      src={shipmentData.proof_of_delivery.recipient_signature_url} 
                       alt="Recipient signature"
                       className="h-16 w-full object-contain"
                     />
@@ -371,19 +525,23 @@ export default function TrackingPage({ params }: TrackingPageProps) {
               )}
 
               {/* Delivery Photos */}
-              {shipmentData.proof_of_delivery.photos && shipmentData.proof_of_delivery.photos.length > 0 && (
+              {shipmentData.proof_of_delivery.delivery_photos && shipmentData.proof_of_delivery.delivery_photos.length > 0 && (
                 <div>
                   <h4 className="font-medium text-sm mb-2">Delivery Photos</h4>
                   <div className="grid grid-cols-2 gap-2">
-                    {shipmentData.proof_of_delivery.photos.map((photo: string, index: number) => (
+                    {shipmentData.proof_of_delivery.delivery_photos.map((photoUrl: string, index: number) => (
                       <img 
                         key={index}
-                        src={photo} 
+                        src={photoUrl} 
                         alt={`Delivery photo ${index + 1}`}
-                        className="w-full h-32 object-cover rounded border"
+                        className="w-full h-32 object-cover rounded border cursor-pointer hover:opacity-90"
+                        onClick={() => window.open(photoUrl, '_blank')}
                       />
                     ))}
                   </div>
+                  <p className="text-xs text-gray-500 mt-2">
+                    Click on photos to view full size
+                  </p>
                 </div>
               )}
             </CardContent>

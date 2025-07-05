@@ -25,6 +25,7 @@ import { AuthGuard } from '@/components/auth/auth-guard';
 import { ActivityLog } from '@/components/communications/ActivityLog';
 import { HazardInspection } from '@/components/inspections/HazardInspection';
 import { ProofOfDelivery } from '@/components/delivery/ProofOfDelivery';
+import DocumentGenerator from '@/components/documents/DocumentGenerator';
 import Link from 'next/link';
 
 interface ShipmentDetailPageProps {
@@ -388,16 +389,18 @@ export default function ShipmentDetailPage({ params }: ShipmentDetailPageProps) 
               </CardContent>
             </Card>
 
+            {/* Document Generation */}
+            <DocumentGenerator 
+              shipmentId={shipmentId} 
+              shipment={shipment} 
+            />
+
             {/* Quick Actions */}
             <Card>
               <CardHeader>
                 <CardTitle className="text-sm">Quick Actions</CardTitle>
               </CardHeader>
               <CardContent className="space-y-2">
-                <Button variant="outline" size="sm" className="w-full justify-start">
-                  <FileText className="h-4 w-4 mr-2" />
-                  Generate Documentation
-                </Button>
                 <Button variant="outline" size="sm" className="w-full justify-start">
                   <Eye className="h-4 w-4 mr-2" />
                   Track Shipment

@@ -38,7 +38,8 @@
       "Bash(python3:*)",
       "Bash(npm run type-check:*)",
       "Bash(cd:*)",
-      "Bash(cd:*)"
+      "Bash(cd:*)",
+      "Bash(python manage.py startapp:*)"
     ],
     "deny": []
   }

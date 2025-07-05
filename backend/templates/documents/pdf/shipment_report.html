@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shipment Report - {{ shipment.tracking_number }}</title>
+</head>
+<body>
+    <!-- Header Section -->
+    <div class="header">
+        <div class="company-logo">SafeShipper</div>
+        <div class="document-title">Comprehensive Shipment Report</div>
+        <div class="document-subtitle">
+            Tracking Number: {{ shipment.tracking_number }} | 
+            Generated: {{ generation_date|date:"F d, Y - g:i A" }}
+        </div>
+    </div>
+
+    <!-- Shipment Overview -->
+    <div class="section">
+        <h2 class="section-title">Shipment Overview</h2>
+        <div class="info-grid">
+            <div>
+                <div class="info-item">
+                    <span class="info-label">Tracking Number:</span>
+                    <span class="info-value">{{ shipment.tracking_number }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Reference Number:</span>
+                    <span class="info-value">{{ shipment.reference_number|default:"N/A" }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Current Status:</span>
+                    <span class="info-value status-badge status-{{ shipment.status|lower }}">
+                        {{ shipment.get_status_display }}
+                    </span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Customer:</span>
+                    <span class="info-value">{{ shipment.customer.name }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Carrier:</span>
+                    <span class="info-value">{{ shipment.carrier.name }}</span>
+                </div>
+            </div>
+            <div>
+                <div class="info-item">
+                    <span class="info-label">Origin:</span>
+                    <span class="info-value">{{ shipment.origin_location }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Destination:</span>
+                    <span class="info-value">{{ shipment.destination_location }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Freight Type:</span>
+                    <span class="info-value">{{ shipment.freight_type.name }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Total Weight:</span>
+                    <span class="info-value">{{ total_weight|floatformat:2 }} kg</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Total Items:</span>
+                    <span class="info-value">{{ total_items }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Timeline -->
+    <div class="section">
+        <h2 class="section-title">Timeline</h2>
+        <div class="info-grid">
+            <div>
+                <div class="info-item">
+                    <span class="info-label">Created:</span>
+                    <span class="info-value">{{ shipment.created_at|date:"F d, Y - g:i A" }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Est. Pickup:</span>
+                    <span class="info-value">
+                        {% if shipment.estimated_pickup_date %}
+                            {{ shipment.estimated_pickup_date|date:"F d, Y - g:i A" }}
+                        {% else %}
+                            Not scheduled
+                        {% endif %}
+                    </span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Actual Pickup:</span>
+                    <span class="info-value">
+                        {% if shipment.actual_pickup_date %}
+                            {{ shipment.actual_pickup_date|date:"F d, Y - g:i A" }}
+                        {% else %}
+                            Pending
+                        {% endif %}
+                    </span>
+                </div>
+            </div>
+            <div>
+                <div class="info-item">
+                    <span class="info-label">Est. Delivery:</span>
+                    <span class="info-value">
+                        {% if shipment.estimated_delivery_date %}
+                            {{ shipment.estimated_delivery_date|date:"F d, Y - g:i A" }}
+                        {% else %}
+                            TBD
+                        {% endif %}
+                    </span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Actual Delivery:</span>
+                    <span class="info-value">
+                        {% if shipment.actual_delivery_date %}
+                            {{ shipment.actual_delivery_date|date:"F d, Y - g:i A" }}
+                        {% else %}
+                            Pending
+                        {% endif %}
+                    </span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Last Updated:</span>
+                    <span class="info-value">{{ shipment.updated_at|date:"F d, Y - g:i A" }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Assignment Information -->
+    {% if shipment.assigned_vehicle or shipment.assigned_driver %}
+    <div class="section">
+        <h2 class="section-title">Assignment Information</h2>
+        <div class="info-grid">
+            <div>
+                {% if shipment.assigned_driver %}
+                <div class="info-item">
+                    <span class="info-label">Assigned Driver:</span>
+                    <span class="info-value">{{ shipment.assigned_driver.get_full_name }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Driver Email:</span>
+                    <span class="info-value">{{ shipment.assigned_driver.email }}</span>
+                </div>
+                {% endif %}
+            </div>
+            <div>
+                {% if shipment.assigned_vehicle %}
+                <div class="info-item">
+                    <span class="info-label">Assigned Vehicle:</span>
+                    <span class="info-value">{{ shipment.assigned_vehicle.registration_number }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Vehicle Type:</span>
+                    <span class="info-value">{{ shipment.assigned_vehicle.vehicle_type }}</span>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Consignment Items -->
+    <div class="section">
+        <h2 class="section-title">Consignment Items</h2>
+        {% if consignment_items %}
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Description</th>
+                    <th>Quantity</th>
+                    <th>Weight (kg)</th>
+                    <th>Dimensions (cm)</th>
+                    <th>Dangerous Good</th>
+                    <th>UN Number</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in consignment_items %}
+                <tr>
+                    <td>{{ item.description }}</td>
+                    <td>{{ item.quantity }}</td>
+                    <td>{{ item.weight_kg|default:"N/A" }}</td>
+                    <td>
+                        {% if item.length_cm and item.width_cm and item.height_cm %}
+                            {{ item.length_cm }}×{{ item.width_cm }}×{{ item.height_cm }}
+                        {% else %}
+                            N/A
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if item.is_dangerous_good %}
+                            <span class="status-badge status-exception">Yes</span>
+                        {% else %}
+                            <span class="status-badge status-delivered">No</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if item.dangerous_good_entry %}
+                            {{ item.dangerous_good_entry.un_number }}
+                        {% else %}
+                            N/A
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p>No consignment items found.</p>
+        {% endif %}
+    </div>
+
+    <!-- Dangerous Goods Details -->
+    {% if dangerous_items %}
+    <div class="section page-break">
+        <h2 class="section-title">Dangerous Goods Details</h2>
+        {% for item in dangerous_items %}
+        <div class="compliance-section">
+            <h3>{{ item.description }}</h3>
+            {% if item.dangerous_good_entry %}
+            <div class="info-grid">
+                <div>
+                    <div class="info-item">
+                        <span class="info-label">UN Number:</span>
+                        <span class="info-value">{{ item.dangerous_good_entry.un_number }}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Proper Shipping Name:</span>
+                        <span class="info-value">{{ item.dangerous_good_entry.proper_shipping_name }}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Hazard Class:</span>
+                        <span class="info-value hazard-class hazard-class-{{ item.dangerous_good_entry.hazard_class }}">
+                            {{ item.dangerous_good_entry.hazard_class }}
+                        </span>
+                    </div>
+                </div>
+                <div>
+                    <div class="info-item">
+                        <span class="info-label">Packing Group:</span>
+                        <span class="info-value">{{ item.dangerous_good_entry.packing_group|default:"N/A" }}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Quantity:</span>
+                        <span class="info-value">{{ item.quantity }}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Total Weight:</span>
+                        <span class="info-value">
+                            {% if item.weight_kg %}
+                                {{ item.weight_kg|floatformat:2 }} kg × {{ item.quantity }} = 
+                                {{ item.weight_kg|floatformat:2|add:item.quantity }} kg
+                            {% else %}
+                                Not specified
+                            {% endif %}
+                        </span>
+                    </div>
+                </div>
+            </div>
+            {% else %}
+            <div class="warning-box">
+                <strong>Warning:</strong> This item is marked as dangerous goods but lacks proper classification.
+            </div>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- Documents -->
+    <div class="section">
+        <h2 class="section-title">Associated Documents</h2>
+        {% if documents %}
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Document Type</th>
+                    <th>Filename</th>
+                    <th>Status</th>
+                    <th>Uploaded</th>
+                    <th>Uploaded By</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for document in documents %}
+                <tr>
+                    <td>{{ document.get_document_type_display }}</td>
+                    <td>{{ document.original_filename }}</td>
+                    <td>
+                        <span class="status-badge status-{{ document.status|lower }}">
+                            {{ document.get_status_display }}
+                        </span>
+                    </td>
+                    <td>{{ document.created_at|date:"M d, Y" }}</td>
+                    <td>{{ document.uploaded_by.get_full_name|default:"System" }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p>No documents uploaded for this shipment.</p>
+        {% endif %}
+    </div>
+
+    <!-- Communications Log -->
+    {% if communications %}
+    <div class="section">
+        <h2 class="section-title">Recent Communications</h2>
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>From</th>
+                    <th>To</th>
+                    <th>Type</th>
+                    <th>Subject</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for comm in communications %}
+                <tr>
+                    <td>{{ comm.created_at|date:"M d, Y g:i A" }}</td>
+                    <td>{{ comm.sender.get_full_name|default:"System" }}</td>
+                    <td>{{ comm.recipient.get_full_name|default:"N/A" }}</td>
+                    <td>{{ comm.get_communication_type_display }}</td>
+                    <td>{{ comm.subject|truncatechars:50 }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+
+    <!-- Audit Trail -->
+    {% if include_audit_trail and audit_logs %}
+    <div class="section page-break">
+        <h2 class="section-title">Audit Trail (Recent Activities)</h2>
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Date/Time</th>
+                    <th>User</th>
+                    <th>Action</th>
+                    <th>Previous Status</th>
+                    <th>New Status</th>
+                    <th>Impact</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for audit in audit_logs %}
+                <tr>
+                    <td>{{ audit.audit_log.timestamp|date:"M d, Y g:i A" }}</td>
+                    <td>{{ audit.audit_log.user.get_full_name|default:"System" }}</td>
+                    <td>{{ audit.audit_log.action_description }}</td>
+                    <td>{{ audit.previous_status|default:"N/A" }}</td>
+                    <td>{{ audit.new_status|default:"N/A" }}</td>
+                    <td>
+                        <span class="status-badge 
+                            {% if audit.impact_level == 'HIGH' or audit.impact_level == 'CRITICAL' %}status-exception
+                            {% elif audit.impact_level == 'MEDIUM' %}status-pending
+                            {% else %}status-delivered{% endif %}">
+                            {{ audit.get_impact_level_display }}
+                        </span>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+
+    <!-- Special Instructions -->
+    {% if shipment.instructions %}
+    <div class="section">
+        <h2 class="section-title">Special Instructions</h2>
+        <div class="compliance-section">
+            {{ shipment.instructions|linebreaks }}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Footer -->
+    <div class="footer">
+        <p>
+            This report was generated by the SafeShipper platform on {{ generation_date|date:"F d, Y \a\t g:i A" }}. 
+            For questions regarding this shipment, please contact our customer service team.
+        </p>
+        <p>
+            <strong>Confidentiality Notice:</strong> This document contains confidential and proprietary information. 
+            Distribution is restricted to authorized personnel only.
+        </p>
+    </div>
+</body>
+</html>

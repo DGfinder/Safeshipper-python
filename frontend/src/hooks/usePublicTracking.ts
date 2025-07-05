@@ -22,13 +22,56 @@ export interface RouteInfo {
   note?: string;
 }
 
+export interface DocumentInfo {
+  id: string;
+  type: string;
+  type_display: string;
+  filename: string;
+  status: string;
+  status_display: string;
+  upload_date: string;
+  download_url: string;
+}
+
+export interface CommunicationInfo {
+  id: string;
+  type: string;
+  type_display: string;
+  subject: string;
+  message: string;
+  sent_at: string;
+  sender: string;
+  status: string;
+}
+
+export interface ProofOfDeliveryInfo {
+  delivery_date: string;
+  recipient_name?: string;
+  recipient_signature_url?: string;
+  delivery_photos: string[];
+  delivery_notes?: string;
+  delivered_by: string;
+  status?: string;
+}
+
+export interface ItemsSummary {
+  total_items: number;
+  total_weight_kg: number;
+  has_dangerous_goods: boolean;
+  dangerous_goods_count: number;
+}
+
 export interface PublicShipmentData {
   tracking_number: string;
   status: string;
+  status_display: string;
   customer_reference?: string;
   origin_location: string;
   destination_location: string;
+  estimated_pickup_date?: string;
+  actual_pickup_date?: string;
   estimated_delivery_date?: string;
+  actual_delivery_date?: string;
   created_at: string;
   updated_at: string;
   vehicle_location?: VehicleLocation;
@@ -36,6 +79,10 @@ export interface PublicShipmentData {
   vehicle_registration?: string;
   status_timeline: StatusTimelineItem[];
   route_info: RouteInfo;
+  documents: DocumentInfo[];
+  communications: CommunicationInfo[];
+  proof_of_delivery?: ProofOfDeliveryInfo;
+  items_summary: ItemsSummary;
 }
 
 const API_BASE_URL = '/api/v1';
