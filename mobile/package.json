@@ -27,7 +27,10 @@
     "zustand": "^4.4.6",
     "react-native-toast-message": "^2.2.0",
     "react-native-vector-icons": "^10.0.2",
-    "react-native-elements": "^3.4.3"
+    "react-native-elements": "^3.4.3",
+    "react-native-image-picker": "^7.1.0",
+    "react-native-signature-canvas": "^4.7.2",
+    "react-native-document-picker": "^9.1.1"
   },
   "devDependencies": {
     "@babel/core": "^7.20.0",

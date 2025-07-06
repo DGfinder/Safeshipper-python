@@ -163,6 +163,132 @@ async function confirmDangerousGoods(
   return response.json();
 }
 
+// Enhanced types for manifest-based workflow
+export interface ManifestStatus {
+  shipment: {
+    id: string;
+    tracking_number: string;
+    status: string;
+    status_display: string;
+    total_items: number;
+    dangerous_items: number;
+  };
+  manifests: Array<{
+    id: string;
+    status: string;
+    status_display: string;
+    manifest_type: string;
+    manifest_type_display: string;
+    total_dg_matches: number;
+    confirmed_dg_count: number;
+    document_status: string;
+    document_id: string;
+    analysis_summary?: {
+      total_potential_dgs: number;
+      requires_confirmation: boolean;
+      processing_time?: number;
+    };
+  }>;
+  overall_status: string;
+  total_manifests: number;
+  timestamp: string;
+}
+
+export interface CompatibilityError {
+  error: string;
+  compatibility_result: {
+    is_compatible: boolean;
+    conflicts: string[];
+    [key: string]: any;
+  };
+}
+
+// Enhanced API functions for manifest workflow
+async function pollManifestStatus(shipmentId: string, token: string): Promise<ManifestStatus> {
+  const response = await fetch(`${API_BASE_URL}/manifests/poll-status/${shipmentId}/`, {
+    method: 'GET',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.error || 'Failed to get manifest status');
+  }
+
+  return response.json();
+}
+
+async function confirmManifestDangerousGoods(
+  manifestId: string,
+  confirmedUnNumbers: string[],
+  token: string
+): Promise<{
+  message: string;
+  confirmed_count: number;
+  compatibility_result: any;
+  manifest: any;
+}> {
+  const response = await fetch(`${API_BASE_URL}/manifests/${manifestId}/confirm_dangerous_goods/`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      confirmed_un_numbers: confirmedUnNumbers,
+    }),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.error || 'Failed to confirm dangerous goods');
+  }
+
+  return response.json();
+}
+
+async function finalizeManifest(
+  manifestId: string,
+  confirmedDGs: DangerousGoodConfirmation[],
+  token: string
+): Promise<{
+  message: string;
+  created_items_count: number;
+  compatibility_result: any;
+  manifest: any;
+}> {
+  const response = await fetch(`${API_BASE_URL}/manifests/${manifestId}/finalize/`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      confirmed_dangerous_goods: confirmedDGs,
+    }),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json();
+    
+    // Check if this is a compatibility error
+    if (errorData.compatibility_result && !errorData.compatibility_result.is_compatible) {
+      const compatError = new Error(errorData.error || 'Dangerous goods are not compatible') as any;
+      compatError.isCompatibilityError = true;
+      compatError.compatibilityResult = errorData.compatibility_result;
+      throw compatError;
+    }
+    
+    throw new Error(errorData.error || 'Failed to finalize manifest');
+  }
+
+  return response.json();
+}
+
+// Legacy function for backward compatibility
 async function finalizeShipmentFromManifest(
   shipmentId: string,
   documentId: string,
@@ -190,6 +316,15 @@ async function finalizeShipmentFromManifest(
 
   if (!response.ok) {
     const errorData = await response.json();
+    
+    // Check if this is a compatibility error
+    if (errorData.compatibility_result && !errorData.compatibility_result.is_compatible) {
+      const compatError = new Error(errorData.error || 'Dangerous goods are not compatible') as any;
+      compatError.isCompatibilityError = true;
+      compatError.compatibilityResult = errorData.compatibility_result;
+      throw compatError;
+    }
+    
     throw new Error(errorData.error || 'Failed to finalize shipment');
   }
 
@@ -275,6 +410,80 @@ export function useConfirmDangerousGoods() {
   });
 }
 
+// Enhanced hooks for manifest-based workflow
+export function useManifestStatus(shipmentId: string | null, pollingInterval = 5000) {
+  const { getToken } = useAuthStore();
+
+  return useQuery({
+    queryKey: ['manifest-status', shipmentId],
+    queryFn: () => {
+      const token = getToken();
+      if (!token || !shipmentId) throw new Error('No token or shipment ID');
+      return pollManifestStatus(shipmentId, token);
+    },
+    enabled: !!shipmentId && !!getToken(),
+    refetchInterval: (query) => {
+      // Keep polling if any manifest is still processing
+      const data = query.state.data as ManifestStatus | undefined;
+      if (data?.overall_status === 'analyzing' || data?.overall_status === 'processing') {
+        return pollingInterval;
+      }
+      return false;
+    },
+    refetchIntervalInBackground: true,
+  });
+}
+
+export function useConfirmManifestDangerousGoods() {
+  const queryClient = useQueryClient();
+  const { getToken } = useAuthStore();
+
+  return useMutation({
+    mutationFn: ({ 
+      manifestId, 
+      confirmedUnNumbers 
+    }: { 
+      manifestId: string; 
+      confirmedUnNumbers: string[] 
+    }) => {
+      const token = getToken();
+      if (!token) throw new Error('No authentication token');
+      return confirmManifestDangerousGoods(manifestId, confirmedUnNumbers, token);
+    },
+    onSuccess: (data, variables) => {
+      // Invalidate manifest status and related queries
+      queryClient.invalidateQueries({ queryKey: ['manifest-status'] });
+      queryClient.invalidateQueries({ queryKey: ['manifests'] });
+    },
+  });
+}
+
+export function useFinalizeManifest() {
+  const queryClient = useQueryClient();
+  const { getToken } = useAuthStore();
+
+  return useMutation({
+    mutationFn: ({ 
+      manifestId, 
+      confirmedDGs 
+    }: { 
+      manifestId: string; 
+      confirmedDGs: DangerousGoodConfirmation[] 
+    }) => {
+      const token = getToken();
+      if (!token) throw new Error('No authentication token');
+      return finalizeManifest(manifestId, confirmedDGs, token);
+    },
+    onSuccess: (data, variables) => {
+      // Invalidate and refetch related queries
+      queryClient.invalidateQueries({ queryKey: ['manifest-status'] });
+      queryClient.invalidateQueries({ queryKey: ['manifests'] });
+      queryClient.invalidateQueries({ queryKey: ['shipments'] });
+    },
+  });
+}
+
+// Legacy hook for backward compatibility
 export function useFinalizeShipmentFromManifest() {
   const queryClient = useQueryClient();
   const { getToken } = useAuthStore();
@@ -298,6 +507,7 @@ export function useFinalizeShipmentFromManifest() {
       queryClient.invalidateQueries({ queryKey: ['shipment', variables.shipmentId] });
       queryClient.invalidateQueries({ queryKey: ['shipments'] });
       queryClient.invalidateQueries({ queryKey: ['document-status', variables.documentId] });
+      queryClient.invalidateQueries({ queryKey: ['manifest-status', variables.shipmentId] });
     },
   });
 }

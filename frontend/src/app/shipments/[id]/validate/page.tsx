@@ -21,6 +21,7 @@ import {
 import { ManifestDropzone } from '@/components/manifests/ManifestDropzone';
 import { DangerousGoodsConfirmation } from '@/components/manifests/DangerousGoodsConfirmation';
 import { PDFViewer } from '@/components/manifests/PDFViewer';
+import { CompatibilityErrorDialog } from '@/components/manifests/CompatibilityErrorDialog';
 import { 
   useUploadManifest, 
   useDocumentStatus, 
@@ -41,6 +42,8 @@ export default function ShipmentValidationPage() {
   const [uploadedDocumentId, setUploadedDocumentId] = useState<string | null>(null);
   const [confirmedDGs, setConfirmedDGs] = useState<DangerousGoodConfirmation[]>([]);
   const [showPDFViewer, setShowPDFViewer] = useState(false);
+  const [compatibilityError, setCompatibilityError] = useState<any>(null);
+  const [showCompatibilityDialog, setShowCompatibilityDialog] = useState(false);
 
   // Queries and mutations
   const { data: shipment, isLoading: shipmentLoading, error: shipmentError } = useShipment(shipmentId);
@@ -95,8 +98,30 @@ export default function ShipmentValidationPage() {
       toast.success(result.message);
       router.push(`/shipments/${shipmentId}`);
     } catch (error: any) {
-      toast.error(error.message || 'Failed to finalize shipment');
+      // Check if this is a compatibility error
+      if (error.isCompatibilityError && error.compatibilityResult) {
+        setCompatibilityError(error.compatibilityResult);
+        setShowCompatibilityDialog(true);
+      } else {
+        toast.error(error.message || 'Failed to finalize shipment');
+      }
     }
+  };
+
+  const handleCompatibilityDialogClose = () => {
+    setShowCompatibilityDialog(false);
+    setCompatibilityError(null);
+  };
+
+  const handleEditSelection = () => {
+    setShowCompatibilityDialog(false);
+    setCompatibilityError(null);
+    // Focus on the dangerous goods confirmation section
+    const dgSection = document.getElementById('dangerous-goods-confirmation');
+    if (dgSection) {
+      dgSection.scrollIntoView({ behavior: 'smooth' });
+    }
+    toast.info('Please modify your dangerous goods selection to resolve compatibility issues');
   };
 
   // Loading state
@@ -248,11 +273,13 @@ export default function ShipmentValidationPage() {
 
             {/* Dangerous Goods Confirmation */}
             {hasValidationResults && (
-              <DangerousGoodsConfirmation
-                validationResults={validationResults}
-                onConfirmation={handleDGConfirmation}
-                confirmedDGs={confirmedDGs}
-              />
+              <div id="dangerous-goods-confirmation">
+                <DangerousGoodsConfirmation
+                  validationResults={validationResults}
+                  onConfirmation={handleDGConfirmation}
+                  confirmedDGs={confirmedDGs}
+                />
+              </div>
             )}
           </div>
 
@@ -361,6 +388,20 @@ export default function ShipmentValidationPage() {
             )}
           </div>
         </div>
+
+        {/* Compatibility Error Dialog */}
+        {compatibilityError && (
+          <CompatibilityErrorDialog
+            isOpen={showCompatibilityDialog}
+            onClose={handleCompatibilityDialogClose}
+            compatibilityResult={compatibilityError}
+            confirmedItems={confirmedDGs.map(dg => ({
+              un_number: dg.un_number,
+              description: dg.description
+            }))}
+            onEditSelection={handleEditSelection}
+          />
+        )}
       </div>
     </DashboardLayout>
   );

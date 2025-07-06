@@ -181,11 +181,84 @@ class ApiService {
   }
 
   // Shipment Status Updates
-  async updateShipmentStatus(shipmentId: string, status: string): Promise<Shipment> {
+  async updateShipmentStatus(shipmentId: string, status: string, podData?: any): Promise<Shipment> {
+    const body: any = { status };
+    if (podData) {
+      body.proof_of_delivery = podData;
+    }
+    
     return this.makeRequest<Shipment>(`/shipments/${shipmentId}/update-status/`, {
       method: 'PATCH',
-      body: JSON.stringify({ status }),
+      body: JSON.stringify(body),
     });
+  }
+
+  // Inspection Management
+  async getInspectionTemplates(inspectionType?: string): Promise<any[]> {
+    let url = '/inspections/templates/';
+    if (inspectionType) {
+      url += `?inspection_type=${inspectionType}`;
+    }
+    return this.makeRequest<any[]>(url);
+  }
+
+  async getShipmentInspections(shipmentId: string): Promise<any[]> {
+    return this.makeRequest<any[]>(`/inspections/?shipment=${shipmentId}`);
+  }
+
+  async createInspection(data: any): Promise<any> {
+    return this.makeRequest<any>('/inspections/', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updateInspection(inspectionId: string, data: any): Promise<any> {
+    return this.makeRequest<any>(`/inspections/${inspectionId}/`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async completeInspection(inspectionId: string): Promise<any> {
+    return this.makeRequest<any>(`/inspections/${inspectionId}/complete/`, {
+      method: 'POST',
+    });
+  }
+
+  // Communication & Events
+  async getShipmentEvents(shipmentId: string): Promise<any[]> {
+    return this.makeRequest<any[]>(`/communications/events/for_shipment/?shipment_id=${shipmentId}`);
+  }
+
+  async createShipmentEvent(data: any): Promise<any> {
+    return this.makeRequest<any>('/communications/events/', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async postComment(shipmentId: string, details: string, mentionedUsers?: string[]): Promise<any> {
+    const data = {
+      shipment: shipmentId,
+      details,
+      mentioned_users: mentionedUsers || [],
+    };
+    
+    return this.makeRequest<any>('/communications/events/comment/', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async markEventRead(eventId: string): Promise<any> {
+    return this.makeRequest<any>(`/communications/events/${eventId}/mark_read/`, {
+      method: 'POST',
+    });
+  }
+
+  async getUnreadEventCount(): Promise<{unread_count: number}> {
+    return this.makeRequest<{unread_count: number}>('/communications/events/unread_count/');
   }
 }
 

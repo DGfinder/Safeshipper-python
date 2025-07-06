@@ -114,7 +114,7 @@ class ShipmentViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=['patch'], url_path='update-status')
     def update_status(self, request, pk=None):
-        """Custom endpoint for updating shipment status with role-based validation."""
+        """Custom endpoint for updating shipment status with role-based validation and POD support."""
         shipment = self.get_object()
         new_status = request.data.get('status')
         
@@ -125,9 +125,34 @@ class ShipmentViewSet(viewsets.ModelViewSet):
             )
         
         try:
+            # Handle POD data if status is DELIVERED
+            if new_status == 'DELIVERED':
+                pod_data = request.data.get('proof_of_delivery')
+                if pod_data:
+                    from .serializers import ProofOfDeliveryCreateSerializer
+                    pod_data['shipment'] = shipment.id
+                    pod_serializer = ProofOfDeliveryCreateSerializer(
+                        data=pod_data, 
+                        context={'request': request}
+                    )
+                    if pod_serializer.is_valid():
+                        pod_serializer.save()
+                    else:
+                        return Response(
+                            {"proof_of_delivery_errors": pod_serializer.errors},
+                            status=status.HTTP_400_BAD_REQUEST
+                        )
+            
             updated_shipment = update_shipment_status_service(
                 shipment, new_status, request.user
             )
+            
+            # Set actual delivery date when delivered
+            if new_status == 'DELIVERED':
+                from django.utils import timezone
+                updated_shipment.actual_delivery_date = timezone.now()
+                updated_shipment.save()
+            
             serializer = self.get_serializer(updated_shipment)
             return Response(serializer.data)
         except ValidationError as e:

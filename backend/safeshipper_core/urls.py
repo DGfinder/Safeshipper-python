@@ -66,6 +66,8 @@ urlpatterns = [
         path('audits/', include('audits.urls')),  # Enabled for audit functionality
         path('auth/', include('enterprise_auth.urls')),  # Enterprise authentication
         path('iot/', include('iot_devices.urls')),  # IoT device management
+        path('inspections/', include('inspections.urls')),  # Inspection management
+        path('communications/', include('communications.urls')),  # Communication and activity logs
         # Temporarily disabled apps:
         # path('locations/', include('locations.urls')),
         # path('hazard-assessments/', include('hazard_assessments.urls')),

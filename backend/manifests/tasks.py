@@ -2,7 +2,8 @@ from celery import shared_task
 from celery.utils.log import get_task_logger
 from django.utils.translation import gettext_lazy as _
 from documents.models import Document
-from .services import run_manifest_validation
+from .services import run_manifest_validation, create_manifest_from_document, run_enhanced_manifest_analysis
+from .models import ManifestType
 
 logger = get_task_logger(__name__)
 
@@ -37,21 +38,33 @@ def process_manifest_validation(self, document_id: str):
         document.status = Document.DocumentStatus.PROCESSING
         document.save(update_fields=['status'])
         
-        # Run validation
-        validation_results = run_manifest_validation(document)
+        # Create manifest record if it doesn't exist
+        if not hasattr(document, 'manifest'):
+            create_manifest_from_document(document, ManifestType.DG_MANIFEST)
         
-        # Update document with results
-        document.validation_results = validation_results
-        document.status = (
-            Document.DocumentStatus.VALIDATED_OK
-            if not validation_results.get('validation_errors')
-            else Document.DocumentStatus.VALIDATED_WITH_ERRORS
-        )
+        # Run enhanced analysis
+        enhanced_results = run_enhanced_manifest_analysis(document)
+        
+        # Update document with results (maintaining backward compatibility)
+        legacy_validation_results = run_manifest_validation(document)
+        document.validation_results = legacy_validation_results
+        
+        # Determine status based on whether dangerous goods were found and if there are errors
+        has_dgs = enhanced_results.get('total_potential_dgs', 0) > 0
+        has_errors = bool(legacy_validation_results.get('validation_errors'))
+        
+        if has_errors:
+            document.status = Document.DocumentStatus.PROCESSING_FAILED
+        elif has_dgs:
+            document.status = Document.DocumentStatus.VALIDATED_WITH_ERRORS  # Requires user confirmation
+        else:
+            document.status = Document.DocumentStatus.VALIDATED_OK
+        
         document.save(update_fields=['status', 'validation_results'])
         
         logger.info(
-            _("Manifest validation completed for document %(doc_id)s"),
-            {'doc_id': document_id}
+            _("Enhanced manifest validation completed for document %(doc_id)s. Found %(dg_count)s potential dangerous goods."),
+            {'doc_id': document_id, 'dg_count': enhanced_results.get('total_potential_dgs', 0)}
         )
         
     except Document.DoesNotExist:

@@ -612,25 +612,29 @@ def public_delivery_signature(request, tracking_number):
             )
         
         try:
-            from delivery.models import ProofOfDelivery
+            from shipments.models import ProofOfDelivery
             pod = ProofOfDelivery.objects.get(shipment=shipment)
             
-            if not hasattr(pod, 'signature_image') or not pod.signature_image:
+            if not pod.recipient_signature_url:
                 return Response(
                     {'error': 'Signature not available'}, 
                     status=status.HTTP_404_NOT_FOUND
                 )
             
-            # Serve signature image
-            response = HttpResponse(pod.signature_image.read(), content_type='image/png')
-            response['Content-Disposition'] = f'inline; filename="signature_{tracking_number}.png"'
+            # Return signature URL or base64 data
+            signature_data = {
+                'signature_url': pod.recipient_signature_url,
+                'recipient_name': pod.recipient_name,
+                'delivered_at': pod.delivered_at.isoformat(),
+                'delivered_by': pod.delivered_by.get_full_name() if pod.delivered_by else 'Unknown',
+            }
             
             logger.info(f"Public signature access: {tracking_number}")
-            return response
+            return Response(signature_data)
             
-        except ImportError:
+        except ProofOfDelivery.DoesNotExist:
             return Response(
-                {'error': 'Delivery signature feature not available'}, 
+                {'error': 'Signature not available'}, 
                 status=status.HTTP_404_NOT_FOUND
             )
         except Exception as e:
@@ -674,34 +678,37 @@ def public_delivery_photos(request, tracking_number, photo_id):
             )
         
         try:
-            from delivery.models import ProofOfDelivery
+            from shipments.models import ProofOfDelivery, ProofOfDeliveryPhoto
             pod = ProofOfDelivery.objects.get(shipment=shipment)
             
             # Get specific photo by ID
-            photo_field = f'delivery_photo_{photo_id}'
-            if not hasattr(pod, photo_field):
+            try:
+                photo = ProofOfDeliveryPhoto.objects.get(
+                    proof_of_delivery=pod,
+                    id=photo_id
+                )
+            except ProofOfDeliveryPhoto.DoesNotExist:
                 return Response(
                     {'error': 'Photo not found'}, 
                     status=status.HTTP_404_NOT_FOUND
                 )
             
-            photo = getattr(pod, photo_field)
-            if not photo:
-                return Response(
-                    {'error': 'Photo not available'}, 
-                    status=status.HTTP_404_NOT_FOUND
-                )
-            
-            # Serve photo
-            response = HttpResponse(photo.read(), content_type='image/jpeg')
-            response['Content-Disposition'] = f'inline; filename="delivery_photo_{tracking_number}_{photo_id}.jpg"'
+            # Return photo data
+            photo_data = {
+                'image_url': photo.image_url,
+                'thumbnail_url': photo.thumbnail_url,
+                'caption': photo.caption,
+                'taken_at': photo.taken_at.isoformat(),
+                'file_name': photo.file_name,
+                'file_size_mb': photo.file_size_mb,
+            }
             
             logger.info(f"Public delivery photo access: {tracking_number}/{photo_id}")
-            return response
+            return Response(photo_data)
             
-        except ImportError:
+        except ProofOfDelivery.DoesNotExist:
             return Response(
-                {'error': 'Delivery photos feature not available'}, 
+                {'error': 'Delivery photos not available'}, 
                 status=status.HTTP_404_NOT_FOUND
             )
         except Exception as e:
@@ -845,5 +852,52 @@ def public_shipment_timeline(request, tracking_number):
         logger.error(f"Public shipment timeline error for {tracking_number}: {str(e)}")
         return Response(
             {'error': 'An error occurred while retrieving the timeline'}, 
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def public_pod_info(request, tracking_number):
+    """
+    Public endpoint for customers to view complete proof of delivery information
+    """
+    try:
+        from shipments.models import Shipment, ProofOfDelivery
+        from shipments.serializers import ProofOfDeliverySerializer
+        
+        # Find shipment
+        try:
+            shipment = Shipment.objects.get(tracking_number=tracking_number)
+        except Shipment.DoesNotExist:
+            return Response(
+                {'error': 'Shipment not found'}, 
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        # Check if shipment is delivered
+        if shipment.status != 'DELIVERED':
+            return Response(
+                {'error': 'Proof of delivery not available - shipment not yet delivered'}, 
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        try:
+            pod = ProofOfDelivery.objects.get(shipment=shipment)
+            serializer = ProofOfDeliverySerializer(pod)
+            
+            logger.info(f"Public POD access: {tracking_number}")
+            return Response(serializer.data)
+            
+        except ProofOfDelivery.DoesNotExist:
+            return Response(
+                {'error': 'Proof of delivery not available'}, 
+                status=status.HTTP_404_NOT_FOUND
+            )
+            
+    except Exception as e:
+        logger.error(f"Public POD error for {tracking_number}: {str(e)}")
+        return Response(
+            {'error': 'An error occurred while retrieving the proof of delivery'}, 
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
