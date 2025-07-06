@@ -20,7 +20,7 @@ import {
   useGenerateDGManifest,
   useGenerateBatchDocuments
 } from '@/hooks/useShipments';
-import { toast } from 'sonner';
+// Toast notifications - replace with your preferred toast library
 
 interface DocumentGeneratorProps {
   shipmentId: string;
@@ -101,27 +101,27 @@ const DocumentGenerator: React.FC<DocumentGeneratorProps> = ({
             shipmentId, 
             includeAudit: includeAuditTrail 
           });
-          toast.success('Shipment report generated successfully');
+          console.log('Shipment report generated successfully');
           break;
         case 'compliance_certificate':
           await generateCertificate.mutateAsync(shipmentId);
-          toast.success('Compliance certificate generated successfully');
+          console.log('Compliance certificate generated successfully');
           break;
         case 'dg_manifest':
           await generateManifest.mutateAsync(shipmentId);
-          toast.success('DG manifest generated successfully');
+          console.log('DG manifest generated successfully');
           break;
         default:
           throw new Error('Unknown document type');
       }
     } catch (error: any) {
-      toast.error(error.message || 'Failed to generate document');
+      console.error('Failed to generate document:', error.message || error);
     }
   };
 
   const handleBatchGeneration = async () => {
     if (selectedDocuments.length === 0) {
-      toast.error('Please select at least one document type');
+      console.error('Please select at least one document type');
       return;
     }
 
@@ -130,10 +130,10 @@ const DocumentGenerator: React.FC<DocumentGeneratorProps> = ({
         shipmentId,
         documentTypes: selectedDocuments
       });
-      toast.success(`Generated ${selectedDocuments.length} documents successfully`);
+      console.log(`Generated ${selectedDocuments.length} documents successfully`);
       setSelectedDocuments([]);
     } catch (error: any) {
-      toast.error(error.message || 'Failed to generate batch documents');
+      console.error('Failed to generate batch documents:', error.message || error);
     }
   };
 

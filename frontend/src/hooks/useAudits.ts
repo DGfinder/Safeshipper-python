@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useAuth } from './useMockAuth';
+import { useMockAuth } from './useMockAuth';
 
 // Types for audit data
 export interface AuditLog {
@@ -139,7 +139,8 @@ const exportAuditLogs = async (filters: AuditFilters, token: string): Promise<{ 
 
 // Custom hooks
 export const useAuditLogs = (filters: AuditFilters = {}) => {
-  const { token } = useAuth();
+  const { getToken } = useMockAuth();
+  const token = getToken();
 
   return useQuery({
     queryKey: ['auditLogs', filters],
@@ -150,7 +151,8 @@ export const useAuditLogs = (filters: AuditFilters = {}) => {
 };
 
 export const useShipmentAuditLogs = (shipmentId: string) => {
-  const { token } = useAuth();
+  const { getToken } = useMockAuth();
+  const token = getToken();
 
   return useQuery({
     queryKey: ['shipmentAuditLogs', shipmentId],
@@ -161,7 +163,8 @@ export const useShipmentAuditLogs = (shipmentId: string) => {
 };
 
 export const useAuditSummary = (filters: { date_from?: string; date_to?: string } = {}) => {
-  const { token } = useAuth();
+  const { getToken } = useMockAuth();
+  const token = getToken();
 
   return useQuery({
     queryKey: ['auditSummary', filters],
@@ -172,7 +175,8 @@ export const useAuditSummary = (filters: { date_from?: string; date_to?: string 
 };
 
 export const useExportAuditLogs = () => {
-  const { token } = useAuth();
+  const { getToken } = useMockAuth();
+  const token = getToken();
   const queryClient = useQueryClient();
 
   return useMutation({

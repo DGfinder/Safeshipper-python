@@ -39,7 +39,8 @@
       "Bash(npm run type-check:*)",
       "Bash(cd:*)",
       "Bash(cd:*)",
-      "Bash(python manage.py startapp:*)"
+      "Bash(python manage.py startapp:*)",
+      "Bash(dos2unix:*)"
     ],
     "deny": []
   }

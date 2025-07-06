@@ -222,6 +222,7 @@ export function useMockPublicTracking(trackingNumber: string) {
   const baseData = {
     tracking_number: trackingNumber,
     status: 'DELIVERED',
+    status_display: 'Delivered',
     customer_reference: 'REF-12345',
     origin_location: 'Sydney, NSW, Australia',
     destination_location: 'Melbourne, VIC, Australia',
@@ -258,15 +259,46 @@ export function useMockPublicTracking(trackingNumber: string) {
       tracking_available: false,
       note: 'Shipment has been delivered'
     },
+    documents: [
+      {
+        id: 'doc-1',
+        type: 'manifest',
+        type_display: 'Shipping Manifest',
+        filename: 'manifest.pdf',
+        status: 'available',
+        status_display: 'Available',
+        upload_date: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+        download_url: '#'
+      }
+    ],
+    communications: [
+      {
+        id: 'comm-1',
+        type: 'sms',
+        type_display: 'SMS Notification',
+        subject: 'Shipment Status Update',
+        message: 'Your shipment has been delivered successfully.',
+        sent_at: new Date().toISOString(),
+        sender: 'SafeShipper System',
+        status: 'delivered'
+      }
+    ],
+    items_summary: {
+      total_items: 3,
+      total_weight_kg: 15.5,
+      has_dangerous_goods: false,
+      dangerous_goods_count: 0
+    },
     proof_of_delivery: {
-      signature: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
-      photos: [
+      delivery_date: new Date().toISOString(),
+      recipient_name: 'Jane Doe',
+      recipient_signature_url: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
+      delivery_photos: [
         'https://via.placeholder.com/400x300/4CAF50/FFFFFF?text=POD+Photo+1',
         'https://via.placeholder.com/400x300/2196F3/FFFFFF?text=POD+Photo+2'
       ],
-      recipient: 'Jane Doe',
-      timestamp: new Date().toISOString(),
-      driver: 'John Smith'
+      delivery_notes: 'Package delivered to front door',
+      delivered_by: 'John Smith'
     }
   };
 

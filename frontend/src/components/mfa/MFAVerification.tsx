@@ -258,7 +258,7 @@ export function MFAVerification({
         {/* SMS Resend Option */}
         {selectedDevice?.device_type === 'sms' && (
           <div className="text-sm text-gray-600">
-            Didn't receive the code?{' '}
+            {"Didn't receive the code? "}
             <button
               onClick={handleResendSMS}
               disabled={countdown > 0 || isLoading}
