@@ -304,7 +304,7 @@ export default function EmergencyProceduresPage() {
                   </div>
                 ) : (
                   <div className="space-y-4">
-                    {epgData?.results?.map((epg) => (
+                    {epgData?.results?.map((epg: EmergencyProcedureGuide) => (
                       <div
                         key={epg.id}
                         className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50"

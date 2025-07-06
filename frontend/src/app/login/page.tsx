@@ -51,202 +51,175 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex">
-      {/* Left side - Login Form */}
-      <div className="flex-1 flex items-center justify-center px-4 sm:px-6 lg:px-8 bg-gray-50">
-        <div className="max-w-md w-full space-y-8">
-          {/* Logo */}
-          <div className="text-center">
-            <div className="flex items-center justify-center space-x-3 mb-6">
-              <div className="relative h-12 w-12">
-                <Image
-                  src="/symbol.svg"
-                  alt="SafeShipper Symbol"
-                  width={48}
-                  height={48}
-                  className="object-contain"
-                />
-              </div>
-              <div className="relative h-8 w-40">
-                <Image
-                  src="/logo.svg"
-                  alt="SafeShipper"
-                  width={160}
-                  height={32}
-                  className="object-contain"
-                />
-              </div>
-            </div>
-            <h2 className="text-3xl font-bold text-gray-900">Welcome back</h2>
-            <p className="mt-2 text-sm text-gray-600">
-              Sign in to your SafeShipper account
+    <div className="min-h-screen flex relative overflow-hidden">
+      {/* Left side - Hero Image with Diagonal Cut */}
+      <div className="relative flex-1 bg-gradient-to-br from-gray-100 to-gray-200">
+        {/* Diagonal overlay shape */}
+        <div 
+          className="absolute inset-0 bg-white"
+          style={{
+            clipPath: 'polygon(0 0, 70% 0, 85% 100%, 0 100%)'
+          }}
+        ></div>
+        
+        {/* Background image */}
+        <div className="absolute inset-0">
+          <Image
+            src="/login-illustration.png.png"
+            alt="SafeShipper Fleet Management"
+            fill
+            className="object-cover object-center"
+            style={{
+              clipPath: 'polygon(0 0, 70% 0, 85% 100%, 0 100%)'
+            }}
+          />
+          {/* Overlay for better contrast */}
+          <div 
+            className="absolute inset-0 bg-gradient-to-r from-blue-900/20 to-transparent"
+            style={{
+              clipPath: 'polygon(0 0, 70% 0, 85% 100%, 0 100%)'
+            }}
+          ></div>
+        </div>
+
+        {/* Content overlay on image */}
+        <div className="relative z-10 h-full flex items-end p-12">
+          <div className="text-white max-w-md">
+            <h1 className="text-4xl font-bold mb-4">
+              Professional Fleet<br />Management
+            </h1>
+            <p className="text-lg text-white/90 leading-relaxed">
+              Secure dangerous goods transportation with comprehensive safety monitoring and compliance management.
             </p>
-          </div>
-
-          {/* Login Form */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-center text-lg">Sign In</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleSubmit} className="space-y-6">
-                {error && (
-                  <Alert className="border-red-200 bg-red-50">
-                    <AlertCircle className="h-4 w-4 text-red-600" />
-                    <AlertDescription className="text-red-700">
-                      {error}
-                    </AlertDescription>
-                  </Alert>
-                )}
-
-                <div className="space-y-4">
-                  <div>
-                    <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
-                      Email address
-                    </label>
-                    <div className="relative">
-                      <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                      <Input
-                        id="email"
-                        name="email"
-                        type="email"
-                        autoComplete="email"
-                        required
-                        value={formData.email}
-                        onChange={handleInputChange}
-                        className="pl-10"
-                        placeholder="Enter your email"
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
-                      Password
-                    </label>
-                    <div className="relative">
-                      <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                      <Input
-                        id="password"
-                        name="password"
-                        type={showPassword ? 'text' : 'password'}
-                        autoComplete="current-password"
-                        required
-                        value={formData.password}
-                        onChange={handleInputChange}
-                        className="pl-10 pr-10"
-                        placeholder="Enter your password"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowPassword(!showPassword)}
-                        className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 hover:text-gray-600"
-                      >
-                        {showPassword ? <EyeOff /> : <Eye />}
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center">
-                    <input
-                      id="remember-me"
-                      name="remember-me"
-                      type="checkbox"
-                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                    />
-                    <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-700">
-                      Remember me
-                    </label>
-                  </div>
-
-                  <div className="text-sm">
-                    <Link
-                      href="/forgot-password"
-                      className="font-medium text-blue-600 hover:text-blue-500"
-                    >
-                      Forgot your password?
-                    </Link>
-                  </div>
-                </div>
-
-                <Button
-                  type="submit"
-                  disabled={isLoading}
-                  className="w-full bg-[#153F9F] hover:bg-[#1230B] text-white font-medium py-2 px-4 rounded-md transition-colors"
-                >
-                  {isLoading ? 'Signing in...' : 'Sign in'}
-                </Button>
-
-                {/* Demo Credentials */}
-                <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
-                  <p className="text-sm text-blue-800 font-medium mb-1">Demo Credentials:</p>
-                  <p className="text-xs text-blue-700">Email: demo@safeshipper.com</p>
-                  <p className="text-xs text-blue-700">Password: demo123</p>
-                </div>
-              </form>
-            </CardContent>
-          </Card>
-
-          {/* Footer */}
-          <div className="text-center">
-            <p className="text-xs text-gray-500">
-              © 2024 SafeShipper. All rights reserved.
-            </p>
-            <div className="mt-2 flex items-center justify-center space-x-4 text-xs text-gray-400">
-              <Link href="/privacy" className="hover:text-gray-600">Privacy Policy</Link>
-              <span>•</span>
-              <Link href="/terms" className="hover:text-gray-600">Terms of Service</Link>
-              <span>•</span>
-              <Link href="/support" className="hover:text-gray-600">Support</Link>
-            </div>
           </div>
         </div>
       </div>
 
-      {/* Right side - Illustration */}
-      <div className="hidden lg:flex flex-1 bg-gradient-to-br from-[#153F9F] to-[#1E40AF] relative overflow-hidden">
-        <div className="absolute inset-0 bg-black opacity-10"></div>
-        <div className="relative z-10 flex items-center justify-center w-full">
-          <div className="text-center text-white px-8">
-            <div className="mb-8 relative">
-              <div className="relative w-96 h-96 mx-auto">
+      {/* Right side - Login Form */}
+      <div className="flex-1 flex items-center justify-center px-8 sm:px-12 lg:px-16 bg-white">
+        <div className="max-w-md w-full space-y-8">
+          {/* Logo */}
+          <div className="text-center">
+            <div className="flex items-center justify-center space-x-3 mb-8">
+              <div className="relative h-10 w-10">
                 <Image
-                  src="/login-illustration.png.png"
-                  alt="SafeShipper Login Illustration"
-                  fill
+                  src="/symbol.svg"
+                  alt="SafeShipper Symbol"
+                  width={40}
+                  height={40}
                   className="object-contain"
                 />
               </div>
+              <span className="text-2xl font-bold text-[#153F9F]">SafeShipper</span>
             </div>
-            <h1 className="text-4xl font-bold mb-6">
-              Secure Dangerous Goods Transportation
-            </h1>
-            <p className="text-xl text-blue-100 mb-8 max-w-md mx-auto leading-relaxed">
-              Comprehensive safety management platform for hazardous materials shipping and compliance
+            <h2 className="text-3xl font-bold text-gray-900 mb-2">Welcome to SafeShipper! 👋</h2>
+            <p className="text-gray-600">
+              Please sign in to your account and start the adventure
             </p>
-            <div className="grid grid-cols-1 gap-4 max-w-sm mx-auto">
-              <div className="flex items-center space-x-3 text-blue-100">
-                <Shield className="h-5 w-5" />
-                <span>Real-time Safety Monitoring</span>
+          </div>
+
+          {/* Login Form */}
+          <div className="space-y-6">
+            {error && (
+              <Alert className="border-red-200 bg-red-50">
+                <AlertCircle className="h-4 w-4 text-red-600" />
+                <AlertDescription className="text-red-700">
+                  {error}
+                </AlertDescription>
+              </Alert>
+            )}
+
+            <form onSubmit={handleSubmit} className="space-y-5">
+              <div>
+                <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
+                  Email or Username
+                </label>
+                <Input
+                  id="email"
+                  name="email"
+                  type="email"
+                  autoComplete="email"
+                  required
+                  value={formData.email}
+                  onChange={handleInputChange}
+                  className="h-12 px-4 rounded-lg border border-gray-300 focus:border-[#153F9F] focus:ring-[#153F9F]"
+                  placeholder="john@doe.com"
+                />
               </div>
-              <div className="flex items-center space-x-3 text-blue-100">
-                <AlertCircle className="h-5 w-5" />
-                <span>Emergency Response Planning</span>
+
+              <div>
+                <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
+                  Password
+                </label>
+                <div className="relative">
+                  <Input
+                    id="password"
+                    name="password"
+                    type={showPassword ? 'text' : 'password'}
+                    autoComplete="current-password"
+                    required
+                    value={formData.password}
+                    onChange={handleInputChange}
+                    className="h-12 px-4 pr-12 rounded-lg border border-gray-300 focus:border-[#153F9F] focus:ring-[#153F9F]"
+                    placeholder="Password"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400 hover:text-gray-600"
+                  >
+                    {showPassword ? <EyeOff /> : <Eye />}
+                  </button>
+                </div>
               </div>
-              <div className="flex items-center space-x-3 text-blue-100">
-                <User className="h-5 w-5" />
-                <span>Compliance Management</span>
+
+              <div className="flex items-center justify-between">
+                <div className="flex items-center">
+                  <input
+                    id="remember-me"
+                    name="remember-me"
+                    type="checkbox"
+                    className="h-4 w-4 text-[#153F9F] focus:ring-[#153F9F] border-gray-300 rounded"
+                  />
+                  <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-600">
+                    Remember Me
+                  </label>
+                </div>
+
+                <div className="text-sm">
+                  <Link
+                    href="/forgot-password"
+                    className="font-medium text-[#153F9F] hover:text-[#1230B]"
+                  >
+                    Forgot Password?
+                  </Link>
+                </div>
               </div>
+
+              <Button
+                type="submit"
+                disabled={isLoading}
+                className="w-full h-12 bg-[#153F9F] hover:bg-[#1230B] text-white font-medium rounded-lg transition-colors text-base"
+              >
+                {isLoading ? 'Signing in...' : 'Sign In'}
+              </Button>
+            </form>
+
+            {/* Demo Credentials */}
+            <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+              <p className="text-sm text-blue-800 font-medium mb-2">Demo Credentials:</p>
+              <p className="text-xs text-blue-700">Email: demo@safeshipper.com</p>
+              <p className="text-xs text-blue-700">Password: demo123</p>
             </div>
           </div>
+
+          {/* Footer */}
+          <div className="text-center mt-8">
+            <p className="text-xs text-gray-400">
+              © 2024 SafeShipper. All rights reserved.
+            </p>
+          </div>
         </div>
-        
-        {/* Decorative elements */}
-        <div className="absolute top-20 right-20 w-32 h-32 border border-white opacity-20 rounded-full"></div>
-        <div className="absolute bottom-20 left-20 w-24 h-24 border border-white opacity-20 rounded-full"></div>
-        <div className="absolute top-1/2 left-10 w-16 h-16 border border-white opacity-20 rounded-full"></div>
       </div>
     </div>
   );
