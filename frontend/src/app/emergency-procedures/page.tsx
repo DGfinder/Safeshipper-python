@@ -20,11 +20,6 @@ import {
   RefreshCw,
   Eye,
   Edit,
-  Trash2,
-  Download,
-  Filter,
-  BarChart3,
-  BookOpen,
   Zap,
   AlertCircle,
   Globe
@@ -412,7 +407,7 @@ export default function EmergencyProceduresPage() {
               <CardContent>
                 {dueForReview && dueForReview.length > 0 ? (
                   <div className="space-y-4">
-                    {dueForReview.map((epg) => (
+                    {dueForReview.map((epg: EmergencyProcedureGuide) => (
                       <div key={epg.id} className="flex items-center justify-between p-4 border border-yellow-200 bg-yellow-50 rounded-lg">
                         <div className="flex items-center gap-4">
                           <AlertTriangle className="h-6 w-6 text-yellow-600" />
