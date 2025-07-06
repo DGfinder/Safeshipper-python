@@ -22,7 +22,8 @@ import {
   Edit,
   Zap,
   AlertCircle,
-  Globe
+  Globe,
+  BookOpen
 } from 'lucide-react';
 import { AuthGuard } from '@/components/auth/auth-guard';
 import { 
