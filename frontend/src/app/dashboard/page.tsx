@@ -10,7 +10,14 @@ import {
   Star, 
   ChevronDown, 
   ChevronUp, 
-  MoreVertical 
+  MoreVertical,
+  CheckCircle,
+  XCircle,
+  MessageSquare,
+  FileCheck,
+  Clock,
+  Activity,
+  AlertTriangle
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
@@ -191,6 +198,125 @@ export default function Dashboard() {
               </Card>
             );
           })}
+        </div>
+
+        {/* Inspection & Communication Stats */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Inspection Performance */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <CheckCircle className="h-5 w-5 text-green-600" />
+                  <CardTitle>Inspection Performance</CardTitle>
+                </div>
+                <Badge variant="success">94.2%</Badge>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-600">Pass Rate</span>
+                  <span className="font-bold text-green-600">94.2%</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-600">Completed Today</span>
+                  <span className="font-medium">23</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-600">Failed Inspections</span>
+                  <span className="font-medium text-red-600">3</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-600">Pending Reviews</span>
+                  <span className="font-medium text-yellow-600">5</span>
+                </div>
+                <div className="w-full bg-gray-200 rounded-full h-2">
+                  <div className="bg-green-600 h-2 rounded-full" style={{ width: '94.2%' }}></div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Communication Activity */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <MessageSquare className="h-5 w-5 text-blue-600" />
+                  <CardTitle>Communication Activity</CardTitle>
+                </div>
+                <Badge variant="info">Live</Badge>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                <div className="flex items-center gap-3 pb-2 border-b">
+                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                  <div className="flex-1">
+                    <p className="text-sm font-medium">Inspection completed</p>
+                    <p className="text-xs text-gray-500">VOL-873454 • 2 min ago</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 pb-2 border-b">
+                  <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                  <div className="flex-1">
+                    <p className="text-sm font-medium">POD captured</p>
+                    <p className="text-xs text-gray-500">VOL-345789 • 5 min ago</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 pb-2">
+                  <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
+                  <div className="flex-1">
+                    <p className="text-sm font-medium">Status update</p>
+                    <p className="text-xs text-gray-500">VOL-456890 • 8 min ago</p>
+                  </div>
+                </div>
+                <div className="pt-2">
+                  <p className="text-xs text-gray-500 text-center">
+                    <Activity className="h-3 w-3 inline mr-1" />
+                    127 events today
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Proof of Delivery Stats */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <FileCheck className="h-5 w-5 text-purple-600" />
+                  <CardTitle>Proof of Delivery</CardTitle>
+                </div>
+                <Badge variant="success">100%</Badge>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-600">Capture Rate</span>
+                  <span className="font-bold text-purple-600">100%</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-600">Digital Signatures</span>
+                  <span className="font-medium">45</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-600">Photos Captured</span>
+                  <span className="font-medium">89</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-600">Avg Response Time</span>
+                  <span className="font-medium text-green-600">1.2h</span>
+                </div>
+                <div className="w-full bg-gray-200 rounded-full h-2">
+                  <div className="bg-purple-600 h-2 rounded-full" style={{ width: '100%' }}></div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
 
         {/* Analytics Row */}
