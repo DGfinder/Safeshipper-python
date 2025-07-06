@@ -19,13 +19,23 @@ import {
   ArrowRight,
   MessageSquare,
   Shield,
-  CheckCircle
+  CheckCircle,
+  Info,
+  Map,
+  Paperclip,
+  ClipboardCheck,
+  LayoutPanelTop,
+  Phone,
+  Mail,
+  Clock,
+  ChevronLeft
 } from 'lucide-react';
 import { AuthGuard } from '@/components/auth/auth-guard';
 import { ActivityLog } from '@/components/communications/ActivityLog';
 import { HazardInspection } from '@/components/inspections/HazardInspection';
 import { ProofOfDelivery } from '@/components/delivery/ProofOfDelivery';
 import DocumentGenerator from '@/components/documents/DocumentGenerator';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import Link from 'next/link';
 
 interface ShipmentDetailPageProps {
@@ -125,7 +135,7 @@ const getDGClassColor = (dgClass: string) => {
 export default function ShipmentDetailPage({ params }: ShipmentDetailPageProps) {
   const [shipmentId, setShipmentId] = useState<string | null>(null);
   const [shipment, setShipment] = useState<any>(null);
-  const [activeTab, setActiveTab] = useState<'overview' | 'activity' | 'inspection' | 'delivery'>('overview');
+  const [activeTab, setActiveTab] = useState('info');
 
   useEffect(() => {
     params.then(p => {
@@ -153,13 +163,21 @@ export default function ShipmentDetailPage({ params }: ShipmentDetailPageProps) 
   return (
     <AuthGuard>
       <div className="p-6 space-y-6">
+        {/* Breadcrumb */}
+        <div className="flex items-center gap-2 text-sm text-gray-600">
+          <Link href="/shipments" className="hover:text-gray-900">Shipments</Link>
+          <ChevronLeft className="h-4 w-4 rotate-180" />
+          <span className="font-medium">{shipment.tracking_number}</span>
+        </div>
+
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold">Shipment Details</h1>
-            <p className="text-gray-600 mt-1">
-              Tracking: {shipment.tracking_number}
-            </p>
+            <h1 className="text-3xl font-bold">{shipment.tracking_number}</h1>
+            <div className="flex items-center gap-2 mt-1">
+              <User className="h-4 w-4 text-gray-500" />
+              <span className="text-gray-600">Client: {shipment.customer.name}</span>
+            </div>
           </div>
           
           <div className="flex items-center gap-3">
@@ -169,308 +187,316 @@ export default function ShipmentDetailPage({ params }: ShipmentDetailPageProps) 
             >
               {shipment.status.replace('_', ' ')}
             </Badge>
-            <Button variant="outline" size="sm">
-              <Edit className="h-4 w-4 mr-2" />
-              Edit Shipment
+            <Button className="bg-[#153F9F] hover:bg-[#153F9F]/90">
+              Start trip
             </Button>
           </div>
         </div>
 
-        {/* Overview Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">Total Items</p>
-                  <p className="text-2xl font-bold">{totalItems}</p>
-                </div>
-                <Package className="h-8 w-8 text-blue-500" />
-              </div>
-            </CardContent>
-          </Card>
+        {/* Tab System */}
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+          <TabsList className="grid w-full grid-cols-6">
+            <TabsTrigger value="info" className="flex items-center gap-2">
+              <Info className="h-4 w-4" />
+              Info
+            </TabsTrigger>
+            <TabsTrigger value="map" className="flex items-center gap-2">
+              <Map className="h-4 w-4" />
+              Map
+            </TabsTrigger>
+            <TabsTrigger value="files" className="flex items-center gap-2">
+              <Paperclip className="h-4 w-4" />
+              Attached files
+            </TabsTrigger>
+            <TabsTrigger value="inspection" className="flex items-center gap-2">
+              <ClipboardCheck className="h-4 w-4" />
+              Hazard inspection
+            </TabsTrigger>
+            <TabsTrigger value="loadplan" className="flex items-center gap-2">
+              <LayoutPanelTop className="h-4 w-4" />
+              Load plan
+            </TabsTrigger>
+            <TabsTrigger value="chat" className="flex items-center gap-2">
+              <MessageSquare className="h-4 w-4" />
+              Chat
+            </TabsTrigger>
+          </TabsList>
 
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">Total Weight</p>
-                  <p className="text-2xl font-bold">{totalWeight.toLocaleString()}</p>
-                  <p className="text-xs text-gray-500">kg</p>
-                </div>
-                <Box className="h-8 w-8 text-green-500" />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">Vehicle</p>
-                  <p className="text-2xl font-bold">{shipment.assigned_vehicle.registration_number}</p>
-                </div>
-                <Truck className="h-8 w-8 text-purple-500" />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">ETA</p>
-                  <p className="text-lg font-bold">{new Date(shipment.estimated_delivery_date).toLocaleDateString()}</p>
-                </div>
-                <Calendar className="h-8 w-8 text-orange-500" />
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Tab Navigation */}
-        <div className="border-b border-gray-200">
-          <nav className="flex space-x-8">
-            {[
-              { key: 'overview', label: 'Overview', icon: Package },
-              { key: 'activity', label: 'Activity Log', icon: MessageSquare },
-              { key: 'inspection', label: 'Inspections', icon: Shield },
-              { key: 'delivery', label: 'Proof of Delivery', icon: CheckCircle }
-            ].map(({ key, label, icon: Icon }) => (
-              <button
-                key={key}
-                onClick={() => setActiveTab(key as any)}
-                className={`flex items-center gap-2 py-2 px-1 border-b-2 font-medium text-sm ${
-                  activeTab === key
-                    ? 'border-blue-500 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
-              >
-                <Icon className="h-4 w-4" />
-                {label}
-              </button>
-            ))}
-          </nav>
-        </div>
-
-        {/* Tab Content */}
-        <div className="mt-6">
-          {activeTab === 'overview' && (
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Left Column - Shipment Info */}
-          <div className="lg:col-span-2 space-y-6">
-            {/* Customer & Route */}
+          {/* Info Tab */}
+          <TabsContent value="info" className="space-y-6">
+            {/* Tracking Section */}
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <User className="h-5 w-5" />
-                  Customer & Route Information
-                </CardTitle>
+                <CardTitle>Tracking</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <h4 className="font-medium text-gray-900 mb-2">Customer Details</h4>
-                  <div className="space-y-1 text-sm">
-                    <p><span className="font-medium">Name:</span> {shipment.customer.name}</p>
-                    <p><span className="font-medium">Email:</span> {shipment.customer.email}</p>
-                    <p><span className="font-medium">Phone:</span> {shipment.customer.phone}</p>
-                  </div>
-                </div>
-                
-                <div className="border-t pt-4">
-                  <h4 className="font-medium text-gray-900 mb-2">Route Information</h4>
-                  <div className="flex items-center gap-4">
-                    <div className="text-center">
-                      <MapPin className="h-5 w-5 mx-auto mb-1 text-gray-600" />
-                      <p className="text-sm font-medium">{shipment.origin_location}</p>
-                      <p className="text-xs text-gray-500">Origin</p>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-3 p-3 bg-green-50 rounded-lg">
+                      <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                      <div>
+                        <p className="font-medium text-green-800">TRACKING PLANNED CREATED</p>
+                        <p className="text-sm text-green-600">{shipment.origin_location}</p>
+                        <p className="text-xs text-green-500">12:34 3 Dec 2024</p>
+                      </div>
                     </div>
-                    <ArrowRight className="h-5 w-5 text-gray-400" />
-                    <div className="text-center">
-                      <MapPin className="h-5 w-5 mx-auto mb-1 text-gray-600" />
-                      <p className="text-sm font-medium">{shipment.destination_location}</p>
-                      <p className="text-xs text-gray-500">Destination</p>
+                    
+                    <div className="flex items-center gap-3 p-3 bg-blue-50 rounded-lg">
+                      <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+                      <div>
+                        <p className="font-medium text-blue-800">OUT FOR DELIVERY</p>
+                        <p className="text-sm text-blue-600">{shipment.origin_location}</p>
+                        <p className="text-xs text-blue-500">3:30 AM</p>
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                      <div className="w-3 h-3 bg-gray-400 rounded-full"></div>
+                      <div>
+                        <p className="font-medium text-gray-600">DELIVERED</p>
+                        <p className="text-sm text-gray-500">{shipment.destination_location}</p>
+                        <p className="text-xs text-gray-400">10:00 AM</p>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {/* Map placeholder */}
+                  <div className="md:col-span-2">
+                    <div className="bg-gray-100 rounded-lg h-64 flex items-center justify-center">
+                      <div className="text-center">
+                        <Map className="h-12 w-12 text-gray-400 mx-auto mb-2" />
+                        <p className="text-gray-500">Interactive map would be displayed here</p>
+                        <p className="text-sm text-gray-400 mt-1">Route: {shipment.origin_location} → {shipment.destination_location}</p>
+                      </div>
                     </div>
                   </div>
                 </div>
               </CardContent>
             </Card>
 
+            {/* Client & Contact Info */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Client Information</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div>
+                    <p className="text-sm font-medium text-gray-600">Company</p>
+                    <p className="font-medium">{shipment.customer.name}</p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Mail className="h-4 w-4 text-gray-400" />
+                    <span className="text-sm">{shipment.customer.email}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Phone className="h-4 w-4 text-gray-400" />
+                    <span className="text-sm">{shipment.customer.phone}</span>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Shipment Details</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-sm font-medium text-gray-600">Total Items</p>
+                      <p className="font-medium">{totalItems}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-gray-600">Total Weight</p>
+                      <p className="font-medium">{totalWeight.toLocaleString()} kg</p>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-gray-600">Vehicle</p>
+                      <p className="font-medium">{shipment.assigned_vehicle.registration_number}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-gray-600">Driver</p>
+                      <p className="font-medium">{shipment.assigned_vehicle.driver_name}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 mt-4">
+                    <Clock className="h-4 w-4 text-gray-400" />
+                    <span className="text-sm">ETA: {new Date(shipment.estimated_delivery_date).toLocaleDateString()}</span>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
             {/* Consignment Items */}
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Package className="h-5 w-5" />
-                  Consignment Items
-                </CardTitle>
+                <CardTitle>Consignment Items</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="space-y-3">
+                <div className="space-y-4">
                   {shipment.consignment_items.map((item: any) => (
-                    <div key={item.id} className="border rounded-lg p-3 bg-gray-50">
-                      <div className="flex items-start justify-between mb-2">
-                        <h4 className="font-medium text-gray-900">{item.description}</h4>
-                        <div className="flex items-center gap-2">
-                          {item.un_number && (
-                            <Badge variant="outline" className="text-xs font-mono">
-                              {item.un_number}
-                            </Badge>
-                          )}
-                          <Badge 
-                            variant="outline" 
-                            className={`text-xs ${getDGClassColor(item.dangerous_goods_class)}`}
-                          >
-                            {item.dangerous_goods_class === 'GENERAL' ? 'General' : `Class ${item.dangerous_goods_class}`}
-                          </Badge>
+                    <div key={item.id} className="flex items-center justify-between p-4 border rounded-lg">
+                      <div className="flex items-center gap-4">
+                        <div className="p-2 bg-gray-100 rounded-lg">
+                          <Package className="h-5 w-5 text-gray-600" />
                         </div>
-                      </div>
-                      <div className="grid grid-cols-3 gap-4 text-sm text-gray-600">
-                        <p><span className="font-medium">Quantity:</span> {item.quantity}</p>
-                        <p><span className="font-medium">Weight:</span> {item.weight_kg} kg</p>
-                        <p><span className="font-medium">Dimensions:</span> {item.dimensions}</p>
+                        <div>
+                          <h3 className="font-medium">{item.description}</h3>
+                          <div className="flex items-center gap-4 text-sm text-gray-600 mt-1">
+                            {item.un_number && (
+                              <Badge className={getDGClassColor(item.dangerous_goods_class)}>
+                                {item.un_number} - Class {item.dangerous_goods_class}
+                              </Badge>
+                            )}
+                            <span>Qty: {item.quantity}</span>
+                            <span>{item.weight_kg}kg</span>
+                            <span>{item.dimensions}</span>
+                          </div>
+                        </div>
                       </div>
                     </div>
                   ))}
                 </div>
               </CardContent>
             </Card>
-          </div>
+          </TabsContent>
 
-          {/* Right Column - Actions & Tools */}
-          <div className="space-y-6">
-            {/* Load Planning */}
-            <Card className="border-2 border-blue-200 bg-blue-50">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-blue-900">
-                  <Settings className="h-5 w-5" />
-                  3D Load Planning
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <p className="text-sm text-blue-800">
-                  Generate an optimized 3D visualization showing how to efficiently load all items into the vehicle.
-                </p>
-                
-                <div className="space-y-2 text-xs text-blue-700">
-                  <p>✓ 3D spatial optimization</p>
-                  <p>✓ Dangerous goods compatibility</p>
-                  <p>✓ Weight distribution analysis</p>
-                  <p>✓ Interactive visualization</p>
+          {/* Map Tab */}
+          <TabsContent value="map">
+            <Card>
+              <CardContent className="p-0">
+                <div className="bg-gray-100 rounded-lg h-96 flex items-center justify-center">
+                  <div className="text-center">
+                    <Map className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+                    <p className="text-gray-600 text-lg">Interactive Route Map</p>
+                    <p className="text-sm text-gray-500 mt-2">
+                      Real-time tracking from {shipment.origin_location} to {shipment.destination_location}
+                    </p>
+                  </div>
                 </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
 
-                <Link href={`/shipments/${shipmentId}/load-plan`}>
-                  <Button className="w-full bg-blue-600 hover:bg-blue-700">
-                    <Box className="h-4 w-4 mr-2" />
-                    Open Load Planner
+          {/* Files Tab */}
+          <TabsContent value="files">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center justify-between">
+                  Files
+                  <Button size="sm">
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add new file
                   </Button>
-                </Link>
-              </CardContent>
-            </Card>
-
-            {/* Vehicle Information */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Truck className="h-5 w-5" />
-                  Assigned Vehicle
                 </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="text-sm">
-                  <p><span className="font-medium">Registration:</span> {shipment.assigned_vehicle.registration_number}</p>
-                  <p><span className="font-medium">Type:</span> {shipment.assigned_vehicle.vehicle_type}</p>
-                  <p><span className="font-medium">Driver:</span> {shipment.assigned_vehicle.driver_name}</p>
-                </div>
-                
-                <Button variant="outline" size="sm" className="w-full">
-                  <Eye className="h-4 w-4 mr-2" />
-                  View Vehicle Details
-                </Button>
-              </CardContent>
-            </Card>
-
-            {/* Document Generation */}
-            <DocumentGenerator 
-              shipmentId={shipmentId} 
-              shipment={shipment} 
-            />
-
-            {/* Quick Actions */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-sm">Quick Actions</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                <Button variant="outline" size="sm" className="w-full justify-start">
-                  <Eye className="h-4 w-4 mr-2" />
-                  Track Shipment
-                </Button>
-                <Button variant="outline" size="sm" className="w-full justify-start">
-                  <MapPin className="h-4 w-4 mr-2" />
-                  View on Map
-                </Button>
-              </CardContent>
-            </Card>
-
-            {/* Timeline */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-sm">Status Timeline</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="space-y-3 text-sm">
-                  <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                    <span>Shipment created</span>
+                <div className="space-y-3">
+                  {['EPG', 'EPG', 'EPG', 'EPG', 'SDS'].map((type, index) => (
+                    <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
+                      <div className="flex items-center gap-3">
+                        <FileText className="h-5 w-5 text-gray-400" />
+                        <span className="font-medium">{type}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm text-gray-500">{type}</span>
+                        <Button variant="ghost" size="sm">
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="sm">
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Hazard Inspection Tab */}
+          <TabsContent value="inspection">
+            <HazardInspection />
+          </TabsContent>
+
+          {/* Load Plan Tab */}
+          <TabsContent value="loadplan">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <CardTitle>Load Plan</CardTitle>
+                    <Link href={`/shipments/${shipmentId}/load-plan`}>
+                      <Button variant="outline" size="sm">
+                        <Edit className="h-4 w-4 mr-2" />
+                        Edit Plan
+                      </Button>
+                    </Link>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                    <span>Ready for dispatch</span>
+                </CardHeader>
+                <CardContent>
+                  <div className="bg-gray-100 rounded-lg h-64 flex items-center justify-center">
+                    <div className="text-center">
+                      <LayoutPanelTop className="h-12 w-12 text-gray-400 mx-auto mb-2" />
+                      <p className="text-gray-600">3D Load Plan Visualization</p>
+                      <p className="text-sm text-gray-500 mt-1">Interactive truck loading layout</p>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 bg-gray-300 rounded-full"></div>
-                    <span className="text-gray-500">In transit</span>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Load Details</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <p className="text-sm font-medium text-gray-600">Total Weight</p>
+                        <p className="text-lg font-bold">{totalWeight.toLocaleString()} kg</p>
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-gray-600">Vehicle Capacity</p>
+                        <p className="text-lg font-bold">20,000 kg</p>
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <div className="flex justify-between text-sm">
+                        <span>Load Utilization</span>
+                        <span>{Math.round((totalWeight / 20000) * 100)}%</span>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-2">
+                        <div 
+                          className="bg-blue-600 h-2 rounded-full" 
+                          style={{ width: `${(totalWeight / 20000) * 100}%` }}
+                        ></div>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+
+          {/* Chat Tab */}
+          <TabsContent value="chat">
+            <Card>
+              <CardHeader>
+                <CardTitle>Communication</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="bg-gray-50 rounded-lg h-64 flex items-center justify-center">
+                  <div className="text-center">
+                    <MessageSquare className="h-12 w-12 text-gray-400 mx-auto mb-2" />
+                    <p className="text-gray-600">Real-time Chat</p>
+                    <p className="text-sm text-gray-500 mt-1">Communication with driver and stakeholders</p>
                   </div>
                 </div>
               </CardContent>
             </Card>
-              </div>
-            </div>
-          )}
-
-          {activeTab === 'activity' && (
-            <div className="max-w-4xl">
-              <ActivityLog shipmentId={shipmentId || 'demo-shipment'} />
-            </div>
-          )}
-
-          {activeTab === 'inspection' && (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <HazardInspection 
-                shipmentId={shipmentId || 'demo-shipment'} 
-                inspectionType="PRE_TRIP"
-              />
-              <HazardInspection 
-                shipmentId={shipmentId || 'demo-shipment'} 
-                inspectionType="POST_TRIP"
-              />
-            </div>
-          )}
-
-          {activeTab === 'delivery' && (
-            <div className="max-w-2xl mx-auto">
-              <ProofOfDelivery
-                shipmentId={shipmentId || 'demo-shipment'}
-                customerName={shipment?.customer?.name || 'Global Manufacturing Inc.'}
-                deliveryAddress={shipment?.destination_location || 'Melbourne, VIC, Australia'}
-                onComplete={(podData) => {
-                  console.log('POD completed:', podData);
-                  // Update shipment status to DELIVERED
-                }}
-              />
-            </div>
-          )}
-        </div>
+          </TabsContent>
+        </Tabs>
       </div>
     </AuthGuard>
   );
