@@ -28,7 +28,8 @@ import {
   Phone,
   Mail,
   Clock,
-  ChevronLeft
+  ChevronLeft,
+  Plus
 } from 'lucide-react';
 import { AuthGuard } from '@/components/auth/auth-guard';
 import { ActivityLog } from '@/components/communications/ActivityLog';
@@ -378,46 +379,80 @@ export default function ShipmentDetailPage({ params }: ShipmentDetailPageProps) 
             </Card>
           </TabsContent>
 
-          {/* Files Tab */}
-          <TabsContent value="files">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center justify-between">
-                  Files
-                  <Button size="sm">
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add new file
-                  </Button>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  {['EPG', 'EPG', 'EPG', 'EPG', 'SDS'].map((type, index) => (
-                    <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
-                      <div className="flex items-center gap-3">
-                        <FileText className="h-5 w-5 text-gray-400" />
-                        <span className="font-medium">{type}</span>
+                      {/* Files Tab */}
+            <TabsContent value="files">
+              <div className="space-y-6">
+                {/* Manifest Upload Section */}
+                <Card className="border-2 border-blue-200 bg-blue-50">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-blue-900">
+                      <Shield className="h-5 w-5" />
+                      Manifest Validation
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      <p className="text-sm text-blue-800">
+                        Upload and validate PDF manifests to automatically detect dangerous goods and ensure compliance.
+                      </p>
+                      
+                      <div className="space-y-2 text-xs text-blue-700">
+                        <p>✓ Automatic dangerous goods detection</p>
+                        <p>✓ Compatibility rule validation</p>
+                        <p>✓ Compliance document generation</p>
+                        <p>✓ PDF manifest processing</p>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm text-gray-500">{type}</span>
-                        <Button variant="ghost" size="sm">
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                        <Button variant="ghost" size="sm">
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
 
-          {/* Hazard Inspection Tab */}
-          <TabsContent value="inspection">
-            <HazardInspection />
-          </TabsContent>
+                      <Link href={`/shipments/${shipmentId}/validate`}>
+                        <Button className="w-full bg-blue-600 hover:bg-blue-700">
+                          <FileText className="h-4 w-4 mr-2" />
+                          Upload & Validate Manifest
+                        </Button>
+                      </Link>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Existing Files */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center justify-between">
+                      Attached Files
+                      <Button size="sm" variant="outline">
+                        <Plus className="h-4 w-4 mr-2" />
+                        Add new file
+                      </Button>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3">
+                      {['EPG', 'EPG', 'EPG', 'EPG', 'SDS'].map((type, index) => (
+                        <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
+                          <div className="flex items-center gap-3">
+                            <FileText className="h-5 w-5 text-gray-400" />
+                            <span className="font-medium">{type}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm text-gray-500">{type}</span>
+                            <Button variant="ghost" size="sm">
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                            <Button variant="ghost" size="sm">
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </TabsContent>
+
+                      {/* Hazard Inspection Tab */}
+            <TabsContent value="inspection">
+              <HazardInspection shipmentId={shipmentId} />
+            </TabsContent>
 
           {/* Load Plan Tab */}
           <TabsContent value="loadplan">
