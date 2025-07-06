@@ -76,16 +76,15 @@ const API_BASE_URL = '/api/v1';
 
 // API Functions
 async function uploadManifest(shipmentId: string, file: File, token: string): Promise<{
+  id: string;
+  status: string;
   message: string;
-  document: Document;
-  processing_status: string;
 }> {
   const formData = new FormData();
   formData.append('file', file);
   formData.append('shipment_id', shipmentId);
-  formData.append('document_type', 'DG_MANIFEST');
 
-  const response = await fetch(`${API_BASE_URL}/documents/upload-manifest/`, {
+  const response = await fetch(`${API_BASE_URL}/manifest-upload/`, {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${token}`,
@@ -342,10 +341,11 @@ export function useUploadManifest() {
       if (!token) throw new Error('No authentication token');
       return uploadManifest(shipmentId, file, token);
     },
-    onSuccess: (data) => {
+    onSuccess: (data, variables) => {
       // Invalidate and refetch related queries
-      queryClient.invalidateQueries({ queryKey: ['shipment', data.document.shipment] });
-      queryClient.invalidateQueries({ queryKey: ['documents'] });
+      queryClient.invalidateQueries({ queryKey: ['shipment', variables.shipmentId] });
+      queryClient.invalidateQueries({ queryKey: ['manifest-status', variables.shipmentId] });
+      queryClient.invalidateQueries({ queryKey: ['manifests'] });
     },
   });
 }

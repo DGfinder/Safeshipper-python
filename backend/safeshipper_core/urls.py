@@ -68,15 +68,15 @@ urlpatterns = [
         path('iot/', include('iot_devices.urls')),  # IoT device management
         path('inspections/', include('inspections.urls')),  # Inspection management
         path('communications/', include('communications.urls')),  # Communication and activity logs
+        path('manifests/', include('manifests.urls')),  # Enabled for DG manifest processing
         # Temporarily disabled apps:
         # path('locations/', include('locations.urls')),
         # path('hazard-assessments/', include('hazard_assessments.urls')),
         # path('load-plans/', include('load_plans.urls')),
-        # path('manifests/', include('manifests.urls')),
         # path('emergency-procedures/', include('emergency_procedures.urls')),
         # path('handling-unit-types/', include('handling_unit_types.urls')),
-        # path('sds/', include('sds.urls')),
-        # path('epg/', include('epg.urls')),
+        path('sds/', include('sds.urls')),  # Enabled for Safety Data Sheets
+        path('epg/', include('epg.urls')),  # Enabled for Emergency Procedure Guides
     ])),
 ]
 

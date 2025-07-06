@@ -59,20 +59,22 @@ INSTALLED_APPS = [
     'incidents',
     'training',
     'iot_devices',
-    # 'documents',
-    # 'manifests',
+    'documents',  # Enabled for manifest functionality
+    'manifests',  # Enabled for DG manifest processing
+    'audits',     # Enabled for audit functionality
+    'inspections', # Enabled for inspection management
+    'communications', # Enabled for activity logs
+    'dashboards', # Enabled for dashboard statistics
     # 'locations',  # Temporarily disabled due to GIS dependencies
     # 'tracking',  # Temporarily disabled due to GIS dependencies
     # 'hazard_assessments',
-    # 'audits',
     # 'load_plans',
     # 'handling_unit_types',
-    # 'sds',
-    # 'epg',
+    'sds',        # Enabled for Safety Data Sheets
+    'epg',        # Enabled for Emergency Procedure Guides
     # 'emergency_procedures',
     # 'capacity_marketplace',
     # 'routes',
-    # 'dashboards',
     # 'pricing',
 ]
 
