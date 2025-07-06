@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/stores/auth-store';
@@ -15,7 +16,11 @@ import {
   FileText,
   Building2,
   Search,
-  MapPin
+  MapPin,
+  BookOpen,
+  Activity,
+  AlertTriangle,
+  Database
 } from 'lucide-react';
 
 const navigation = [
@@ -24,6 +29,9 @@ const navigation = [
   { name: 'Users', href: '/users', icon: Users },
   { name: 'Shipments', href: '/shipments/demo-shipment', icon: Package },
   { name: 'DG Checker', href: '/dg-checker', icon: Search },
+  { name: 'SDS Library', href: '/sds-library', icon: Database },
+  { name: 'Emergency Procedures', href: '/emergency-procedures', icon: AlertTriangle },
+  { name: 'IoT Monitoring', href: '/iot-monitoring', icon: Activity },
   { name: 'Fleet', href: '/fleet', icon: Truck },
   { name: 'DG Compliance', href: '/dg-compliance', icon: Shield },
   { name: 'Customers', href: '/customers', icon: Building2 },
@@ -40,10 +48,26 @@ export function Sidebar() {
     <div className="flex h-full w-64 flex-col bg-white border-r border-gray-200">
       {/* Logo */}
       <div className="flex h-16 items-center justify-center border-b border-gray-200 px-6">
-        <div className="flex items-center space-x-2">
-          <Shield className="h-8 w-8 text-[#153F9F]" />
-          <span className="text-xl font-bold text-[#153F9F]">SafeShipper</span>
-        </div>
+        <Link href="/dashboard" className="flex items-center space-x-3">
+          <div className="relative h-8 w-8">
+            <Image
+              src="/symbol.svg"
+              alt="SafeShipper Symbol"
+              width={32}
+              height={32}
+              className="object-contain"
+            />
+          </div>
+          <div className="relative h-6 w-32">
+            <Image
+              src="/logo.svg"
+              alt="SafeShipper"
+              width={128}
+              height={24}
+              className="object-contain"
+            />
+          </div>
+        </Link>
       </div>
 
       {/* Navigation */}
