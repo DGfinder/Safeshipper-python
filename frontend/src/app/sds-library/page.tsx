@@ -417,7 +417,7 @@ export default function SDSLibraryPage() {
                         {Object.entries(statistics.by_status).map(([status, count]) => (
                           <div key={status} className="flex justify-between items-center">
                             <span className="text-sm capitalize">{status.toLowerCase()}</span>
-                            <Badge variant="outline">{count}</Badge>
+                            <Badge variant="outline">{count as number}</Badge>
                           </div>
                         ))}
                       </div>
@@ -433,7 +433,7 @@ export default function SDSLibraryPage() {
                         {Object.entries(statistics.by_language).map(([language, count]) => (
                           <div key={language} className="flex justify-between items-center">
                             <span className="text-sm">{language}</span>
-                            <Badge variant="outline">{count}</Badge>
+                            <Badge variant="outline">{count as number}</Badge>
                           </div>
                         ))}
                       </div>

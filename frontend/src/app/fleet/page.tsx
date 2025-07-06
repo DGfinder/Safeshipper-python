@@ -176,7 +176,7 @@ export default function FleetPage() {
               </CardHeader>
               <CardContent>
                 <div className="h-96 rounded-lg border">
-                  <FleetMap />
+                  <FleetMap vehicles={fleetData?.vehicles || []} />
                 </div>
               </CardContent>
             </Card>
@@ -204,7 +204,7 @@ export default function FleetPage() {
                         <div>
                           <h3 className="font-medium">{vehicle.registration_number}</h3>
                           <p className="text-sm text-gray-600">
-                            {vehicle.make} {vehicle.model} • {vehicle.year}
+                            {vehicle.vehicle_type}
                           </p>
                         </div>
                       </div>
@@ -214,20 +214,20 @@ export default function FleetPage() {
                           <Badge className={getStatusColor(vehicle.status)}>
                             {vehicle.status}
                           </Badge>
-                          {vehicle.driver && (
+                          {vehicle.assigned_driver && (
                             <p className="text-sm text-gray-600 mt-1">
-                              Driver: {vehicle.driver.name}
+                              Driver: {vehicle.assigned_driver.name}
                             </p>
                           )}
                         </div>
                         
-                        {vehicle.current_shipment && (
+                        {vehicle.active_shipment && (
                           <div className="text-right">
                             <p className="text-sm font-medium">
-                              {vehicle.current_shipment.tracking_number}
+                              {vehicle.active_shipment.tracking_number}
                             </p>
                             <p className="text-xs text-gray-600">
-                              {vehicle.current_shipment.status}
+                              {vehicle.active_shipment.status}
                             </p>
                           </div>
                         )}

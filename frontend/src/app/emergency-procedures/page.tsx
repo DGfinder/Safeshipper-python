@@ -491,7 +491,7 @@ export default function EmergencyProceduresPage() {
                         {Object.entries(statistics.by_hazard_class).map(([hazardClass, count]) => (
                           <div key={hazardClass} className="flex justify-between items-center">
                             <span className="text-sm">Class {hazardClass}</span>
-                            <Badge variant="outline">{count}</Badge>
+                            <Badge variant="outline">{count as number}</Badge>
                           </div>
                         ))}
                       </div>
@@ -507,7 +507,7 @@ export default function EmergencyProceduresPage() {
                         {Object.entries(statistics.by_severity_level).map(([severity, count]) => (
                           <div key={severity} className="flex justify-between items-center">
                             <span className="text-sm capitalize">{severity.toLowerCase()}</span>
-                            <Badge variant="outline">{count}</Badge>
+                            <Badge variant="outline">{count as number}</Badge>
                           </div>
                         ))}
                       </div>
@@ -520,7 +520,7 @@ export default function EmergencyProceduresPage() {
                     </CardHeader>
                     <CardContent>
                       <div className="space-y-3">
-                        {statistics.recent_updates.slice(0, 10).map((update) => (
+                        {statistics.recent_updates.slice(0, 10).map((update: any) => (
                           <div key={update.id} className="flex justify-between items-center">
                             <div>
                               <span className="text-sm font-medium">{update.epg_number}</span>

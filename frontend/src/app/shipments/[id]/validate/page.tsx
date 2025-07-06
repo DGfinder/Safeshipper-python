@@ -64,7 +64,7 @@ export default function ShipmentValidationPage() {
         file
       });
       
-      setUploadedDocumentId(result.document.id);
+      setUploadedDocumentId(result.id);
       toast.success('Manifest uploaded successfully! Processing started...');
     } catch (error: any) {
       toast.error(error.message || 'Failed to upload manifest');
@@ -121,7 +121,7 @@ export default function ShipmentValidationPage() {
     if (dgSection) {
       dgSection.scrollIntoView({ behavior: 'smooth' });
     }
-    toast.info('Please modify your dangerous goods selection to resolve compatibility issues');
+    toast('Please modify your dangerous goods selection to resolve compatibility issues');
   };
 
   // Loading state
