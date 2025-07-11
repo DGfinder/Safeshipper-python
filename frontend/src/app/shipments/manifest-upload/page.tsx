@@ -16,10 +16,31 @@ import {
   CheckCircle,
   Package,
   ArrowRight,
-  Plus
+  Plus,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 import { AuthGuard } from '@/components/auth/auth-guard';
 import Link from 'next/link';
+import dynamic from 'next/dynamic';
+
+// Dynamically import PDF viewer to avoid SSR issues
+const PDFViewer = dynamic(() => import('@/components/pdf/PDFViewer'), {
+  ssr: false,
+  loading: () => (
+    <div className="flex items-center justify-center h-96">
+      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+    </div>
+  ),
+});
+
+const ManifestTable = dynamic(() => import('@/components/manifests/ManifestTable'), {
+  ssr: false,
+});
+
+const URLUploadModal = dynamic(() => import('@/components/manifests/URLUploadModal'), {
+  ssr: false,
+});
 
 // Mock data for previously searched manifests
 const mockPreviousSearches = [
@@ -47,6 +68,67 @@ const mockPreviousSearches = [
     date: '2024-01-08 11:45:30',
     status: 'processing'
   }
+];
+
+// Mock data for comprehensive manifest table
+const mockManifestTableData = [
+  {
+    id: '1',
+    un: '3500',
+    properShippingName: 'Batteries wet filled with acid',
+    class: '6.1',
+    subHazard: '6.1',
+    packingGroup: 'III',
+    typeOfContainer: '14',
+    quantity: '20,000L',
+    weight: '20,000L'
+  },
+  {
+    id: '2',
+    un: '2794',
+    properShippingName: '-',
+    class: '6.3',
+    subHazard: '-',
+    packingGroup: 'III',
+    typeOfContainer: '14',
+    quantity: '20,000L',
+    weight: '20,000L'
+  },
+  {
+    id: '3',
+    un: '3500',
+    properShippingName: 'Electric storage',
+    class: '6.1',
+    subHazard: '6.1',
+    packingGroup: 'III',
+    typeOfContainer: '14',
+    quantity: '20,000L',
+    weight: '20,000L',
+    skipped: true
+  },
+  {
+    id: '4',
+    un: '3500',
+    properShippingName: 'Electric storage',
+    class: '6.1',
+    subHazard: '6.1',
+    packingGroup: 'III',
+    typeOfContainer: '14',
+    quantity: '20,000L',
+    weight: '20,000L'
+  },
+  {
+    id: '5',
+    un: '3500',
+    properShippingName: 'Electric storage',
+    class: '6.1',
+    subHazard: '6.1',
+    packingGroup: 'III',
+    typeOfContainer: '14',
+    quantity: '20,000L',
+    weight: '20,000L',
+    skipped: true
+  },
 ];
 
 // Mock search results after manifest upload
@@ -97,6 +179,10 @@ export default function ManifestUploadPage() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [searchResults, setSearchResults] = useState<typeof mockSearchResults | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [showUrlUpload, setShowUrlUpload] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(0);
+  const [viewMode, setViewMode] = useState<'search' | 'table'>('search');
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -112,32 +198,127 @@ export default function ManifestUploadPage() {
     e.preventDefault();
     setIsDragging(false);
     const files = Array.from(e.dataTransfer.files);
-    if (files.length > 0 && files[0].type === 'application/pdf') {
-      setUploadedFile(files[0]);
-      processManifest(files[0]);
+    if (files.length > 0) {
+      const file = files[0];
+      const isPDF = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
+      if (isPDF) {
+        setUploadedFile(file);
+        processManifest(file);
+      } else {
+        alert('Please upload a PDF file');
+      }
     }
   }, []);
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (files && files.length > 0) {
-      setUploadedFile(files[0]);
-      processManifest(files[0]);
+      const file = files[0];
+      const isPDF = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
+      if (isPDF) {
+        setUploadedFile(file);
+        processManifest(file);
+      } else {
+        alert('Please upload a PDF file');
+      }
     }
   };
 
   const processManifest = async (file: File) => {
     setIsProcessing(true);
-    // Simulate API processing
-    setTimeout(() => {
+    
+    try {
+      // Import the manifest service dynamically to avoid SSR issues
+      const { manifestService } = await import('@/services/manifestService');
+      
+      // Validate the PDF file first
+      const validation = manifestService.validatePDFFile(file);
+      if (!validation.valid) {
+        alert(`File validation failed:\n${validation.errors.join('\n')}`);
+        setIsProcessing(false);
+        return;
+      }
+
+      // Upload and analyze the manifest
+      const response = await manifestService.uploadAndAnalyzeManifest({
+        file,
+        analysisOptions: {
+          detectDangerousGoods: true,
+          extractMetadata: true,
+          validateFormat: true
+        }
+      });
+
+      if (response.success && response.results) {
+        // Transform the results to match our current mockSearchResults format
+        const transformedResults = response.results.dangerousGoods.map(dg => ({
+          id: dg.id,
+          un: dg.un,
+          properShippingName: dg.properShippingName,
+          class: dg.class,
+          materialNumber: dg.un, // Use UN number as material number
+          materialName: dg.properShippingName.split(',')[0], // Use first part of shipping name
+          details: `Confidence: ${Math.round(dg.confidence * 100)}% | Source: ${dg.source} | Qty: ${dg.quantity || 'N/A'}`,
+          subHazard: dg.subHazard,
+          packingGroup: dg.packingGroup,
+          quantity: dg.quantity || '20,000L',
+          weight: dg.weight || '20,000L'
+        }));
+
+        setSearchResults(transformedResults);
+        
+        // Show analysis summary
+        if (response.results.warnings.length > 0 || response.results.recommendations.length > 0) {
+          const summary = [
+            'Manifest Analysis Complete!',
+            `Found ${transformedResults.length} dangerous goods`,
+            ...response.results.warnings.map(w => `⚠️ ${w}`),
+            ...response.results.recommendations.map(r => `💡 ${r}`)
+          ].join('\n\n');
+          
+          alert(summary);
+        }
+      } else {
+        alert(`Manifest analysis failed: ${response.error || 'Unknown error'}`);
+        // Fallback to mock results for demonstration
+        setSearchResults(mockSearchResults);
+      }
+    } catch (error) {
+      console.error('Manifest processing error:', error);
+      alert('Manifest processing failed. Using demonstration data.');
+      // Fallback to mock results
       setSearchResults(mockSearchResults);
+    } finally {
       setIsProcessing(false);
-    }, 3000);
+    }
   };
 
   const addToManifest = (item: typeof mockSearchResults[0]) => {
     // Handle adding item to manifest
     console.log('Adding to manifest:', item);
+  };
+
+  const handleURLUpload = async (url: string) => {
+    try {
+      // In a real implementation, this would call an API to fetch the URL
+      // For now, we'll simulate the process
+      setIsProcessing(true);
+      
+      // Simulate URL fetching and processing
+      setTimeout(() => {
+        // Create a mock file object for the URL
+        const mockFile = new File([''], url.split('/').pop() || 'document.pdf', {
+          type: 'application/pdf'
+        });
+        setUploadedFile(mockFile);
+        setSearchResults(mockSearchResults);
+        setIsProcessing(false);
+        setShowUrlUpload(false);
+      }, 2000);
+    } catch (error) {
+      console.error('URL upload failed:', error);
+      throw new Error('Failed to fetch document from URL');
+    }
   };
 
   return (
@@ -159,52 +340,111 @@ export default function ManifestUploadPage() {
         {!searchResults ? (
           <>
             {/* Upload Section */}
-            <Card>
-              <CardContent className="p-8">
-                <div className="text-center space-y-4">
-                  <h2 className="text-xl font-semibold">Search your shipment manifest to find dangerous goods</h2>
+            <Card className="max-w-4xl mx-auto">
+              <CardContent className="p-12">
+                <div className="text-center space-y-6">
+                  <h2 className="text-2xl font-semibold text-gray-900">Search your shipment manifest to find dangerous goods</h2>
                   
-                  <div className="flex justify-end">
-                    <Button variant="outline" className="text-blue-600">
-                      Add media from URL
-                    </Button>
-                  </div>
-
-                  {/* Drag and Drop Area */}
-                  <div
-                    className={`border-2 border-dashed rounded-lg p-16 transition-colors ${
-                      isDragging 
-                        ? 'border-blue-500 bg-blue-50' 
-                        : 'border-gray-300 bg-gray-50'
-                    }`}
-                    onDragOver={handleDragOver}
-                    onDragLeave={handleDragLeave}
-                    onDrop={handleDrop}
-                  >
-                    <div className="flex flex-col items-center space-y-4">
-                      <Upload className="h-12 w-12 text-gray-400" />
-                      <div className="text-center">
-                        <p className="text-lg font-medium text-gray-700">
-                          {uploadedFile ? uploadedFile.name : 'Drag and Drop your Manifest here'}
-                        </p>
-                        <p className="text-gray-500">or</p>
-                        <label className="cursor-pointer">
-                          <input
-                            type="file"
-                            accept=".pdf"
-                            onChange={handleFileSelect}
-                            className="hidden"
-                          />
-                          <Button className="mt-2">Browse file</Button>
-                        </label>
+                  {!uploadedFile ? (
+                    <>
+                      <div className="flex justify-end">
+                        <Button 
+                          variant="ghost" 
+                          className="text-blue-600 hover:text-blue-700"
+                          onClick={() => setShowUrlUpload(true)}
+                        >
+                          Add media from URL
+                        </Button>
                       </div>
-                    </div>
-                  </div>
 
-                  {isProcessing && (
-                    <div className="flex items-center justify-center space-x-3 mt-6">
-                      <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
-                      <span className="text-gray-600">Processing manifest...</span>
+                      {/* Drag and Drop Area */}
+                      <div
+                        className={`relative border-2 border-dashed rounded-xl p-20 transition-all duration-200 ${
+                          isDragging 
+                            ? 'border-blue-500 bg-blue-50 scale-105' 
+                            : 'border-gray-300 bg-gray-50 hover:border-gray-400'
+                        }`}
+                        onDragOver={handleDragOver}
+                        onDragLeave={handleDragLeave}
+                        onDrop={handleDrop}
+                      >
+                        <div className="flex flex-col items-center space-y-4">
+                          <FileText className="h-16 w-16 text-gray-400" />
+                          <div className="text-center space-y-2">
+                            <p className="text-lg font-medium text-gray-700">
+                              Drag and Drop your Manifest here
+                            </p>
+                            <p className="text-gray-500">or</p>
+                            <label htmlFor="file-upload" className="cursor-pointer">
+                              <input
+                                id="file-upload"
+                                type="file"
+                                accept=".pdf"
+                                onChange={handleFileSelect}
+                                className="hidden"
+                              />
+                              <span className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors bg-blue-600 text-white shadow hover:bg-blue-700 h-10 px-6 py-2">
+                                Browse other file
+                              </span>
+                            </label>
+                          </div>
+                        </div>
+                      </div>
+                    </>
+                  ) : (
+                    /* File Uploaded State */
+                    <div className="space-y-6">
+                      <div className="bg-gray-50 rounded-lg p-6 border border-gray-200">
+                        <div className="flex items-center justify-between mb-4">
+                          <div className="flex items-center gap-3">
+                            <FileText className="h-8 w-8 text-gray-600" />
+                            <div className="text-left">
+                              <p className="font-medium text-gray-900">{uploadedFile.name}</p>
+                              <p className="text-sm text-gray-500">
+                                {(uploadedFile.size / 1024).toFixed(1)} KB
+                              </p>
+                            </div>
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              setUploadedFile(null);
+                              setSearchResults(null);
+                            }}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                        <div className="flex gap-3">
+                          <label htmlFor="file-reupload" className="flex-1">
+                            <input
+                              id="file-reupload"
+                              type="file"
+                              accept=".pdf"
+                              onChange={handleFileSelect}
+                              className="hidden"
+                            />
+                            <span className="w-full inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors border border-gray-300 bg-white text-gray-700 shadow-sm hover:bg-gray-50 h-10 px-4 py-2 cursor-pointer">
+                              Browse other file
+                            </span>
+                          </label>
+                          <Button 
+                            className="flex-1 bg-blue-600 hover:bg-blue-700"
+                            onClick={() => processManifest(uploadedFile)}
+                            disabled={isProcessing}
+                          >
+                            {isProcessing ? (
+                              <>
+                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                                Searching...
+                              </>
+                            ) : (
+                              'Search Manifest'
+                            )}
+                          </Button>
+                        </div>
+                      </div>
                     </div>
                   )}
                 </div>
@@ -281,85 +521,106 @@ export default function ManifestUploadPage() {
               </CardContent>
             </Card>
           </>
-        ) : (
-          /* Search Results */
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Uploaded PDF Viewer */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Uploaded pdf</CardTitle>
-                <p className="text-sm text-gray-600">{uploadedFile?.name}</p>
-              </CardHeader>
-              <CardContent>
-                <div className="bg-gray-100 rounded-lg p-8 text-center h-96 flex items-center justify-center">
+        ) : viewMode === 'search' ? (
+          <>
+            {/* View Toggle */}
+            <div className="flex justify-end mb-4">
+              <Button 
+                onClick={() => setViewMode('table')}
+                className="bg-blue-600 hover:bg-blue-700"
+              >
+                View as Table
+              </Button>
+            </div>
+            
+            {/* Search Results - Split View */}
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+            {/* Left Panel - PDF Viewer */}
+            <Card className="h-[calc(100vh-200px)]">
+              <CardHeader className="pb-2">
+                <div className="flex items-center justify-between">
                   <div>
-                    <FileText className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-                    <p className="text-gray-600">PDF Preview</p>
-                    <p className="text-sm text-gray-500 mt-2">
-                      Interactive PDF viewer would be displayed here
-                    </p>
+                    <CardTitle className="text-lg">Uploaded pdf</CardTitle>
+                    <p className="text-sm text-gray-600">{uploadedFile?.name}</p>
                   </div>
                 </div>
+              </CardHeader>
+              <CardContent className="p-0 h-[calc(100%-80px)]">
+                {uploadedFile && (
+                  <PDFViewer 
+                    file={uploadedFile}
+                    onPageChange={(page, total) => {
+                      setCurrentPage(page);
+                      setTotalPages(total);
+                    }}
+                  />
+                )}
               </CardContent>
             </Card>
 
-            {/* Search Results */}
-            <Card>
-              <CardHeader>
+            {/* Right Panel - Search Results */}
+            <Card className="h-[calc(100vh-200px)]">
+              <CardHeader className="pb-2">
                 <div className="flex items-center justify-between">
                   <div>
-                    <CardTitle>Potential Results</CardTitle>
+                    <CardTitle className="text-lg">Potential Results</CardTitle>
                     <div className="flex items-center gap-4 text-sm text-gray-600 mt-1">
-                      <span>Search pages: 1 of 39</span>
-                      <span>Results: 1 of 12</span>
+                      <span>Search pages: {currentPage} of {totalPages || '?'}</span>
+                      <span>Results: {searchResults.length} of 12</span>
                     </div>
                   </div>
-                  <Button variant="outline" size="sm">
+                  <Button variant="outline" size="sm" title="Download results">
                     <Download className="h-4 w-4" />
                   </Button>
                 </div>
               </CardHeader>
-              <CardContent>
+              <CardContent className="overflow-y-auto h-[calc(100%-100px)]">
                 <div className="space-y-4">
                   {searchResults.map((result, index) => (
-                    <div key={result.id} className="border rounded-lg p-4 space-y-3">
+                    <div key={result.id} className="border rounded-lg p-4 space-y-3 hover:border-blue-300 transition-colors">
                       <div className="flex items-start justify-between">
-                        <div className="flex items-center gap-3">
-                          <span className="text-lg font-bold text-gray-600">#{index + 1}</span>
-                          <div>
+                        <div className="flex items-start gap-3">
+                          <span className="text-lg font-bold text-gray-500 mt-1">#{index + 1}</span>
+                          <div className="flex-1">
                             <div className="flex items-center gap-2 mb-1">
-                              <Badge className="text-xs">{result.un}</Badge>
+                              <Badge variant="outline" className="text-xs font-semibold">{result.un}</Badge>
                               <span className="font-medium text-sm">{result.properShippingName}</span>
                             </div>
-                            <div className="flex items-center gap-3 text-xs text-gray-600">
-                              <span className={`px-2 py-1 rounded text-white ${getDGClassColor(result.class)}`}>
-                                {result.class}
+                            <div className="flex items-center gap-3">
+                              <span className={`px-2 py-1 rounded text-white text-xs font-semibold ${getDGClassColor(result.class)}`}>
+                                Class {result.class}
                               </span>
                             </div>
                           </div>
                         </div>
-                        <div className={`w-8 h-8 ${getDGClassColor(result.class)} rounded flex items-center justify-center`}>
-                          <AlertTriangle className="h-4 w-4 text-white" />
+                        <div className={`w-10 h-10 ${getDGClassColor(result.class)} rounded-lg flex items-center justify-center`}>
+                          <AlertTriangle className="h-5 w-5 text-white" />
                         </div>
                       </div>
 
                       <div className="grid grid-cols-2 gap-4 text-sm">
                         <div>
-                          <span className="text-gray-500">Material number:</span>
+                          <span className="text-gray-500 text-xs">Material number:</span>
                           <p className="font-medium">{result.materialNumber}</p>
                         </div>
                         <div>
-                          <span className="text-gray-500">Material name:</span>
+                          <span className="text-gray-500 text-xs">Material name:</span>
                           <p className="font-medium">{result.materialName}</p>
                         </div>
                       </div>
 
-                      <div className="flex items-center justify-between pt-2">
-                        <div className="flex items-center gap-2">
-                          <Button variant="outline" size="sm">
-                            View SDS
-                          </Button>
-                        </div>
+                      <div className="text-sm text-gray-600">
+                        <p>{result.details}</p>
+                      </div>
+
+                      <div className="flex items-center justify-between pt-2 border-t">
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          className="text-blue-600 hover:text-blue-700"
+                        >
+                          View SDS
+                        </Button>
                         <Button 
                           size="sm" 
                           className="bg-blue-600 hover:bg-blue-700"
@@ -373,26 +634,59 @@ export default function ManifestUploadPage() {
                   ))}
                 </div>
 
-                <div className="flex items-center justify-between mt-6 pt-4 border-t">
-                  <Button variant="outline">
-                    Previous
-                  </Button>
-                  <Button className="bg-blue-600 hover:bg-blue-700">
-                    Next
-                    <ArrowRight className="h-4 w-4 ml-1" />
-                  </Button>
-                </div>
-
-                <div className="mt-4 p-3 bg-blue-50 rounded-lg flex items-start gap-2">
-                  <AlertTriangle className="h-5 w-5 text-blue-600 mt-0.5" />
-                  <p className="text-sm text-blue-800">
-                    These results may require further investigation
-                  </p>
+                <div className="sticky bottom-0 bg-white pt-4 border-t mt-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <Button 
+                      variant="outline"
+                      disabled={currentPage <= 1}
+                    >
+                      <ChevronLeft className="h-4 w-4 mr-1" />
+                      Previous
+                    </Button>
+                    <Button className="bg-blue-600 hover:bg-blue-700">
+                      Next
+                      <ChevronRight className="h-4 w-4 ml-1" />
+                    </Button>
+                  </div>
+                  
+                  <div className="p-3 bg-amber-50 rounded-lg flex items-start gap-2">
+                    <AlertTriangle className="h-5 w-5 text-amber-600 mt-0.5 flex-shrink-0" />
+                    <p className="text-sm text-amber-800">
+                      These results may require further investigation
+                    </p>
+                  </div>
                 </div>
               </CardContent>
             </Card>
           </div>
+          </>
+        ) : (
+          /* Table View */
+          <>
+            <div className="flex justify-between items-center mb-4">
+              <Button 
+                onClick={() => setViewMode('search')}
+                variant="outline"
+              >
+                Back to Search View
+              </Button>
+            </div>
+            
+            <ManifestTable 
+              items={mockManifestTableData}
+              onCompare={() => console.log('Compare clicked')}
+              onGenerateFile={() => console.log('Generate file clicked')}
+              onItemSelect={(ids) => console.log('Selected items:', ids)}
+            />
+          </>
         )}
+        
+        {/* URL Upload Modal */}
+        <URLUploadModal
+          isOpen={showUrlUpload}
+          onClose={() => setShowUrlUpload(false)}
+          onUpload={handleURLUpload}
+        />
       </div>
     </AuthGuard>
   );

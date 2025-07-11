@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation';
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/stores/auth-store';
+import UnifiedSearchBar from '@/components/search/UnifiedSearchBar';
 import { 
   Home, 
   Users, 
@@ -47,6 +48,7 @@ const navigation: NavigationItem[] = [
     children: [
       { name: 'Overview', href: '/dashboard', icon: Home },
       { name: 'Live Map', href: '/dashboard/live-map', icon: MapPin },
+      { name: 'Search', href: '/search', icon: Search },
     ]
   },
   {
@@ -221,6 +223,16 @@ export function Sidebar() {
             />
           </div>
         </Link>
+      </div>
+
+      {/* Global Search */}
+      <div className="px-4 py-3 border-b border-gray-200">
+        <UnifiedSearchBar
+          placeholder="Search SafeShipper..."
+          compact={true}
+          showAIToggle={true}
+          className="w-full"
+        />
       </div>
 
       {/* Navigation */}
