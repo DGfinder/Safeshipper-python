@@ -481,7 +481,7 @@ class DocumentIntelligenceService {
     const documentId = `doc-${Date.now()}`;
     
     // Mock OCR text based on common document types
-    let mockText = `DANGEROUS GOODS DECLARATION
+    const mockText = `DANGEROUS GOODS DECLARATION
     
     Shipment Number: SS-${Math.floor(Math.random() * 10000)}
     Date: ${new Date().toLocaleDateString()}

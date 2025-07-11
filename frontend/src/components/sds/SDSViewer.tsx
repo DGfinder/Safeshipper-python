@@ -21,7 +21,8 @@ import {
   Eye,
   Activity,
   FileText,
-  ExternalLink
+  ExternalLink,
+  CheckCircle
 } from 'lucide-react';
 import { type SDSExtractionResult } from '@/services/sdsExtractionService';
 import { epgTemplateService, type EPGData, type EPGGenerationRequest } from '@/services/epgTemplateService';

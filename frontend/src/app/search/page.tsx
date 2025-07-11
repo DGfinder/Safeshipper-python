@@ -185,7 +185,7 @@ function SearchPageContent() {
             <p className="text-gray-600">
               {query && (
                 <>
-                  Results for <span className="font-medium">"{query}"</span>
+                  Results for <span className="font-medium">&quot;{query}&quot;</span>
                   {isAI && <Badge className="ml-2 bg-blue-100 text-blue-800">AI Enhanced</Badge>}
                 </>
               )}

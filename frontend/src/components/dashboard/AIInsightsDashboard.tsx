@@ -29,7 +29,8 @@ import {
   XCircle,
   ArrowUp,
   ArrowDown,
-  Minus
+  Minus,
+  FileText
 } from 'lucide-react';
 import { 
   predictiveRiskAnalyticsService, 
@@ -117,7 +118,7 @@ export default function AIInsightsDashboard({ className = '' }: AIInsightsDashbo
       // Subscribe to safety alerts
       const unsubscribeSafety = computerVisionSafetyService.subscribeToSafetyAlerts((alert) => {
         setSafetyAlerts(prev => {
-          const filtered = prev.filter(a => a.alertId !== alert.alertId);
+          const filtered = prev.filter(a => (a as any).alertId !== (alert as any).alertId);
           return [...filtered, alert].slice(-10); // Keep last 10
         });
       });

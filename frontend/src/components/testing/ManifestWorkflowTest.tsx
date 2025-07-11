@@ -189,7 +189,7 @@ export default function ManifestWorkflowTest() {
             <div className="text-center">
               <Upload className="h-8 w-8 text-gray-400 mx-auto mb-2" />
               <p className="text-sm text-gray-600 mb-2">
-                Select the SAP PDF file: "PDF DOCUMENT - Grey.pdf"
+                Select the SAP PDF file: &quot;PDF DOCUMENT - Grey.pdf&quot;
               </p>
               <label className="cursor-pointer">
                 <input
