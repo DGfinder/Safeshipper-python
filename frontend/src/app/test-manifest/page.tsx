@@ -1,3 +1,5 @@
+'use client';
+
 import { AuthGuard } from '@/components/auth/auth-guard';
 import dynamic from 'next/dynamic';
 

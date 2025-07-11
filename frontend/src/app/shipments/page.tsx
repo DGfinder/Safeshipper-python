@@ -281,7 +281,7 @@ export default function ShipmentsPage() {
       // Apply filter based on suggestion metadata
       if (suggestion.metadata.hazardClass) {
         setDgFilter('with_dg');
-        setAppliedFilters(prev => [...prev, `Class ${suggestion.metadata.hazardClass}`]);
+        setAppliedFilters(prev => [...prev, `Class ${suggestion.metadata?.hazardClass}`]);
       }
     }
     setShowSuggestions(false);
@@ -605,11 +605,11 @@ export default function ShipmentsPage() {
                     <div className="flex-1">
                       <div className="flex items-center gap-3 mb-1">
                         <h3 className="font-semibold text-lg">
-                          {isSearchResult ? result.title.split(' - ')[0] : shipmentData.trackingNumber}
+                          {isSearchResult ? result.title.split(' - ')[0] : (shipmentData as any).trackingNumber}
                         </h3>
-                        <Badge className={`${getStatusColor(shipmentData.status)} flex items-center gap-1`}>
-                          {getStatusIcon(shipmentData.status)}
-                          {shipmentData.status.replace('_', ' ')}
+                        <Badge className={`${getStatusColor((shipmentData as any).status)} flex items-center gap-1`}>
+                          {getStatusIcon((shipmentData as any).status)}
+                          {(shipmentData as any).status.replace('_', ' ')}
                         </Badge>
                         {isSearchResult && isSemanticSearch && (
                           <Badge variant="outline" className="bg-blue-50 text-blue-600 border-blue-200">
@@ -617,14 +617,14 @@ export default function ShipmentsPage() {
                           </Badge>
                         )}
                       </div>
-                      <p className="text-gray-600 font-medium">{shipmentData.client}</p>
+                      <p className="text-gray-600 font-medium">{(shipmentData as any).client}</p>
                       <div className="flex items-center gap-4 text-sm text-gray-500 mt-1">
                         <span className="flex items-center gap-1">
                           <MapPin className="h-3 w-3" />
-                          {shipmentData.route}
+                          {(shipmentData as any).route}
                         </span>
-                        <span>{shipmentData.weight}</span>
-                        <span>{shipmentData.distance}</span>
+                        <span>{(shipmentData as any).weight}</span>
+                        <span>{(shipmentData as any).distance}</span>
                       </div>
                       
                       {/* Search Highlights */}
@@ -646,8 +646,8 @@ export default function ShipmentsPage() {
                     <div className="text-center">
                       <p className="text-xs text-gray-500 mb-2">Dangerous Goods</p>
                       <div className="flex gap-1">
-                        {shipmentData.dangerousGoods.length > 0 ? (
-                          shipmentData.dangerousGoods.map((dg, index) => (
+                        {(shipmentData as any).dangerousGoods.length > 0 ? (
+                          (shipmentData as any).dangerousGoods.map((dg: any, index: number) => (
                             <div key={index} className="relative">
                               <div className={`w-8 h-8 ${getDGClassColor(dg.class)} rounded flex items-center justify-center text-white text-xs font-bold`}>
                                 {dg.class}
@@ -669,10 +669,10 @@ export default function ShipmentsPage() {
                       <div className="w-full bg-gray-200 rounded-full h-2 mb-1">
                         <div 
                           className="bg-blue-600 h-2 rounded-full transition-all duration-300" 
-                          style={{ width: `${shipmentData.progress}%` }}
+                          style={{ width: `${(shipmentData as any).progress}%` }}
                         ></div>
                       </div>
-                      <span className="text-xs text-gray-600">{shipmentData.progress}%</span>
+                      <span className="text-xs text-gray-600">{(shipmentData as any).progress}%</span>
                     </div>
                   </div>
 
@@ -681,11 +681,11 @@ export default function ShipmentsPage() {
                     <div className="text-right">
                       <div className="text-sm">
                         <p className="text-gray-500">Driver:</p>
-                        <p className="font-medium">{shipmentData.driver || 'Unassigned'}</p>
+                        <p className="font-medium">{(shipmentData as any).driver || 'Unassigned'}</p>
                       </div>
                       <div className="text-sm mt-2">
                         <p className="text-gray-500">Vehicle:</p>
-                        <p className="font-medium">{shipmentData.vehicle || 'TBD'}</p>
+                        <p className="font-medium">{(shipmentData as any).vehicle || 'TBD'}</p>
                       </div>
                     </div>
 
@@ -708,7 +708,7 @@ export default function ShipmentsPage() {
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2 text-sm text-gray-600">
                       <Calendar className="h-4 w-4" />
-                      <span>Estimated Delivery: {new Date(shipmentData.estimatedDelivery).toLocaleDateString()}</span>
+                      <span>Estimated Delivery: {new Date((shipmentData as any).estimatedDelivery).toLocaleDateString()}</span>
                     </div>
                     {isSearchResult && isSemanticSearch && (
                       <div className="text-xs text-blue-600">
