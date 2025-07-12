@@ -24,6 +24,7 @@ from .services import (
     update_shipment_status_service,
     search_shipments
 )
+from .safety_validation import ShipmentSafetyValidator, ShipmentPreValidationService
 
 
 class ShipmentViewSet(viewsets.ModelViewSet):
@@ -650,6 +651,216 @@ class ShipmentViewSet(viewsets.ModelViewSet):
             logger.error(f"Error generating batch documents for {shipment.id}: {str(e)}")
             return Response(
                 {"detail": "An error occurred while generating the batch documents."},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+    
+    @action(detail=True, methods=['get'], url_path='safety-validation')
+    def safety_validation(self, request, pk=None):
+        """
+        Validate shipment safety compliance including vehicle equipment and dangerous goods.
+        
+        Query parameters:
+        - vehicle_id: UUID of vehicle to validate against (optional)
+        """
+        shipment = self.get_object()
+        vehicle_id = request.query_params.get('vehicle_id')
+        vehicle = None
+        
+        if vehicle_id:
+            try:
+                from vehicles.models import Vehicle
+                vehicle = Vehicle.objects.get(id=vehicle_id)
+            except Vehicle.DoesNotExist:
+                return Response(
+                    {"error": "Vehicle not found"},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+        
+        try:
+            validation_result = ShipmentSafetyValidator.validate_shipment_safety_compliance(
+                shipment, vehicle
+            )
+            
+            return Response(validation_result)
+            
+        except Exception as e:
+            logger.error(f"Error validating shipment safety for {shipment.id}: {str(e)}")
+            return Response(
+                {"error": "An error occurred during safety validation"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+    
+    @action(detail=True, methods=['get'], url_path='compliant-vehicles')
+    def compliant_vehicles(self, request, pk=None):
+        """
+        Get list of vehicles that are compliant for this shipment.
+        
+        Query parameters:
+        - status: Filter vehicles by status (default: AVAILABLE)
+        - depot: Filter vehicles by depot
+        """
+        shipment = self.get_object()
+        
+        try:
+            from vehicles.models import Vehicle
+            
+            # Get available vehicles with optional filtering
+            vehicles_qs = Vehicle.objects.all()
+            
+            vehicle_status = request.query_params.get('status', 'AVAILABLE')
+            vehicles_qs = vehicles_qs.filter(status=vehicle_status)
+            
+            depot = request.query_params.get('depot')
+            if depot:
+                vehicles_qs = vehicles_qs.filter(assigned_depot=depot)
+            
+            compliant_vehicles = ShipmentSafetyValidator.get_compliant_vehicles_for_shipment(
+                shipment, vehicles_qs
+            )
+            
+            return Response({
+                'shipment_id': shipment.id,
+                'tracking_number': shipment.tracking_number,
+                'compliant_vehicles': compliant_vehicles,
+                'total_vehicles_checked': vehicles_qs.count(),
+                'compliant_count': len(compliant_vehicles)
+            })
+            
+        except Exception as e:
+            logger.error(f"Error getting compliant vehicles for shipment {shipment.id}: {str(e)}")
+            return Response(
+                {"error": "An error occurred while finding compliant vehicles"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+    
+    @action(detail=True, methods=['post'], url_path='assign-vehicle')
+    def assign_vehicle(self, request, pk=None):
+        """
+        Assign a vehicle to the shipment with safety validation.
+        
+        Expected payload:
+        {
+            "vehicle_id": "uuid",
+            "override_warnings": false
+        }
+        """
+        shipment = self.get_object()
+        vehicle_id = request.data.get('vehicle_id')
+        override_warnings = request.data.get('override_warnings', False)
+        
+        if not vehicle_id:
+            return Response(
+                {"error": "vehicle_id is required"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        try:
+            from vehicles.models import Vehicle
+            vehicle = Vehicle.objects.get(id=vehicle_id)
+            
+            # Validate vehicle assignment
+            validation_result = ShipmentSafetyValidator.validate_vehicle_assignment(
+                shipment, vehicle
+            )
+            
+            if not validation_result['can_assign']:
+                return Response({
+                    "error": "Vehicle cannot be assigned to this shipment",
+                    "reason": validation_result['reason'],
+                    "validation_details": validation_result
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            # Check for warnings
+            vehicle_compliance = validation_result.get('vehicle_compliance', {})
+            warnings = vehicle_compliance.get('warnings', [])
+            
+            if warnings and not override_warnings:
+                return Response({
+                    "warning": "Vehicle has warnings but can be assigned",
+                    "warnings": warnings,
+                    "can_override": True,
+                    "message": "Set override_warnings=true to proceed with assignment"
+                }, status=status.HTTP_200_OK)
+            
+            # Assign vehicle to shipment
+            shipment.assigned_vehicle = vehicle
+            shipment.save()
+            
+            # Log the assignment
+            from audits.signals import log_custom_action
+            from audits.models import AuditActionType
+            
+            log_custom_action(
+                action_type=AuditActionType.UPDATE,
+                description=f"Assigned vehicle {vehicle.registration_number} to shipment {shipment.tracking_number}",
+                content_object=shipment,
+                request=request,
+                metadata={
+                    'vehicle_id': str(vehicle.id),
+                    'vehicle_registration': vehicle.registration_number,
+                    'validation_passed': validation_result['can_assign'],
+                    'warnings_overridden': override_warnings and len(warnings) > 0
+                }
+            )
+            
+            serializer = self.get_serializer(shipment)
+            return Response({
+                "message": f"Vehicle {vehicle.registration_number} successfully assigned to shipment",
+                "shipment": serializer.data,
+                "validation_result": validation_result
+            })
+            
+        except Vehicle.DoesNotExist:
+            return Response(
+                {"error": "Vehicle not found"},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        except Exception as e:
+            logger.error(f"Error assigning vehicle to shipment {shipment.id}: {str(e)}")
+            return Response(
+                {"error": "An error occurred while assigning the vehicle"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+    
+    @action(detail=False, methods=['post'], url_path='pre-validate')
+    def pre_validate(self, request):
+        """
+        Pre-validate shipment data before creation.
+        
+        Expected payload:
+        {
+            "shipment_data": {...},
+            "items_data": [...],
+            "vehicle_id": "uuid" (optional)
+        }
+        """
+        shipment_data = request.data.get('shipment_data', {})
+        items_data = request.data.get('items_data', [])
+        vehicle_id = request.data.get('vehicle_id')
+        
+        if not shipment_data:
+            return Response(
+                {"error": "shipment_data is required"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        if not items_data:
+            return Response(
+                {"error": "items_data is required"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        try:
+            validation_result = ShipmentPreValidationService.validate_shipment_creation(
+                shipment_data, items_data, vehicle_id
+            )
+            
+            return Response(validation_result)
+            
+        except Exception as e:
+            logger.error(f"Error pre-validating shipment: {str(e)}")
+            return Response(
+                {"error": "An error occurred during pre-validation"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 

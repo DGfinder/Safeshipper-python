@@ -1,7 +1,7 @@
 # manifests/documents.py
 from django_elasticsearch_dsl import Document, Index, fields
 from elasticsearch_dsl import analyzer, normalizer
-from .models import Manifest, ManifestItem
+from .models import Manifest, ManifestDangerousGoodMatch
 
 # Define analyzers
 manifest_analyzer = analyzer(
@@ -52,59 +52,15 @@ class ManifestDocument(Document):
         }
     )
     
-    # Manifest metadata
-    manifest_number = fields.TextField(
-        attr='manifest_number',
-        analyzer=manifest_analyzer,
-        fields={
-            'raw': fields.KeywordField(),
-            'suggest': fields.CompletionField(),
-        }
-    )
-    
-    origin_location = fields.TextField(
-        attr='origin_location',
-        analyzer=manifest_analyzer,
-        fields={
-            'raw': fields.KeywordField(),
-        }
-    )
-    
-    destination_location = fields.TextField(
-        attr='destination_location',
-        analyzer=manifest_analyzer,
-        fields={
-            'raw': fields.KeywordField(),
-        }
-    )
-    
-    transport_mode = fields.KeywordField(attr='transport_mode')
-    carrier_name = fields.TextField(
-        attr='carrier_name',
-        analyzer=manifest_analyzer,
-        fields={
-            'raw': fields.KeywordField(),
-        }
-    )
-    
-    # Processing information
-    ai_confidence_score = fields.FloatField(attr='ai_confidence_score')
-    requires_manual_review = fields.BooleanField(attr='requires_manual_review')
-    
-    processing_notes = fields.TextField(
-        attr='processing_notes',
-        analyzer=manifest_analyzer,
-    )
-    
-    validation_errors = fields.TextField(
-        attr='validation_errors',
-        analyzer=manifest_analyzer,
-    )
-    
     # Timestamps
     created_at = fields.DateField(attr='created_at')
     updated_at = fields.DateField(attr='updated_at')
-    processed_at = fields.DateField(attr='processed_at')
+    
+    # Analysis information
+    analysis_started_at = fields.DateField(attr='analysis_started_at')
+    analysis_completed_at = fields.DateField(attr='analysis_completed_at')
+    confirmed_at = fields.DateField(attr='confirmed_at')
+    finalized_at = fields.DateField(attr='finalized_at')
     
     # Aggregated item information
     total_items = fields.IntegerField()
@@ -134,27 +90,23 @@ class ManifestDocument(Document):
         return instance.shipment.reference_number if instance.shipment else None
     
     def prepare_total_items(self, instance):
-        """Count total manifest items"""
-        return instance.items.count()
+        """Count total manifest dangerous good matches"""
+        return instance.dg_matches.count()
     
     def prepare_dangerous_goods_count(self, instance):
-        """Count dangerous goods items"""
-        return instance.items.filter(dangerous_good__isnull=False).count()
+        """Count dangerous goods matches"""
+        return instance.dg_matches.count()
     
     def prepare_hazard_classes(self, instance):
-        """Get unique hazard classes from items"""
-        classes = instance.items.filter(
-            dangerous_good__isnull=False
-        ).values_list(
+        """Get unique hazard classes from dangerous good matches"""
+        classes = instance.dg_matches.values_list(
             'dangerous_good__hazard_class', flat=True
         ).distinct()
         return list(classes)
     
     def prepare_un_numbers(self, instance):
-        """Get unique UN numbers from items"""
-        un_numbers = instance.items.filter(
-            dangerous_good__isnull=False
-        ).values_list(
+        """Get unique UN numbers from dangerous good matches"""
+        un_numbers = instance.dg_matches.values_list(
             'dangerous_good__un_number', flat=True
         ).distinct()
         return list(un_numbers)
@@ -163,13 +115,7 @@ class ManifestDocument(Document):
         """
         Combine searchable fields for comprehensive search
         """
-        content_parts = [
-            instance.manifest_number or '',
-            instance.origin_location or '',
-            instance.destination_location or '',
-            instance.carrier_name or '',
-            instance.processing_notes or '',
-        ]
+        content_parts = []
         
         # Add document filename if available
         if instance.document:
@@ -179,15 +125,15 @@ class ManifestDocument(Document):
         if instance.shipment:
             content_parts.append(instance.shipment.reference_number or '')
         
-        # Add dangerous goods information
-        for item in instance.items.all():
-            if item.dangerous_good:
+        # Add dangerous goods information from matches
+        for match in instance.dg_matches.all():
+            if match.dangerous_good:
                 content_parts.extend([
-                    item.dangerous_good.un_number or '',
-                    item.dangerous_good.proper_shipping_name or '',
-                    item.dangerous_good.simplified_name or '',
+                    match.dangerous_good.un_number or '',
+                    match.dangerous_good.proper_shipping_name or '',
+                    match.dangerous_good.simplified_name or '',
                 ])
-            content_parts.append(item.item_description or '')
+            content_parts.append(match.found_text or '')
         
         return ' '.join(filter(None, content_parts))
     
@@ -207,35 +153,34 @@ class ManifestDocument(Document):
         }
 
 
-# Define manifest items index
-manifest_items_index = Index('manifest_items')
-manifest_items_index.settings(
+# Define manifest dangerous goods matches index
+manifest_dg_matches_index = Index('manifest_dg_matches')
+manifest_dg_matches_index.settings(
     number_of_shards=1,
     number_of_replicas=0
 )
 
-@manifest_items_index.doc_type
-class ManifestItemDocument(Document):
+@manifest_dg_matches_index.doc_type
+class ManifestDangerousGoodMatchDocument(Document):
     """
-    Elasticsearch document for ManifestItem model for detailed item search
+    Elasticsearch document for ManifestDangerousGoodMatch model for detailed match search
     """
     
     # Core identification
     id = fields.KeywordField(attr='id')
     manifest_id = fields.KeywordField()
     
-    # Item information
-    item_description = fields.TextField(
-        attr='item_description',
+    # Match information
+    found_text = fields.TextField(
+        attr='found_text',
         analyzer=manifest_analyzer,
         fields={
             'raw': fields.KeywordField(),
         }
     )
     
-    quantity = fields.FloatField(attr='quantity')
-    unit = fields.KeywordField(attr='unit')
-    weight_kg = fields.FloatField(attr='weight_kg')
+    match_type = fields.KeywordField(attr='match_type')
+    confidence_score = fields.FloatField(attr='confidence_score')
     
     # Dangerous goods information
     dangerous_good_id = fields.KeywordField()
@@ -244,22 +189,16 @@ class ManifestItemDocument(Document):
     hazard_class = fields.KeywordField()
     packing_group = fields.KeywordField()
     
-    # Classification
-    is_dangerous_good = fields.BooleanField(attr='is_dangerous_good')
-    requires_review = fields.BooleanField(attr='requires_review')
-    confidence_score = fields.FloatField(attr='confidence_score')
+    # Confirmation status
+    is_confirmed = fields.BooleanField(attr='is_confirmed')
     
-    # Processing information
-    classification_method = fields.KeywordField(attr='classification_method')
-    manual_override = fields.BooleanField(attr='manual_override')
-    review_notes = fields.TextField(
-        attr='review_notes',
-        analyzer=manifest_analyzer,
-    )
+    # Position information
+    page_number = fields.IntegerField(attr='page_number')
     
     # Timestamps
     created_at = fields.DateField(attr='created_at')
     updated_at = fields.DateField(attr='updated_at')
+    confirmed_at = fields.DateField(attr='confirmed_at')
     
     def prepare_manifest_id(self, instance):
         """Get manifest ID"""
@@ -286,14 +225,14 @@ class ManifestItemDocument(Document):
         return instance.dangerous_good.packing_group if instance.dangerous_good else None
     
     class Django:
-        model = ManifestItem
+        model = ManifestDangerousGoodMatch
         fields = []
         
         # Related models that should trigger reindexing
         related_models = ['manifests.Manifest', 'dangerous_goods.DangerousGood']
         
     class Index:
-        name = 'manifest_items'
+        name = 'manifest_dg_matches'
         settings = {
             'number_of_shards': 1,
             'number_of_replicas': 0,

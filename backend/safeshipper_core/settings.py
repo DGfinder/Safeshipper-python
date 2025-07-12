@@ -70,13 +70,13 @@ INSTALLED_APPS = [
     # 'locations',  # Temporarily disabled due to GIS dependencies
     # 'tracking',  # Temporarily disabled due to GIS dependencies
     # 'hazard_assessments',
-    # 'load_plans',
+    'load_plans',
     # 'handling_unit_types',
     'sds',        # Enabled for Safety Data Sheets
     'epg',        # Enabled for Emergency Procedure Guides
     # 'emergency_procedures',
-    # 'capacity_marketplace',
-    # 'routes',
+    'capacity_marketplace',
+    'routes',
     # 'pricing',
 ]
 

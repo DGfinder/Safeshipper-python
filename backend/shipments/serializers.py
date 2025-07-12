@@ -54,6 +54,46 @@ class ConsignmentItemSerializer(serializers.ModelSerializer):
         
         return data
 
+class ProofOfDeliveryPhotoSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ProofOfDeliveryPhoto
+        fields = [
+            'id',
+            'image_url',
+            'thumbnail_url',
+            'file_name',
+            'file_size',
+            'caption',
+            'taken_at',
+            'file_size_mb'
+        ]
+
+class ProofOfDeliverySerializer(serializers.ModelSerializer):
+    photos = ProofOfDeliveryPhotoSerializer(many=True, read_only=True)
+    delivered_by_name = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = ProofOfDelivery
+        fields = [
+            'id',
+            'delivered_by',
+            'delivered_by_name',
+            'delivered_at',
+            'recipient_name',
+            'recipient_signature_url',
+            'delivery_notes',
+            'delivery_location',
+            'photos',
+            'photo_count',
+            'created_at',
+            'updated_at'
+        ]
+    
+    def get_delivered_by_name(self, obj):
+        if obj.delivered_by:
+            return f"{obj.delivered_by.first_name} {obj.delivered_by.last_name}".strip()
+        return None
+
 class ShipmentSerializer(serializers.ModelSerializer):
     items = ConsignmentItemSerializer(many=True, required=False)
     status = serializers.ChoiceField(choices=ShipmentStatus.choices, required=False)

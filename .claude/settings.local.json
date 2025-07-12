@@ -48,7 +48,12 @@
       "Bash(node:*)",
       "Bash(npm:*)",
       "Bash(docker:*)",
-      "Bash(npx:*)"
+      "Bash(npx:*)",
+      "Bash(./install.sh)",
+      "Bash(timeout 60 docker-compose logs -f backend)",
+      "Bash(timeout 45 docker-compose logs -f backend)",
+      "Bash(python:*)",
+      "Bash(pip3 list:*)"
     ],
     "deny": []
   }

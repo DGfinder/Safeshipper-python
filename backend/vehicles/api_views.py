@@ -2,8 +2,16 @@ from rest_framework import viewsets, permissions, filters, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from django_filters.rest_framework import DjangoFilterBackend
-from .models import Vehicle
-from .serializers import VehicleSerializer
+from django.utils import timezone
+from .models import (
+    Vehicle, SafetyEquipmentType, VehicleSafetyEquipment,
+    SafetyEquipmentInspection, SafetyEquipmentCertification
+)
+from .serializers import (
+    VehicleSerializer, VehicleDetailSerializer, SafetyEquipmentTypeSerializer,
+    VehicleSafetyEquipmentSerializer, SafetyEquipmentInspectionSerializer,
+    SafetyEquipmentCertificationSerializer, VehicleSafetyComplianceSerializer
+)
 from .services import (
     create_vehicle,
     assign_driver_to_vehicle,
@@ -111,4 +119,172 @@ class VehicleViewSet(viewsets.ModelViewSet):
             return Response(
                 {'error': 'Depot not found'}, 
                 status=status.HTTP_404_NOT_FOUND
-            ) 
+            )
+    
+    def get_serializer_class(self):
+        """Use detailed serializer for retrieve action"""
+        if self.action == 'retrieve':
+            return VehicleDetailSerializer
+        return VehicleSerializer
+    
+    @action(detail=True, methods=['get'])
+    def safety_compliance(self, request, pk=None):
+        """Check vehicle safety equipment compliance for dangerous goods transport"""
+        vehicle = self.get_object()
+        adr_classes = request.query_params.getlist('adr_classes', ['ALL_CLASSES'])
+        
+        serializer = VehicleSafetyComplianceSerializer(
+            vehicle, 
+            context={'adr_classes': adr_classes}
+        )
+        return Response(serializer.data)
+
+
+class SafetyEquipmentTypeViewSet(viewsets.ModelViewSet):
+    """API endpoint for managing safety equipment types"""
+    queryset = SafetyEquipmentType.objects.all()
+    serializer_class = SafetyEquipmentTypeSerializer
+    permission_classes = [IsStaffOrReadOnly]
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter]
+    filterset_fields = ['category', 'is_active', 'required_by_vehicle_weight']
+    search_fields = ['name', 'description']
+    ordering_fields = ['name', 'category', 'created_at']
+    ordering = ['category', 'name']
+
+    def get_queryset(self):
+        """Filter active equipment types by default"""
+        queryset = super().get_queryset()
+        if self.request.query_params.get('include_inactive') != 'true':
+            queryset = queryset.filter(is_active=True)
+        return queryset
+
+
+class VehicleSafetyEquipmentViewSet(viewsets.ModelViewSet):
+    """API endpoint for managing vehicle safety equipment instances"""
+    queryset = VehicleSafetyEquipment.objects.select_related(
+        'vehicle', 'equipment_type'
+    ).prefetch_related('inspections', 'certifications')
+    serializer_class = VehicleSafetyEquipmentSerializer
+    permission_classes = [IsStaffOrReadOnly]
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter]
+    filterset_fields = [
+        'vehicle', 'equipment_type', 'status', 'equipment_type__category'
+    ]
+    search_fields = ['serial_number', 'manufacturer', 'model', 'vehicle__registration_number']
+    ordering_fields = ['installation_date', 'expiry_date', 'next_inspection_date']
+    ordering = ['-installation_date']
+
+    def get_queryset(self):
+        """Filter by vehicle if specified"""
+        queryset = super().get_queryset()
+        vehicle_id = self.request.query_params.get('vehicle_id')
+        if vehicle_id:
+            queryset = queryset.filter(vehicle_id=vehicle_id)
+        return queryset
+
+    @action(detail=False, methods=['get'])
+    def expiring_soon(self, request):
+        """Get equipment expiring within the next 30 days"""
+        from datetime import timedelta
+        cutoff_date = timezone.now().date() + timedelta(days=30)
+        
+        equipment = self.get_queryset().filter(
+            status='ACTIVE',
+            expiry_date__lte=cutoff_date,
+            expiry_date__gte=timezone.now().date()
+        )
+        
+        serializer = self.get_serializer(equipment, many=True)
+        return Response(serializer.data)
+
+    @action(detail=False, methods=['get'])
+    def inspection_due(self, request):
+        """Get equipment with inspections due"""
+        equipment = self.get_queryset().filter(
+            status='ACTIVE',
+            next_inspection_date__lte=timezone.now().date()
+        )
+        
+        serializer = self.get_serializer(equipment, many=True)
+        return Response(serializer.data)
+
+    @action(detail=True, methods=['post'])
+    def schedule_inspection(self, request, pk=None):
+        """Schedule an inspection for this equipment"""
+        equipment = self.get_object()
+        inspection_date = request.data.get('inspection_date')
+        inspection_type = request.data.get('inspection_type', 'ROUTINE')
+        
+        if not inspection_date:
+            return Response(
+                {'error': 'inspection_date is required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Create inspection record
+        inspection = SafetyEquipmentInspection.objects.create(
+            equipment=equipment,
+            inspection_type=inspection_type,
+            inspection_date=inspection_date,
+            inspector=request.user,
+            result='PASSED'  # Default, will be updated during inspection
+        )
+        
+        serializer = SafetyEquipmentInspectionSerializer(inspection)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+
+class SafetyEquipmentInspectionViewSet(viewsets.ModelViewSet):
+    """API endpoint for managing safety equipment inspections"""
+    queryset = SafetyEquipmentInspection.objects.select_related(
+        'equipment', 'equipment__vehicle', 'inspector'
+    )
+    serializer_class = SafetyEquipmentInspectionSerializer
+    permission_classes = [IsStaffOrReadOnly]
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter]
+    filterset_fields = [
+        'equipment', 'equipment__vehicle', 'inspection_type', 'result'
+    ]
+    search_fields = ['equipment__serial_number', 'equipment__vehicle__registration_number']
+    ordering_fields = ['inspection_date', 'created_at']
+    ordering = ['-inspection_date']
+
+    def perform_create(self, serializer):
+        """Set inspector to current user if not specified"""
+        if not serializer.validated_data.get('inspector'):
+            serializer.save(inspector=self.request.user)
+        else:
+            serializer.save()
+
+
+class SafetyEquipmentCertificationViewSet(viewsets.ModelViewSet):
+    """API endpoint for managing safety equipment certifications"""
+    queryset = SafetyEquipmentCertification.objects.select_related(
+        'equipment', 'equipment__vehicle'
+    )
+    serializer_class = SafetyEquipmentCertificationSerializer
+    permission_classes = [IsStaffOrReadOnly]
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter]
+    filterset_fields = [
+        'equipment', 'equipment__vehicle', 'certification_type'
+    ]
+    search_fields = [
+        'certificate_number', 'issuing_authority', 
+        'equipment__serial_number', 'equipment__vehicle__registration_number'
+    ]
+    ordering_fields = ['issue_date', 'expiry_date', 'created_at']
+    ordering = ['-issue_date']
+
+    @action(detail=False, methods=['get'])
+    def expiring_soon(self, request):
+        """Get certifications expiring within the next 60 days"""
+        from datetime import timedelta
+        cutoff_date = timezone.now().date() + timedelta(days=60)
+        
+        certifications = self.get_queryset().filter(
+            expiry_date__lte=cutoff_date,
+            expiry_date__gte=timezone.now().date()
+        )
+        
+        serializer = self.get_serializer(certifications, many=True)
+        return Response(serializer.data) 

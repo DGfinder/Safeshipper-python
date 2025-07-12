@@ -289,7 +289,7 @@ class SafetyDataSheet(models.Model):
             models.Index(fields=['language', 'country_code']),
             models.Index(fields=['version', 'revision_date']),
             models.Index(fields=['ph_value_min', 'ph_value_max']),
-            models.Index(fields=['dangerous_good__hazard_class', 'ph_value_min']),
+            models.Index(fields=['dangerous_good', 'ph_value_min']),
         ]
         unique_together = [
             ['dangerous_good', 'version', 'language', 'country_code']

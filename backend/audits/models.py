@@ -235,7 +235,7 @@ class ShipmentAuditLog(models.Model):
         verbose_name_plural = _("Shipment Audit Logs")
         ordering = ['-audit_log__timestamp']
         indexes = [
-            models.Index(fields=['shipment', 'audit_log__timestamp']),
+            models.Index(fields=['shipment', 'audit_log']),
             models.Index(fields=['previous_status', 'new_status']),
         ]
     
@@ -305,7 +305,7 @@ class ComplianceAuditLog(models.Model):
         verbose_name_plural = _("Compliance Audit Logs")
         ordering = ['-audit_log__timestamp']
         indexes = [
-            models.Index(fields=['compliance_status', 'audit_log__timestamp']),
+            models.Index(fields=['compliance_status', 'audit_log']),
             models.Index(fields=['regulation_type']),
         ]
     

@@ -61,7 +61,7 @@ urlpatterns = [
         path('companies/', include('companies.urls')),
         path('freight-types/', include('freight_types.urls')),
         path('vehicles/', include('vehicles.urls')),
-        path('tracking/', include('tracking.urls')),  # Enabled for mobile app
+        # path('tracking/', include('tracking.urls')),  # Temporarily disabled due to GIS dependencies
         path('documents/', include('documents.urls')),  # Enabled for manifest functionality
         path('audits/', include('audits.urls')),  # Enabled for audit functionality
         path('auth/', include('enterprise_auth.urls')),  # Enterprise authentication
