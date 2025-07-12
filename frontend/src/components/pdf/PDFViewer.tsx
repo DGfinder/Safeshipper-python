@@ -294,4 +294,3 @@ const PDFViewer = forwardRef<PDFViewerRef, PDFViewerProps>(function PDFViewer({
 });
 
 export default PDFViewer;
-export type { HighlightArea, PDFViewerRef };
