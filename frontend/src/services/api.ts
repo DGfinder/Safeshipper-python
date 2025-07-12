@@ -1,12 +1,12 @@
 // services/api.ts
-import axios from 'axios';
+import axios from "axios";
 
 // Create axios instance with base configuration
 export const api = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1',
+  baseURL: process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1",
   timeout: 30000,
   headers: {
-    'Content-Type': 'application/json',
+    "Content-Type": "application/json",
   },
 });
 
@@ -14,17 +14,18 @@ export const api = axios.create({
 api.interceptors.request.use(
   (config) => {
     // Get token from localStorage or your auth store
-    const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
-    
+    const token =
+      typeof window !== "undefined" ? localStorage.getItem("auth_token") : null;
+
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
-    
+
     return config;
   },
   (error) => {
     return Promise.reject(error);
-  }
+  },
 );
 
 // Response interceptor for error handling
@@ -36,23 +37,23 @@ api.interceptors.response.use(
     // Handle common error cases
     if (error.response?.status === 401) {
       // Token expired or invalid
-      if (typeof window !== 'undefined') {
-        localStorage.removeItem('auth_token');
+      if (typeof window !== "undefined") {
+        localStorage.removeItem("auth_token");
         // Redirect to login if needed
-        window.location.href = '/login';
+        window.location.href = "/login";
       }
     }
-    
+
     // Log error for debugging
-    console.error('API Error:', {
+    console.error("API Error:", {
       message: error.message,
       status: error.response?.status,
       data: error.response?.data,
       url: error.config?.url,
     });
-    
+
     return Promise.reject(error);
-  }
+  },
 );
 
 // Helper functions for common API operations
@@ -108,18 +109,24 @@ export const apiHelpers = {
   },
 
   // Upload file with progress tracking
-  uploadFile: async (url: string, file: File, onProgress?: (progress: number) => void) => {
+  uploadFile: async (
+    url: string,
+    file: File,
+    onProgress?: (progress: number) => void,
+  ) => {
     const formData = new FormData();
-    formData.append('file', file);
+    formData.append("file", file);
 
     try {
       const response = await api.post(url, formData, {
         headers: {
-          'Content-Type': 'multipart/form-data',
+          "Content-Type": "multipart/form-data",
         },
         onUploadProgress: (progressEvent) => {
           if (onProgress && progressEvent.total) {
-            const progress = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+            const progress = Math.round(
+              (progressEvent.loaded * 100) / progressEvent.total,
+            );
             onProgress(progress);
           }
         },
@@ -134,20 +141,20 @@ export const apiHelpers = {
   downloadFile: async (url: string, filename?: string) => {
     try {
       const response = await api.get(url, {
-        responseType: 'blob',
+        responseType: "blob",
       });
 
       // Create blob link to download
       const blob = new Blob([response.data]);
-      const link = document.createElement('a');
+      const link = document.createElement("a");
       link.href = window.URL.createObjectURL(blob);
-      link.download = filename || 'download';
-      
+      link.download = filename || "download";
+
       // Trigger download
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      
+
       return response.data;
     } catch (error) {
       throw error;

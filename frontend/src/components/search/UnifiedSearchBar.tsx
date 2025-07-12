@@ -1,38 +1,38 @@
-'use client';
+"use client";
 
-import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Card, CardContent } from '@/components/ui/card';
-import { 
-  Search, 
-  Brain, 
-  Zap, 
-  Package, 
-  FileText, 
-  Truck, 
-  Users, 
+import React, { useState, useEffect, useCallback, useRef } from "react";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
+import {
+  Search,
+  Brain,
+  Zap,
+  Package,
+  FileText,
+  Truck,
+  Users,
   Shield,
   Clock,
   History,
   X,
   ChevronRight,
   Filter,
-  ArrowRight
-} from 'lucide-react';
-import { 
-  semanticSearchService, 
-  type SearchQuery, 
-  type SearchResult, 
+  ArrowRight,
+} from "lucide-react";
+import {
+  semanticSearchService,
+  type SearchQuery,
+  type SearchResult,
   type SearchSuggestion,
-  type SemanticAnalysis 
-} from '@/services/semanticSearchService';
-import { useRouter } from 'next/navigation';
+  type SemanticAnalysis,
+} from "@/services/semanticSearchService";
+import { useRouter } from "next/navigation";
 
 interface UnifiedSearchBarProps {
   placeholder?: string;
-  currentModule?: 'shipments' | 'documents' | 'fleet' | 'users' | 'compliance';
+  currentModule?: "shipments" | "documents" | "fleet" | "users" | "compliance";
   onSearchResults?: (results: SearchResult[]) => void;
   className?: string;
   compact?: boolean;
@@ -45,17 +45,20 @@ export default function UnifiedSearchBar({
   onSearchResults,
   className = "",
   compact = false,
-  showAIToggle = true
+  showAIToggle = true,
 }: UnifiedSearchBarProps) {
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
-  
-  const [searchTerm, setSearchTerm] = useState('');
+
+  const [searchTerm, setSearchTerm] = useState("");
   const [isSemanticSearch, setIsSemanticSearch] = useState(false);
-  const [searchSuggestions, setSearchSuggestions] = useState<SearchSuggestion[]>([]);
+  const [searchSuggestions, setSearchSuggestions] = useState<
+    SearchSuggestion[]
+  >([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
-  const [semanticAnalysis, setSemanticAnalysis] = useState<SemanticAnalysis | null>(null);
+  const [semanticAnalysis, setSemanticAnalysis] =
+    useState<SemanticAnalysis | null>(null);
   const [searchLoading, setSearchLoading] = useState(false);
   const [recentSearches, setRecentSearches] = useState<string[]>([]);
   const [popularSearches, setPopularSearches] = useState<string[]>([]);
@@ -72,21 +75,27 @@ export default function UnifiedSearchBar({
       const popular = await semanticSearchService.getPopularSearches(6);
       setPopularSearches(popular);
     } catch (error) {
-      console.error('Failed to load popular searches:', error);
+      console.error("Failed to load popular searches:", error);
     }
   };
 
   const loadRecentSearches = () => {
-    const stored = localStorage.getItem('safeshipper_recent_searches');
+    const stored = localStorage.getItem("safeshipper_recent_searches");
     if (stored) {
       setRecentSearches(JSON.parse(stored));
     }
   };
 
   const saveRecentSearch = (query: string) => {
-    const updated = [query, ...recentSearches.filter(s => s !== query)].slice(0, 5);
+    const updated = [query, ...recentSearches.filter((s) => s !== query)].slice(
+      0,
+      5,
+    );
     setRecentSearches(updated);
-    localStorage.setItem('safeshipper_recent_searches', JSON.stringify(updated));
+    localStorage.setItem(
+      "safeshipper_recent_searches",
+      JSON.stringify(updated),
+    );
   };
 
   // Debounced suggestions
@@ -94,30 +103,33 @@ export default function UnifiedSearchBar({
     debounce(async (query: string) => {
       if (query.length >= 2 && isSemanticSearch) {
         try {
-          const suggestions = await semanticSearchService.getSuggestions(query, {
-            userRole: 'dispatcher',
-            recentSearches,
-            currentPage: currentModule || 'global',
-            activeShipments: [],
-            complianceAlerts: 0
-          });
+          const suggestions = await semanticSearchService.getSuggestions(
+            query,
+            {
+              userRole: "dispatcher",
+              recentSearches,
+              currentPage: currentModule || "global",
+              activeShipments: [],
+              complianceAlerts: 0,
+            },
+          );
           setSearchSuggestions(suggestions);
           setShowSuggestions(true);
         } catch (error) {
-          console.error('Failed to get suggestions:', error);
+          console.error("Failed to get suggestions:", error);
         }
       } else {
         setSearchSuggestions([]);
         setShowSuggestions(false);
       }
     }, 300),
-    [isSemanticSearch, recentSearches, currentModule]
+    [isSemanticSearch, recentSearches, currentModule],
   );
 
   // Handle search input change
   const handleSearchChange = (value: string) => {
     setSearchTerm(value);
-    
+
     if (value.length === 0) {
       setShowQuickActions(true);
       setShowSuggestions(false);
@@ -132,42 +144,45 @@ export default function UnifiedSearchBar({
   // Perform semantic search
   const performSearch = async (query: string) => {
     if (!query.trim()) return;
-    
+
     setSearchLoading(true);
     setShowSuggestions(false);
     setShowQuickActions(false);
-    
+
     try {
       const searchQuery: SearchQuery = {
         query: query.trim(),
-        searchScope: currentModule ? [currentModule] : ['shipments', 'documents', 'fleet', 'users', 'compliance'],
-        limit: 20
+        searchScope: currentModule
+          ? [currentModule]
+          : ["shipments", "documents", "fleet", "users", "compliance"],
+        limit: 20,
       };
 
       const result = await semanticSearchService.search(searchQuery, {
-        userRole: 'dispatcher',
+        userRole: "dispatcher",
         recentSearches,
-        currentPage: currentModule || 'global',
+        currentPage: currentModule || "global",
         activeShipments: [],
-        complianceAlerts: 0
+        complianceAlerts: 0,
       });
 
       setSearchResults(result.results);
       setSemanticAnalysis(result.semanticAnalysis);
-      
+
       // Save to recent searches
       saveRecentSearch(query);
-      
+
       // Call callback if provided
       if (onSearchResults) {
         onSearchResults(result.results);
       } else {
         // Navigate to search results page if no callback
-        router.push(`/search?q=${encodeURIComponent(query)}&ai=${isSemanticSearch}`);
+        router.push(
+          `/search?q=${encodeURIComponent(query)}&ai=${isSemanticSearch}`,
+        );
       }
-      
     } catch (error) {
-      console.error('Search failed:', error);
+      console.error("Search failed:", error);
     } finally {
       setSearchLoading(false);
     }
@@ -214,29 +229,44 @@ export default function UnifiedSearchBar({
   // Get icon for result type
   const getResultIcon = (type: string) => {
     switch (type) {
-      case 'shipment': return <Package className="h-4 w-4" />;
-      case 'document': return <FileText className="h-4 w-4" />;
-      case 'vehicle': return <Truck className="h-4 w-4" />;
-      case 'user': return <Users className="h-4 w-4" />;
-      case 'compliance_record': return <Shield className="h-4 w-4" />;
-      default: return <Search className="h-4 w-4" />;
+      case "shipment":
+        return <Package className="h-4 w-4" />;
+      case "document":
+        return <FileText className="h-4 w-4" />;
+      case "vehicle":
+        return <Truck className="h-4 w-4" />;
+      case "user":
+        return <Users className="h-4 w-4" />;
+      case "compliance_record":
+        return <Shield className="h-4 w-4" />;
+      default:
+        return <Search className="h-4 w-4" />;
     }
   };
 
   // Get color for result type
   const getResultColor = (type: string) => {
     switch (type) {
-      case 'shipment': return 'text-blue-500';
-      case 'document': return 'text-green-500';
-      case 'vehicle': return 'text-orange-500';
-      case 'user': return 'text-purple-500';
-      case 'compliance_record': return 'text-red-500';
-      default: return 'text-gray-500';
+      case "shipment":
+        return "text-blue-500";
+      case "document":
+        return "text-green-500";
+      case "vehicle":
+        return "text-orange-500";
+      case "user":
+        return "text-purple-500";
+      case "compliance_record":
+        return "text-red-500";
+      default:
+        return "text-gray-500";
     }
   };
 
   // Debounce utility
-  function debounce<T extends (...args: any[]) => any>(func: T, wait: number): T {
+  function debounce<T extends (...args: any[]) => any>(
+    func: T,
+    wait: number,
+  ): T {
     let timeout: NodeJS.Timeout;
     return ((...args: any[]) => {
       clearTimeout(timeout);
@@ -245,43 +275,58 @@ export default function UnifiedSearchBar({
   }
 
   const quickActions = [
-    { text: 'lithium battery shipments', icon: Package, color: 'text-blue-500' },
-    { text: 'expired documents', icon: FileText, color: 'text-red-500' },
-    { text: 'delayed shipments', icon: Clock, color: 'text-orange-500' },
-    { text: 'Class 3 flammable liquids', icon: Shield, color: 'text-yellow-600' },
-    { text: 'compliance violations', icon: Shield, color: 'text-red-600' },
-    { text: 'ready for dispatch', icon: Truck, color: 'text-green-500' }
+    {
+      text: "lithium battery shipments",
+      icon: Package,
+      color: "text-blue-500",
+    },
+    { text: "expired documents", icon: FileText, color: "text-red-500" },
+    { text: "delayed shipments", icon: Clock, color: "text-orange-500" },
+    {
+      text: "Class 3 flammable liquids",
+      icon: Shield,
+      color: "text-yellow-600",
+    },
+    { text: "compliance violations", icon: Shield, color: "text-red-600" },
+    { text: "ready for dispatch", icon: Truck, color: "text-green-500" },
   ];
 
   return (
     <div className={`relative ${className}`}>
-      <div className={`relative flex items-center ${compact ? 'gap-2' : 'gap-3'}`}>
+      <div
+        className={`relative flex items-center ${compact ? "gap-2" : "gap-3"}`}
+      >
         {/* Search Input */}
         <div className="relative flex-1">
-          <Search className={`absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 ${
-            searchLoading ? 'animate-pulse text-blue-500' : 'text-gray-400'
-          }`} />
+          <Search
+            className={`absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 ${
+              searchLoading ? "animate-pulse text-blue-500" : "text-gray-400"
+            }`}
+          />
           <Input
             ref={inputRef}
-            placeholder={isSemanticSearch ? 
-              "Try: 'lithium batteries delayed this week' or 'Class 3 from Sydney'" : 
-              placeholder
+            placeholder={
+              isSemanticSearch
+                ? "Try: 'lithium batteries delayed this week' or 'Class 3 from Sydney'"
+                : placeholder
             }
             value={searchTerm}
             onChange={(e) => handleSearchChange(e.target.value)}
             onFocus={handleInputFocus}
             onBlur={handleInputBlur}
             onKeyDown={(e) => {
-              if (e.key === 'Enter') {
+              if (e.key === "Enter") {
                 performSearch(searchTerm);
-              } else if (e.key === 'Escape') {
+              } else if (e.key === "Escape") {
                 setShowSuggestions(false);
                 setShowQuickActions(false);
                 inputRef.current?.blur();
               }
             }}
-            className={`pl-10 ${compact ? 'h-9' : 'h-10'} ${
-              isSemanticSearch ? 'border-blue-200 focus:border-blue-400 bg-blue-50/30' : ''
+            className={`pl-10 ${compact ? "h-9" : "h-10"} ${
+              isSemanticSearch
+                ? "border-blue-200 focus:border-blue-400 bg-blue-50/30"
+                : ""
             }`}
           />
         </div>
@@ -292,19 +337,19 @@ export default function UnifiedSearchBar({
             variant="outline"
             size={compact ? "sm" : "default"}
             onClick={toggleSearchMode}
-            className={`flex items-center gap-2 ${compact ? 'px-3' : 'px-4'} ${
-              isSemanticSearch ? 'bg-blue-50 border-blue-200 text-blue-700' : ''
+            className={`flex items-center gap-2 ${compact ? "px-3" : "px-4"} ${
+              isSemanticSearch ? "bg-blue-50 border-blue-200 text-blue-700" : ""
             }`}
           >
             {isSemanticSearch ? (
               <>
                 <Brain className="h-4 w-4" />
-                {!compact && 'AI'}
+                {!compact && "AI"}
               </>
             ) : (
               <>
                 <Zap className="h-4 w-4" />
-                {!compact && 'AI'}
+                {!compact && "AI"}
               </>
             )}
           </Button>
@@ -322,7 +367,9 @@ export default function UnifiedSearchBar({
                   <div>
                     <div className="flex items-center gap-2 mb-2">
                       <History className="h-4 w-4 text-gray-500" />
-                      <span className="text-sm font-medium text-gray-700">Recent</span>
+                      <span className="text-sm font-medium text-gray-700">
+                        Recent
+                      </span>
                     </div>
                     <div className="flex flex-wrap gap-1">
                       {recentSearches.map((search, index) => (
@@ -341,7 +388,9 @@ export default function UnifiedSearchBar({
                 <div>
                   <div className="flex items-center gap-2 mb-2">
                     <Search className="h-4 w-4 text-gray-500" />
-                    <span className="text-sm font-medium text-gray-700">Quick Actions</span>
+                    <span className="text-sm font-medium text-gray-700">
+                      Quick Actions
+                    </span>
                   </div>
                   <div className="space-y-1">
                     {quickActions.map((action, index) => (
@@ -362,7 +411,9 @@ export default function UnifiedSearchBar({
                   <div>
                     <div className="flex items-center gap-2 mb-2">
                       <Filter className="h-4 w-4 text-gray-500" />
-                      <span className="text-sm font-medium text-gray-700">Popular</span>
+                      <span className="text-sm font-medium text-gray-700">
+                        Popular
+                      </span>
                     </div>
                     <div className="flex flex-wrap gap-1">
                       {popularSearches.map((search, index) => (
@@ -391,12 +442,22 @@ export default function UnifiedSearchBar({
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
-                        {suggestion.type === 'entity' && <Package className="h-4 w-4 text-blue-500" />}
-                        {suggestion.type === 'query' && <Search className="h-4 w-4 text-green-500" />}
-                        {suggestion.type === 'filter' && <Filter className="h-4 w-4 text-orange-500" />}
+                        {suggestion.type === "entity" && (
+                          <Package className="h-4 w-4 text-blue-500" />
+                        )}
+                        {suggestion.type === "query" && (
+                          <Search className="h-4 w-4 text-green-500" />
+                        )}
+                        {suggestion.type === "filter" && (
+                          <Filter className="h-4 w-4 text-orange-500" />
+                        )}
                         <div>
-                          <p className="text-sm font-medium">{suggestion.text}</p>
-                          <p className="text-xs text-gray-500">{suggestion.category}</p>
+                          <p className="text-sm font-medium">
+                            {suggestion.text}
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            {suggestion.category}
+                          </p>
                         </div>
                       </div>
                       <Badge variant="outline" className="text-xs">
@@ -419,7 +480,10 @@ export default function UnifiedSearchBar({
             <span className="font-medium text-blue-800">AI Understanding</span>
           </div>
           <p className="text-blue-700">
-            Intent: <span className="font-medium">{semanticAnalysis.intent.replace('_', ' ')}</span>
+            Intent:{" "}
+            <span className="font-medium">
+              {semanticAnalysis.intent.replace("_", " ")}
+            </span>
           </p>
           {semanticAnalysis.entities.length > 0 && (
             <div className="mt-1">

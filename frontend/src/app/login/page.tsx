@@ -1,49 +1,52 @@
-'use client';
+"use client";
 
-import React, { useState } from 'react';
-import Link from 'next/link';
-import Image from 'next/image';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Eye, EyeOff, AlertCircle } from 'lucide-react';
+import React, { useState } from "react";
+import Link from "next/link";
+import Image from "next/image";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Eye, EyeOff, AlertCircle } from "lucide-react";
 
 export default function LoginPage() {
   const [formData, setFormData] = useState({
-    email: '',
-    password: ''
+    email: "",
+    password: "",
   });
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      [name]: value
+      [name]: value,
     }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    setError('');
+    setError("");
 
     try {
       // For demo purposes, simulate login
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+
       // Demo credentials check
-      if (formData.email === 'demo@safeshipper.com' && formData.password === 'demo123') {
+      if (
+        formData.email === "demo@safeshipper.com" &&
+        formData.password === "demo123"
+      ) {
         // Simulate successful login
-        localStorage.setItem('auth_token', 'demo_token');
-        window.location.href = '/dashboard';
+        localStorage.setItem("auth_token", "demo_token");
+        window.location.href = "/dashboard";
       } else {
-        setError('Invalid credentials. Use demo@safeshipper.com / demo123');
+        setError("Invalid credentials. Use demo@safeshipper.com / demo123");
       }
     } catch {
-      setError('Login failed. Please try again.');
+      setError("Login failed. Please try again.");
     } finally {
       setIsLoading(false);
     }
@@ -54,13 +57,13 @@ export default function LoginPage() {
       {/* Left side - Hero Image with Diagonal Cut */}
       <div className="relative flex-1 bg-gradient-to-br from-gray-100 to-gray-200">
         {/* Diagonal overlay shape */}
-        <div 
+        <div
           className="absolute inset-0 bg-white"
           style={{
-            clipPath: 'polygon(0 0, 70% 0, 85% 100%, 0 100%)'
+            clipPath: "polygon(0 0, 70% 0, 85% 100%, 0 100%)",
           }}
         ></div>
-        
+
         {/* Background image */}
         <div className="absolute inset-0">
           <Image
@@ -69,14 +72,14 @@ export default function LoginPage() {
             fill
             className="object-cover object-center"
             style={{
-              clipPath: 'polygon(0 0, 70% 0, 85% 100%, 0 100%)'
+              clipPath: "polygon(0 0, 70% 0, 85% 100%, 0 100%)",
             }}
           />
           {/* Overlay for better contrast */}
-          <div 
+          <div
             className="absolute inset-0 bg-gradient-to-r from-blue-900/20 to-transparent"
             style={{
-              clipPath: 'polygon(0 0, 70% 0, 85% 100%, 0 100%)'
+              clipPath: "polygon(0 0, 70% 0, 85% 100%, 0 100%)",
             }}
           ></div>
         </div>
@@ -85,10 +88,13 @@ export default function LoginPage() {
         <div className="relative z-10 h-full flex items-end p-12">
           <div className="text-white max-w-md">
             <h1 className="text-4xl font-bold mb-4">
-              Professional Fleet<br />Management
+              Professional Fleet
+              <br />
+              Management
             </h1>
             <p className="text-lg text-white/90 leading-relaxed">
-              Secure dangerous goods transportation with comprehensive safety monitoring and compliance management.
+              Secure dangerous goods transportation with comprehensive safety
+              monitoring and compliance management.
             </p>
           </div>
         </div>
@@ -109,9 +115,13 @@ export default function LoginPage() {
                   className="object-contain"
                 />
               </div>
-              <span className="text-2xl font-bold text-[#153F9F]">SafeShipper</span>
+              <span className="text-2xl font-bold text-[#153F9F]">
+                SafeShipper
+              </span>
             </div>
-            <h2 className="text-3xl font-bold text-gray-900 mb-2">Welcome to SafeShipper! 👋</h2>
+            <h2 className="text-3xl font-bold text-gray-900 mb-2">
+              Welcome to SafeShipper! 👋
+            </h2>
             <p className="text-gray-600">
               Please sign in to your account and start the adventure
             </p>
@@ -130,7 +140,10 @@ export default function LoginPage() {
 
             <form onSubmit={handleSubmit} className="space-y-5">
               <div>
-                <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
+                <label
+                  htmlFor="email"
+                  className="block text-sm font-medium text-gray-700 mb-2"
+                >
                   Email or Username
                 </label>
                 <Input
@@ -147,14 +160,17 @@ export default function LoginPage() {
               </div>
 
               <div>
-                <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
+                <label
+                  htmlFor="password"
+                  className="block text-sm font-medium text-gray-700 mb-2"
+                >
                   Password
                 </label>
                 <div className="relative">
                   <Input
                     id="password"
                     name="password"
-                    type={showPassword ? 'text' : 'password'}
+                    type={showPassword ? "text" : "password"}
                     autoComplete="current-password"
                     required
                     value={formData.password}
@@ -180,7 +196,10 @@ export default function LoginPage() {
                     type="checkbox"
                     className="h-4 w-4 text-[#153F9F] focus:ring-[#153F9F] border-gray-300 rounded"
                   />
-                  <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-600">
+                  <label
+                    htmlFor="remember-me"
+                    className="ml-2 block text-sm text-gray-600"
+                  >
                     Remember Me
                   </label>
                 </div>
@@ -200,14 +219,18 @@ export default function LoginPage() {
                 disabled={isLoading}
                 className="w-full h-12 bg-[#153F9F] hover:bg-[#1230B] text-white font-medium rounded-lg transition-colors text-base"
               >
-                {isLoading ? 'Signing in...' : 'Sign In'}
+                {isLoading ? "Signing in..." : "Sign In"}
               </Button>
             </form>
 
             {/* Demo Credentials */}
             <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-              <p className="text-sm text-blue-800 font-medium mb-2">Demo Credentials:</p>
-              <p className="text-xs text-blue-700">Email: demo@safeshipper.com</p>
+              <p className="text-sm text-blue-800 font-medium mb-2">
+                Demo Credentials:
+              </p>
+              <p className="text-xs text-blue-700">
+                Email: demo@safeshipper.com
+              </p>
               <p className="text-xs text-blue-700">Password: demo123</p>
             </div>
           </div>

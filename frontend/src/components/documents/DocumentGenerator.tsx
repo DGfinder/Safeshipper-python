@@ -1,25 +1,25 @@
-'use client';
+"use client";
 
-import React, { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { 
-  FileText, 
-  Download, 
-  Shield, 
-  Package, 
+import React, { useState } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import {
+  FileText,
+  Download,
+  Shield,
+  Package,
   Archive,
   Loader2,
   CheckCircle,
-  AlertTriangle
-} from 'lucide-react';
-import { 
+  AlertTriangle,
+} from "lucide-react";
+import {
   useGenerateShipmentReport,
   useGenerateComplianceCertificate,
   useGenerateDGManifest,
-  useGenerateBatchDocuments
-} from '@/hooks/useShipments';
+  useGenerateBatchDocuments,
+} from "@/hooks/useShipments";
 // Toast notifications - replace with your preferred toast library
 
 interface DocumentGeneratorProps {
@@ -43,35 +43,35 @@ interface DocumentType {
 
 const documentTypes: DocumentType[] = [
   {
-    id: 'shipment_report',
-    name: 'Shipment Report',
-    description: 'Comprehensive shipment details and history',
+    id: "shipment_report",
+    name: "Shipment Report",
+    description: "Comprehensive shipment details and history",
     icon: FileText,
     requiresDG: false,
-    allowedRoles: ['ADMIN', 'COMPLIANCE_OFFICER', 'DISPATCHER', 'CUSTOMER'],
+    allowedRoles: ["ADMIN", "COMPLIANCE_OFFICER", "DISPATCHER", "CUSTOMER"],
   },
   {
-    id: 'compliance_certificate',
-    name: 'Compliance Certificate',
-    description: 'DG compliance certification document',
+    id: "compliance_certificate",
+    name: "Compliance Certificate",
+    description: "DG compliance certification document",
     icon: Shield,
     requiresDG: true,
-    allowedRoles: ['ADMIN', 'COMPLIANCE_OFFICER'],
+    allowedRoles: ["ADMIN", "COMPLIANCE_OFFICER"],
   },
   {
-    id: 'dg_manifest',
-    name: 'DG Manifest',
-    description: 'Dangerous goods transport manifest',
+    id: "dg_manifest",
+    name: "DG Manifest",
+    description: "Dangerous goods transport manifest",
     icon: Package,
     requiresDG: true,
-    allowedRoles: ['ADMIN', 'COMPLIANCE_OFFICER', 'DISPATCHER'],
+    allowedRoles: ["ADMIN", "COMPLIANCE_OFFICER", "DISPATCHER"],
   },
 ];
 
-const DocumentGenerator: React.FC<DocumentGeneratorProps> = ({ 
-  shipmentId, 
-  shipment, 
-  className = '' 
+const DocumentGenerator: React.FC<DocumentGeneratorProps> = ({
+  shipmentId,
+  shipment,
+  className = "",
 }) => {
   const [selectedDocuments, setSelectedDocuments] = useState<string[]>([]);
   const [includeAuditTrail, setIncludeAuditTrail] = useState(true);
@@ -83,10 +83,11 @@ const DocumentGenerator: React.FC<DocumentGeneratorProps> = ({
   const generateBatch = useGenerateBatchDocuments();
 
   // Check if shipment has dangerous goods
-  const hasDangerousGoods = shipment.items?.some(item => item.is_dangerous_good) || false;
+  const hasDangerousGoods =
+    shipment.items?.some((item) => item.is_dangerous_good) || false;
 
   // Mock user role - in real app this would come from auth context
-  const userRole = 'ADMIN'; // This should come from useAuth() or similar
+  const userRole = "ADMIN"; // This should come from useAuth() or similar
 
   const canAccessDocument = (docType: DocumentType) => {
     if (docType.requiresDG && !hasDangerousGoods) return false;
@@ -96,59 +97,64 @@ const DocumentGenerator: React.FC<DocumentGeneratorProps> = ({
   const handleSingleDocumentGeneration = async (documentType: string) => {
     try {
       switch (documentType) {
-        case 'shipment_report':
-          await generateReport.mutateAsync({ 
-            shipmentId, 
-            includeAudit: includeAuditTrail 
+        case "shipment_report":
+          await generateReport.mutateAsync({
+            shipmentId,
+            includeAudit: includeAuditTrail,
           });
-          console.log('Shipment report generated successfully');
+          console.log("Shipment report generated successfully");
           break;
-        case 'compliance_certificate':
+        case "compliance_certificate":
           await generateCertificate.mutateAsync(shipmentId);
-          console.log('Compliance certificate generated successfully');
+          console.log("Compliance certificate generated successfully");
           break;
-        case 'dg_manifest':
+        case "dg_manifest":
           await generateManifest.mutateAsync(shipmentId);
-          console.log('DG manifest generated successfully');
+          console.log("DG manifest generated successfully");
           break;
         default:
-          throw new Error('Unknown document type');
+          throw new Error("Unknown document type");
       }
     } catch (error: any) {
-      console.error('Failed to generate document:', error.message || error);
+      console.error("Failed to generate document:", error.message || error);
     }
   };
 
   const handleBatchGeneration = async () => {
     if (selectedDocuments.length === 0) {
-      console.error('Please select at least one document type');
+      console.error("Please select at least one document type");
       return;
     }
 
     try {
       await generateBatch.mutateAsync({
         shipmentId,
-        documentTypes: selectedDocuments
+        documentTypes: selectedDocuments,
       });
-      console.log(`Generated ${selectedDocuments.length} documents successfully`);
+      console.log(
+        `Generated ${selectedDocuments.length} documents successfully`,
+      );
       setSelectedDocuments([]);
     } catch (error: any) {
-      console.error('Failed to generate batch documents:', error.message || error);
+      console.error(
+        "Failed to generate batch documents:",
+        error.message || error,
+      );
     }
   };
 
   const toggleDocumentSelection = (docId: string) => {
-    setSelectedDocuments(prev => 
-      prev.includes(docId) 
-        ? prev.filter(id => id !== docId)
-        : [...prev, docId]
+    setSelectedDocuments((prev) =>
+      prev.includes(docId)
+        ? prev.filter((id) => id !== docId)
+        : [...prev, docId],
     );
   };
 
-  const isLoading = 
-    generateReport.isPending || 
-    generateCertificate.isPending || 
-    generateManifest.isPending || 
+  const isLoading =
+    generateReport.isPending ||
+    generateCertificate.isPending ||
+    generateManifest.isPending ||
     generateBatch.isPending;
 
   return (
@@ -169,10 +175,12 @@ const DocumentGenerator: React.FC<DocumentGeneratorProps> = ({
               <AlertTriangle className="h-4 w-4 text-yellow-500" />
             )}
             <span className="text-gray-600">
-              {hasDangerousGoods ? 'DG documents available' : 'No dangerous goods'}
+              {hasDangerousGoods
+                ? "DG documents available"
+                : "No dangerous goods"}
             </span>
           </div>
-          
+
           <div className="flex items-center gap-2 text-sm">
             <Package className="h-4 w-4 text-blue-500" />
             <span className="text-gray-600">Shipment Status: </span>
@@ -182,12 +190,14 @@ const DocumentGenerator: React.FC<DocumentGeneratorProps> = ({
 
         {/* Individual Document Generation */}
         <div className="space-y-3">
-          <h4 className="text-sm font-medium text-gray-900">Individual Documents</h4>
-          
+          <h4 className="text-sm font-medium text-gray-900">
+            Individual Documents
+          </h4>
+
           {documentTypes.map((docType) => {
             const IconComponent = docType.icon;
             const canAccess = canAccessDocument(docType);
-            
+
             return (
               <div key={docType.id} className="space-y-2">
                 <div className="flex items-start gap-3 p-3 border rounded-lg bg-gray-50">
@@ -201,12 +211,14 @@ const DocumentGenerator: React.FC<DocumentGeneratorProps> = ({
                     <p className="text-xs text-gray-500 mb-2">
                       {docType.description}
                     </p>
-                    
+
                     <div className="flex items-center gap-2">
                       <Button
                         size="sm"
                         variant="outline"
-                        onClick={() => handleSingleDocumentGeneration(docType.id)}
+                        onClick={() =>
+                          handleSingleDocumentGeneration(docType.id)
+                        }
                         disabled={!canAccess || isLoading}
                         className="text-xs"
                       >
@@ -217,7 +229,7 @@ const DocumentGenerator: React.FC<DocumentGeneratorProps> = ({
                         )}
                         Generate
                       </Button>
-                      
+
                       {canAccess && (
                         <label className="flex items-center gap-1 text-xs text-gray-600">
                           <input
@@ -232,13 +244,12 @@ const DocumentGenerator: React.FC<DocumentGeneratorProps> = ({
                     </div>
                   </div>
                 </div>
-                
+
                 {!canAccess && (
                   <p className="text-xs text-red-500 ml-7">
-                    {docType.requiresDG && !hasDangerousGoods 
-                      ? 'Requires dangerous goods'
-                      : 'Insufficient permissions'
-                    }
+                    {docType.requiresDG && !hasDangerousGoods
+                      ? "Requires dangerous goods"
+                      : "Insufficient permissions"}
                   </p>
                 )}
               </div>
@@ -247,33 +258,39 @@ const DocumentGenerator: React.FC<DocumentGeneratorProps> = ({
         </div>
 
         {/* Shipment Report Options */}
-        {documentTypes.find(d => d.id === 'shipment_report') && 
-         canAccessDocument(documentTypes.find(d => d.id === 'shipment_report')!) && (
-          <div className="space-y-2">
-            <h4 className="text-sm font-medium text-gray-900">Report Options</h4>
-            <label className="flex items-center gap-2 text-sm text-gray-600">
-              <input
-                type="checkbox"
-                checked={includeAuditTrail}
-                onChange={(e) => setIncludeAuditTrail(e.target.checked)}
-                className="rounded"
-              />
-              Include audit trail in shipment report
-            </label>
-          </div>
-        )}
+        {documentTypes.find((d) => d.id === "shipment_report") &&
+          canAccessDocument(
+            documentTypes.find((d) => d.id === "shipment_report")!,
+          ) && (
+            <div className="space-y-2">
+              <h4 className="text-sm font-medium text-gray-900">
+                Report Options
+              </h4>
+              <label className="flex items-center gap-2 text-sm text-gray-600">
+                <input
+                  type="checkbox"
+                  checked={includeAuditTrail}
+                  onChange={(e) => setIncludeAuditTrail(e.target.checked)}
+                  className="rounded"
+                />
+                Include audit trail in shipment report
+              </label>
+            </div>
+          )}
 
         {/* Batch Generation */}
         {selectedDocuments.length > 0 && (
           <div className="pt-4 border-t">
             <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <h4 className="text-sm font-medium text-gray-900">Batch Generation</h4>
+                <h4 className="text-sm font-medium text-gray-900">
+                  Batch Generation
+                </h4>
                 <Badge variant="secondary" className="text-xs">
                   {selectedDocuments.length} selected
                 </Badge>
               </div>
-              
+
               <Button
                 onClick={handleBatchGeneration}
                 disabled={isLoading}
@@ -294,8 +311,8 @@ const DocumentGenerator: React.FC<DocumentGeneratorProps> = ({
         {/* Help Text */}
         <div className="pt-4 border-t">
           <p className="text-xs text-gray-500">
-            Documents will be automatically downloaded when generated. 
-            ZIP files contain multiple documents for easy sharing.
+            Documents will be automatically downloaded when generated. ZIP files
+            contain multiple documents for easy sharing.
           </p>
         </div>
       </CardContent>

@@ -7,7 +7,7 @@ interface SensorReading {
   timestamp: string;
   value: number;
   unit: string;
-  quality: 'good' | 'poor' | 'failed';
+  quality: "good" | "poor" | "failed";
   batteryLevel?: number; // for wireless sensors
 }
 
@@ -51,7 +51,7 @@ interface ContainerSensorData {
 
 interface SmartContainer {
   containerId: string;
-  containerType: 'standard' | 'refrigerated' | 'tank' | 'bulk' | 'specialized';
+  containerType: "standard" | "refrigerated" | "tank" | "bulk" | "specialized";
   dimensions: {
     length: number;
     width: number;
@@ -89,16 +89,16 @@ interface SmartContainer {
   powerManagement: {
     batteryLevel: number;
     estimatedRuntime: number; // hours
-    chargingStatus: 'charged' | 'charging' | 'low' | 'critical';
-    powerSource: 'battery' | 'external' | 'solar' | 'hybrid';
+    chargingStatus: "charged" | "charging" | "low" | "critical";
+    powerSource: "battery" | "external" | "solar" | "hybrid";
     lastChargeDate: string;
   };
   networkConnectivity: {
-    primaryConnection: 'cellular' | 'satellite' | 'wifi' | 'lorawan';
+    primaryConnection: "cellular" | "satellite" | "wifi" | "lorawan";
     signalStrength: number; // dBm
     dataUsage: number; // MB
     lastTransmission: string;
-    connectionStatus: 'connected' | 'intermittent' | 'disconnected';
+    connectionStatus: "connected" | "intermittent" | "disconnected";
   };
   maintenanceSchedule: {
     lastCalibration: string;
@@ -115,8 +115,15 @@ interface SmartContainer {
 interface ContainerAlert {
   alertId: string;
   containerId: string;
-  alertType: 'threshold_exceeded' | 'sensor_failure' | 'tampering' | 'door_breach' | 'location_deviation' | 'power_low' | 'communication_loss';
-  severity: 'info' | 'warning' | 'critical' | 'emergency';
+  alertType:
+    | "threshold_exceeded"
+    | "sensor_failure"
+    | "tampering"
+    | "door_breach"
+    | "location_deviation"
+    | "power_low"
+    | "communication_loss";
+  severity: "info" | "warning" | "critical" | "emergency";
   title: string;
   description: string;
   triggeredAt: string;
@@ -127,7 +134,7 @@ interface ContainerAlert {
     parameter: string;
     currentValue: number;
     thresholdValue: number;
-    trend: 'increasing' | 'decreasing' | 'stable';
+    trend: "increasing" | "decreasing" | "stable";
   };
   location: {
     latitude: number;
@@ -138,7 +145,7 @@ interface ContainerAlert {
   escalationLevel: number;
   affectedCargo: {
     unNumbers: string[];
-    estimatedRisk: 'low' | 'medium' | 'high' | 'critical';
+    estimatedRisk: "low" | "medium" | "high" | "critical";
     potentialConsequences: string[];
   };
   relatedAlerts: string[]; // IDs of related alerts
@@ -147,7 +154,7 @@ interface ContainerAlert {
 interface GeofenceZone {
   zoneId: string;
   name: string;
-  type: 'safe' | 'restricted' | 'hazardous' | 'checkpoint' | 'customs';
+  type: "safe" | "restricted" | "hazardous" | "checkpoint" | "customs";
   coordinates: Array<{
     latitude: number;
     longitude: number;
@@ -242,7 +249,7 @@ interface PredictiveAnalytics {
     maintenanceNeeds: {
       type: string;
       recommendedDate: string;
-      priority: 'low' | 'medium' | 'high' | 'urgent';
+      priority: "low" | "medium" | "high" | "urgent";
       estimatedCost: number;
       estimatedDowntime: number; // hours
     }[];
@@ -300,7 +307,7 @@ interface ContainerFleetAnalytics {
     sustainabilityScore: number; // 0-100
   };
   trends: {
-    period: 'daily' | 'weekly' | 'monthly' | 'yearly';
+    period: "daily" | "weekly" | "monthly" | "yearly";
     utilizationTrend: number[]; // percentage over time
     incidentTrend: number[]; // incidents over time
     efficiencyTrend: number[]; // efficiency score over time
@@ -308,26 +315,31 @@ interface ContainerFleetAnalytics {
 }
 
 class IoTSmartContainerService {
-  private baseUrl = '/api/v1';
+  private baseUrl = "/api/v1";
   private wsConnections: Map<string, WebSocket> = new Map();
   private alertCallbacks: Set<(alert: ContainerAlert) => void> = new Set();
-  private sensorUpdateCallbacks: Map<string, Set<(data: ContainerSensorData) => void>> = new Map();
+  private sensorUpdateCallbacks: Map<
+    string,
+    Set<(data: ContainerSensorData) => void>
+  > = new Map();
 
   // Initialize real-time monitoring for a container
   async initializeContainerMonitoring(containerId: string): Promise<void> {
-    if (typeof window !== 'undefined' && 'WebSocket' in window) {
+    if (typeof window !== "undefined" && "WebSocket" in window) {
       try {
-        const ws = new WebSocket(`wss://api.safeshipper.com/ws/container/${containerId}`);
-        
+        const ws = new WebSocket(
+          `wss://api.safeshipper.com/ws/container/${containerId}`,
+        );
+
         ws.onmessage = (event) => {
           const data = JSON.parse(event.data);
-          
-          if (data.type === 'alert') {
-            this.alertCallbacks.forEach(callback => callback(data.alert));
-          } else if (data.type === 'sensor_data') {
+
+          if (data.type === "alert") {
+            this.alertCallbacks.forEach((callback) => callback(data.alert));
+          } else if (data.type === "sensor_data") {
             const callbacks = this.sensorUpdateCallbacks.get(containerId);
             if (callbacks) {
-              callbacks.forEach(callback => callback(data.sensor_data));
+              callbacks.forEach((callback) => callback(data.sensor_data));
             }
           }
         };
@@ -338,7 +350,9 @@ class IoTSmartContainerService {
 
         this.wsConnections.set(containerId, ws);
       } catch (error) {
-        console.warn(`WebSocket for container ${containerId} failed, using polling`);
+        console.warn(
+          `WebSocket for container ${containerId} failed, using polling`,
+        );
         this.startContainerPolling(containerId);
       }
     }
@@ -350,7 +364,7 @@ class IoTSmartContainerService {
         const data = await this.fetchContainerSensorData(containerId);
         const callbacks = this.sensorUpdateCallbacks.get(containerId);
         if (callbacks && data) {
-          callbacks.forEach(callback => callback(data));
+          callbacks.forEach((callback) => callback(data));
         }
       } catch (error) {
         console.error(`Polling failed for container ${containerId}:`, error);
@@ -362,13 +376,16 @@ class IoTSmartContainerService {
   }
 
   // Subscribe to container sensor updates
-  subscribeToContainerUpdates(containerId: string, callback: (data: ContainerSensorData) => void): () => void {
+  subscribeToContainerUpdates(
+    containerId: string,
+    callback: (data: ContainerSensorData) => void,
+  ): () => void {
     if (!this.sensorUpdateCallbacks.has(containerId)) {
       this.sensorUpdateCallbacks.set(containerId, new Set());
     }
-    
+
     this.sensorUpdateCallbacks.get(containerId)!.add(callback);
-    
+
     // Initialize monitoring if not already done
     if (!this.wsConnections.has(containerId)) {
       this.initializeContainerMonitoring(containerId);
@@ -386,84 +403,100 @@ class IoTSmartContainerService {
   }
 
   // Subscribe to container alerts
-  subscribeToContainerAlerts(callback: (alert: ContainerAlert) => void): () => void {
+  subscribeToContainerAlerts(
+    callback: (alert: ContainerAlert) => void,
+  ): () => void {
     this.alertCallbacks.add(callback);
     return () => this.alertCallbacks.delete(callback);
   }
 
   // Get container sensor data
-  async fetchContainerSensorData(containerId: string): Promise<ContainerSensorData | null> {
+  async fetchContainerSensorData(
+    containerId: string,
+  ): Promise<ContainerSensorData | null> {
     try {
-      const response = await fetch(`${this.baseUrl}/iot-containers/${containerId}/sensor-data/`);
+      const response = await fetch(
+        `${this.baseUrl}/iot-containers/${containerId}/sensor-data/`,
+      );
       if (!response.ok) return null;
-      
+
       return await response.json();
     } catch (error) {
-      console.error('Container sensor data fetch failed:', error);
+      console.error("Container sensor data fetch failed:", error);
       return this.simulateContainerSensorData(containerId);
     }
   }
 
   // Simulate container sensor data for development
-  private simulateContainerSensorData(containerId: string): ContainerSensorData {
+  private simulateContainerSensorData(
+    containerId: string,
+  ): ContainerSensorData {
     const now = new Date().toISOString();
     const createReading = (value: number, unit: string): SensorReading => ({
       sensorId: `sensor-${Math.random().toString(36).substr(2, 9)}`,
       timestamp: now,
       value: value + (Math.random() - 0.5) * 2, // Add some variance
       unit,
-      quality: Math.random() > 0.95 ? 'poor' : 'good',
-      batteryLevel: Math.random() * 100
+      quality: Math.random() > 0.95 ? "poor" : "good",
+      batteryLevel: Math.random() * 100,
     });
 
     return {
       containerId,
-      temperature: [createReading(4.5, '°C')], // Typical refrigerated temp
-      humidity: [createReading(65, '%')],
-      pressure: [createReading(101.3, 'kPa')],
-      vibration: [createReading(0.5, 'g')],
-      shock: [createReading(0.1, 'g')],
-      tilt: [createReading(2.1, '°')],
+      temperature: [createReading(4.5, "°C")], // Typical refrigerated temp
+      humidity: [createReading(65, "%")],
+      pressure: [createReading(101.3, "kPa")],
+      vibration: [createReading(0.5, "g")],
+      shock: [createReading(0.1, "g")],
+      tilt: [createReading(2.1, "°")],
       gasDetection: {
-        co2: [createReading(400, 'ppm')],
-        co: [createReading(0.1, 'ppm')],
-        h2s: [createReading(0.01, 'ppm')],
-        ch4: [createReading(1.8, 'ppm')],
-        o2: [createReading(20.9, '%')],
-        voc: [createReading(0.05, 'ppm')]
+        co2: [createReading(400, "ppm")],
+        co: [createReading(0.1, "ppm")],
+        h2s: [createReading(0.01, "ppm")],
+        ch4: [createReading(1.8, "ppm")],
+        o2: [createReading(20.9, "%")],
+        voc: [createReading(0.05, "ppm")],
       },
-      location: [{
-        latitude: -37.8136 + (Math.random() - 0.5) * 0.1,
-        longitude: 144.9631 + (Math.random() - 0.5) * 0.1,
-        accuracy: 3,
-        speed: 65 + Math.random() * 20,
-        heading: Math.random() * 360,
-        timestamp: now
-      }],
-      doorStatus: [{
-        timestamp: now,
-        isOpen: false,
-        authorized: true,
-        userId: 'driver-001'
-      }],
-      sealIntegrity: [{
-        timestamp: now,
-        isIntact: true,
-        sealId: 'SEAL-001',
-        tamperDetected: false
-      }]
+      location: [
+        {
+          latitude: -37.8136 + (Math.random() - 0.5) * 0.1,
+          longitude: 144.9631 + (Math.random() - 0.5) * 0.1,
+          accuracy: 3,
+          speed: 65 + Math.random() * 20,
+          heading: Math.random() * 360,
+          timestamp: now,
+        },
+      ],
+      doorStatus: [
+        {
+          timestamp: now,
+          isOpen: false,
+          authorized: true,
+          userId: "driver-001",
+        },
+      ],
+      sealIntegrity: [
+        {
+          timestamp: now,
+          isIntact: true,
+          sealId: "SEAL-001",
+          tamperDetected: false,
+        },
+      ],
     };
   }
 
   // Get smart container details
   async getSmartContainer(containerId: string): Promise<SmartContainer | null> {
     try {
-      const response = await fetch(`${this.baseUrl}/iot-containers/${containerId}/`);
+      const response = await fetch(
+        `${this.baseUrl}/iot-containers/${containerId}/`,
+      );
       if (!response.ok) return null;
-      
+
       return await response.json();
     } catch (error) {
-      console.error('Smart container fetch failed:', error);
+      console.error("Smart container fetch failed:", error);
       return this.simulateSmartContainer(containerId);
     }
   }
@@ -471,26 +504,26 @@ class IoTSmartContainerService {
   private simulateSmartContainer(containerId: string): SmartContainer {
     return {
       containerId,
-      containerType: 'refrigerated',
+      containerType: "refrigerated",
       dimensions: {
         length: 12.2,
         width: 2.4,
         height: 2.6,
-        volume: 76.3
+        volume: 76.3,
       },
       certification: {
-        unApproval: 'UN31A/Y/150/S',
-        expiryDate: '2025-12-31',
+        unApproval: "UN31A/Y/150/S",
+        expiryDate: "2025-12-31",
         testPressure: 150,
-        maxGrossWeight: 30480
+        maxGrossWeight: 30480,
       },
       currentCargo: {
-        unNumbers: ['UN1942'],
-        hazardClasses: ['5.1'],
+        unNumbers: ["UN1942"],
+        hazardClasses: ["5.1"],
         totalWeight: 24000,
-        manifestReference: 'MAN-001',
-        loadingDate: '2024-01-15T08:00:00Z',
-        expectedUnloadingDate: '2024-01-17T10:00:00Z'
+        manifestReference: "MAN-001",
+        loadingDate: "2024-01-15T08:00:00Z",
+        expectedUnloadingDate: "2024-01-17T10:00:00Z",
       },
       sensorConfiguration: {
         temperatureRange: { min: -20, max: 25 },
@@ -502,150 +535,184 @@ class IoTSmartContainerService {
           pressure: { min: 99, max: 103 },
           vibration: 2.0,
           gasConcentration: {
-            'co2': 1000,
-            'co': 10,
-            'h2s': 5
-          }
+            co2: 1000,
+            co: 10,
+            h2s: 5,
+          },
         },
         samplingInterval: 60,
-        transmissionInterval: 300
+        transmissionInterval: 300,
       },
       powerManagement: {
         batteryLevel: 78,
         estimatedRuntime: 168,
-        chargingStatus: 'charged',
-        powerSource: 'battery',
-        lastChargeDate: '2024-01-14T18:00:00Z'
+        chargingStatus: "charged",
+        powerSource: "battery",
+        lastChargeDate: "2024-01-14T18:00:00Z",
       },
       networkConnectivity: {
-        primaryConnection: 'cellular',
+        primaryConnection: "cellular",
         signalStrength: -75,
         dataUsage: 245,
         lastTransmission: new Date().toISOString(),
-        connectionStatus: 'connected'
+        connectionStatus: "connected",
       },
       maintenanceSchedule: {
-        lastCalibration: '2024-01-01T10:00:00Z',
-        nextCalibration: '2024-04-01T10:00:00Z',
+        lastCalibration: "2024-01-01T10:00:00Z",
+        nextCalibration: "2024-04-01T10:00:00Z",
         maintenanceHistory: [
           {
-            date: '2024-01-01T10:00:00Z',
-            type: 'Sensor Calibration',
-            technician: 'Tech-001',
-            notes: 'All sensors calibrated and tested'
-          }
-        ]
-      }
+            date: "2024-01-01T10:00:00Z",
+            type: "Sensor Calibration",
+            technician: "Tech-001",
+            notes: "All sensors calibrated and tested",
+          },
+        ],
+      },
     };
   }
 
   // Get container alerts
-  async getContainerAlerts(containerId: string, activeOnly: boolean = true): Promise<ContainerAlert[]> {
+  async getContainerAlerts(
+    containerId: string,
+    activeOnly: boolean = true,
+  ): Promise<ContainerAlert[]> {
     try {
-      const response = await fetch(`${this.baseUrl}/iot-containers/${containerId}/alerts/?active_only=${activeOnly}`);
+      const response = await fetch(
+        `${this.baseUrl}/iot-containers/${containerId}/alerts/?active_only=${activeOnly}`,
+      );
       if (!response.ok) return [];
-      
+
       const data = await response.json();
       return data.alerts || [];
     } catch (error) {
-      console.error('Container alerts fetch failed:', error);
+      console.error("Container alerts fetch failed:", error);
       return [];
     }
   }
 
   // Acknowledge alert
-  async acknowledgeAlert(alertId: string, userId: string, notes?: string): Promise<boolean> {
+  async acknowledgeAlert(
+    alertId: string,
+    userId: string,
+    notes?: string,
+  ): Promise<boolean> {
     try {
-      const response = await fetch(`${this.baseUrl}/iot-containers/alerts/${alertId}/acknowledge/`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          user_id: userId,
-          notes: notes
-        })
-      });
-      
+      const response = await fetch(
+        `${this.baseUrl}/iot-containers/alerts/${alertId}/acknowledge/`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            user_id: userId,
+            notes: notes,
+          }),
+        },
+      );
+
       return response.ok;
     } catch (error) {
-      console.error('Alert acknowledgment failed:', error);
+      console.error("Alert acknowledgment failed:", error);
       return false;
     }
   }
 
   // Get container journey analytics
-  async getContainerJourney(containerId: string, journeyId?: string): Promise<ContainerJourney | null> {
+  async getContainerJourney(
+    containerId: string,
+    journeyId?: string,
+  ): Promise<ContainerJourney | null> {
     try {
-      const url = journeyId 
+      const url = journeyId
         ? `${this.baseUrl}/iot-containers/${containerId}/journey/${journeyId}/`
         : `${this.baseUrl}/iot-containers/${containerId}/current-journey/`;
-      
+
       const response = await fetch(url);
       if (!response.ok) return null;
-      
+
       return await response.json();
     } catch (error) {
-      console.error('Container journey fetch failed:', error);
+      console.error("Container journey fetch failed:", error);
       return null;
     }
   }
 
   // Get predictive analytics for container
-  async getContainerPredictiveAnalytics(containerId: string): Promise<PredictiveAnalytics | null> {
+  async getContainerPredictiveAnalytics(
+    containerId: string,
+  ): Promise<PredictiveAnalytics | null> {
     try {
-      const response = await fetch(`${this.baseUrl}/iot-containers/${containerId}/predictive-analytics/`);
+      const response = await fetch(
+        `${this.baseUrl}/iot-containers/${containerId}/predictive-analytics/`,
+      );
       if (!response.ok) return null;
-      
+
       return await response.json();
     } catch (error) {
-      console.error('Predictive analytics fetch failed:', error);
+      console.error("Predictive analytics fetch failed:", error);
       return null;
     }
   }
 
   // Get fleet analytics
-  async getFleetAnalytics(timeframe: 'day' | 'week' | 'month' | 'year' = 'month'): Promise<ContainerFleetAnalytics | null> {
+  async getFleetAnalytics(
+    timeframe: "day" | "week" | "month" | "year" = "month",
+  ): Promise<ContainerFleetAnalytics | null> {
     try {
-      const response = await fetch(`${this.baseUrl}/iot-containers/fleet-analytics/?timeframe=${timeframe}`);
+      const response = await fetch(
+        `${this.baseUrl}/iot-containers/fleet-analytics/?timeframe=${timeframe}`,
+      );
       if (!response.ok) return null;
-      
+
       return await response.json();
     } catch (error) {
-      console.error('Fleet analytics fetch failed:', error);
+      console.error("Fleet analytics fetch failed:", error);
       return null;
     }
   }
 
   // Configure geofence zones
-  async createGeofenceZone(zone: Omit<GeofenceZone, 'zoneId'>): Promise<string | null> {
+  async createGeofenceZone(
+    zone: Omit<GeofenceZone, "zoneId">,
+  ): Promise<string | null> {
     try {
-      const response = await fetch(`${this.baseUrl}/iot-containers/geofence-zones/`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(zone)
-      });
-      
+      const response = await fetch(
+        `${this.baseUrl}/iot-containers/geofence-zones/`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(zone),
+        },
+      );
+
       if (!response.ok) return null;
-      
+
       const data = await response.json();
       return data.zone_id;
     } catch (error) {
-      console.error('Geofence zone creation failed:', error);
+      console.error("Geofence zone creation failed:", error);
       return null;
     }
   }
 
   // Update container sensor configuration
-  async updateSensorConfiguration(containerId: string, config: SmartContainer['sensorConfiguration']): Promise<boolean> {
+  async updateSensorConfiguration(
+    containerId: string,
+    config: SmartContainer["sensorConfiguration"],
+  ): Promise<boolean> {
     try {
-      const response = await fetch(`${this.baseUrl}/iot-containers/${containerId}/sensor-config/`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(config)
-      });
-      
+      const response = await fetch(
+        `${this.baseUrl}/iot-containers/${containerId}/sensor-config/`,
+        {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(config),
+        },
+      );
+
       return response.ok;
     } catch (error) {
-      console.error('Sensor configuration update failed:', error);
+      console.error("Sensor configuration update failed:", error);
       return false;
     }
   }
@@ -693,5 +760,5 @@ export type {
   GeofenceZone,
   ContainerJourney,
   PredictiveAnalytics,
-  ContainerFleetAnalytics
+  ContainerFleetAnalytics,
 };

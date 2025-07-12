@@ -1,26 +1,32 @@
 // components/manifests/DangerousGoodsConfirmation.tsx
-'use client';
+"use client";
 
-import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { 
-  CheckCircle, 
-  AlertTriangle, 
+import React, { useState, useEffect } from "react";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import {
+  CheckCircle,
+  AlertTriangle,
   Package,
   Edit,
   Trash2,
   Eye,
-  Target
-} from 'lucide-react';
-import { 
-  type ManifestValidationResult, 
+  Target,
+} from "lucide-react";
+import {
+  type ManifestValidationResult,
   type DangerousGoodConfirmation,
-  type DangerousGoodMatch 
-} from '@/hooks/useManifests';
+  type DangerousGoodMatch,
+} from "@/hooks/useManifests";
 
 interface DangerousGoodsConfirmationProps {
   validationResults: ManifestValidationResult;
@@ -31,11 +37,15 @@ interface DangerousGoodsConfirmationProps {
 export function DangerousGoodsConfirmation({
   validationResults,
   onConfirmation,
-  confirmedDGs
+  confirmedDGs,
 }: DangerousGoodsConfirmationProps) {
-  const [localConfirmed, setLocalConfirmed] = useState<DangerousGoodConfirmation[]>([]);
+  const [localConfirmed, setLocalConfirmed] = useState<
+    DangerousGoodConfirmation[]
+  >([]);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [editValues, setEditValues] = useState<Partial<DangerousGoodConfirmation>>({});
+  const [editValues, setEditValues] = useState<
+    Partial<DangerousGoodConfirmation>
+  >({});
 
   // Initialize with existing confirmed DGs or convert from validation results
   useEffect(() => {
@@ -43,16 +53,18 @@ export function DangerousGoodsConfirmation({
       setLocalConfirmed(confirmedDGs);
     } else {
       // Convert potential DGs to confirmation format
-      const initialConfirmed = validationResults.potential_dangerous_goods.map(dg => ({
-        un_number: dg.un_number,
-        description: dg.proper_shipping_name,
-        quantity: dg.quantity || 1,
-        weight_kg: dg.weight_kg || 0,
-        found_text: dg.found_text,
-        confidence_score: dg.confidence_score,
-        page_number: dg.page_number,
-        matched_term: dg.matched_term
-      }));
+      const initialConfirmed = validationResults.potential_dangerous_goods.map(
+        (dg) => ({
+          un_number: dg.un_number,
+          description: dg.proper_shipping_name,
+          quantity: dg.quantity || 1,
+          weight_kg: dg.weight_kg || 0,
+          found_text: dg.found_text,
+          confidence_score: dg.confidence_score,
+          page_number: dg.page_number,
+          matched_term: dg.matched_term,
+        }),
+      );
       setLocalConfirmed(initialConfirmed);
     }
   }, [validationResults, confirmedDGs]);
@@ -63,25 +75,25 @@ export function DangerousGoodsConfirmation({
   }, [localConfirmed, onConfirmation]);
 
   const getHazardClassColor = (hazardClass: string) => {
-    const classNum = hazardClass.split('.')[0];
+    const classNum = hazardClass.split(".")[0];
     const colors: { [key: string]: string } = {
-      '1': 'bg-orange-100 text-orange-800 border-orange-200',
-      '2': 'bg-green-100 text-green-800 border-green-200',
-      '3': 'bg-red-100 text-red-800 border-red-200',
-      '4': 'bg-yellow-100 text-yellow-800 border-yellow-200',
-      '5': 'bg-blue-100 text-blue-800 border-blue-200',
-      '6': 'bg-purple-100 text-purple-800 border-purple-200',
-      '7': 'bg-pink-100 text-pink-800 border-pink-200',
-      '8': 'bg-gray-100 text-gray-800 border-gray-200',
-      '9': 'bg-indigo-100 text-indigo-800 border-indigo-200',
+      "1": "bg-orange-100 text-orange-800 border-orange-200",
+      "2": "bg-green-100 text-green-800 border-green-200",
+      "3": "bg-red-100 text-red-800 border-red-200",
+      "4": "bg-yellow-100 text-yellow-800 border-yellow-200",
+      "5": "bg-blue-100 text-blue-800 border-blue-200",
+      "6": "bg-purple-100 text-purple-800 border-purple-200",
+      "7": "bg-pink-100 text-pink-800 border-pink-200",
+      "8": "bg-gray-100 text-gray-800 border-gray-200",
+      "9": "bg-indigo-100 text-indigo-800 border-indigo-200",
     };
-    return colors[classNum] || 'bg-gray-100 text-gray-800 border-gray-200';
+    return colors[classNum] || "bg-gray-100 text-gray-800 border-gray-200";
   };
 
   const getConfidenceColor = (score: number) => {
-    if (score >= 0.9) return 'text-green-600';
-    if (score >= 0.7) return 'text-yellow-600';
-    return 'text-red-600';
+    if (score >= 0.9) return "text-green-600";
+    if (score >= 0.7) return "text-yellow-600";
+    return "text-red-600";
   };
 
   const handleStartEdit = (dg: DangerousGoodConfirmation) => {
@@ -92,12 +104,12 @@ export function DangerousGoodsConfirmation({
   const handleSaveEdit = () => {
     if (!editingId || !editValues.un_number) return;
 
-    setLocalConfirmed(prev => 
-      prev.map(dg => 
-        dg.un_number === editingId 
-          ? { ...dg, ...editValues } as DangerousGoodConfirmation
-          : dg
-      )
+    setLocalConfirmed((prev) =>
+      prev.map((dg) =>
+        dg.un_number === editingId
+          ? ({ ...dg, ...editValues } as DangerousGoodConfirmation)
+          : dg,
+      ),
     );
     setEditingId(null);
     setEditValues({});
@@ -109,11 +121,15 @@ export function DangerousGoodsConfirmation({
   };
 
   const handleRemove = (unNumber: string) => {
-    setLocalConfirmed(prev => prev.filter(dg => dg.un_number !== unNumber));
+    setLocalConfirmed((prev) => prev.filter((dg) => dg.un_number !== unNumber));
   };
 
-  const findOriginalMatch = (unNumber: string): DangerousGoodMatch | undefined => {
-    return validationResults.potential_dangerous_goods.find(dg => dg.un_number === unNumber);
+  const findOriginalMatch = (
+    unNumber: string,
+  ): DangerousGoodMatch | undefined => {
+    return validationResults.potential_dangerous_goods.find(
+      (dg) => dg.un_number === unNumber,
+    );
   };
 
   if (validationResults.potential_dangerous_goods.length === 0) {
@@ -125,7 +141,8 @@ export function DangerousGoodsConfirmation({
             No Dangerous Goods Found
           </CardTitle>
           <CardDescription>
-            The manifest analysis did not identify any dangerous goods that require special handling.
+            The manifest analysis did not identify any dangerous goods that
+            require special handling.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -148,7 +165,7 @@ export function DangerousGoodsConfirmation({
           Confirm Dangerous Goods
         </CardTitle>
         <CardDescription>
-          Review and confirm the dangerous goods identified in your manifest. 
+          Review and confirm the dangerous goods identified in your manifest.
           Adjust quantities and weights as needed.
         </CardDescription>
       </CardHeader>
@@ -175,16 +192,19 @@ export function DangerousGoodsConfirmation({
                         {confirmedDG.un_number}
                       </span>
                       {originalMatch && (
-                        <Badge 
-                          variant="outline" 
+                        <Badge
+                          variant="outline"
                           className={`text-xs ${getHazardClassColor(originalMatch.hazard_class)}`}
                         >
                           Class {originalMatch.hazard_class}
                         </Badge>
                       )}
                       {originalMatch?.confidence_score && (
-                        <span className={`text-xs ${getConfidenceColor(originalMatch.confidence_score)}`}>
-                          {Math.round(originalMatch.confidence_score * 100)}% match
+                        <span
+                          className={`text-xs ${getConfidenceColor(originalMatch.confidence_score)}`}
+                        >
+                          {Math.round(originalMatch.confidence_score * 100)}%
+                          match
                         </span>
                       )}
                     </div>
@@ -218,8 +238,13 @@ export function DangerousGoodsConfirmation({
                           Description
                         </label>
                         <Input
-                          value={editValues.description || ''}
-                          onChange={(e) => setEditValues(prev => ({ ...prev, description: e.target.value }))}
+                          value={editValues.description || ""}
+                          onChange={(e) =>
+                            setEditValues((prev) => ({
+                              ...prev,
+                              description: e.target.value,
+                            }))
+                          }
                           placeholder="Enter description"
                         />
                       </div>
@@ -231,8 +256,13 @@ export function DangerousGoodsConfirmation({
                           <Input
                             type="number"
                             min="1"
-                            value={editValues.quantity || ''}
-                            onChange={(e) => setEditValues(prev => ({ ...prev, quantity: parseInt(e.target.value) || 1 }))}
+                            value={editValues.quantity || ""}
+                            onChange={(e) =>
+                              setEditValues((prev) => ({
+                                ...prev,
+                                quantity: parseInt(e.target.value) || 1,
+                              }))
+                            }
                             placeholder="1"
                           />
                         </div>
@@ -244,8 +274,13 @@ export function DangerousGoodsConfirmation({
                             type="number"
                             min="0"
                             step="0.1"
-                            value={editValues.weight_kg || ''}
-                            onChange={(e) => setEditValues(prev => ({ ...prev, weight_kg: parseFloat(e.target.value) || 0 }))}
+                            value={editValues.weight_kg || ""}
+                            onChange={(e) =>
+                              setEditValues((prev) => ({
+                                ...prev,
+                                weight_kg: parseFloat(e.target.value) || 0,
+                              }))
+                            }
                             placeholder="0.0"
                           />
                         </div>
@@ -254,7 +289,11 @@ export function DangerousGoodsConfirmation({
                         <Button size="sm" onClick={handleSaveEdit}>
                           Save
                         </Button>
-                        <Button size="sm" variant="outline" onClick={handleCancelEdit}>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={handleCancelEdit}
+                        >
                           Cancel
                         </Button>
                       </div>
@@ -278,9 +317,14 @@ export function DangerousGoodsConfirmation({
                             <div className="p-2 bg-green-50 border border-green-200 rounded text-xs">
                               <div className="flex items-center gap-2 mb-1">
                                 <Target className="h-3 w-3 text-green-600" />
-                                <span className="font-medium text-green-800">Matched term:</span>
-                                <Badge variant="outline" className="text-xs bg-green-100 text-green-800 border-green-300">
-                                  {originalMatch.match_type.replace('_', ' ')}
+                                <span className="font-medium text-green-800">
+                                  Matched term:
+                                </span>
+                                <Badge
+                                  variant="outline"
+                                  className="text-xs bg-green-100 text-green-800 border-green-300"
+                                >
+                                  {originalMatch.match_type.replace("_", " ")}
                                 </Badge>
                               </div>
                               <p className="font-mono text-green-700 bg-green-100 px-2 py-1 rounded">
@@ -288,14 +332,18 @@ export function DangerousGoodsConfirmation({
                               </p>
                             </div>
                           )}
-                          
+
                           {/* Found text context */}
                           <div className="p-2 bg-gray-100 rounded text-xs text-gray-600">
                             <div className="flex items-center gap-2 mb-1">
                               <Eye className="h-3 w-3" />
-                              <span className="font-medium">Found in manifest:</span>
+                              <span className="font-medium">
+                                Found in manifest:
+                              </span>
                             </div>
-                            <p className="italic">&ldquo;{confirmedDG.found_text}&rdquo;</p>
+                            <p className="italic">
+                              &ldquo;{confirmedDG.found_text}&rdquo;
+                            </p>
                             {confirmedDG.page_number && (
                               <p className="text-xs text-gray-500 mt-1">
                                 Page {confirmedDG.page_number}
@@ -316,8 +364,9 @@ export function DangerousGoodsConfirmation({
           <Alert className="border-blue-200 bg-blue-50">
             <AlertTriangle className="h-4 w-4 text-blue-600" />
             <AlertDescription className="text-blue-800">
-              <strong>Important:</strong> Please verify that all quantities and weights are accurate. 
-              These will be used to create the official dangerous goods transport documentation.
+              <strong>Important:</strong> Please verify that all quantities and
+              weights are accurate. These will be used to create the official
+              dangerous goods transport documentation.
             </AlertDescription>
           </Alert>
         )}
@@ -326,7 +375,11 @@ export function DangerousGoodsConfirmation({
           <div className="flex items-center justify-between text-sm text-gray-600">
             <span>Dangerous goods to confirm: {localConfirmed.length}</span>
             <span>
-              Total weight: {localConfirmed.reduce((sum, dg) => sum + dg.weight_kg, 0).toFixed(2)} kg
+              Total weight:{" "}
+              {localConfirmed
+                .reduce((sum, dg) => sum + dg.weight_kg, 0)
+                .toFixed(2)}{" "}
+              kg
             </span>
           </div>
         </div>

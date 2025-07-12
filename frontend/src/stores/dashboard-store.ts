@@ -1,4 +1,4 @@
-import { create } from 'zustand';
+import { create } from "zustand";
 
 interface DashboardState {
   stats: {
@@ -24,38 +24,38 @@ export const useDashboardStore = create<DashboardState>((set) => ({
 
   fetchStats: async () => {
     set({ isLoading: true, error: null });
-    
+
     try {
-      const token = localStorage.getItem('access_token');
-      
+      const token = localStorage.getItem("access_token");
+
       if (!token) {
-        throw new Error('No authentication token found');
+        throw new Error("No authentication token found");
       }
-      
-      const response = await fetch('/api/v1/dashboard/stats/', {
+
+      const response = await fetch("/api/v1/dashboard/stats/", {
         headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
         },
       });
-      
+
       if (!response.ok) {
         throw new Error(`Failed to fetch stats: ${response.status}`);
       }
-      
+
       const data = await response.json();
-      
+
       const stats = {
         totalShipments: data.totalShipments,
         pendingReviews: data.pendingReviews,
         complianceRate: data.complianceRate,
         activeRoutes: data.activeRoutes,
       };
-      
+
       set({ stats, isLoading: false });
     } catch (error) {
-      console.error('Dashboard stats error:', error);
-      
+      console.error("Dashboard stats error:", error);
+
       // Fallback to mock data if API fails
       const fallbackStats = {
         totalShipments: 2847,
@@ -63,11 +63,11 @@ export const useDashboardStore = create<DashboardState>((set) => ({
         complianceRate: 98.7,
         activeRoutes: 156,
       };
-      
-      set({ 
+
+      set({
         stats: fallbackStats,
-        error: error instanceof Error ? error.message : 'Failed to fetch stats',
-        isLoading: false 
+        error: error instanceof Error ? error.message : "Failed to fetch stats",
+        isLoading: false,
       });
     }
   },

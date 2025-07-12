@@ -1,12 +1,12 @@
-'use client';
+"use client";
 
-import React, { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { 
-  AlertTriangle, 
-  Phone, 
+import React, { useState } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import {
+  AlertTriangle,
+  Phone,
   Eye,
   Thermometer,
   Droplets,
@@ -15,9 +15,9 @@ import {
   FileText,
   Printer,
   Download,
-  Info
-} from 'lucide-react';
-import { type EPGData } from '@/services/epgTemplateService';
+  Info,
+} from "lucide-react";
+import { type EPGData } from "@/services/epgTemplateService";
 
 interface EPGViewerProps {
   epgData: EPGData;
@@ -25,7 +25,11 @@ interface EPGViewerProps {
   showActions?: boolean;
 }
 
-export default function EPGViewer({ epgData, className = '', showActions = true }: EPGViewerProps) {
+export default function EPGViewer({
+  epgData,
+  className = "",
+  showActions = true,
+}: EPGViewerProps) {
   const [isPrintMode, setIsPrintMode] = useState(false);
 
   const handlePrint = () => {
@@ -38,13 +42,13 @@ export default function EPGViewer({ epgData, className = '', showActions = true 
 
   const getHazardIcon = (category: string) => {
     switch (category) {
-      case 'fire':
+      case "fire":
         return <Flame className="h-4 w-4 text-red-600" />;
-      case 'spill':
+      case "spill":
         return <Droplets className="h-4 w-4 text-blue-600" />;
-      case 'exposure':
+      case "exposure":
         return <AlertTriangle className="h-4 w-4 text-yellow-600" />;
-      case 'transport':
+      case "transport":
         return <Shield className="h-4 w-4 text-purple-600" />;
       default:
         return <Info className="h-4 w-4 text-gray-600" />;
@@ -53,28 +57,28 @@ export default function EPGViewer({ epgData, className = '', showActions = true 
 
   const getSeverityColor = (severity: string) => {
     switch (severity) {
-      case 'critical':
-        return 'bg-red-600 text-white';
-      case 'high':
-        return 'bg-orange-600 text-white';
-      case 'medium':
-        return 'bg-yellow-600 text-white';
-      case 'low':
-        return 'bg-green-600 text-white';
+      case "critical":
+        return "bg-red-600 text-white";
+      case "high":
+        return "bg-orange-600 text-white";
+      case "medium":
+        return "bg-yellow-600 text-white";
+      case "low":
+        return "bg-green-600 text-white";
       default:
-        return 'bg-gray-600 text-white';
+        return "bg-gray-600 text-white";
     }
   };
 
   const getExposureIcon = (exposureType: string) => {
     switch (exposureType) {
-      case 'eyes':
+      case "eyes":
         return <Eye className="h-4 w-4 text-blue-600" />;
-      case 'inhalation':
+      case "inhalation":
         return <Thermometer className="h-4 w-4 text-purple-600" />;
-      case 'skin':
+      case "skin":
         return <Droplets className="h-4 w-4 text-green-600" />;
-      case 'ingestion':
+      case "ingestion":
         return <AlertTriangle className="h-4 w-4 text-red-600" />;
       default:
         return <Info className="h-4 w-4 text-gray-600" />;
@@ -82,13 +86,19 @@ export default function EPGViewer({ epgData, className = '', showActions = true 
   };
 
   return (
-    <div className={`bg-white ${isPrintMode ? 'print:shadow-none' : 'shadow-lg'} ${className}`}>
+    <div
+      className={`bg-white ${isPrintMode ? "print:shadow-none" : "shadow-lg"} ${className}`}
+    >
       {/* Actions Bar */}
       {showActions && !isPrintMode && (
         <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-gray-50 print:hidden">
           <div>
-            <h2 className="text-lg font-semibold text-gray-900">Emergency Procedure Guide</h2>
-            <p className="text-sm text-gray-600">Generated: {new Date(epgData.generatedDate).toLocaleDateString()}</p>
+            <h2 className="text-lg font-semibold text-gray-900">
+              Emergency Procedure Guide
+            </h2>
+            <p className="text-sm text-gray-600">
+              Generated: {new Date(epgData.generatedDate).toLocaleDateString()}
+            </p>
           </div>
           <div className="flex items-center gap-2">
             <Button variant="outline" size="sm" onClick={handlePrint}>
@@ -119,24 +129,32 @@ export default function EPGViewer({ epgData, className = '', showActions = true 
               </p>
             </div>
           </div>
-          
+
           {/* Basic Info Table */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm print:text-xs">
             <div className="bg-gray-50 p-3 rounded">
               <span className="font-medium text-gray-600">UN NO.</span>
-              <p className="font-bold text-lg text-gray-900">{epgData.unNumber}</p>
+              <p className="font-bold text-lg text-gray-900">
+                {epgData.unNumber}
+              </p>
             </div>
             <div className="bg-gray-50 p-3 rounded">
               <span className="font-medium text-gray-600">HAZCHEM</span>
-              <p className="font-bold text-lg text-gray-900">{epgData.hazchemCode}</p>
+              <p className="font-bold text-lg text-gray-900">
+                {epgData.hazchemCode}
+              </p>
             </div>
             <div className="bg-gray-50 p-3 rounded">
               <span className="font-medium text-gray-600">CLASS</span>
-              <p className="font-bold text-lg text-gray-900">{epgData.hazardClass}</p>
+              <p className="font-bold text-lg text-gray-900">
+                {epgData.hazardClass}
+              </p>
             </div>
             <div className="bg-gray-50 p-3 rounded">
               <span className="font-medium text-gray-600">APPEARANCE</span>
-              <p className="font-bold text-gray-900 text-sm">WHITE TO OFF-WHITE GRANULAR SOLID, SLIGHT ODOUR</p>
+              <p className="font-bold text-gray-900 text-sm">
+                WHITE TO OFF-WHITE GRANULAR SOLID, SLIGHT ODOUR
+              </p>
             </div>
           </div>
         </div>
@@ -153,19 +171,29 @@ export default function EPGViewer({ epgData, className = '', showActions = true 
               <div className="border border-gray-300 p-4 print:p-3">
                 <div className="grid grid-cols-1 gap-4 text-sm print:text-xs">
                   <div>
-                    <span className="font-medium text-gray-700">Hazard Summary</span>
-                    <p className="text-gray-900 mt-1">{epgData.hazardSummary}</p>
+                    <span className="font-medium text-gray-700">
+                      Hazard Summary
+                    </span>
+                    <p className="text-gray-900 mt-1">
+                      {epgData.hazardSummary}
+                    </p>
                   </div>
                   <div>
-                    <span className="font-medium text-gray-700">Special hazards</span>
+                    <span className="font-medium text-gray-700">
+                      Special hazards
+                    </span>
                     <div className="mt-1">
                       {epgData.specialHazards.map((hazard, index) => (
-                        <p key={index} className="text-gray-900">{hazard}</p>
+                        <p key={index} className="text-gray-900">
+                          {hazard}
+                        </p>
                       ))}
                     </div>
                   </div>
                   <div>
-                    <span className="font-medium text-gray-700">Reactivity</span>
+                    <span className="font-medium text-gray-700">
+                      Reactivity
+                    </span>
                     <p className="text-gray-900 mt-1">{epgData.reactivity}</p>
                   </div>
                 </div>
@@ -180,7 +208,9 @@ export default function EPGViewer({ epgData, className = '', showActions = true 
               <div className="border border-gray-300 p-4 print:p-3">
                 <div className="text-sm print:text-xs">
                   {epgData.precautions.map((precaution, index) => (
-                    <p key={index} className="text-gray-900 mb-2">{precaution}</p>
+                    <p key={index} className="text-gray-900 mb-2">
+                      {precaution}
+                    </p>
                   ))}
                 </div>
               </div>
@@ -194,11 +224,18 @@ export default function EPGViewer({ epgData, className = '', showActions = true 
               <div className="border border-gray-300 p-4 print:p-3">
                 <div className="space-y-3 text-sm print:text-xs">
                   {epgData.emergencyContacts.map((contact, index) => (
-                    <div key={index} className="flex items-center justify-between">
-                      <span className="font-medium text-gray-700">{contact.organization}</span>
+                    <div
+                      key={index}
+                      className="flex items-center justify-between"
+                    >
+                      <span className="font-medium text-gray-700">
+                        {contact.organization}
+                      </span>
                       <div className="flex items-center gap-2">
                         <Phone className="h-4 w-4 text-[#153F9F]" />
-                        <span className="font-bold text-gray-900">{contact.phone}</span>
+                        <span className="font-bold text-gray-900">
+                          {contact.phone}
+                        </span>
                       </div>
                     </div>
                   ))}
@@ -218,8 +255,12 @@ export default function EPGViewer({ epgData, className = '', showActions = true 
                 <table className="w-full text-sm print:text-xs">
                   <thead className="bg-gray-100">
                     <tr>
-                      <th className="text-left p-3 print:p-2 font-medium">If this happens</th>
-                      <th className="text-left p-3 print:p-2 font-medium">Do this</th>
+                      <th className="text-left p-3 print:p-2 font-medium">
+                        If this happens
+                      </th>
+                      <th className="text-left p-3 print:p-2 font-medium">
+                        Do this
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
@@ -229,8 +270,12 @@ export default function EPGViewer({ epgData, className = '', showActions = true 
                           <div className="flex items-start gap-2">
                             {getHazardIcon(procedure.category)}
                             <div>
-                              <span className="font-medium text-gray-900">{procedure.scenario}</span>
-                              <Badge className={`ml-2 text-xs ${getSeverityColor(procedure.severity)}`}>
+                              <span className="font-medium text-gray-900">
+                                {procedure.scenario}
+                              </span>
+                              <Badge
+                                className={`ml-2 text-xs ${getSeverityColor(procedure.severity)}`}
+                              >
                                 {procedure.severity.toUpperCase()}
                               </Badge>
                             </div>
@@ -255,8 +300,12 @@ export default function EPGViewer({ epgData, className = '', showActions = true 
                 <table className="w-full text-sm print:text-xs">
                   <thead className="bg-gray-100">
                     <tr>
-                      <th className="text-left p-3 print:p-2 font-medium">Exposure</th>
-                      <th className="text-left p-3 print:p-2 font-medium">Treatment</th>
+                      <th className="text-left p-3 print:p-2 font-medium">
+                        Exposure
+                      </th>
+                      <th className="text-left p-3 print:p-2 font-medium">
+                        Treatment
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
@@ -301,10 +350,13 @@ export default function EPGViewer({ epgData, className = '', showActions = true 
 
         {/* Footer */}
         <div className="mt-8 print:mt-6 pt-4 border-t border-gray-200 text-center text-xs text-gray-500 print:text-xs">
-          <p>Emergency Procedure Guide v{epgData.documentVersion} | Generated by SafeShipper</p>
+          <p>
+            Emergency Procedure Guide v{epgData.documentVersion} | Generated by
+            SafeShipper
+          </p>
           <p>Generated: {new Date(epgData.generatedDate).toLocaleString()}</p>
           <p className="mt-2">
-            Regulatory References: {epgData.regulatoryReferences.join(', ')}
+            Regulatory References: {epgData.regulatoryReferences.join(", ")}
           </p>
         </div>
       </div>
@@ -357,12 +409,12 @@ export default function EPGViewer({ epgData, className = '', showActions = true 
           .print\\:max-w-none {
             max-width: none !important;
           }
-          
+
           @page {
             margin: 1cm;
             size: A4;
           }
-          
+
           body {
             print-color-adjust: exact;
             -webkit-print-color-adjust: exact;

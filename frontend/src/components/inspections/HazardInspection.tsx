@@ -1,17 +1,17 @@
 // components/inspections/HazardInspection.tsx
-'use client';
+"use client";
 
-import React, { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Input } from '@/components/ui/input';
-import { 
-  CheckCircle, 
-  XCircle, 
-  Camera, 
-  FileText, 
+import React, { useState } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Input } from "@/components/ui/input";
+import {
+  CheckCircle,
+  XCircle,
+  Camera,
+  FileText,
   AlertTriangle,
   Clock,
   User,
@@ -20,9 +20,12 @@ import {
   Shield,
   Eye,
   Plus,
-  Loader2
-} from 'lucide-react';
-import { useMockInspections, useMockCreateInspection } from '@/hooks/useMockAPI';
+  Loader2,
+} from "lucide-react";
+import {
+  useMockInspections,
+  useMockCreateInspection,
+} from "@/hooks/useMockAPI";
 
 interface HazardInspectionProps {
   shipmentId: string;
@@ -35,108 +38,109 @@ interface InspectionItem {
   description: string;
   category: string;
   is_mandatory: boolean;
-  result?: 'PASS' | 'FAIL' | 'N/A';
+  result?: "PASS" | "FAIL" | "N/A";
   notes?: string;
   photos?: string[];
 }
 
 // Standard inspection checklist items
 const INSPECTION_CHECKLISTS = {
-  'PRE_TRIP': [
-    { 
-      id: '1', 
-      description: 'Check vehicle for fluid leaks (oil, fuel, coolant)', 
-      category: 'VEHICLE',
-      is_mandatory: true 
+  PRE_TRIP: [
+    {
+      id: "1",
+      description: "Check vehicle for fluid leaks (oil, fuel, coolant)",
+      category: "VEHICLE",
+      is_mandatory: true,
     },
-    { 
-      id: '2', 
-      description: 'Verify dangerous goods placarding is correct and visible', 
-      category: 'PLACARDING',
-      is_mandatory: true 
+    {
+      id: "2",
+      description: "Verify dangerous goods placarding is correct and visible",
+      category: "PLACARDING",
+      is_mandatory: true,
     },
-    { 
-      id: '3', 
-      description: 'Inspect load securing and restraint systems', 
-      category: 'CARGO',
-      is_mandatory: true 
+    {
+      id: "3",
+      description: "Inspect load securing and restraint systems",
+      category: "CARGO",
+      is_mandatory: true,
     },
-    { 
-      id: '4', 
-      description: 'Check fire extinguisher is present and accessible', 
-      category: 'SAFETY',
-      is_mandatory: true 
+    {
+      id: "4",
+      description: "Check fire extinguisher is present and accessible",
+      category: "SAFETY",
+      is_mandatory: true,
     },
-    { 
-      id: '5', 
-      description: 'Verify emergency response documentation is available', 
-      category: 'DOCUMENTATION',
-      is_mandatory: true 
+    {
+      id: "5",
+      description: "Verify emergency response documentation is available",
+      category: "DOCUMENTATION",
+      is_mandatory: true,
     },
-    { 
-      id: '6', 
-      description: 'Check tire condition and pressure', 
-      category: 'VEHICLE',
-      is_mandatory: true 
+    {
+      id: "6",
+      description: "Check tire condition and pressure",
+      category: "VEHICLE",
+      is_mandatory: true,
     },
-    { 
-      id: '7', 
-      description: 'Inspect lighting systems (headlights, taillights, hazard lights)', 
-      category: 'VEHICLE',
-      is_mandatory: true 
+    {
+      id: "7",
+      description:
+        "Inspect lighting systems (headlights, taillights, hazard lights)",
+      category: "VEHICLE",
+      is_mandatory: true,
     },
-    { 
-      id: '8', 
-      description: 'Verify spill kit is complete and accessible', 
-      category: 'SAFETY',
-      is_mandatory: true 
-    }
+    {
+      id: "8",
+      description: "Verify spill kit is complete and accessible",
+      category: "SAFETY",
+      is_mandatory: true,
+    },
   ],
-  'POST_TRIP': [
-    { 
-      id: '1', 
-      description: 'Check for any new fluid leaks after trip', 
-      category: 'VEHICLE',
-      is_mandatory: true 
+  POST_TRIP: [
+    {
+      id: "1",
+      description: "Check for any new fluid leaks after trip",
+      category: "VEHICLE",
+      is_mandatory: true,
     },
-    { 
-      id: '2', 
-      description: 'Inspect cargo area for damage or contamination', 
-      category: 'CARGO',
-      is_mandatory: true 
+    {
+      id: "2",
+      description: "Inspect cargo area for damage or contamination",
+      category: "CARGO",
+      is_mandatory: true,
     },
-    { 
-      id: '3', 
-      description: 'Verify all dangerous goods have been properly unloaded', 
-      category: 'CARGO',
-      is_mandatory: true 
+    {
+      id: "3",
+      description: "Verify all dangerous goods have been properly unloaded",
+      category: "CARGO",
+      is_mandatory: true,
     },
-    { 
-      id: '4', 
-      description: 'Check that placarding has been removed if required', 
-      category: 'PLACARDING',
-      is_mandatory: true 
+    {
+      id: "4",
+      description: "Check that placarding has been removed if required",
+      category: "PLACARDING",
+      is_mandatory: true,
     },
-    { 
-      id: '5', 
-      description: 'Document any incidents or issues during transport', 
-      category: 'DOCUMENTATION',
-      is_mandatory: true 
-    }
-  ]
+    {
+      id: "5",
+      description: "Document any incidents or issues during transport",
+      category: "DOCUMENTATION",
+      is_mandatory: true,
+    },
+  ],
 };
 
 const getCategoryIcon = (category: string) => {
   switch (category) {
-    case 'VEHICLE':
+    case "VEHICLE":
       return <Truck className="h-4 w-4" />;
-    case 'CARGO':
+    case "CARGO":
       return <Package className="h-4 w-4" />;
-    case 'SAFETY':
+    case "SAFETY":
       return <Shield className="h-4 w-4" />;
-    case 'PLACARDING':
+    case "PLACARDING":
       return <FileText className="h-4 w-4" />;
-    case 'DOCUMENTATION':
+    case "DOCUMENTATION":
       return <FileText className="h-4 w-4" />;
     default:
       return <CheckCircle className="h-4 w-4" />;
@@ -145,105 +149,111 @@ const getCategoryIcon = (category: string) => {
 
 const getCategoryColor = (category: string) => {
   switch (category) {
-    case 'VEHICLE':
-      return 'bg-blue-100 text-blue-800 border-blue-200';
-    case 'CARGO':
-      return 'bg-green-100 text-green-800 border-green-200';
-    case 'SAFETY':
-      return 'bg-red-100 text-red-800 border-red-200';
-    case 'PLACARDING':
-      return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-    case 'DOCUMENTATION':
-      return 'bg-purple-100 text-purple-800 border-purple-200';
+    case "VEHICLE":
+      return "bg-blue-100 text-blue-800 border-blue-200";
+    case "CARGO":
+      return "bg-green-100 text-green-800 border-green-200";
+    case "SAFETY":
+      return "bg-red-100 text-red-800 border-red-200";
+    case "PLACARDING":
+      return "bg-yellow-100 text-yellow-800 border-yellow-200";
+    case "DOCUMENTATION":
+      return "bg-purple-100 text-purple-800 border-purple-200";
     default:
-      return 'bg-gray-100 text-gray-800 border-gray-200';
+      return "bg-gray-100 text-gray-800 border-gray-200";
   }
 };
 
-export function HazardInspection({ 
-  shipmentId, 
-  inspectionType = 'PRE_TRIP', 
-  className 
+export function HazardInspection({
+  shipmentId,
+  inspectionType = "PRE_TRIP",
+  className,
 }: HazardInspectionProps) {
-  const [selectedItems, setSelectedItems] = useState<{ [key: string]: InspectionItem }>({});
+  const [selectedItems, setSelectedItems] = useState<{
+    [key: string]: InspectionItem;
+  }>({});
   const [isStarted, setIsStarted] = useState(false);
   const [currentItemIndex, setCurrentItemIndex] = useState(0);
-  const [notes, setNotes] = useState('');
+  const [notes, setNotes] = useState("");
 
-  const { data: existingInspections, isLoading } = useMockInspections(shipmentId);
+  const { data: existingInspections, isLoading } =
+    useMockInspections(shipmentId);
   const createInspectionMutation = useMockCreateInspection();
 
-  const checklist = INSPECTION_CHECKLISTS[inspectionType as keyof typeof INSPECTION_CHECKLISTS] || [];
+  const checklist =
+    INSPECTION_CHECKLISTS[
+      inspectionType as keyof typeof INSPECTION_CHECKLISTS
+    ] || [];
   const currentItem = checklist[currentItemIndex];
   const isLastItem = currentItemIndex === checklist.length - 1;
 
   // Check if there's already a completed inspection of this type
   const existingInspection = existingInspections?.find(
-    (inspection: any) => inspection.inspection_type === inspectionType
+    (inspection: any) => inspection.inspection_type === inspectionType,
   );
 
   const handleStartInspection = () => {
     setIsStarted(true);
     // Initialize all items in selectedItems
     const initialItems: { [key: string]: InspectionItem } = {};
-    checklist.forEach(item => {
+    checklist.forEach((item) => {
       initialItems[item.id] = { ...item };
     });
     setSelectedItems(initialItems);
   };
 
-  const handleItemResult = (result: 'PASS' | 'FAIL' | 'N/A') => {
+  const handleItemResult = (result: "PASS" | "FAIL" | "N/A") => {
     if (!currentItem) return;
 
-    setSelectedItems(prev => ({
+    setSelectedItems((prev) => ({
       ...prev,
       [currentItem.id]: {
         ...prev[currentItem.id],
         result,
-        notes: notes
-      }
+        notes: notes,
+      },
     }));
 
-    setNotes('');
+    setNotes("");
 
     if (isLastItem) {
       // Complete inspection
       handleCompleteInspection();
     } else {
-      setCurrentItemIndex(prev => prev + 1);
+      setCurrentItemIndex((prev) => prev + 1);
     }
   };
 
   const handleCompleteInspection = async () => {
-    const items = Object.values(selectedItems).map(item => ({
+    const items = Object.values(selectedItems).map((item) => ({
       description: item.description,
       category: item.category,
       is_mandatory: item.is_mandatory,
       result: item.result,
-      notes: item.notes || '',
-      photos: item.photos || []
+      notes: item.notes || "",
+      photos: item.photos || [],
     }));
 
     try {
       await createInspectionMutation.mutateAsync({
         shipmentId,
         inspectionType,
-        items
+        items,
       });
-      
+
       // Reset state
       setIsStarted(false);
       setCurrentItemIndex(0);
       setSelectedItems({});
     } catch (error) {
-      console.error('Failed to complete inspection:', error);
+      console.error("Failed to complete inspection:", error);
     }
   };
 
   const handlePreviousItem = () => {
     if (currentItemIndex > 0) {
-      setCurrentItemIndex(prev => prev - 1);
-      setNotes(selectedItems[checklist[currentItemIndex - 1]?.id]?.notes || '');
+      setCurrentItemIndex((prev) => prev - 1);
+      setNotes(selectedItems[checklist[currentItemIndex - 1]?.id]?.notes || "");
     }
   };
 
@@ -254,11 +264,11 @@ export function HazardInspection({
 
   const getOverallResult = () => {
     const items = Object.values(selectedItems);
-    const completedItems = items.filter(item => item.result);
-    const failedItems = completedItems.filter(item => item.result === 'FAIL');
-    
+    const completedItems = items.filter((item) => item.result);
+    const failedItems = completedItems.filter((item) => item.result === "FAIL");
+
     if (completedItems.length === 0) return null;
-    return failedItems.length === 0 ? 'PASS' : 'FAIL';
+    return failedItems.length === 0 ? "PASS" : "FAIL";
   };
 
   if (isLoading) {
@@ -278,25 +288,41 @@ export function HazardInspection({
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <CheckCircle className="h-5 w-5 text-green-600" />
-            {inspectionType.replace('_', ' ')} Inspection Complete
+            {inspectionType.replace("_", " ")} Inspection Complete
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <Alert className="border-green-200 bg-green-50">
             <CheckCircle className="h-4 w-4 text-green-600" />
             <AlertDescription className="text-green-800">
-              This inspection was completed on {new Date(existingInspection.timestamp).toLocaleString()}.
+              This inspection was completed on{" "}
+              {new Date(existingInspection.timestamp).toLocaleString()}.
             </AlertDescription>
           </Alert>
-          
+
           <div className="grid grid-cols-2 gap-4 text-sm">
             <div>
-              <p><span className="font-medium">Inspector:</span> {existingInspection.inspector.name}</p>
-              <p><span className="font-medium">Items Checked:</span> {existingInspection.items.length}</p>
+              <p>
+                <span className="font-medium">Inspector:</span>{" "}
+                {existingInspection.inspector.name}
+              </p>
+              <p>
+                <span className="font-medium">Items Checked:</span>{" "}
+                {existingInspection.items.length}
+              </p>
             </div>
             <div>
-              <p><span className="font-medium">Status:</span> {existingInspection.status}</p>
-              <p><span className="font-medium">Photos:</span> {existingInspection.items.reduce((sum: number, item: any) => sum + item.photos.length, 0)}</p>
+              <p>
+                <span className="font-medium">Status:</span>{" "}
+                {existingInspection.status}
+              </p>
+              <p>
+                <span className="font-medium">Photos:</span>{" "}
+                {existingInspection.items.reduce(
+                  (sum: number, item: any) => sum + item.photos.length,
+                  0,
+                )}
+              </p>
             </div>
           </div>
 
@@ -315,7 +341,7 @@ export function HazardInspection({
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Shield className="h-5 w-5" />
-            {inspectionType.replace('_', ' ')} Hazard Inspection
+            {inspectionType.replace("_", " ")} Hazard Inspection
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -323,21 +349,24 @@ export function HazardInspection({
             <div className="p-4 bg-blue-100 rounded-full w-16 h-16 mx-auto mb-4 flex items-center justify-center">
               <Shield className="h-8 w-8 text-blue-600" />
             </div>
-            
+
             <h3 className="text-lg font-semibold mb-2">
-              Ready to Start {inspectionType.replace('_', ' ')} Inspection
+              Ready to Start {inspectionType.replace("_", " ")} Inspection
             </h3>
             <p className="text-gray-600 text-sm mb-4">
               Complete the mandatory safety checklist for shipment {shipmentId}
             </p>
-            
+
             <div className="space-y-2 text-sm text-gray-500 mb-6">
               <p>✓ {checklist.length} inspection points to verify</p>
               <p>✓ Photo documentation required for failed items</p>
-              <p>✓ Estimated completion time: {Math.ceil(checklist.length * 1.5)} minutes</p>
+              <p>
+                ✓ Estimated completion time: {Math.ceil(checklist.length * 1.5)}{" "}
+                minutes
+              </p>
             </div>
 
-            <Button 
+            <Button
               onClick={handleStartInspection}
               size="lg"
               className="w-full"
@@ -357,34 +386,36 @@ export function HazardInspection({
         <div className="flex items-center justify-between">
           <CardTitle className="flex items-center gap-2">
             <Shield className="h-5 w-5" />
-            {inspectionType.replace('_', ' ')} Inspection
+            {inspectionType.replace("_", " ")} Inspection
           </CardTitle>
           <Badge variant="outline" className="text-xs">
             {currentItemIndex + 1} of {checklist.length}
           </Badge>
         </div>
-        
+
         {/* Progress Bar */}
         <div className="w-full bg-gray-200 rounded-full h-2">
-          <div 
+          <div
             className="bg-blue-600 h-2 rounded-full transition-all duration-300"
             style={{ width: `${getCompletionPercentage()}%` }}
           ></div>
         </div>
       </CardHeader>
-      
+
       <CardContent className="space-y-4">
         {currentItem && (
           <>
             {/* Current Item */}
             <div className="border rounded-lg p-4 bg-gray-50">
               <div className="flex items-start gap-3 mb-3">
-                <div className={`p-2 rounded-full ${getCategoryColor(currentItem.category)}`}>
+                <div
+                  className={`p-2 rounded-full ${getCategoryColor(currentItem.category)}`}
+                >
                   {getCategoryIcon(currentItem.category)}
                 </div>
                 <div className="flex-1">
-                  <Badge 
-                    variant="outline" 
+                  <Badge
+                    variant="outline"
                     className={`text-xs mb-2 ${getCategoryColor(currentItem.category)}`}
                   >
                     {currentItem.category}
@@ -393,7 +424,10 @@ export function HazardInspection({
                     {currentItem.description}
                   </h4>
                   {currentItem.is_mandatory && (
-                    <Badge variant="outline" className="text-xs bg-red-50 text-red-700 border-red-200">
+                    <Badge
+                      variant="outline"
+                      className="text-xs bg-red-50 text-red-700 border-red-200"
+                    >
                       Mandatory
                     </Badge>
                   )}
@@ -413,7 +447,7 @@ export function HazardInspection({
               {/* Action Buttons */}
               <div className="grid grid-cols-3 gap-2">
                 <Button
-                  onClick={() => handleItemResult('PASS')}
+                  onClick={() => handleItemResult("PASS")}
                   className="bg-green-600 hover:bg-green-700 text-white"
                   size="sm"
                 >
@@ -421,7 +455,7 @@ export function HazardInspection({
                   Pass
                 </Button>
                 <Button
-                  onClick={() => handleItemResult('FAIL')}
+                  onClick={() => handleItemResult("FAIL")}
                   className="bg-red-600 hover:bg-red-700 text-white"
                   size="sm"
                 >
@@ -429,7 +463,7 @@ export function HazardInspection({
                   Fail
                 </Button>
                 <Button
-                  onClick={() => handleItemResult('N/A')}
+                  onClick={() => handleItemResult("N/A")}
                   variant="outline"
                   size="sm"
                 >
@@ -454,7 +488,7 @@ export function HazardInspection({
               >
                 Previous
               </Button>
-              
+
               <div className="flex items-center gap-2 text-sm text-gray-500">
                 <Clock className="h-3 w-3" />
                 <span>{getCompletionPercentage()}% complete</span>

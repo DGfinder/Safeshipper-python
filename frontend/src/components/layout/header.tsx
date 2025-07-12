@@ -1,11 +1,11 @@
-'use client';
+"use client";
 
-import { Search, Bell, LogOut } from 'lucide-react';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { useAuthStore } from '@/stores/auth-store';
-import { useRouter } from 'next/navigation';
+import { Search, Bell, LogOut } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { useAuthStore } from "@/stores/auth-store";
+import { useRouter } from "next/navigation";
 
 export function Header() {
   const { user, logout } = useAuthStore();
@@ -13,7 +13,7 @@ export function Header() {
 
   const handleLogout = () => {
     logout();
-    router.push('/login');
+    router.push("/login");
   };
 
   return (
@@ -35,8 +35,8 @@ export function Header() {
         {/* Notifications */}
         <Button variant="ghost" size="icon" className="relative">
           <Bell className="h-5 w-5" />
-          <Badge 
-            variant="destructive" 
+          <Badge
+            variant="destructive"
             className="absolute -top-2 -right-2 h-5 w-5 rounded-full p-0 text-xs flex items-center justify-center"
           >
             4
@@ -46,11 +46,13 @@ export function Header() {
         {/* User Avatar */}
         <div className="flex items-center space-x-3">
           <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#153F9F] text-white text-sm font-medium">
-            {user?.avatar || 'U'}
+            {user?.avatar || "U"}
           </div>
           <div className="hidden md:block">
-            <p className="text-sm font-medium text-gray-900">{user?.username || 'Unknown User'}</p>
-            <p className="text-xs text-gray-500">{user?.role || 'User'}</p>
+            <p className="text-sm font-medium text-gray-900">
+              {user?.username || "Unknown User"}
+            </p>
+            <p className="text-xs text-gray-500">{user?.role || "User"}</p>
           </div>
           <Button
             variant="ghost"

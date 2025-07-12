@@ -1,11 +1,11 @@
-'use client';
+"use client";
 
-import { useState, useEffect, useCallback } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { 
+import { useState, useEffect, useCallback } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
   Activity,
   Thermometer,
   Droplets,
@@ -20,8 +20,8 @@ import {
   Clock,
   TrendingUp,
   Eye,
-  Command
-} from 'lucide-react';
+  Command,
+} from "lucide-react";
 
 interface IoTDevice {
   id: string;
@@ -31,7 +31,7 @@ interface IoTDevice {
     name: string;
     category: string;
   };
-  status: 'active' | 'inactive' | 'maintenance' | 'error' | 'offline';
+  status: "active" | "inactive" | "maintenance" | "error" | "offline";
   location: string;
   coordinates?: { lat: number; lng: number };
   last_seen: string;
@@ -54,10 +54,10 @@ interface DeviceAlert {
   id: string;
   device_name: string;
   alert_type: string;
-  severity: 'info' | 'warning' | 'error' | 'critical';
+  severity: "info" | "warning" | "error" | "critical";
   title: string;
   description: string;
-  status: 'active' | 'acknowledged' | 'resolved';
+  status: "active" | "acknowledged" | "resolved";
   triggered_at: string;
 }
 
@@ -77,7 +77,7 @@ export default function IoTMonitoringPage() {
   const [alerts, setAlerts] = useState<DeviceAlert[]>([]);
   const [stats, setStats] = useState<IoTStats | null>(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('overview');
+  const [activeTab, setActiveTab] = useState("overview");
   const [autoRefresh, setAutoRefresh] = useState(true);
 
   const fetchData = useCallback(async () => {
@@ -89,112 +89,112 @@ export default function IoTMonitoringPage() {
         offline_devices: 2,
         devices_with_alerts: 3,
         total_readings_today: 2847,
-        active_alerts: 5
+        active_alerts: 5,
       };
 
       const mockDevices: IoTDevice[] = [
         {
-          id: '1',
-          device_id: 'ESP32_TEMP_001',
-          name: 'Warehouse A Temperature Sensor',
-          device_type: { name: 'Temperature Sensor', category: 'sensor' },
-          status: 'active',
-          location: 'Warehouse A - Bay 1',
-          coordinates: { lat: 40.7128, lng: -74.0060 },
+          id: "1",
+          device_id: "ESP32_TEMP_001",
+          name: "Warehouse A Temperature Sensor",
+          device_type: { name: "Temperature Sensor", category: "sensor" },
+          status: "active",
+          location: "Warehouse A - Bay 1",
+          coordinates: { lat: 40.7128, lng: -74.006 },
           last_seen: new Date(Date.now() - 2 * 60 * 1000).toISOString(),
           battery_level: 85,
           signal_strength: -45,
-          is_online: true
+          is_online: true,
         },
         {
-          id: '2',
-          device_id: 'RPI_GATEWAY_001',
-          name: 'Main Gateway',
-          device_type: { name: 'IoT Gateway', category: 'controller' },
-          status: 'active',
-          location: 'Control Room',
+          id: "2",
+          device_id: "RPI_GATEWAY_001",
+          name: "Main Gateway",
+          device_type: { name: "IoT Gateway", category: "controller" },
+          status: "active",
+          location: "Control Room",
           last_seen: new Date(Date.now() - 30 * 1000).toISOString(),
           signal_strength: -35,
-          is_online: true
+          is_online: true,
         },
         {
-          id: '3',
-          device_id: 'ESP32_SHOCK_002',
-          name: 'Transport Monitor',
-          device_type: { name: 'Shock Sensor', category: 'tracker' },
-          status: 'error',
-          location: 'Vehicle VH-001',
+          id: "3",
+          device_id: "ESP32_SHOCK_002",
+          name: "Transport Monitor",
+          device_type: { name: "Shock Sensor", category: "tracker" },
+          status: "error",
+          location: "Vehicle VH-001",
           last_seen: new Date(Date.now() - 15 * 60 * 1000).toISOString(),
           battery_level: 15,
           signal_strength: -75,
-          is_online: false
-        }
+          is_online: false,
+        },
       ];
 
       const mockAlerts: DeviceAlert[] = [
         {
-          id: '1',
-          device_name: 'Transport Monitor',
-          alert_type: 'battery_low',
-          severity: 'warning',
-          title: 'Low Battery Alert',
-          description: 'Device battery level is below 20%',
-          status: 'active',
-          triggered_at: new Date(Date.now() - 5 * 60 * 1000).toISOString()
+          id: "1",
+          device_name: "Transport Monitor",
+          alert_type: "battery_low",
+          severity: "warning",
+          title: "Low Battery Alert",
+          description: "Device battery level is below 20%",
+          status: "active",
+          triggered_at: new Date(Date.now() - 5 * 60 * 1000).toISOString(),
         },
         {
-          id: '2',
-          device_name: 'Warehouse A Temperature Sensor',
-          alert_type: 'temperature_high',
-          severity: 'critical',
-          title: 'Temperature Threshold Exceeded',
-          description: 'Temperature reading of 35°C exceeds critical threshold of 30°C',
-          status: 'active',
-          triggered_at: new Date(Date.now() - 2 * 60 * 1000).toISOString()
-        }
+          id: "2",
+          device_name: "Warehouse A Temperature Sensor",
+          alert_type: "temperature_high",
+          severity: "critical",
+          title: "Temperature Threshold Exceeded",
+          description:
+            "Temperature reading of 35°C exceeds critical threshold of 30°C",
+          status: "active",
+          triggered_at: new Date(Date.now() - 2 * 60 * 1000).toISOString(),
+        },
       ];
 
       const mockSensorData: SensorReading[] = [
         {
-          id: '1',
-          sensor_type: 'temperature',
+          id: "1",
+          sensor_type: "temperature",
           value: 35.2,
-          unit: '°C',
+          unit: "°C",
           timestamp: new Date().toISOString(),
           quality_score: 0.95,
-          device_name: 'Warehouse A Temperature Sensor'
+          device_name: "Warehouse A Temperature Sensor",
         },
         {
-          id: '2',
-          sensor_type: 'humidity',
+          id: "2",
+          sensor_type: "humidity",
           value: 68.5,
-          unit: '%',
+          unit: "%",
           timestamp: new Date().toISOString(),
           quality_score: 0.98,
-          device_name: 'Warehouse A Temperature Sensor'
+          device_name: "Warehouse A Temperature Sensor",
         },
         {
-          id: '3',
-          sensor_type: 'shock',
+          id: "3",
+          sensor_type: "shock",
           value: 1,
-          unit: 'event',
+          unit: "event",
           timestamp: new Date(Date.now() - 30 * 1000).toISOString(),
           quality_score: 1.0,
-          device_name: 'Transport Monitor'
-        }
+          device_name: "Transport Monitor",
+        },
       ];
 
       setStats(mockStats);
       setDevices(mockDevices);
       setAlerts(mockAlerts);
       setSensorData(mockSensorData);
-      
+
       if (!selectedDevice && mockDevices.length > 0) {
         setSelectedDevice(mockDevices[0]);
       }
-
     } catch (error) {
-      console.error('Error fetching IoT data:', error);
+      console.error("Error fetching IoT data:", error);
     } finally {
       setLoading(false);
     }
@@ -202,7 +202,7 @@ export default function IoTMonitoringPage() {
 
   useEffect(() => {
     fetchData();
-    
+
     if (autoRefresh) {
       const interval = setInterval(fetchData, 30000); // Refresh every 30 seconds
       return () => clearInterval(interval);
@@ -211,33 +211,50 @@ export default function IoTMonitoringPage() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'active': return 'bg-green-500';
-      case 'inactive': return 'bg-gray-500';
-      case 'maintenance': return 'bg-yellow-500';
-      case 'error': return 'bg-red-500';
-      case 'offline': return 'bg-gray-400';
-      default: return 'bg-gray-500';
+      case "active":
+        return "bg-green-500";
+      case "inactive":
+        return "bg-gray-500";
+      case "maintenance":
+        return "bg-yellow-500";
+      case "error":
+        return "bg-red-500";
+      case "offline":
+        return "bg-gray-400";
+      default:
+        return "bg-gray-500";
     }
   };
 
   const getSeverityColor = (severity: string) => {
     switch (severity) {
-      case 'info': return 'bg-blue-500';
-      case 'warning': return 'bg-yellow-500';
-      case 'error': return 'bg-orange-500';
-      case 'critical': return 'bg-red-500';
-      default: return 'bg-gray-500';
+      case "info":
+        return "bg-blue-500";
+      case "warning":
+        return "bg-yellow-500";
+      case "error":
+        return "bg-orange-500";
+      case "critical":
+        return "bg-red-500";
+      default:
+        return "bg-gray-500";
     }
   };
 
   const getSensorIcon = (sensorType: string) => {
     switch (sensorType) {
-      case 'temperature': return Thermometer;
-      case 'humidity': return Droplets;
-      case 'pressure': return Gauge;
-      case 'location': return MapPin;
-      case 'shock': return Zap;
-      default: return Activity;
+      case "temperature":
+        return Thermometer;
+      case "humidity":
+        return Droplets;
+      case "pressure":
+        return Gauge;
+      case "location":
+        return MapPin;
+      case "shock":
+        return Zap;
+      default:
+        return Activity;
     }
   };
 
@@ -255,7 +272,9 @@ export default function IoTMonitoringPage() {
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">IoT Monitoring</h1>
-          <p className="text-gray-600">Real-time monitoring of IoT devices and sensors</p>
+          <p className="text-gray-600">
+            Real-time monitoring of IoT devices and sensors
+          </p>
         </div>
         <div className="flex gap-2">
           <Button
@@ -286,55 +305,63 @@ export default function IoTMonitoringPage() {
               </div>
             </CardContent>
           </Card>
-          
+
           <Card>
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-gray-600">Online</p>
-                  <p className="text-2xl font-bold text-green-600">{stats.online_devices}</p>
+                  <p className="text-2xl font-bold text-green-600">
+                    {stats.online_devices}
+                  </p>
                 </div>
                 <Wifi className="h-8 w-8 text-green-600" />
               </div>
             </CardContent>
           </Card>
-          
+
           <Card>
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-gray-600">Offline</p>
-                  <p className="text-2xl font-bold text-red-600">{stats.offline_devices}</p>
+                  <p className="text-2xl font-bold text-red-600">
+                    {stats.offline_devices}
+                  </p>
                 </div>
                 <Wifi className="h-8 w-8 text-red-600" />
               </div>
             </CardContent>
           </Card>
-          
+
           <Card>
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-gray-600">Active Alerts</p>
-                  <p className="text-2xl font-bold text-orange-600">{stats.active_alerts}</p>
+                  <p className="text-2xl font-bold text-orange-600">
+                    {stats.active_alerts}
+                  </p>
                 </div>
                 <AlertTriangle className="h-8 w-8 text-orange-600" />
               </div>
             </CardContent>
           </Card>
-          
+
           <Card>
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-gray-600">Readings Today</p>
-                  <p className="text-2xl font-bold">{stats.total_readings_today.toLocaleString()}</p>
+                  <p className="text-2xl font-bold">
+                    {stats.total_readings_today.toLocaleString()}
+                  </p>
                 </div>
                 <TrendingUp className="h-8 w-8 text-blue-600" />
               </div>
             </CardContent>
           </Card>
-          
+
           <Card>
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
@@ -371,12 +398,19 @@ export default function IoTMonitoringPage() {
               <CardContent>
                 <div className="space-y-3">
                   {devices.slice(0, 5).map((device) => (
-                    <div key={device.id} className="flex items-center justify-between p-3 border rounded-lg">
+                    <div
+                      key={device.id}
+                      className="flex items-center justify-between p-3 border rounded-lg"
+                    >
                       <div className="flex items-center gap-3">
-                        <div className={`w-3 h-3 rounded-full ${getStatusColor(device.status)}`}></div>
+                        <div
+                          className={`w-3 h-3 rounded-full ${getStatusColor(device.status)}`}
+                        ></div>
                         <div>
                           <div className="font-medium">{device.name}</div>
-                          <div className="text-sm text-gray-600">{device.device_id}</div>
+                          <div className="text-sm text-gray-600">
+                            {device.device_id}
+                          </div>
                         </div>
                       </div>
                       <div className="text-right">
@@ -411,13 +445,19 @@ export default function IoTMonitoringPage() {
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
                           <div className="flex items-center gap-2 mb-1">
-                            <Badge className={`${getSeverityColor(alert.severity)} text-white text-xs`}>
+                            <Badge
+                              className={`${getSeverityColor(alert.severity)} text-white text-xs`}
+                            >
                               {alert.severity.toUpperCase()}
                             </Badge>
-                            <span className="text-sm text-gray-600">{alert.device_name}</span>
+                            <span className="text-sm text-gray-600">
+                              {alert.device_name}
+                            </span>
                           </div>
                           <div className="font-medium">{alert.title}</div>
-                          <div className="text-sm text-gray-600">{alert.description}</div>
+                          <div className="text-sm text-gray-600">
+                            {alert.description}
+                          </div>
                           <div className="text-xs text-gray-500 mt-1">
                             {new Date(alert.triggered_at).toLocaleString()}
                           </div>
@@ -443,11 +483,15 @@ export default function IoTMonitoringPage() {
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
                         <div className="flex items-center gap-3 mb-2">
-                          <div className={`w-3 h-3 rounded-full ${getStatusColor(device.status)}`}></div>
+                          <div
+                            className={`w-3 h-3 rounded-full ${getStatusColor(device.status)}`}
+                          ></div>
                           <h3 className="font-medium text-lg">{device.name}</h3>
-                          <Badge variant="outline">{device.device_type.name}</Badge>
+                          <Badge variant="outline">
+                            {device.device_type.name}
+                          </Badge>
                         </div>
-                        
+
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm text-gray-600 mb-3">
                           <div className="flex items-center gap-1">
                             <Settings className="h-4 w-4" />
@@ -469,7 +513,7 @@ export default function IoTMonitoringPage() {
                           )}
                         </div>
                       </div>
-                      
+
                       <div className="flex items-center gap-2">
                         <Button variant="outline" size="sm">
                           <Eye className="h-4 w-4 mr-1" />
@@ -504,12 +548,14 @@ export default function IoTMonitoringPage() {
                           <IconComponent className="h-6 w-6 text-blue-600" />
                           <div>
                             <div className="font-medium capitalize">
-                              {reading.sensor_type.replace('_', ' ')}
+                              {reading.sensor_type.replace("_", " ")}
                             </div>
-                            <div className="text-sm text-gray-600">{reading.device_name}</div>
+                            <div className="text-sm text-gray-600">
+                              {reading.device_name}
+                            </div>
                           </div>
                         </div>
-                        
+
                         <div className="text-right">
                           <div className="text-2xl font-bold">
                             {reading.value} {reading.unit}
@@ -542,30 +588,35 @@ export default function IoTMonitoringPage() {
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
                         <div className="flex items-center gap-3 mb-2">
-                          <Badge className={`${getSeverityColor(alert.severity)} text-white`}>
+                          <Badge
+                            className={`${getSeverityColor(alert.severity)} text-white`}
+                          >
                             {alert.severity.toUpperCase()}
                           </Badge>
                           <span className="font-medium">{alert.title}</span>
                         </div>
-                        
-                        <p className="text-gray-600 mb-2">{alert.description}</p>
-                        
+
+                        <p className="text-gray-600 mb-2">
+                          {alert.description}
+                        </p>
+
                         <div className="flex items-center gap-4 text-sm text-gray-500">
                           <span>Device: {alert.device_name}</span>
                           <span>Type: {alert.alert_type}</span>
-                          <span>Triggered: {new Date(alert.triggered_at).toLocaleString()}</span>
+                          <span>
+                            Triggered:{" "}
+                            {new Date(alert.triggered_at).toLocaleString()}
+                          </span>
                         </div>
                       </div>
-                      
+
                       <div className="flex items-center gap-2">
-                        {alert.status === 'active' && (
+                        {alert.status === "active" && (
                           <>
                             <Button variant="outline" size="sm">
                               Acknowledge
                             </Button>
-                            <Button size="sm">
-                              Resolve
-                            </Button>
+                            <Button size="sm">Resolve</Button>
                           </>
                         )}
                       </div>

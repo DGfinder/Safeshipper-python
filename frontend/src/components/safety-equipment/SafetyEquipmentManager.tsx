@@ -1,22 +1,22 @@
-'use client';
+"use client";
 
-import React, { useState, useEffect } from 'react';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Alert } from '@/components/ui/alert';
-import { 
-  Truck, 
-  Shield, 
-  AlertTriangle, 
-  CheckCircle, 
+import React, { useState, useEffect } from "react";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Alert } from "@/components/ui/alert";
+import {
+  Truck,
+  Shield,
+  AlertTriangle,
+  CheckCircle,
   XCircle,
   Calendar,
   Settings,
   FileText,
   Plus,
-  Eye
-} from 'lucide-react';
+  Eye,
+} from "lucide-react";
 
 interface SafetyEquipment {
   id: string;
@@ -31,7 +31,7 @@ interface SafetyEquipment {
   installation_date: string;
   expiry_date: string | null;
   next_inspection_date: string | null;
-  status: 'ACTIVE' | 'EXPIRED' | 'MAINTENANCE' | 'DECOMMISSIONED';
+  status: "ACTIVE" | "EXPIRED" | "MAINTENANCE" | "DECOMMISSIONED";
   is_compliant: boolean;
   is_expired: boolean;
   inspection_overdue: boolean;
@@ -57,7 +57,10 @@ interface SafetyEquipmentManagerProps {
   onEquipmentUpdate?: () => void;
 }
 
-export default function SafetyEquipmentManager({ vehicleId, onEquipmentUpdate }: SafetyEquipmentManagerProps) {
+export default function SafetyEquipmentManager({
+  vehicleId,
+  onEquipmentUpdate,
+}: SafetyEquipmentManagerProps) {
   const [vehicle, setVehicle] = useState<Vehicle | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -76,12 +79,12 @@ export default function SafetyEquipmentManager({ vehicleId, onEquipmentUpdate }:
       setLoading(true);
       const response = await fetch(`/api/v1/vehicles/${vehicleId}/`);
       if (!response.ok) {
-        throw new Error('Failed to fetch vehicle details');
+        throw new Error("Failed to fetch vehicle details");
       }
       const data = await response.json();
       setVehicle(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred');
+      setError(err instanceof Error ? err.message : "An error occurred");
     } finally {
       setLoading(false);
     }
@@ -90,43 +93,49 @@ export default function SafetyEquipmentManager({ vehicleId, onEquipmentUpdate }:
   const getStatusBadge = (equipment: SafetyEquipment) => {
     if (!equipment.is_compliant) {
       if (equipment.is_expired) {
-        return <Badge variant="destructive" className="flex items-center gap-1">
-          <XCircle className="w-3 h-3" />
-          Expired
-        </Badge>;
+        return (
+          <Badge variant="destructive" className="flex items-center gap-1">
+            <XCircle className="w-3 h-3" />
+            Expired
+          </Badge>
+        );
       } else if (equipment.inspection_overdue) {
-        return <Badge variant="destructive" className="flex items-center gap-1">
-          <AlertTriangle className="w-3 h-3" />
-          Inspection Due
-        </Badge>;
+        return (
+          <Badge variant="destructive" className="flex items-center gap-1">
+            <AlertTriangle className="w-3 h-3" />
+            Inspection Due
+          </Badge>
+        );
       }
     }
-    
-    return <Badge variant="default" className="flex items-center gap-1">
-      <CheckCircle className="w-3 h-3" />
-      Compliant
-    </Badge>;
+
+    return (
+      <Badge variant="default" className="flex items-center gap-1">
+        <CheckCircle className="w-3 h-3" />
+        Compliant
+      </Badge>
+    );
   };
 
   const getCategoryIcon = (category: string) => {
     switch (category) {
-      case 'FIRE_EXTINGUISHER':
-        return '🧯';
-      case 'FIRST_AID_KIT':
-        return '🏥';
-      case 'SPILL_KIT':
-        return '🛢️';
-      case 'PROTECTIVE_EQUIPMENT':
-        return '🦺';
-      case 'TOOLS':
-        return '🔧';
+      case "FIRE_EXTINGUISHER":
+        return "🧯";
+      case "FIRST_AID_KIT":
+        return "🏥";
+      case "SPILL_KIT":
+        return "🛢️";
+      case "PROTECTIVE_EQUIPMENT":
+        return "🦺";
+      case "TOOLS":
+        return "🔧";
       default:
-        return '⚠️';
+        return "⚠️";
     }
   };
 
   const formatDate = (dateString: string | null) => {
-    if (!dateString) return 'N/A';
+    if (!dateString) return "N/A";
     return new Date(dateString).toLocaleDateString();
   };
 
@@ -220,8 +229,12 @@ export default function SafetyEquipmentManager({ vehicleId, onEquipmentUpdate }:
         </CardHeader>
         <CardContent>
           <div className="bg-blue-50 p-4 rounded-lg">
-            <h4 className="font-medium text-blue-900 mb-2">Fire Extinguisher Requirements</h4>
-            <p className="text-blue-800">{vehicle.required_fire_extinguisher_capacity}</p>
+            <h4 className="font-medium text-blue-900 mb-2">
+              Fire Extinguisher Requirements
+            </h4>
+            <p className="text-blue-800">
+              {vehicle.required_fire_extinguisher_capacity}
+            </p>
           </div>
         </CardContent>
       </Card>
@@ -234,7 +247,7 @@ export default function SafetyEquipmentManager({ vehicleId, onEquipmentUpdate }:
               <Settings className="w-5 h-5" />
               Safety Equipment ({vehicle.safety_equipment.length})
             </CardTitle>
-            <Button 
+            <Button
               onClick={() => setShowAddModal(true)}
               className="flex items-center gap-2"
             >
@@ -255,10 +268,12 @@ export default function SafetyEquipmentManager({ vehicleId, onEquipmentUpdate }:
           ) : (
             <div className="space-y-4">
               {vehicle.safety_equipment.map((equipment) => {
-                const daysUntilExpiry = getDaysUntilExpiry(equipment.expiry_date);
-                
+                const daysUntilExpiry = getDaysUntilExpiry(
+                  equipment.expiry_date,
+                );
+
                 return (
-                  <div 
+                  <div
                     key={equipment.id}
                     className="border rounded-lg p-4 hover:bg-gray-50 transition-colors"
                   >
@@ -269,54 +284,75 @@ export default function SafetyEquipmentManager({ vehicleId, onEquipmentUpdate }:
                             {getCategoryIcon(equipment.equipment_type.category)}
                           </span>
                           <div>
-                            <h4 className="font-medium">{equipment.equipment_type.name}</h4>
+                            <h4 className="font-medium">
+                              {equipment.equipment_type.name}
+                            </h4>
                             <p className="text-sm text-gray-600">
-                              {equipment.manufacturer} {equipment.serial_number && `• ${equipment.serial_number}`}
+                              {equipment.manufacturer}{" "}
+                              {equipment.serial_number &&
+                                `• ${equipment.serial_number}`}
                             </p>
                           </div>
                         </div>
-                        
+
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                           <div>
                             <label className="text-gray-500">Capacity</label>
-                            <p className="font-medium">{equipment.capacity || 'Not specified'}</p>
+                            <p className="font-medium">
+                              {equipment.capacity || "Not specified"}
+                            </p>
                           </div>
                           <div>
                             <label className="text-gray-500">Location</label>
-                            <p className="font-medium">{equipment.location_on_vehicle || 'Not specified'}</p>
+                            <p className="font-medium">
+                              {equipment.location_on_vehicle || "Not specified"}
+                            </p>
                           </div>
                           <div>
                             <label className="text-gray-500">Installed</label>
-                            <p className="font-medium">{formatDate(equipment.installation_date)}</p>
+                            <p className="font-medium">
+                              {formatDate(equipment.installation_date)}
+                            </p>
                           </div>
                           <div>
-                            <label className="text-gray-500">Next Inspection</label>
-                            <p className="font-medium">{formatDate(equipment.next_inspection_date)}</p>
+                            <label className="text-gray-500">
+                              Next Inspection
+                            </label>
+                            <p className="font-medium">
+                              {formatDate(equipment.next_inspection_date)}
+                            </p>
                           </div>
                         </div>
 
                         {equipment.expiry_date && (
                           <div className="mt-2 text-sm">
                             <span className="text-gray-500">Expires: </span>
-                            <span className={`font-medium ${
-                              daysUntilExpiry !== null && daysUntilExpiry <= 30 
-                                ? 'text-red-600' 
-                                : 'text-gray-900'
-                            }`}>
+                            <span
+                              className={`font-medium ${
+                                daysUntilExpiry !== null &&
+                                daysUntilExpiry <= 30
+                                  ? "text-red-600"
+                                  : "text-gray-900"
+                              }`}
+                            >
                               {formatDate(equipment.expiry_date)}
                               {daysUntilExpiry !== null && (
                                 <span className="ml-1">
-                                  ({daysUntilExpiry > 0 ? `${daysUntilExpiry} days` : 'Expired'})
+                                  (
+                                  {daysUntilExpiry > 0
+                                    ? `${daysUntilExpiry} days`
+                                    : "Expired"}
+                                  )
                                 </span>
                               )}
                             </span>
                           </div>
                         )}
                       </div>
-                      
+
                       <div className="flex flex-col items-end gap-2">
                         {getStatusBadge(equipment)}
-                        
+
                         <div className="flex gap-1">
                           <Button size="sm" variant="outline">
                             <Eye className="w-3 h-3" />
@@ -343,7 +379,8 @@ export default function SafetyEquipmentManager({ vehicleId, onEquipmentUpdate }:
             <h4>Safety Compliance Issues</h4>
             <p>{vehicle.safety_equipment_status.message}</p>
             <p className="text-sm mt-2">
-              This vehicle may not be suitable for dangerous goods transport until these issues are resolved.
+              This vehicle may not be suitable for dangerous goods transport
+              until these issues are resolved.
             </p>
           </div>
         </Alert>

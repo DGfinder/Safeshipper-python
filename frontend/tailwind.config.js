@@ -1,8 +1,6 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
-  content: [
-    "./src/**/*.{js,ts,jsx,tsx,mdx}",
-  ],
+  content: ["./src/**/*.{js,ts,jsx,tsx,mdx}"],
   theme: {
     extend: {
       colors: {
@@ -46,8 +44,8 @@ module.exports = {
         sm: "calc(var(--radius) - 4px)",
       },
       fontFamily: {
-        sans: ['var(--font-poppins)', 'system-ui', 'sans-serif'],
-        mono: ['var(--font-mono)', 'monospace'],
+        sans: ["var(--font-poppins)", "system-ui", "sans-serif"],
+        mono: ["var(--font-mono)", "monospace"],
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
@@ -74,4 +72,4 @@ module.exports = {
   future: {
     hoverOnlyWhenSupported: true,
   },
-} 
+};

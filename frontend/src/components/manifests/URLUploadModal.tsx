@@ -1,6 +1,6 @@
-'use client';
+"use client";
 
-import React, { useState } from 'react';
+import React, { useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -8,11 +8,11 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { AlertTriangle, Link, Upload } from 'lucide-react';
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { AlertTriangle, Link, Upload } from "lucide-react";
 
 interface URLUploadModalProps {
   isOpen: boolean;
@@ -20,8 +20,12 @@ interface URLUploadModalProps {
   onUpload: (url: string) => Promise<void>;
 }
 
-export default function URLUploadModal({ isOpen, onClose, onUpload }: URLUploadModalProps) {
-  const [url, setUrl] = useState('');
+export default function URLUploadModal({
+  isOpen,
+  onClose,
+  onUpload,
+}: URLUploadModalProps) {
+  const [url, setUrl] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -29,7 +33,7 @@ export default function URLUploadModal({ isOpen, onClose, onUpload }: URLUploadM
     try {
       const urlObj = new URL(url);
       // Only allow HTTP and HTTPS protocols
-      return urlObj.protocol === 'http:' || urlObj.protocol === 'https:';
+      return urlObj.protocol === "http:" || urlObj.protocol === "https:";
     } catch {
       return false;
     }
@@ -40,22 +44,22 @@ export default function URLUploadModal({ isOpen, onClose, onUpload }: URLUploadM
     setError(null);
 
     if (!url.trim()) {
-      setError('Please enter a URL');
+      setError("Please enter a URL");
       return;
     }
 
     if (!validateURL(url)) {
-      setError('Please enter a valid HTTP or HTTPS URL');
+      setError("Please enter a valid HTTP or HTTPS URL");
       return;
     }
 
     setIsLoading(true);
     try {
       await onUpload(url);
-      setUrl('');
+      setUrl("");
       onClose();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch URL');
+      setError(err instanceof Error ? err.message : "Failed to fetch URL");
     } finally {
       setIsLoading(false);
     }
@@ -63,7 +67,7 @@ export default function URLUploadModal({ isOpen, onClose, onUpload }: URLUploadM
 
   const handleClose = () => {
     if (!isLoading) {
-      setUrl('');
+      setUrl("");
       setError(null);
       onClose();
     }
@@ -78,7 +82,8 @@ export default function URLUploadModal({ isOpen, onClose, onUpload }: URLUploadM
             Add media from URL
           </DialogTitle>
           <DialogDescription>
-            Enter the URL of a PDF manifest file you want to analyze for dangerous goods.
+            Enter the URL of a PDF manifest file you want to analyze for
+            dangerous goods.
           </DialogDescription>
         </DialogHeader>
 
@@ -111,7 +116,9 @@ export default function URLUploadModal({ isOpen, onClose, onUpload }: URLUploadM
                   <li>Only PDF files will be processed</li>
                   <li>URLs must use HTTP or HTTPS protocols</li>
                   <li>File size limit: 50MB</li>
-                  <li>Files are processed securely and not stored permanently</li>
+                  <li>
+                    Files are processed securely and not stored permanently
+                  </li>
                 </ul>
               </div>
             </div>

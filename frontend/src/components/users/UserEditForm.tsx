@@ -1,12 +1,12 @@
-'use client';
+"use client";
 
-import { useEffect } from 'react';
-import { useForm } from 'react-hook-form';
-import { toast } from 'react-hot-toast';
-import { X } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { UpdateUserRequest, useUpdateUser, User } from '@/hooks/useUsers';
+import { useEffect } from "react";
+import { useForm } from "react-hook-form";
+import { toast } from "react-hot-toast";
+import { X } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { UpdateUserRequest, useUpdateUser, User } from "@/hooks/useUsers";
 
 interface UserEditFormProps {
   user: User;
@@ -15,11 +15,11 @@ interface UserEditFormProps {
 }
 
 const USER_ROLES = [
-  { value: 'ADMIN', label: 'Admin' },
-  { value: 'DISPATCHER', label: 'Dispatcher' },
-  { value: 'COMPLIANCE_OFFICER', label: 'Compliance Officer' },
-  { value: 'DRIVER', label: 'Driver' },
-  { value: 'CUSTOMER', label: 'Customer' },
+  { value: "ADMIN", label: "Admin" },
+  { value: "DISPATCHER", label: "Dispatcher" },
+  { value: "COMPLIANCE_OFFICER", label: "Compliance Officer" },
+  { value: "DRIVER", label: "Driver" },
+  { value: "CUSTOMER", label: "Customer" },
 ];
 
 export function UserEditForm({ user, onClose, onSuccess }: UserEditFormProps) {
@@ -48,17 +48,17 @@ export function UserEditForm({ user, onClose, onSuccess }: UserEditFormProps) {
   const onSubmit = async (data: UpdateUserRequest) => {
     try {
       await updateUserMutation.mutateAsync({ id: user.id, data });
-      toast.success('User updated successfully!');
+      toast.success("User updated successfully!");
       onSuccess?.();
       onClose();
     } catch (error: any) {
-      console.error('Update user error:', error);
-      
+      console.error("Update user error:", error);
+
       // Handle validation errors from the backend
-      if (error.message.includes('email')) {
-        setError('email', { message: 'A user with this email already exists' });
+      if (error.message.includes("email")) {
+        setError("email", { message: "A user with this email already exists" });
       } else {
-        toast.error(error.message || 'Failed to update user');
+        toast.error(error.message || "Failed to update user");
       }
     }
   };
@@ -87,7 +87,9 @@ export function UserEditForm({ user, onClose, onSuccess }: UserEditFormProps) {
               disabled
               className="bg-gray-100 text-gray-600"
             />
-            <p className="text-xs text-gray-500 mt-1">Username cannot be changed</p>
+            <p className="text-xs text-gray-500 mt-1">
+              Username cannot be changed
+            </p>
           </div>
 
           {/* Email */}
@@ -97,18 +99,20 @@ export function UserEditForm({ user, onClose, onSuccess }: UserEditFormProps) {
             </label>
             <Input
               type="email"
-              {...register('email', { 
-                required: 'Email is required',
+              {...register("email", {
+                required: "Email is required",
                 pattern: {
                   value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
-                  message: 'Invalid email address'
-                }
+                  message: "Invalid email address",
+                },
               })}
               placeholder="Enter email address"
-              className={errors.email ? 'border-red-500' : ''}
+              className={errors.email ? "border-red-500" : ""}
             />
             {errors.email && (
-              <p className="text-red-500 text-sm mt-1">{errors.email.message}</p>
+              <p className="text-red-500 text-sm mt-1">
+                {errors.email.message}
+              </p>
             )}
           </div>
 
@@ -117,10 +121,7 @@ export function UserEditForm({ user, onClose, onSuccess }: UserEditFormProps) {
             <label className="block text-sm font-medium text-gray-700 mb-1">
               First Name
             </label>
-            <Input
-              {...register('first_name')}
-              placeholder="Enter first name"
-            />
+            <Input {...register("first_name")} placeholder="Enter first name" />
           </div>
 
           {/* Last Name */}
@@ -128,10 +129,7 @@ export function UserEditForm({ user, onClose, onSuccess }: UserEditFormProps) {
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Last Name
             </label>
-            <Input
-              {...register('last_name')}
-              placeholder="Enter last name"
-            />
+            <Input {...register("last_name")} placeholder="Enter last name" />
           </div>
 
           {/* Role */}
@@ -140,7 +138,7 @@ export function UserEditForm({ user, onClose, onSuccess }: UserEditFormProps) {
               Role <span className="text-red-500">*</span>
             </label>
             <select
-              {...register('role', { required: 'Role is required' })}
+              {...register("role", { required: "Role is required" })}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
               {USER_ROLES.map((role) => (
@@ -159,7 +157,7 @@ export function UserEditForm({ user, onClose, onSuccess }: UserEditFormProps) {
             <div className="flex items-center">
               <input
                 type="checkbox"
-                {...register('is_active')}
+                {...register("is_active")}
                 id="is_active"
                 className="mr-2"
               />
@@ -170,7 +168,7 @@ export function UserEditForm({ user, onClose, onSuccess }: UserEditFormProps) {
             <div className="flex items-center">
               <input
                 type="checkbox"
-                {...register('is_staff')}
+                {...register("is_staff")}
                 id="is_staff"
                 className="mr-2"
               />
@@ -183,7 +181,8 @@ export function UserEditForm({ user, onClose, onSuccess }: UserEditFormProps) {
           {/* Password Change Note */}
           <div className="bg-blue-50 border border-blue-200 rounded-md p-3">
             <p className="text-sm text-blue-800">
-              <strong>Note:</strong> To change this user&apos;s password, please contact a system administrator.
+              <strong>Note:</strong> To change this user&apos;s password, please
+              contact a system administrator.
             </p>
           </div>
 
@@ -203,7 +202,7 @@ export function UserEditForm({ user, onClose, onSuccess }: UserEditFormProps) {
               className="flex-1 bg-[#153F9F] hover:bg-blue-700"
               disabled={isSubmitting}
             >
-              {isSubmitting ? 'Updating...' : 'Update User'}
+              {isSubmitting ? "Updating..." : "Update User"}
             </Button>
           </div>
         </form>

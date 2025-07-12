@@ -1,5 +1,5 @@
 // hooks/usePublicTracking.ts
-import { useQuery } from '@tanstack/react-query';
+import { useQuery } from "@tanstack/react-query";
 
 // Types
 export interface VehicleLocation {
@@ -85,41 +85,54 @@ export interface PublicShipmentData {
   items_summary: ItemsSummary;
 }
 
-const API_BASE_URL = '/api/v1';
+const API_BASE_URL = "/api/v1";
 
 // API Functions
-async function getPublicShipmentTracking(trackingNumber: string): Promise<PublicShipmentData> {
-  const response = await fetch(`${API_BASE_URL}/tracking/public/shipment/${trackingNumber}/`, {
-    method: 'GET',
-    headers: {
-      'Content-Type': 'application/json',
+async function getPublicShipmentTracking(
+  trackingNumber: string,
+): Promise<PublicShipmentData> {
+  const response = await fetch(
+    `${API_BASE_URL}/tracking/public/shipment/${trackingNumber}/`,
+    {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+      },
     },
-  });
+  );
 
   if (!response.ok) {
     if (response.status === 404) {
-      throw new Error('Shipment not found. Please check your tracking number.');
+      throw new Error("Shipment not found. Please check your tracking number.");
     }
     const errorData = await response.json();
-    throw new Error(errorData.error || 'Failed to get shipment tracking information');
+    throw new Error(
+      errorData.error || "Failed to get shipment tracking information",
+    );
   }
 
   return response.json();
 }
 
 // Hooks
-export function usePublicShipmentTracking(trackingNumber: string | null, pollingInterval = 30000) {
+export function usePublicShipmentTracking(
+  trackingNumber: string | null,
+  pollingInterval = 30000,
+) {
   return useQuery({
-    queryKey: ['public-shipment-tracking', trackingNumber],
+    queryKey: ["public-shipment-tracking", trackingNumber],
     queryFn: () => {
-      if (!trackingNumber) throw new Error('No tracking number provided');
+      if (!trackingNumber) throw new Error("No tracking number provided");
       return getPublicShipmentTracking(trackingNumber);
     },
     enabled: !!trackingNumber,
     refetchInterval: (query) => {
       // Only poll if shipment is in transit and has live tracking
       const data = query.state.data;
-      if (data?.status === 'IN_TRANSIT' && data?.route_info?.has_live_tracking) {
+      if (
+        data?.status === "IN_TRANSIT" &&
+        data?.route_info?.has_live_tracking
+      ) {
         return pollingInterval;
       }
       return false;
@@ -127,7 +140,7 @@ export function usePublicShipmentTracking(trackingNumber: string | null, polling
     refetchIntervalInBackground: false,
     retry: (failureCount, error) => {
       // Don't retry for 404 errors (shipment not found)
-      if (error.message.includes('not found')) {
+      if (error.message.includes("not found")) {
         return false;
       }
       return failureCount < 3;

@@ -1,17 +1,17 @@
 // app/emergency-procedures/page.tsx
-'use client';
+"use client";
 
-import React, { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { 
-  Shield, 
-  Search, 
-  Plus, 
+import React, { useState } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import {
+  Shield,
+  Search,
+  Plus,
   FileText,
   AlertTriangle,
   CheckCircle,
@@ -23,26 +23,31 @@ import {
   Zap,
   AlertCircle,
   Globe,
-  BookOpen
-} from 'lucide-react';
-import { AuthGuard } from '@/components/auth/auth-guard';
-import { 
-  useEPGs, 
-  useEPGStatistics, 
+  BookOpen,
+} from "lucide-react";
+import { AuthGuard } from "@/components/auth/auth-guard";
+import {
+  useEPGs,
+  useEPGStatistics,
   useEPGsDueForReview,
   useActivateEPG,
   useArchiveEPG,
   useCreateEPGFromTemplate,
   type EmergencyProcedureGuide,
-  type EPGSearchParams 
-} from '@/hooks/useEPG';
+  type EPGSearchParams,
+} from "@/hooks/useEPG";
 
 export default function EmergencyProceduresPage() {
   const [searchParams, setSearchParams] = useState<EPGSearchParams>({});
-  const [selectedEPG, setSelectedEPG] = useState<EmergencyProcedureGuide | null>(null);
+  const [selectedEPG, setSelectedEPG] =
+    useState<EmergencyProcedureGuide | null>(null);
   const [showCreateForm, setShowCreateForm] = useState(false);
-  
-  const { data: epgData, isLoading: epgLoading, refetch: refetchEPGs } = useEPGs(searchParams);
+
+  const {
+    data: epgData,
+    isLoading: epgLoading,
+    refetch: refetchEPGs,
+  } = useEPGs(searchParams);
   const { data: statistics } = useEPGStatistics();
   const { data: dueForReview } = useEPGsDueForReview(30);
   const activateEPG = useActivateEPG();
@@ -50,7 +55,7 @@ export default function EmergencyProceduresPage() {
   const createFromTemplate = useCreateEPGFromTemplate();
 
   const handleSearch = (newParams: Partial<EPGSearchParams>) => {
-    setSearchParams(prev => ({ ...prev, ...newParams }));
+    setSearchParams((prev) => ({ ...prev, ...newParams }));
   };
 
   const handleActivate = (epgId: string) => {
@@ -68,21 +73,31 @@ export default function EmergencyProceduresPage() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'ACTIVE': return 'bg-green-100 text-green-800';
-      case 'DRAFT': return 'bg-blue-100 text-blue-800';
-      case 'UNDER_REVIEW': return 'bg-yellow-100 text-yellow-800';
-      case 'ARCHIVED': return 'bg-gray-100 text-gray-800';
-      default: return 'bg-gray-100 text-gray-800';
+      case "ACTIVE":
+        return "bg-green-100 text-green-800";
+      case "DRAFT":
+        return "bg-blue-100 text-blue-800";
+      case "UNDER_REVIEW":
+        return "bg-yellow-100 text-yellow-800";
+      case "ARCHIVED":
+        return "bg-gray-100 text-gray-800";
+      default:
+        return "bg-gray-100 text-gray-800";
     }
   };
 
   const getSeverityColor = (severity: string) => {
     switch (severity) {
-      case 'CRITICAL': return 'bg-red-100 text-red-800';
-      case 'HIGH': return 'bg-orange-100 text-orange-800';
-      case 'MEDIUM': return 'bg-yellow-100 text-yellow-800';
-      case 'LOW': return 'bg-green-100 text-green-800';
-      default: return 'bg-gray-100 text-gray-800';
+      case "CRITICAL":
+        return "bg-red-100 text-red-800";
+      case "HIGH":
+        return "bg-orange-100 text-orange-800";
+      case "MEDIUM":
+        return "bg-yellow-100 text-yellow-800";
+      case "LOW":
+        return "bg-green-100 text-green-800";
+      default:
+        return "bg-gray-100 text-gray-800";
     }
   };
 
@@ -92,8 +107,12 @@ export default function EmergencyProceduresPage() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Emergency Procedure Guides</h1>
-            <p className="text-gray-600 mt-1">Manage emergency response procedures for dangerous goods</p>
+            <h1 className="text-3xl font-bold text-gray-900">
+              Emergency Procedure Guides
+            </h1>
+            <p className="text-gray-600 mt-1">
+              Manage emergency response procedures for dangerous goods
+            </p>
           </div>
           <div className="flex items-center gap-3">
             <Button
@@ -102,10 +121,12 @@ export default function EmergencyProceduresPage() {
               disabled={epgLoading}
               className="flex items-center gap-2"
             >
-              <RefreshCw className={`h-4 w-4 ${epgLoading ? 'animate-spin' : ''}`} />
+              <RefreshCw
+                className={`h-4 w-4 ${epgLoading ? "animate-spin" : ""}`}
+              />
               Refresh
             </Button>
-            <Button 
+            <Button
               onClick={() => setShowCreateForm(true)}
               className="flex items-center gap-2"
             >
@@ -120,11 +141,15 @@ export default function EmergencyProceduresPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total EPGs</CardTitle>
+                <CardTitle className="text-sm font-medium">
+                  Total EPGs
+                </CardTitle>
                 <Shield className="h-4 w-4 text-blue-600" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-blue-600">{statistics.total_epgs}</div>
+                <div className="text-2xl font-bold text-blue-600">
+                  {statistics.total_epgs}
+                </div>
                 <p className="text-xs text-muted-foreground">
                   {statistics.active_epgs} active guides
                 </p>
@@ -133,33 +158,47 @@ export default function EmergencyProceduresPage() {
 
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Due for Review</CardTitle>
+                <CardTitle className="text-sm font-medium">
+                  Due for Review
+                </CardTitle>
                 <Clock className="h-4 w-4 text-yellow-600" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-yellow-600">{statistics.due_for_review}</div>
-                <p className="text-xs text-muted-foreground">Require attention</p>
+                <div className="text-2xl font-bold text-yellow-600">
+                  {statistics.due_for_review}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Require attention
+                </p>
               </CardContent>
             </Card>
 
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Under Review</CardTitle>
+                <CardTitle className="text-sm font-medium">
+                  Under Review
+                </CardTitle>
                 <AlertCircle className="h-4 w-4 text-orange-600" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-orange-600">{statistics.under_review}</div>
+                <div className="text-2xl font-bold text-orange-600">
+                  {statistics.under_review}
+                </div>
                 <p className="text-xs text-muted-foreground">Being reviewed</p>
               </CardContent>
             </Card>
 
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Draft EPGs</CardTitle>
+                <CardTitle className="text-sm font-medium">
+                  Draft EPGs
+                </CardTitle>
                 <Edit className="h-4 w-4 text-purple-600" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-purple-600">{statistics.draft_epgs}</div>
+                <div className="text-2xl font-bold text-purple-600">
+                  {statistics.draft_epgs}
+                </div>
                 <p className="text-xs text-muted-foreground">In development</p>
               </CardContent>
             </Card>
@@ -171,8 +210,11 @@ export default function EmergencyProceduresPage() {
           <Alert className="border-yellow-200 bg-yellow-50">
             <AlertTriangle className="h-4 w-4 text-yellow-600" />
             <AlertDescription className="text-yellow-800">
-              You have {dueForReview.length} EPGs due for review within 30 days. 
-              <Button variant="link" className="p-0 h-auto text-yellow-700 underline ml-1">
+              You have {dueForReview.length} EPGs due for review within 30 days.
+              <Button
+                variant="link"
+                className="p-0 h-auto text-yellow-700 underline ml-1"
+              >
                 View review queue
               </Button>
             </AlertDescription>
@@ -193,15 +235,17 @@ export default function EmergencyProceduresPage() {
                 <label className="text-sm font-medium">Search</label>
                 <Input
                   placeholder="EPG number, title, UN number..."
-                  value={searchParams.query || ''}
+                  value={searchParams.query || ""}
                   onChange={(e) => handleSearch({ query: e.target.value })}
                 />
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-medium">Hazard Class</label>
                 <select
-                  value={searchParams.hazard_class || ''}
-                  onChange={(e) => handleSearch({ hazard_class: e.target.value })}
+                  value={searchParams.hazard_class || ""}
+                  onChange={(e) =>
+                    handleSearch({ hazard_class: e.target.value })
+                  }
                   className="w-full border border-gray-200 rounded-md px-3 py-2 text-sm"
                 >
                   <option value="">All Classes</option>
@@ -219,7 +263,7 @@ export default function EmergencyProceduresPage() {
               <div className="space-y-2">
                 <label className="text-sm font-medium">Status</label>
                 <select
-                  value={searchParams.status || ''}
+                  value={searchParams.status || ""}
                   onChange={(e) => handleSearch({ status: e.target.value })}
                   className="w-full border border-gray-200 rounded-md px-3 py-2 text-sm"
                 >
@@ -233,8 +277,10 @@ export default function EmergencyProceduresPage() {
               <div className="space-y-2">
                 <label className="text-sm font-medium">Severity</label>
                 <select
-                  value={searchParams.severity_level || ''}
-                  onChange={(e) => handleSearch({ severity_level: e.target.value })}
+                  value={searchParams.severity_level || ""}
+                  onChange={(e) =>
+                    handleSearch({ severity_level: e.target.value })
+                  }
                   className="w-full border border-gray-200 rounded-md px-3 py-2 text-sm"
                 >
                   <option value="">All Levels</option>
@@ -247,8 +293,10 @@ export default function EmergencyProceduresPage() {
               <div className="space-y-2">
                 <label className="text-sm font-medium">Country</label>
                 <select
-                  value={searchParams.country_code || ''}
-                  onChange={(e) => handleSearch({ country_code: e.target.value })}
+                  value={searchParams.country_code || ""}
+                  onChange={(e) =>
+                    handleSearch({ country_code: e.target.value })
+                  }
                   className="w-full border border-gray-200 rounded-md px-3 py-2 text-sm"
                 >
                   <option value="">All Countries</option>
@@ -265,7 +313,9 @@ export default function EmergencyProceduresPage() {
                   <input
                     type="checkbox"
                     checked={searchParams.include_inactive || false}
-                    onChange={(e) => handleSearch({ include_inactive: e.target.checked })}
+                    onChange={(e) =>
+                      handleSearch({ include_inactive: e.target.checked })
+                    }
                     className="mr-2"
                   />
                   <span className="text-sm">Show inactive EPGs</span>
@@ -311,15 +361,21 @@ export default function EmergencyProceduresPage() {
                           </div>
                           <div>
                             <div className="flex items-center gap-2 mb-1">
-                              <h3 className="font-medium text-lg">{epg.epg_number}</h3>
+                              <h3 className="font-medium text-lg">
+                                {epg.epg_number}
+                              </h3>
                               <Badge className={getStatusColor(epg.status)}>
                                 {epg.status_display}
                               </Badge>
-                              <Badge className={getSeverityColor(epg.severity_level)}>
+                              <Badge
+                                className={getSeverityColor(epg.severity_level)}
+                              >
                                 {epg.severity_level_display}
                               </Badge>
                             </div>
-                            <p className="text-sm text-gray-900 font-medium">{epg.title}</p>
+                            <p className="text-sm text-gray-900 font-medium">
+                              {epg.title}
+                            </p>
                             <div className="flex items-center gap-4 text-sm text-gray-600 mt-1">
                               <span className="flex items-center gap-1">
                                 <Zap className="h-3 w-3" />
@@ -340,7 +396,11 @@ export default function EmergencyProceduresPage() {
                         <div className="flex items-center gap-4">
                           <div className="text-right text-sm text-gray-600">
                             <p>Version {epg.version}</p>
-                            <p>{new Date(epg.effective_date).toLocaleDateString()}</p>
+                            <p>
+                              {new Date(
+                                epg.effective_date,
+                              ).toLocaleDateString()}
+                            </p>
                             {epg.is_due_for_review && (
                               <Badge className="bg-yellow-100 text-yellow-800 mt-1">
                                 Review Due
@@ -349,17 +409,17 @@ export default function EmergencyProceduresPage() {
                           </div>
 
                           <div className="flex gap-2">
-                            <Button 
-                              variant="outline" 
+                            <Button
+                              variant="outline"
                               size="sm"
                               onClick={() => setSelectedEPG(epg)}
                             >
                               <Eye className="h-4 w-4 mr-1" />
                               View
                             </Button>
-                            {epg.status === 'DRAFT' && (
-                              <Button 
-                                variant="outline" 
+                            {epg.status === "DRAFT" && (
+                              <Button
+                                variant="outline"
                                 size="sm"
                                 onClick={() => handleActivate(epg.id)}
                                 disabled={activateEPG.isPending}
@@ -368,9 +428,9 @@ export default function EmergencyProceduresPage() {
                                 Activate
                               </Button>
                             )}
-                            {epg.status === 'ACTIVE' && (
-                              <Button 
-                                variant="outline" 
+                            {epg.status === "ACTIVE" && (
+                              <Button
+                                variant="outline"
                                 size="sm"
                                 onClick={() => handleArchive(epg.id)}
                                 disabled={archiveEPG.isPending}
@@ -387,8 +447,12 @@ export default function EmergencyProceduresPage() {
                     {epgData?.results?.length === 0 && (
                       <div className="text-center py-8">
                         <Shield className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                        <h3 className="text-lg font-medium text-gray-900 mb-2">No EPGs Found</h3>
-                        <p className="text-gray-600">Try adjusting your search criteria</p>
+                        <h3 className="text-lg font-medium text-gray-900 mb-2">
+                          No EPGs Found
+                        </h3>
+                        <p className="text-gray-600">
+                          Try adjusting your search criteria
+                        </p>
                       </div>
                     )}
                   </div>
@@ -409,12 +473,19 @@ export default function EmergencyProceduresPage() {
                 {dueForReview && dueForReview.length > 0 ? (
                   <div className="space-y-4">
                     {dueForReview.map((epg: EmergencyProcedureGuide) => (
-                      <div key={epg.id} className="flex items-center justify-between p-4 border border-yellow-200 bg-yellow-50 rounded-lg">
+                      <div
+                        key={epg.id}
+                        className="flex items-center justify-between p-4 border border-yellow-200 bg-yellow-50 rounded-lg"
+                      >
                         <div className="flex items-center gap-4">
                           <AlertTriangle className="h-6 w-6 text-yellow-600" />
                           <div>
-                            <h3 className="font-medium">{epg.epg_number} - {epg.title}</h3>
-                            <p className="text-sm text-gray-600">{epg.dangerous_good_display}</p>
+                            <h3 className="font-medium">
+                              {epg.epg_number} - {epg.title}
+                            </h3>
+                            <p className="text-sm text-gray-600">
+                              {epg.dangerous_good_display}
+                            </p>
                           </div>
                         </div>
                         <div className="text-right">
@@ -422,7 +493,10 @@ export default function EmergencyProceduresPage() {
                             Review Due
                           </Badge>
                           <p className="text-sm text-gray-600 mt-1">
-                            Due: {epg.review_date ? new Date(epg.review_date).toLocaleDateString() : 'N/A'}
+                            Due:{" "}
+                            {epg.review_date
+                              ? new Date(epg.review_date).toLocaleDateString()
+                              : "N/A"}
                           </p>
                         </div>
                       </div>
@@ -431,8 +505,12 @@ export default function EmergencyProceduresPage() {
                 ) : (
                   <div className="text-center py-8">
                     <CheckCircle className="h-12 w-12 text-green-400 mx-auto mb-4" />
-                    <h3 className="text-lg font-medium text-gray-900 mb-2">All Up to Date!</h3>
-                    <p className="text-gray-600">No EPGs require review at this time</p>
+                    <h3 className="text-lg font-medium text-gray-900 mb-2">
+                      All Up to Date!
+                    </h3>
+                    <p className="text-gray-600">
+                      No EPGs require review at this time
+                    </p>
                   </div>
                 )}
               </CardContent>
@@ -449,30 +527,32 @@ export default function EmergencyProceduresPage() {
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  {['1', '2', '3', '4', '5', '6', '7', '8', '9'].map((hazardClass) => (
-                    <Button
-                      key={hazardClass}
-                      variant="outline"
-                      className="p-4 h-auto text-left"
-                      onClick={() => handleCreateFromTemplate(hazardClass)}
-                      disabled={createFromTemplate.isPending}
-                    >
-                      <div>
-                        <h4 className="font-medium">Class {hazardClass}</h4>
-                        <p className="text-sm text-gray-600 mt-1">
-                          {hazardClass === '1' && 'Explosives'}
-                          {hazardClass === '2' && 'Gases'}
-                          {hazardClass === '3' && 'Flammable Liquids'}
-                          {hazardClass === '4' && 'Flammable Solids'}
-                          {hazardClass === '5' && 'Oxidizers'}
-                          {hazardClass === '6' && 'Toxic/Infectious'}
-                          {hazardClass === '7' && 'Radioactive'}
-                          {hazardClass === '8' && 'Corrosives'}
-                          {hazardClass === '9' && 'Miscellaneous'}
-                        </p>
-                      </div>
-                    </Button>
-                  ))}
+                  {["1", "2", "3", "4", "5", "6", "7", "8", "9"].map(
+                    (hazardClass) => (
+                      <Button
+                        key={hazardClass}
+                        variant="outline"
+                        className="p-4 h-auto text-left"
+                        onClick={() => handleCreateFromTemplate(hazardClass)}
+                        disabled={createFromTemplate.isPending}
+                      >
+                        <div>
+                          <h4 className="font-medium">Class {hazardClass}</h4>
+                          <p className="text-sm text-gray-600 mt-1">
+                            {hazardClass === "1" && "Explosives"}
+                            {hazardClass === "2" && "Gases"}
+                            {hazardClass === "3" && "Flammable Liquids"}
+                            {hazardClass === "4" && "Flammable Solids"}
+                            {hazardClass === "5" && "Oxidizers"}
+                            {hazardClass === "6" && "Toxic/Infectious"}
+                            {hazardClass === "7" && "Radioactive"}
+                            {hazardClass === "8" && "Corrosives"}
+                            {hazardClass === "9" && "Miscellaneous"}
+                          </p>
+                        </div>
+                      </Button>
+                    ),
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -488,12 +568,19 @@ export default function EmergencyProceduresPage() {
                     </CardHeader>
                     <CardContent>
                       <div className="space-y-3">
-                        {Object.entries(statistics.by_hazard_class).map(([hazardClass, count]) => (
-                          <div key={hazardClass} className="flex justify-between items-center">
-                            <span className="text-sm">Class {hazardClass}</span>
-                            <Badge variant="outline">{count as number}</Badge>
-                          </div>
-                        ))}
+                        {Object.entries(statistics.by_hazard_class).map(
+                          ([hazardClass, count]) => (
+                            <div
+                              key={hazardClass}
+                              className="flex justify-between items-center"
+                            >
+                              <span className="text-sm">
+                                Class {hazardClass}
+                              </span>
+                              <Badge variant="outline">{count as number}</Badge>
+                            </div>
+                          ),
+                        )}
                       </div>
                     </CardContent>
                   </Card>
@@ -504,12 +591,19 @@ export default function EmergencyProceduresPage() {
                     </CardHeader>
                     <CardContent>
                       <div className="space-y-3">
-                        {Object.entries(statistics.by_severity_level).map(([severity, count]) => (
-                          <div key={severity} className="flex justify-between items-center">
-                            <span className="text-sm capitalize">{severity.toLowerCase()}</span>
-                            <Badge variant="outline">{count as number}</Badge>
-                          </div>
-                        ))}
+                        {Object.entries(statistics.by_severity_level).map(
+                          ([severity, count]) => (
+                            <div
+                              key={severity}
+                              className="flex justify-between items-center"
+                            >
+                              <span className="text-sm capitalize">
+                                {severity.toLowerCase()}
+                              </span>
+                              <Badge variant="outline">{count as number}</Badge>
+                            </div>
+                          ),
+                        )}
                       </div>
                     </CardContent>
                   </Card>
@@ -520,20 +614,31 @@ export default function EmergencyProceduresPage() {
                     </CardHeader>
                     <CardContent>
                       <div className="space-y-3">
-                        {statistics.recent_updates.slice(0, 10).map((update: any) => (
-                          <div key={update.id} className="flex justify-between items-center">
-                            <div>
-                              <span className="text-sm font-medium">{update.epg_number}</span>
-                              <p className="text-xs text-gray-500">{update.title}</p>
+                        {statistics.recent_updates
+                          .slice(0, 10)
+                          .map((update: any) => (
+                            <div
+                              key={update.id}
+                              className="flex justify-between items-center"
+                            >
+                              <div>
+                                <span className="text-sm font-medium">
+                                  {update.epg_number}
+                                </span>
+                                <p className="text-xs text-gray-500">
+                                  {update.title}
+                                </p>
+                              </div>
+                              <div className="text-right">
+                                <Badge variant="outline">{update.status}</Badge>
+                                <p className="text-xs text-gray-500">
+                                  {new Date(
+                                    update.updated_at,
+                                  ).toLocaleDateString()}
+                                </p>
+                              </div>
                             </div>
-                            <div className="text-right">
-                              <Badge variant="outline">{update.status}</Badge>
-                              <p className="text-xs text-gray-500">
-                                {new Date(update.updated_at).toLocaleDateString()}
-                              </p>
-                            </div>
-                          </div>
-                        ))}
+                          ))}
                       </div>
                     </CardContent>
                   </Card>

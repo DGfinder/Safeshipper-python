@@ -1,17 +1,17 @@
 // app/fleet/page.tsx
-'use client';
+"use client";
 
-import React, { useState } from 'react';
-import dynamic from 'next/dynamic';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { 
-  RefreshCw, 
-  Truck, 
-  Users, 
-  Activity, 
+import React, { useState } from "react";
+import dynamic from "next/dynamic";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  RefreshCw,
+  Truck,
+  Users,
+  Activity,
   MapPin,
   Eye,
   Clock,
@@ -19,23 +19,26 @@ import {
   AlertTriangle,
   BarChart3,
   Settings,
-  Plus
-} from 'lucide-react';
-import { useFleetStatus, type FleetVehicle } from '@/hooks/useFleetTracking';
-import { useMockFleetStatus } from '@/hooks/useMockAPI';
-import { AuthGuard } from '@/components/auth/auth-guard';
+  Plus,
+} from "lucide-react";
+import { useFleetStatus, type FleetVehicle } from "@/hooks/useFleetTracking";
+import { useMockFleetStatus } from "@/hooks/useMockAPI";
+import { AuthGuard } from "@/components/auth/auth-guard";
 
 // Dynamically import FleetMap to avoid SSR issues
 const FleetMap = dynamic(
-  () => import('@/components/maps/FleetMap').then(mod => ({ default: mod.FleetMap })),
-  { 
+  () =>
+    import("@/components/maps/FleetMap").then((mod) => ({
+      default: mod.FleetMap,
+    })),
+  {
     ssr: false,
     loading: () => (
       <div className="flex items-center justify-center h-64">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
       </div>
-    )
-  }
+    ),
+  },
 );
 
 export default function FleetPage() {
@@ -50,20 +53,29 @@ export default function FleetPage() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'ACTIVE': return 'bg-green-100 text-green-800';
-      case 'IN_TRANSIT': return 'bg-blue-100 text-blue-800';
-      case 'MAINTENANCE': return 'bg-yellow-100 text-yellow-800';
-      case 'OFFLINE': return 'bg-gray-100 text-gray-800';
-      default: return 'bg-gray-100 text-gray-800';
+      case "ACTIVE":
+        return "bg-green-100 text-green-800";
+      case "IN_TRANSIT":
+        return "bg-blue-100 text-blue-800";
+      case "MAINTENANCE":
+        return "bg-yellow-100 text-yellow-800";
+      case "OFFLINE":
+        return "bg-gray-100 text-gray-800";
+      default:
+        return "bg-gray-100 text-gray-800";
     }
   };
 
   const getDriverStatusColor = (status: string) => {
     switch (status) {
-      case 'ON_DUTY': return 'bg-green-100 text-green-800';
-      case 'OFF_DUTY': return 'bg-gray-100 text-gray-800';
-      case 'DRIVING': return 'bg-blue-100 text-blue-800';
-      default: return 'bg-gray-100 text-gray-800';
+      case "ON_DUTY":
+        return "bg-green-100 text-green-800";
+      case "OFF_DUTY":
+        return "bg-gray-100 text-gray-800";
+      case "DRIVING":
+        return "bg-blue-100 text-blue-800";
+      default:
+        return "bg-gray-100 text-gray-800";
     }
   };
 
@@ -80,10 +92,14 @@ export default function FleetPage() {
   }
 
   const vehicles = fleetData?.vehicles || [];
-  const activeVehicles = vehicles.filter(v => v.status === 'ACTIVE').length;
-  const inTransitVehicles = vehicles.filter(v => v.status === 'IN_TRANSIT').length;
-  const maintenanceVehicles = vehicles.filter(v => v.status === 'MAINTENANCE').length;
-  const offlineVehicles = vehicles.filter(v => v.status === 'OFFLINE').length;
+  const activeVehicles = vehicles.filter((v) => v.status === "ACTIVE").length;
+  const inTransitVehicles = vehicles.filter(
+    (v) => v.status === "IN_TRANSIT",
+  ).length;
+  const maintenanceVehicles = vehicles.filter(
+    (v) => v.status === "MAINTENANCE",
+  ).length;
+  const offlineVehicles = vehicles.filter((v) => v.status === "OFFLINE").length;
 
   return (
     <AuthGuard>
@@ -91,8 +107,12 @@ export default function FleetPage() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Fleet Management</h1>
-            <p className="text-gray-600 mt-1">Monitor and manage your vehicle fleet</p>
+            <h1 className="text-3xl font-bold text-gray-900">
+              Fleet Management
+            </h1>
+            <p className="text-gray-600 mt-1">
+              Monitor and manage your vehicle fleet
+            </p>
           </div>
           <div className="flex items-center gap-3">
             <Button
@@ -101,7 +121,9 @@ export default function FleetPage() {
               disabled={refreshing}
               className="flex items-center gap-2"
             >
-              <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
+              <RefreshCw
+                className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`}
+              />
               Refresh
             </Button>
             <Button className="flex items-center gap-2">
@@ -115,7 +137,9 @@ export default function FleetPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Vehicles</CardTitle>
+              <CardTitle className="text-sm font-medium">
+                Total Vehicles
+              </CardTitle>
               <Truck className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
@@ -130,8 +154,12 @@ export default function FleetPage() {
               <Activity className="h-4 w-4 text-green-600" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-green-600">{activeVehicles}</div>
-              <p className="text-xs text-muted-foreground">Ready for dispatch</p>
+              <div className="text-2xl font-bold text-green-600">
+                {activeVehicles}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Ready for dispatch
+              </p>
             </CardContent>
           </Card>
 
@@ -141,7 +169,9 @@ export default function FleetPage() {
               <MapPin className="h-4 w-4 text-blue-600" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-blue-600">{inTransitVehicles}</div>
+              <div className="text-2xl font-bold text-blue-600">
+                {inTransitVehicles}
+              </div>
               <p className="text-xs text-muted-foreground">On delivery</p>
             </CardContent>
           </Card>
@@ -152,7 +182,9 @@ export default function FleetPage() {
               <AlertTriangle className="h-4 w-4 text-yellow-600" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-yellow-600">{maintenanceVehicles}</div>
+              <div className="text-2xl font-bold text-yellow-600">
+                {maintenanceVehicles}
+              </div>
               <p className="text-xs text-muted-foreground">Needs attention</p>
             </CardContent>
           </Card>
@@ -202,7 +234,9 @@ export default function FleetPage() {
                           <Truck className="h-5 w-5 text-blue-600" />
                         </div>
                         <div>
-                          <h3 className="font-medium">{vehicle.registration_number}</h3>
+                          <h3 className="font-medium">
+                            {vehicle.registration_number}
+                          </h3>
                           <p className="text-sm text-gray-600">
                             {vehicle.vehicle_type}
                           </p>
@@ -220,7 +254,7 @@ export default function FleetPage() {
                             </p>
                           )}
                         </div>
-                        
+
                         {vehicle.active_shipment && (
                           <div className="text-right">
                             <p className="text-sm font-medium">
@@ -257,12 +291,21 @@ export default function FleetPage() {
                   <div className="space-y-4">
                     <div className="flex justify-between items-center">
                       <span className="text-sm">Active Vehicles</span>
-                      <span className="font-medium">{((activeVehicles + inTransitVehicles) / vehicles.length * 100).toFixed(1)}%</span>
+                      <span className="font-medium">
+                        {(
+                          ((activeVehicles + inTransitVehicles) /
+                            vehicles.length) *
+                          100
+                        ).toFixed(1)}
+                        %
+                      </span>
                     </div>
                     <div className="w-full bg-gray-200 rounded-full h-2">
-                      <div 
-                        className="bg-blue-600 h-2 rounded-full" 
-                        style={{ width: `${(activeVehicles + inTransitVehicles) / vehicles.length * 100}%` }}
+                      <div
+                        className="bg-blue-600 h-2 rounded-full"
+                        style={{
+                          width: `${((activeVehicles + inTransitVehicles) / vehicles.length) * 100}%`,
+                        }}
                       ></div>
                     </div>
                   </div>
@@ -303,8 +346,12 @@ export default function FleetPage() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-3xl font-bold text-yellow-600">{maintenanceVehicles}</div>
-                  <p className="text-sm text-gray-600">Vehicles needing attention</p>
+                  <div className="text-3xl font-bold text-yellow-600">
+                    {maintenanceVehicles}
+                  </div>
+                  <p className="text-sm text-gray-600">
+                    Vehicles needing attention
+                  </p>
                 </CardContent>
               </Card>
             </div>

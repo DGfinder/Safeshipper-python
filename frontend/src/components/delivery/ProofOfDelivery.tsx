@@ -1,26 +1,26 @@
 // components/delivery/ProofOfDelivery.tsx
-'use client';
+"use client";
 
-import React, { useState, useRef } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { 
-  CheckCircle, 
-  Camera, 
-  PenTool, 
-  User, 
+import React, { useState, useRef } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import {
+  CheckCircle,
+  Camera,
+  PenTool,
+  User,
   Package,
   MapPin,
   Clock,
   Upload,
   Loader2,
   X,
-  Eye
-} from 'lucide-react';
-import { useMockSubmitPOD } from '@/hooks/useMockAPI';
+  Eye,
+} from "lucide-react";
+import { useMockSubmitPOD } from "@/hooks/useMockAPI";
 
 interface ProofOfDeliveryProps {
   shipmentId: string;
@@ -36,21 +36,23 @@ interface PODPhoto {
   caption: string;
 }
 
-export function ProofOfDelivery({ 
-  shipmentId, 
-  customerName, 
+export function ProofOfDelivery({
+  shipmentId,
+  customerName,
   deliveryAddress,
   onComplete,
-  className 
+  className,
 }: ProofOfDeliveryProps) {
-  const [step, setStep] = useState<'photos' | 'signature' | 'recipient' | 'complete'>('photos');
+  const [step, setStep] = useState<
+    "photos" | "signature" | "recipient" | "complete"
+  >("photos");
   const [photos, setPhotos] = useState<PODPhoto[]>([]);
-  const [signature, setSignature] = useState<string>('');
-  const [recipientName, setRecipientName] = useState('');
-  const [recipientTitle, setRecipientTitle] = useState('');
-  const [deliveryNotes, setDeliveryNotes] = useState('');
+  const [signature, setSignature] = useState<string>("");
+  const [recipientName, setRecipientName] = useState("");
+  const [recipientTitle, setRecipientTitle] = useState("");
+  const [deliveryNotes, setDeliveryNotes] = useState("");
   const [isDrawing, setIsDrawing] = useState(false);
-  
+
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const submitPODMutation = useMockSubmitPOD();
 
@@ -59,31 +61,31 @@ export function ProofOfDelivery({
     setIsDrawing(true);
     const canvas = canvasRef.current;
     if (!canvas) return;
-    
-    const ctx = canvas.getContext('2d');
+
+    const ctx = canvas.getContext("2d");
     if (!ctx) return;
-    
+
     const rect = canvas.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
-    
+
     ctx.beginPath();
     ctx.moveTo(x, y);
   };
 
   const handleCanvasMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
     if (!isDrawing) return;
-    
+
     const canvas = canvasRef.current;
     if (!canvas) return;
-    
-    const ctx = canvas.getContext('2d');
+
+    const ctx = canvas.getContext("2d");
     if (!ctx) return;
-    
+
     const rect = canvas.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
-    
+
     ctx.lineTo(x, y);
     ctx.stroke();
   };
@@ -100,12 +102,12 @@ export function ProofOfDelivery({
   const clearSignature = () => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    
-    const ctx = canvas.getContext('2d');
+
+    const ctx = canvas.getContext("2d");
     if (!ctx) return;
-    
+
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    setSignature('');
+    setSignature("");
   };
 
   const addPhoto = () => {
@@ -113,18 +115,18 @@ export function ProofOfDelivery({
     const newPhoto: PODPhoto = {
       id: Math.random().toString(),
       url: `https://via.placeholder.com/300x200/4CAF50/FFFFFF?text=POD+Photo+${photos.length + 1}`,
-      caption: `Delivery photo ${photos.length + 1}`
+      caption: `Delivery photo ${photos.length + 1}`,
     };
-    setPhotos(prev => [...prev, newPhoto]);
+    setPhotos((prev) => [...prev, newPhoto]);
   };
 
   const removePhoto = (id: string) => {
-    setPhotos(prev => prev.filter(photo => photo.id !== id));
+    setPhotos((prev) => prev.filter((photo) => photo.id !== id));
   };
 
   const handleSubmitPOD = async () => {
     if (!recipientName.trim()) {
-      alert('Please enter recipient name');
+      alert("Please enter recipient name");
       return;
     }
 
@@ -132,14 +134,14 @@ export function ProofOfDelivery({
       const podData = await submitPODMutation.mutateAsync({
         shipmentId,
         signature,
-        photos: photos.map(p => p.url),
-        recipient: `${recipientName}${recipientTitle ? ` - ${recipientTitle}` : ''}`
+        photos: photos.map((p) => p.url),
+        recipient: `${recipientName}${recipientTitle ? ` - ${recipientTitle}` : ""}`,
       });
-      
-      setStep('complete');
+
+      setStep("complete");
       onComplete?.(podData);
     } catch (error) {
-      console.error('Failed to submit POD:', error);
+      console.error("Failed to submit POD:", error);
     }
   };
 
@@ -147,7 +149,7 @@ export function ProofOfDelivery({
   const canProceedToRecipient = signature.length > 0;
   const canSubmit = recipientName.trim().length > 0;
 
-  if (step === 'complete') {
+  if (step === "complete") {
     return (
       <Card className={className}>
         <CardHeader>
@@ -160,25 +162,34 @@ export function ProofOfDelivery({
           <Alert className="border-green-200 bg-green-50">
             <CheckCircle className="h-4 w-4 text-green-600" />
             <AlertDescription className="text-green-800">
-              Proof of delivery has been captured and submitted. The customer will receive notification shortly.
+              Proof of delivery has been captured and submitted. The customer
+              will receive notification shortly.
             </AlertDescription>
           </Alert>
-          
+
           <div className="grid grid-cols-2 gap-4 text-sm">
             <div>
-              <p><span className="font-medium">Delivered to:</span> {recipientName}</p>
-              <p><span className="font-medium">Photos taken:</span> {photos.length}</p>
+              <p>
+                <span className="font-medium">Delivered to:</span>{" "}
+                {recipientName}
+              </p>
+              <p>
+                <span className="font-medium">Photos taken:</span>{" "}
+                {photos.length}
+              </p>
             </div>
             <div>
-              <p><span className="font-medium">Signature:</span> Captured</p>
-              <p><span className="font-medium">Time:</span> {new Date().toLocaleTimeString()}</p>
+              <p>
+                <span className="font-medium">Signature:</span> Captured
+              </p>
+              <p>
+                <span className="font-medium">Time:</span>{" "}
+                {new Date().toLocaleTimeString()}
+              </p>
             </div>
           </div>
 
-          <Button 
-            onClick={() => window.history.back()} 
-            className="w-full"
-          >
+          <Button onClick={() => window.history.back()} className="w-full">
             Return to Shipments
           </Button>
         </CardContent>
@@ -198,21 +209,21 @@ export function ProofOfDelivery({
           <span>{deliveryAddress}</span>
         </div>
       </CardHeader>
-      
+
       <CardContent className="space-y-4">
         {/* Step Indicator */}
         <div className="flex justify-center space-x-4 mb-6">
           {[
-            { key: 'photos', label: 'Photos', icon: Camera },
-            { key: 'signature', label: 'Signature', icon: PenTool },
-            { key: 'recipient', label: 'Recipient', icon: User }
+            { key: "photos", label: "Photos", icon: Camera },
+            { key: "signature", label: "Signature", icon: PenTool },
+            { key: "recipient", label: "Recipient", icon: User },
           ].map(({ key, label, icon: Icon }, index) => (
-            <div 
+            <div
               key={key}
               className={`flex items-center gap-2 px-3 py-2 rounded-lg ${
-                step === key 
-                  ? 'bg-blue-100 text-blue-700 border border-blue-200' 
-                  : 'bg-gray-100 text-gray-500'
+                step === key
+                  ? "bg-blue-100 text-blue-700 border border-blue-200"
+                  : "bg-gray-100 text-gray-500"
               }`}
             >
               <Icon className="h-4 w-4" />
@@ -222,7 +233,7 @@ export function ProofOfDelivery({
         </div>
 
         {/* Step 1: Photos */}
-        {step === 'photos' && (
+        {step === "photos" && (
           <div className="space-y-4">
             <div>
               <h3 className="font-medium mb-2">Take Delivery Photos</h3>
@@ -235,8 +246,8 @@ export function ProofOfDelivery({
             <div className="grid grid-cols-2 gap-3">
               {photos.map((photo) => (
                 <div key={photo.id} className="relative">
-                  <img 
-                    src={photo.url} 
+                  <img
+                    src={photo.url}
                     alt={photo.caption}
                     className="w-full h-32 object-cover rounded-lg border"
                   />
@@ -263,7 +274,7 @@ export function ProofOfDelivery({
             </Button>
 
             <Button
-              onClick={() => setStep('signature')}
+              onClick={() => setStep("signature")}
               disabled={!canProceedToSignature}
               className="w-full"
             >
@@ -273,7 +284,7 @@ export function ProofOfDelivery({
         )}
 
         {/* Step 2: Signature */}
-        {step === 'signature' && (
+        {step === "signature" && (
           <div className="space-y-4">
             <div>
               <h3 className="font-medium mb-2">Capture Recipient Signature</h3>
@@ -308,14 +319,14 @@ export function ProofOfDelivery({
 
             <div className="flex gap-2">
               <Button
-                onClick={() => setStep('photos')}
+                onClick={() => setStep("photos")}
                 variant="outline"
                 className="flex-1"
               >
                 Back
               </Button>
               <Button
-                onClick={() => setStep('recipient')}
+                onClick={() => setStep("recipient")}
                 disabled={!canProceedToRecipient}
                 className="flex-1"
               >
@@ -326,7 +337,7 @@ export function ProofOfDelivery({
         )}
 
         {/* Step 3: Recipient Details */}
-        {step === 'recipient' && (
+        {step === "recipient" && (
           <div className="space-y-4">
             <div>
               <h3 className="font-medium mb-2">Recipient Information</h3>
@@ -383,7 +394,7 @@ export function ProofOfDelivery({
 
             <div className="flex gap-2">
               <Button
-                onClick={() => setStep('signature')}
+                onClick={() => setStep("signature")}
                 variant="outline"
                 className="flex-1"
               >

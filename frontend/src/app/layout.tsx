@@ -21,7 +21,8 @@ const poppins = Poppins({
 
 export const metadata: Metadata = {
   title: "Safeshipper",
-  description: "A comprehensive logistics and dangerous goods management platform.",
+  description:
+    "A comprehensive logistics and dangerous goods management platform.",
 };
 
 export default function RootLayout({
@@ -34,9 +35,7 @@ export default function RootLayout({
       <body
         className={`${poppins.variable} ${inter.variable} ${jetbrainsMono.variable} font-sans antialiased`}
       >
-        <Providers>
-          {children}
-        </Providers>
+        <Providers>{children}</Providers>
       </body>
     </html>
   );

@@ -1,6 +1,6 @@
 // hooks/useSDS.ts
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useAuthStore } from '@/stores/auth-store';
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useAuthStore } from "@/stores/auth-store";
 
 // Types
 export interface SafetyDataSheet {
@@ -26,7 +26,7 @@ export interface SafetyDataSheet {
   version: string;
   revision_date: string;
   supersedes_version?: string;
-  status: 'ACTIVE' | 'EXPIRED' | 'SUPERSEDED' | 'UNDER_REVIEW' | 'DRAFT';
+  status: "ACTIVE" | "EXPIRED" | "SUPERSEDED" | "UNDER_REVIEW" | "DRAFT";
   status_display: string;
   expiration_date?: string;
   language: string;
@@ -36,7 +36,7 @@ export interface SafetyDataSheet {
   emergency_contacts: Record<string, any>;
   flash_point_celsius?: number;
   auto_ignition_temp_celsius?: number;
-  physical_state?: 'SOLID' | 'LIQUID' | 'GAS' | 'AEROSOL';
+  physical_state?: "SOLID" | "LIQUID" | "GAS" | "AEROSOL";
   color?: string;
   odor?: string;
   hazard_statements: string[];
@@ -103,157 +103,192 @@ export interface SDSStatistics {
   top_manufacturers: Array<[string, number]>;
 }
 
-const API_BASE_URL = '/api/v1';
+const API_BASE_URL = "/api/v1";
 
 // API Functions
-async function fetchSafetyDataSheets(params: SDSSearchParams = {}, token: string): Promise<{
+async function fetchSafetyDataSheets(
+  params: SDSSearchParams = {},
+  token: string,
+): Promise<{
   results: SafetyDataSheet[];
   count: number;
   next?: string;
   previous?: string;
 }> {
   const searchParams = new URLSearchParams();
-  
+
   Object.entries(params).forEach(([key, value]) => {
-    if (value !== undefined && value !== null && value !== '') {
+    if (value !== undefined && value !== null && value !== "") {
       searchParams.append(key, value.toString());
     }
   });
-  
-  const url = `${API_BASE_URL}/sds/safety-data-sheets/${searchParams.toString() ? `?${searchParams.toString()}` : ''}`;
-  
+
+  const url = `${API_BASE_URL}/sds/safety-data-sheets/${searchParams.toString() ? `?${searchParams.toString()}` : ""}`;
+
   const response = await fetch(url, {
     headers: {
-      'Authorization': `Bearer ${token}`,
-      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
     },
   });
 
   if (!response.ok) {
     const errorData = await response.json();
-    throw new Error(errorData.error || 'Failed to fetch safety data sheets');
+    throw new Error(errorData.error || "Failed to fetch safety data sheets");
   }
 
   return response.json();
 }
 
-async function fetchSafetyDataSheet(sdsId: string, token: string): Promise<SafetyDataSheet> {
-  const response = await fetch(`${API_BASE_URL}/sds/safety-data-sheets/${sdsId}/`, {
-    headers: {
-      'Authorization': `Bearer ${token}`,
-      'Content-Type': 'application/json',
+async function fetchSafetyDataSheet(
+  sdsId: string,
+  token: string,
+): Promise<SafetyDataSheet> {
+  const response = await fetch(
+    `${API_BASE_URL}/sds/safety-data-sheets/${sdsId}/`,
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
     },
-  });
+  );
 
   if (!response.ok) {
     const errorData = await response.json();
-    throw new Error(errorData.error || 'Failed to fetch safety data sheet');
+    throw new Error(errorData.error || "Failed to fetch safety data sheet");
   }
 
   return response.json();
 }
 
-async function lookupSDS(lookupData: SDSLookupRequest, token: string): Promise<SafetyDataSheet> {
-  const response = await fetch(`${API_BASE_URL}/sds/safety-data-sheets/lookup/`, {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${token}`,
-      'Content-Type': 'application/json',
+async function lookupSDS(
+  lookupData: SDSLookupRequest,
+  token: string,
+): Promise<SafetyDataSheet> {
+  const response = await fetch(
+    `${API_BASE_URL}/sds/safety-data-sheets/lookup/`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(lookupData),
     },
-    body: JSON.stringify(lookupData),
-  });
+  );
 
   if (!response.ok) {
     const errorData = await response.json();
-    throw new Error(errorData.error || 'Failed to lookup SDS');
+    throw new Error(errorData.error || "Failed to lookup SDS");
   }
 
   return response.json();
 }
 
-async function downloadSDS(sdsId: string, context: string, token: string): Promise<{
+async function downloadSDS(
+  sdsId: string,
+  context: string,
+  token: string,
+): Promise<{
   download_url: string;
   filename: string;
   file_size: number;
   mime_type: string;
 }> {
-  const response = await fetch(`${API_BASE_URL}/sds/safety-data-sheets/${sdsId}/download/`, {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${token}`,
-      'Content-Type': 'application/json',
+  const response = await fetch(
+    `${API_BASE_URL}/sds/safety-data-sheets/${sdsId}/download/`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ context }),
     },
-    body: JSON.stringify({ context }),
-  });
+  );
 
   if (!response.ok) {
     const errorData = await response.json();
-    throw new Error(errorData.error || 'Failed to get download URL');
+    throw new Error(errorData.error || "Failed to get download URL");
   }
 
   return response.json();
 }
 
 async function fetchSDSStatistics(token: string): Promise<SDSStatistics> {
-  const response = await fetch(`${API_BASE_URL}/sds/safety-data-sheets/statistics/`, {
-    headers: {
-      'Authorization': `Bearer ${token}`,
-      'Content-Type': 'application/json',
+  const response = await fetch(
+    `${API_BASE_URL}/sds/safety-data-sheets/statistics/`,
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
     },
-  });
+  );
 
   if (!response.ok) {
     const errorData = await response.json();
-    throw new Error(errorData.error || 'Failed to fetch SDS statistics');
+    throw new Error(errorData.error || "Failed to fetch SDS statistics");
   }
 
   return response.json();
 }
 
-async function fetchExpiringSDS(days: number, token: string): Promise<SafetyDataSheet[]> {
-  const response = await fetch(`${API_BASE_URL}/sds/safety-data-sheets/expiring_soon/?days=${days}`, {
-    headers: {
-      'Authorization': `Bearer ${token}`,
-      'Content-Type': 'application/json',
+async function fetchExpiringSDS(
+  days: number,
+  token: string,
+): Promise<SafetyDataSheet[]> {
+  const response = await fetch(
+    `${API_BASE_URL}/sds/safety-data-sheets/expiring_soon/?days=${days}`,
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
     },
-  });
+  );
 
   if (!response.ok) {
     const errorData = await response.json();
-    throw new Error(errorData.error || 'Failed to fetch expiring SDS');
+    throw new Error(errorData.error || "Failed to fetch expiring SDS");
   }
 
   const data = await response.json();
   return data.results || data;
 }
 
-async function uploadSDS(uploadData: SDSUploadRequest, token: string): Promise<{
+async function uploadSDS(
+  uploadData: SDSUploadRequest,
+  token: string,
+): Promise<{
   message: string;
   sds_id: string;
   document_id: string;
   sds: SafetyDataSheet;
 }> {
   const formData = new FormData();
-  formData.append('file', uploadData.file);
-  formData.append('dangerous_good_id', uploadData.dangerous_good_id);
-  formData.append('product_name', uploadData.product_name);
-  formData.append('manufacturer', uploadData.manufacturer);
-  formData.append('version', uploadData.version);
-  formData.append('revision_date', uploadData.revision_date);
-  if (uploadData.language) formData.append('language', uploadData.language);
-  if (uploadData.country_code) formData.append('country_code', uploadData.country_code);
+  formData.append("file", uploadData.file);
+  formData.append("dangerous_good_id", uploadData.dangerous_good_id);
+  formData.append("product_name", uploadData.product_name);
+  formData.append("manufacturer", uploadData.manufacturer);
+  formData.append("version", uploadData.version);
+  formData.append("revision_date", uploadData.revision_date);
+  if (uploadData.language) formData.append("language", uploadData.language);
+  if (uploadData.country_code)
+    formData.append("country_code", uploadData.country_code);
 
   const response = await fetch(`${API_BASE_URL}/sds/upload/`, {
-    method: 'POST',
+    method: "POST",
     headers: {
-      'Authorization': `Bearer ${token}`,
+      Authorization: `Bearer ${token}`,
     },
     body: formData,
   });
 
   if (!response.ok) {
     const errorData = await response.json();
-    throw new Error(errorData.error || 'Failed to upload SDS');
+    throw new Error(errorData.error || "Failed to upload SDS");
   }
 
   return response.json();
@@ -264,10 +299,10 @@ export function useSafetyDataSheets(params: SDSSearchParams = {}) {
   const { getToken } = useAuthStore();
 
   return useQuery({
-    queryKey: ['safety-data-sheets', params],
+    queryKey: ["safety-data-sheets", params],
     queryFn: () => {
       const token = getToken();
-      if (!token) throw new Error('No authentication token');
+      if (!token) throw new Error("No authentication token");
       return fetchSafetyDataSheets(params, token);
     },
     enabled: !!getToken(),
@@ -278,10 +313,10 @@ export function useSafetyDataSheet(sdsId: string | null) {
   const { getToken } = useAuthStore();
 
   return useQuery({
-    queryKey: ['safety-data-sheet', sdsId],
+    queryKey: ["safety-data-sheet", sdsId],
     queryFn: () => {
       const token = getToken();
-      if (!token || !sdsId) throw new Error('No token or SDS ID');
+      if (!token || !sdsId) throw new Error("No token or SDS ID");
       return fetchSafetyDataSheet(sdsId, token);
     },
     enabled: !!sdsId && !!getToken(),
@@ -294,7 +329,7 @@ export function useSDSLookup() {
   return useMutation({
     mutationFn: (lookupData: SDSLookupRequest) => {
       const token = getToken();
-      if (!token) throw new Error('No authentication token');
+      if (!token) throw new Error("No authentication token");
       return lookupSDS(lookupData, token);
     },
   });
@@ -306,12 +341,12 @@ export function useSDSDownload() {
   return useMutation({
     mutationFn: ({ sdsId, context }: { sdsId: string; context: string }) => {
       const token = getToken();
-      if (!token) throw new Error('No authentication token');
+      if (!token) throw new Error("No authentication token");
       return downloadSDS(sdsId, context, token);
     },
     onSuccess: (data) => {
       // Open download URL
-      window.open(data.download_url, '_blank');
+      window.open(data.download_url, "_blank");
     },
   });
 }
@@ -320,10 +355,10 @@ export function useSDSStatistics() {
   const { getToken } = useAuthStore();
 
   return useQuery({
-    queryKey: ['sds-statistics'],
+    queryKey: ["sds-statistics"],
     queryFn: () => {
       const token = getToken();
-      if (!token) throw new Error('No authentication token');
+      if (!token) throw new Error("No authentication token");
       return fetchSDSStatistics(token);
     },
     enabled: !!getToken(),
@@ -335,10 +370,10 @@ export function useExpiringSDS(days: number = 30) {
   const { getToken } = useAuthStore();
 
   return useQuery({
-    queryKey: ['expiring-sds', days],
+    queryKey: ["expiring-sds", days],
     queryFn: () => {
       const token = getToken();
-      if (!token) throw new Error('No authentication token');
+      if (!token) throw new Error("No authentication token");
       return fetchExpiringSDS(days, token);
     },
     enabled: !!getToken(),
@@ -352,13 +387,13 @@ export function useSDSUpload() {
   return useMutation({
     mutationFn: (uploadData: SDSUploadRequest) => {
       const token = getToken();
-      if (!token) throw new Error('No authentication token');
+      if (!token) throw new Error("No authentication token");
       return uploadSDS(uploadData, token);
     },
     onSuccess: () => {
       // Invalidate and refetch related queries
-      queryClient.invalidateQueries({ queryKey: ['safety-data-sheets'] });
-      queryClient.invalidateQueries({ queryKey: ['sds-statistics'] });
+      queryClient.invalidateQueries({ queryKey: ["safety-data-sheets"] });
+      queryClient.invalidateQueries({ queryKey: ["sds-statistics"] });
     },
   });
 }

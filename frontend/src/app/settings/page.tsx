@@ -1,18 +1,18 @@
 // app/settings/page.tsx
-'use client';
+"use client";
 
-import React, { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Switch } from '@/components/ui/switch';
-import { 
-  Settings, 
-  User, 
-  Bell, 
-  Shield, 
+import React, { useState } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Switch } from "@/components/ui/switch";
+import {
+  Settings,
+  User,
+  Bell,
+  Shield,
   Database,
   Mail,
   Smartphone,
@@ -24,9 +24,9 @@ import {
   Save,
   RefreshCw,
   Eye,
-  EyeOff
-} from 'lucide-react';
-import { AuthGuard } from '@/components/auth/auth-guard';
+  EyeOff,
+} from "lucide-react";
+import { AuthGuard } from "@/components/auth/auth-guard";
 
 export default function SettingsPage() {
   const [showPassword, setShowPassword] = useState(false);
@@ -34,12 +34,12 @@ export default function SettingsPage() {
 
   // Mock settings state - in production this would come from the backend
   const [userSettings, setUserSettings] = useState({
-    name: 'John Dispatcher',
-    email: 'john@safeshipper.com',
-    phone: '+1-555-0123',
-    role: 'DISPATCHER',
-    timezone: 'America/Toronto',
-    language: 'en',
+    name: "John Dispatcher",
+    email: "john@safeshipper.com",
+    phone: "+1-555-0123",
+    role: "DISPATCHER",
+    timezone: "America/Toronto",
+    language: "en",
   });
 
   const [notificationSettings, setNotificationSettings] = useState({
@@ -56,10 +56,10 @@ export default function SettingsPage() {
     autoRefresh: true,
     refreshInterval: 30,
     darkMode: false,
-    defaultMapView: 'standard',
-    measurementUnit: 'metric',
-    dateFormat: 'DD/MM/YYYY',
-    timeFormat: '24h',
+    defaultMapView: "standard",
+    measurementUnit: "metric",
+    dateFormat: "DD/MM/YYYY",
+    timeFormat: "24h",
   });
 
   const [securitySettings, setSecuritySettings] = useState({
@@ -80,17 +80,17 @@ export default function SettingsPage() {
 
   const handleExportData = () => {
     // Export user data
-    console.log('Exporting data...');
+    console.log("Exporting data...");
   };
 
   const handleImportData = () => {
     // Import user data
-    console.log('Importing data...');
+    console.log("Importing data...");
   };
 
   const handleDeleteAccount = () => {
     // Handle account deletion
-    console.log('Deleting account...');
+    console.log("Deleting account...");
   };
 
   return (
@@ -100,7 +100,9 @@ export default function SettingsPage() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold text-gray-900">Settings</h1>
-            <p className="text-gray-600 mt-1">Manage your account and application preferences</p>
+            <p className="text-gray-600 mt-1">
+              Manage your account and application preferences
+            </p>
           </div>
           <div className="flex items-center gap-3">
             <Button
@@ -113,7 +115,7 @@ export default function SettingsPage() {
               ) : (
                 <Save className="h-4 w-4" />
               )}
-              {saving ? 'Saving...' : 'Save Changes'}
+              {saving ? "Saving..." : "Save Changes"}
             </Button>
           </div>
         </div>
@@ -143,7 +145,12 @@ export default function SettingsPage() {
                     <Input
                       id="name"
                       value={userSettings.name}
-                      onChange={(e) => setUserSettings({...userSettings, name: e.target.value})}
+                      onChange={(e) =>
+                        setUserSettings({
+                          ...userSettings,
+                          name: e.target.value,
+                        })
+                      }
                     />
                   </div>
                   <div className="space-y-2">
@@ -152,7 +159,12 @@ export default function SettingsPage() {
                       id="email"
                       type="email"
                       value={userSettings.email}
-                      onChange={(e) => setUserSettings({...userSettings, email: e.target.value})}
+                      onChange={(e) =>
+                        setUserSettings({
+                          ...userSettings,
+                          email: e.target.value,
+                        })
+                      }
                     />
                   </div>
                   <div className="space-y-2">
@@ -160,7 +172,12 @@ export default function SettingsPage() {
                     <Input
                       id="phone"
                       value={userSettings.phone}
-                      onChange={(e) => setUserSettings({...userSettings, phone: e.target.value})}
+                      onChange={(e) =>
+                        setUserSettings({
+                          ...userSettings,
+                          phone: e.target.value,
+                        })
+                      }
                     />
                   </div>
                   <div className="space-y-2">
@@ -177,13 +194,26 @@ export default function SettingsPage() {
                     <select
                       id="timezone"
                       value={userSettings.timezone}
-                      onChange={(e) => setUserSettings({...userSettings, timezone: e.target.value})}
+                      onChange={(e) =>
+                        setUserSettings({
+                          ...userSettings,
+                          timezone: e.target.value,
+                        })
+                      }
                       className="w-full border border-gray-200 rounded-md px-3 py-2"
                     >
-                      <option value="America/Toronto">Eastern Time (Toronto)</option>
-                      <option value="America/Vancouver">Pacific Time (Vancouver)</option>
-                      <option value="America/Winnipeg">Central Time (Winnipeg)</option>
-                      <option value="America/Halifax">Atlantic Time (Halifax)</option>
+                      <option value="America/Toronto">
+                        Eastern Time (Toronto)
+                      </option>
+                      <option value="America/Vancouver">
+                        Pacific Time (Vancouver)
+                      </option>
+                      <option value="America/Winnipeg">
+                        Central Time (Winnipeg)
+                      </option>
+                      <option value="America/Halifax">
+                        Atlantic Time (Halifax)
+                      </option>
                     </select>
                   </div>
                   <div className="space-y-2">
@@ -191,7 +221,12 @@ export default function SettingsPage() {
                     <select
                       id="language"
                       value={userSettings.language}
-                      onChange={(e) => setUserSettings({...userSettings, language: e.target.value})}
+                      onChange={(e) =>
+                        setUserSettings({
+                          ...userSettings,
+                          language: e.target.value,
+                        })
+                      }
                       className="w-full border border-gray-200 rounded-md px-3 py-2"
                     >
                       <option value="en">English</option>
@@ -208,7 +243,7 @@ export default function SettingsPage() {
                       <div className="relative">
                         <Input
                           id="current-password"
-                          type={showPassword ? 'text' : 'password'}
+                          type={showPassword ? "text" : "password"}
                           placeholder="Enter current password"
                         />
                         <Button
@@ -218,7 +253,11 @@ export default function SettingsPage() {
                           className="absolute right-0 top-0 h-full px-3"
                           onClick={() => setShowPassword(!showPassword)}
                         >
-                          {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                          {showPassword ? (
+                            <EyeOff className="h-4 w-4" />
+                          ) : (
+                            <Eye className="h-4 w-4" />
+                          )}
                         </Button>
                       </div>
                     </div>
@@ -253,13 +292,18 @@ export default function SettingsPage() {
                         <Mail className="h-5 w-5 text-gray-400" />
                         <div>
                           <p className="font-medium">Email Notifications</p>
-                          <p className="text-sm text-gray-600">Receive notifications via email</p>
+                          <p className="text-sm text-gray-600">
+                            Receive notifications via email
+                          </p>
                         </div>
                       </div>
                       <Switch
                         checked={notificationSettings.emailNotifications}
-                        onCheckedChange={(checked) => 
-                          setNotificationSettings({...notificationSettings, emailNotifications: checked})
+                        onCheckedChange={(checked) =>
+                          setNotificationSettings({
+                            ...notificationSettings,
+                            emailNotifications: checked,
+                          })
                         }
                       />
                     </div>
@@ -268,13 +312,18 @@ export default function SettingsPage() {
                         <Smartphone className="h-5 w-5 text-gray-400" />
                         <div>
                           <p className="font-medium">SMS Notifications</p>
-                          <p className="text-sm text-gray-600">Receive notifications via SMS</p>
+                          <p className="text-sm text-gray-600">
+                            Receive notifications via SMS
+                          </p>
                         </div>
                       </div>
                       <Switch
                         checked={notificationSettings.smsNotifications}
-                        onCheckedChange={(checked) => 
-                          setNotificationSettings({...notificationSettings, smsNotifications: checked})
+                        onCheckedChange={(checked) =>
+                          setNotificationSettings({
+                            ...notificationSettings,
+                            smsNotifications: checked,
+                          })
                         }
                       />
                     </div>
@@ -283,13 +332,18 @@ export default function SettingsPage() {
                         <Globe className="h-5 w-5 text-gray-400" />
                         <div>
                           <p className="font-medium">Push Notifications</p>
-                          <p className="text-sm text-gray-600">Receive browser push notifications</p>
+                          <p className="text-sm text-gray-600">
+                            Receive browser push notifications
+                          </p>
                         </div>
                       </div>
                       <Switch
                         checked={notificationSettings.pushNotifications}
-                        onCheckedChange={(checked) => 
-                          setNotificationSettings({...notificationSettings, pushNotifications: checked})
+                        onCheckedChange={(checked) =>
+                          setNotificationSettings({
+                            ...notificationSettings,
+                            pushNotifications: checked,
+                          })
                         }
                       />
                     </div>
@@ -302,48 +356,68 @@ export default function SettingsPage() {
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="font-medium">Shipment Updates</p>
-                        <p className="text-sm text-gray-600">Status changes, delivery confirmations</p>
+                        <p className="text-sm text-gray-600">
+                          Status changes, delivery confirmations
+                        </p>
                       </div>
                       <Switch
                         checked={notificationSettings.shipmentUpdates}
-                        onCheckedChange={(checked) => 
-                          setNotificationSettings({...notificationSettings, shipmentUpdates: checked})
+                        onCheckedChange={(checked) =>
+                          setNotificationSettings({
+                            ...notificationSettings,
+                            shipmentUpdates: checked,
+                          })
                         }
                       />
                     </div>
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="font-medium">Inspection Alerts</p>
-                        <p className="text-sm text-gray-600">Failed inspections, pending reviews</p>
+                        <p className="text-sm text-gray-600">
+                          Failed inspections, pending reviews
+                        </p>
                       </div>
                       <Switch
                         checked={notificationSettings.inspectionAlerts}
-                        onCheckedChange={(checked) => 
-                          setNotificationSettings({...notificationSettings, inspectionAlerts: checked})
+                        onCheckedChange={(checked) =>
+                          setNotificationSettings({
+                            ...notificationSettings,
+                            inspectionAlerts: checked,
+                          })
                         }
                       />
                     </div>
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="font-medium">Compliance Alerts</p>
-                        <p className="text-sm text-gray-600">Violations, regulatory updates</p>
+                        <p className="text-sm text-gray-600">
+                          Violations, regulatory updates
+                        </p>
                       </div>
                       <Switch
                         checked={notificationSettings.complianceAlerts}
-                        onCheckedChange={(checked) => 
-                          setNotificationSettings({...notificationSettings, complianceAlerts: checked})
+                        onCheckedChange={(checked) =>
+                          setNotificationSettings({
+                            ...notificationSettings,
+                            complianceAlerts: checked,
+                          })
                         }
                       />
                     </div>
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="font-medium">System Maintenance</p>
-                        <p className="text-sm text-gray-600">Scheduled maintenance, updates</p>
+                        <p className="text-sm text-gray-600">
+                          Scheduled maintenance, updates
+                        </p>
                       </div>
                       <Switch
                         checked={notificationSettings.systemMaintenance}
-                        onCheckedChange={(checked) => 
-                          setNotificationSettings({...notificationSettings, systemMaintenance: checked})
+                        onCheckedChange={(checked) =>
+                          setNotificationSettings({
+                            ...notificationSettings,
+                            systemMaintenance: checked,
+                          })
                         }
                       />
                     </div>
@@ -368,22 +442,34 @@ export default function SettingsPage() {
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="font-medium">Auto Refresh</p>
-                        <p className="text-sm text-gray-600">Automatically refresh data</p>
+                        <p className="text-sm text-gray-600">
+                          Automatically refresh data
+                        </p>
                       </div>
                       <Switch
                         checked={systemSettings.autoRefresh}
-                        onCheckedChange={(checked) => 
-                          setSystemSettings({...systemSettings, autoRefresh: checked})
+                        onCheckedChange={(checked) =>
+                          setSystemSettings({
+                            ...systemSettings,
+                            autoRefresh: checked,
+                          })
                         }
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="refresh-interval">Refresh Interval (seconds)</Label>
+                      <Label htmlFor="refresh-interval">
+                        Refresh Interval (seconds)
+                      </Label>
                       <Input
                         id="refresh-interval"
                         type="number"
                         value={systemSettings.refreshInterval}
-                        onChange={(e) => setSystemSettings({...systemSettings, refreshInterval: parseInt(e.target.value)})}
+                        onChange={(e) =>
+                          setSystemSettings({
+                            ...systemSettings,
+                            refreshInterval: parseInt(e.target.value),
+                          })
+                        }
                         disabled={!systemSettings.autoRefresh}
                       />
                     </div>
@@ -394,8 +480,11 @@ export default function SettingsPage() {
                       </div>
                       <Switch
                         checked={systemSettings.darkMode}
-                        onCheckedChange={(checked) => 
-                          setSystemSettings({...systemSettings, darkMode: checked})
+                        onCheckedChange={(checked) =>
+                          setSystemSettings({
+                            ...systemSettings,
+                            darkMode: checked,
+                          })
                         }
                       />
                     </div>
@@ -408,7 +497,12 @@ export default function SettingsPage() {
                       <select
                         id="map-view"
                         value={systemSettings.defaultMapView}
-                        onChange={(e) => setSystemSettings({...systemSettings, defaultMapView: e.target.value})}
+                        onChange={(e) =>
+                          setSystemSettings({
+                            ...systemSettings,
+                            defaultMapView: e.target.value,
+                          })
+                        }
                         className="w-full border border-gray-200 rounded-md px-3 py-2"
                       >
                         <option value="standard">Standard</option>
@@ -421,7 +515,12 @@ export default function SettingsPage() {
                       <select
                         id="measurement-unit"
                         value={systemSettings.measurementUnit}
-                        onChange={(e) => setSystemSettings({...systemSettings, measurementUnit: e.target.value})}
+                        onChange={(e) =>
+                          setSystemSettings({
+                            ...systemSettings,
+                            measurementUnit: e.target.value,
+                          })
+                        }
                         className="w-full border border-gray-200 rounded-md px-3 py-2"
                       >
                         <option value="metric">Metric (km, kg)</option>
@@ -433,7 +532,12 @@ export default function SettingsPage() {
                       <select
                         id="date-format"
                         value={systemSettings.dateFormat}
-                        onChange={(e) => setSystemSettings({...systemSettings, dateFormat: e.target.value})}
+                        onChange={(e) =>
+                          setSystemSettings({
+                            ...systemSettings,
+                            dateFormat: e.target.value,
+                          })
+                        }
                         className="w-full border border-gray-200 rounded-md px-3 py-2"
                       >
                         <option value="DD/MM/YYYY">DD/MM/YYYY</option>
@@ -446,7 +550,12 @@ export default function SettingsPage() {
                       <select
                         id="time-format"
                         value={systemSettings.timeFormat}
-                        onChange={(e) => setSystemSettings({...systemSettings, timeFormat: e.target.value})}
+                        onChange={(e) =>
+                          setSystemSettings({
+                            ...systemSettings,
+                            timeFormat: e.target.value,
+                          })
+                        }
                         className="w-full border border-gray-200 rounded-md px-3 py-2"
                       >
                         <option value="24h">24 Hour</option>
@@ -474,47 +583,71 @@ export default function SettingsPage() {
                       <Key className="h-5 w-5 text-gray-400" />
                       <div>
                         <p className="font-medium">Two-Factor Authentication</p>
-                        <p className="text-sm text-gray-600">Add an extra layer of security</p>
+                        <p className="text-sm text-gray-600">
+                          Add an extra layer of security
+                        </p>
                       </div>
                     </div>
                     <Switch
                       checked={securitySettings.twoFactorAuth}
-                      onCheckedChange={(checked) => 
-                        setSecuritySettings({...securitySettings, twoFactorAuth: checked})
+                      onCheckedChange={(checked) =>
+                        setSecuritySettings({
+                          ...securitySettings,
+                          twoFactorAuth: checked,
+                        })
                       }
                     />
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="session-timeout">Session Timeout (minutes)</Label>
+                    <Label htmlFor="session-timeout">
+                      Session Timeout (minutes)
+                    </Label>
                     <Input
                       id="session-timeout"
                       type="number"
                       value={securitySettings.sessionTimeout}
-                      onChange={(e) => setSecuritySettings({...securitySettings, sessionTimeout: parseInt(e.target.value)})}
+                      onChange={(e) =>
+                        setSecuritySettings({
+                          ...securitySettings,
+                          sessionTimeout: parseInt(e.target.value),
+                        })
+                      }
                     />
                   </div>
 
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="font-medium">Login Notifications</p>
-                      <p className="text-sm text-gray-600">Get notified of new login attempts</p>
+                      <p className="text-sm text-gray-600">
+                        Get notified of new login attempts
+                      </p>
                     </div>
                     <Switch
                       checked={securitySettings.loginNotifications}
-                      onCheckedChange={(checked) => 
-                        setSecuritySettings({...securitySettings, loginNotifications: checked})
+                      onCheckedChange={(checked) =>
+                        setSecuritySettings({
+                          ...securitySettings,
+                          loginNotifications: checked,
+                        })
                       }
                     />
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="password-expiry">Password Expiry (days)</Label>
+                    <Label htmlFor="password-expiry">
+                      Password Expiry (days)
+                    </Label>
                     <Input
                       id="password-expiry"
                       type="number"
                       value={securitySettings.passwordExpiry}
-                      onChange={(e) => setSecuritySettings({...securitySettings, passwordExpiry: parseInt(e.target.value)})}
+                      onChange={(e) =>
+                        setSecuritySettings({
+                          ...securitySettings,
+                          passwordExpiry: parseInt(e.target.value),
+                        })
+                      }
                     />
                   </div>
                 </div>
@@ -535,9 +668,13 @@ export default function SettingsPage() {
                   <div className="p-4 border rounded-lg">
                     <h3 className="text-lg font-medium mb-2">Export Data</h3>
                     <p className="text-sm text-gray-600 mb-4">
-                      Download a copy of your data including shipments, inspections, and communications.
+                      Download a copy of your data including shipments,
+                      inspections, and communications.
                     </p>
-                    <Button onClick={handleExportData} className="flex items-center gap-2">
+                    <Button
+                      onClick={handleExportData}
+                      className="flex items-center gap-2"
+                    >
                       <Download className="h-4 w-4" />
                       Export Data
                     </Button>
@@ -548,18 +685,29 @@ export default function SettingsPage() {
                     <p className="text-sm text-gray-600 mb-4">
                       Import data from a previous export or external system.
                     </p>
-                    <Button onClick={handleImportData} variant="outline" className="flex items-center gap-2">
+                    <Button
+                      onClick={handleImportData}
+                      variant="outline"
+                      className="flex items-center gap-2"
+                    >
                       <Upload className="h-4 w-4" />
                       Import Data
                     </Button>
                   </div>
 
                   <div className="p-4 border border-red-200 rounded-lg bg-red-50">
-                    <h3 className="text-lg font-medium mb-2 text-red-800">Delete Account</h3>
+                    <h3 className="text-lg font-medium mb-2 text-red-800">
+                      Delete Account
+                    </h3>
                     <p className="text-sm text-red-700 mb-4">
-                      Permanently delete your account and all associated data. This action cannot be undone.
+                      Permanently delete your account and all associated data.
+                      This action cannot be undone.
                     </p>
-                    <Button onClick={handleDeleteAccount} variant="destructive" className="flex items-center gap-2">
+                    <Button
+                      onClick={handleDeleteAccount}
+                      variant="destructive"
+                      className="flex items-center gap-2"
+                    >
                       <Trash2 className="h-4 w-4" />
                       Delete Account
                     </Button>

@@ -1,19 +1,19 @@
-'use client';
+"use client";
 
-import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { 
-  Shield, 
-  Smartphone, 
-  Mail, 
+import React, { useState, useEffect } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import {
+  Shield,
+  Smartphone,
+  Mail,
   Key,
   Loader2,
   AlertTriangle,
-  CheckCircle
-} from 'lucide-react';
+  CheckCircle,
+} from "lucide-react";
 
 interface MFADevice {
   device_id: string;
@@ -25,27 +25,31 @@ interface MFADevice {
 interface MFAVerificationProps {
   tempToken: string;
   availableMethods: MFADevice[];
-  onVerificationSuccess: (tokens: { access_token: string; refresh_token: string; user: any }) => void;
+  onVerificationSuccess: (tokens: {
+    access_token: string;
+    refresh_token: string;
+    user: any;
+  }) => void;
   onCancel?: () => void;
   className?: string;
 }
 
-export function MFAVerification({ 
-  tempToken, 
-  availableMethods, 
-  onVerificationSuccess, 
-  onCancel, 
-  className = '' 
+export function MFAVerification({
+  tempToken,
+  availableMethods,
+  onVerificationSuccess,
+  onCancel,
+  className = "",
 }: MFAVerificationProps) {
   const [selectedDevice, setSelectedDevice] = useState<MFADevice | null>(null);
-  const [verificationCode, setVerificationCode] = useState('');
+  const [verificationCode, setVerificationCode] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
   const [countdown, setCountdown] = useState(0);
 
   // Auto-select primary device if available
   useEffect(() => {
-    const primaryDevice = availableMethods.find(method => method.is_primary);
+    const primaryDevice = availableMethods.find((method) => method.is_primary);
     if (primaryDevice) {
       setSelectedDevice(primaryDevice);
     } else if (availableMethods.length > 0) {
@@ -55,7 +59,7 @@ export function MFAVerification({
 
   // Start countdown for SMS resend
   useEffect(() => {
-    if (selectedDevice?.device_type === 'sms' && countdown > 0) {
+    if (selectedDevice?.device_type === "sms" && countdown > 0) {
       const timer = setTimeout(() => setCountdown(countdown - 1), 1000);
       return () => clearTimeout(timer);
     }
@@ -63,11 +67,11 @@ export function MFAVerification({
 
   const getDeviceIcon = (deviceType: string) => {
     switch (deviceType) {
-      case 'totp':
+      case "totp":
         return Smartphone;
-      case 'sms':
+      case "sms":
         return Mail;
-      case 'backup':
+      case "backup":
         return Key;
       default:
         return Shield;
@@ -76,96 +80,96 @@ export function MFAVerification({
 
   const getDeviceDescription = (device: MFADevice) => {
     switch (device.device_type) {
-      case 'totp':
-        return 'Enter the 6-digit code from your authenticator app';
-      case 'sms':
-        return 'Enter the code sent to your phone';
-      case 'backup':
-        return 'Enter one of your backup recovery codes';
+      case "totp":
+        return "Enter the 6-digit code from your authenticator app";
+      case "sms":
+        return "Enter the code sent to your phone";
+      case "backup":
+        return "Enter one of your backup recovery codes";
       default:
-        return 'Enter your verification code';
+        return "Enter your verification code";
     }
   };
 
   const handleVerification = async () => {
     if (!verificationCode.trim()) {
-      setError('Please enter the verification code');
+      setError("Please enter the verification code");
       return;
     }
 
     if (!selectedDevice) {
-      setError('Please select a verification method');
+      setError("Please select a verification method");
       return;
     }
 
     setIsLoading(true);
-    setError('');
+    setError("");
 
     try {
-      const response = await fetch('/api/v1/auth/mfa/verify-login/', {
-        method: 'POST',
+      const response = await fetch("/api/v1/auth/mfa/verify-login/", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json'
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({
           temp_token: tempToken,
           device_id: selectedDevice.device_id,
-          code: verificationCode
-        })
+          code: verificationCode,
+        }),
       });
 
       const data = await response.json();
 
       if (response.ok) {
         // Store tokens
-        localStorage.setItem('access_token', data.access_token);
-        localStorage.setItem('refresh_token', data.refresh_token);
-        
+        localStorage.setItem("access_token", data.access_token);
+        localStorage.setItem("refresh_token", data.refresh_token);
+
         onVerificationSuccess(data);
       } else {
-        setError(data.error || 'Verification failed');
-        setVerificationCode(''); // Clear the code on failure
+        setError(data.error || "Verification failed");
+        setVerificationCode(""); // Clear the code on failure
       }
     } catch (error) {
-      setError('Network error. Please try again.');
+      setError("Network error. Please try again.");
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleResendSMS = async () => {
-    if (!selectedDevice || selectedDevice.device_type !== 'sms') return;
+    if (!selectedDevice || selectedDevice.device_type !== "sms") return;
 
     setIsLoading(true);
-    setError('');
+    setError("");
 
     try {
       // This would trigger a new SMS code
-      const response = await fetch('/api/v1/auth/mfa/resend-sms/', {
-        method: 'POST',
+      const response = await fetch("/api/v1/auth/mfa/resend-sms/", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json'
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({
           temp_token: tempToken,
-          device_id: selectedDevice.device_id
-        })
+          device_id: selectedDevice.device_id,
+        }),
       });
 
       if (response.ok) {
         setCountdown(60); // 60 second countdown
       } else {
-        setError('Failed to resend SMS code');
+        setError("Failed to resend SMS code");
       }
     } catch (error) {
-      setError('Failed to resend SMS code');
+      setError("Failed to resend SMS code");
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !isLoading) {
+    if (e.key === "Enter" && !isLoading) {
       handleVerification();
     }
   };
@@ -201,8 +205,8 @@ export function MFAVerification({
                     onClick={() => setSelectedDevice(device)}
                     className={`w-full p-3 border rounded-lg text-left transition-colors ${
                       selectedDevice?.device_id === device.device_id
-                        ? 'border-blue-500 bg-blue-50'
-                        : 'border-gray-200 hover:bg-gray-50'
+                        ? "border-blue-500 bg-blue-50"
+                        : "border-gray-200 hover:bg-gray-50"
                     }`}
                   >
                     <div className="flex items-center gap-3">
@@ -210,10 +214,15 @@ export function MFAVerification({
                       <div>
                         <div className="font-medium">{device.device_name}</div>
                         <div className="text-sm text-gray-600">
-                          {device.device_type === 'totp' ? 'Authenticator App' : 
-                           device.device_type === 'sms' ? 'SMS' : 'Backup Codes'}
+                          {device.device_type === "totp"
+                            ? "Authenticator App"
+                            : device.device_type === "sms"
+                              ? "SMS"
+                              : "Backup Codes"}
                           {device.is_primary && (
-                            <span className="ml-2 text-blue-600">(Primary)</span>
+                            <span className="ml-2 text-blue-600">
+                              (Primary)
+                            </span>
                           )}
                         </div>
                       </div>
@@ -230,7 +239,7 @@ export function MFAVerification({
           <div className="p-3 bg-gray-50 rounded-lg">
             <div className="flex items-center gap-2 mb-1">
               {React.createElement(getDeviceIcon(selectedDevice.device_type), {
-                className: "h-4 w-4 text-gray-600"
+                className: "h-4 w-4 text-gray-600",
               })}
               <span className="font-medium">{selectedDevice.device_name}</span>
             </div>
@@ -248,15 +257,19 @@ export function MFAVerification({
           <Input
             value={verificationCode}
             onChange={(e) => setVerificationCode(e.target.value)}
-            placeholder={selectedDevice?.device_type === 'backup' ? 'Enter backup code' : 'Enter 6-digit code'}
-            maxLength={selectedDevice?.device_type === 'backup' ? 8 : 6}
+            placeholder={
+              selectedDevice?.device_type === "backup"
+                ? "Enter backup code"
+                : "Enter 6-digit code"
+            }
+            maxLength={selectedDevice?.device_type === "backup" ? 8 : 6}
             onKeyPress={handleKeyPress}
             autoFocus
           />
         </div>
 
         {/* SMS Resend Option */}
-        {selectedDevice?.device_type === 'sms' && (
+        {selectedDevice?.device_type === "sms" && (
           <div className="text-sm text-gray-600">
             {"Didn't receive the code? "}
             <button
@@ -264,7 +277,7 @@ export function MFAVerification({
               disabled={countdown > 0 || isLoading}
               className="text-blue-600 hover:text-blue-800 disabled:text-gray-400"
             >
-              {countdown > 0 ? `Resend in ${countdown}s` : 'Resend SMS'}
+              {countdown > 0 ? `Resend in ${countdown}s` : "Resend SMS"}
             </button>
           </div>
         )}
@@ -282,7 +295,7 @@ export function MFAVerification({
                 Verifying...
               </>
             ) : (
-              'Verify'
+              "Verify"
             )}
           </Button>
 

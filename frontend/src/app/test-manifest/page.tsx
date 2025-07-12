@@ -1,11 +1,14 @@
-'use client';
+"use client";
 
-import { AuthGuard } from '@/components/auth/auth-guard';
-import dynamic from 'next/dynamic';
+import { AuthGuard } from "@/components/auth/auth-guard";
+import dynamic from "next/dynamic";
 
-const ManifestWorkflowTest = dynamic(() => import('@/components/testing/ManifestWorkflowTest'), {
-  ssr: false,
-});
+const ManifestWorkflowTest = dynamic(
+  () => import("@/components/testing/ManifestWorkflowTest"),
+  {
+    ssr: false,
+  },
+);
 
 export default function TestManifestPage() {
   return (

@@ -1,5 +1,5 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useAuthStore } from '@/stores/auth-store';
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useAuthStore } from "@/stores/auth-store";
 
 // Types
 export interface User {
@@ -40,52 +40,65 @@ export interface UpdateUserRequest {
 
 // API functions
 const fetchUsers = async (token: string): Promise<User[]> => {
-  const response = await fetch('/api/v1/users/', {
+  const response = await fetch("/api/v1/users/", {
     headers: {
-      'Authorization': `Bearer ${token}`,
-      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
     },
   });
 
   if (!response.ok) {
-    const error = await response.json().catch(() => ({ message: 'Failed to fetch users' }));
-    throw new Error(error.message || 'Failed to fetch users');
+    const error = await response
+      .json()
+      .catch(() => ({ message: "Failed to fetch users" }));
+    throw new Error(error.message || "Failed to fetch users");
   }
 
   return response.json();
 };
 
-const createUser = async (data: CreateUserRequest, token: string): Promise<User> => {
-  const response = await fetch('/api/v1/users/', {
-    method: 'POST',
+const createUser = async (
+  data: CreateUserRequest,
+  token: string,
+): Promise<User> => {
+  const response = await fetch("/api/v1/users/", {
+    method: "POST",
     headers: {
-      'Authorization': `Bearer ${token}`,
-      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
     },
     body: JSON.stringify(data),
   });
 
   if (!response.ok) {
-    const error = await response.json().catch(() => ({ message: 'Failed to create user' }));
-    throw new Error(error.message || 'Failed to create user');
+    const error = await response
+      .json()
+      .catch(() => ({ message: "Failed to create user" }));
+    throw new Error(error.message || "Failed to create user");
   }
 
   return response.json();
 };
 
-const updateUser = async (id: string, data: UpdateUserRequest, token: string): Promise<User> => {
+const updateUser = async (
+  id: string,
+  data: UpdateUserRequest,
+  token: string,
+): Promise<User> => {
   const response = await fetch(`/api/v1/users/${id}/`, {
-    method: 'PATCH',
+    method: "PATCH",
     headers: {
-      'Authorization': `Bearer ${token}`,
-      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
     },
     body: JSON.stringify(data),
   });
 
   if (!response.ok) {
-    const error = await response.json().catch(() => ({ message: 'Failed to update user' }));
-    throw new Error(error.message || 'Failed to update user');
+    const error = await response
+      .json()
+      .catch(() => ({ message: "Failed to update user" }));
+    throw new Error(error.message || "Failed to update user");
   }
 
   return response.json();
@@ -93,16 +106,18 @@ const updateUser = async (id: string, data: UpdateUserRequest, token: string): P
 
 const deleteUser = async (id: string, token: string): Promise<void> => {
   const response = await fetch(`/api/v1/users/${id}/`, {
-    method: 'DELETE',
+    method: "DELETE",
     headers: {
-      'Authorization': `Bearer ${token}`,
-      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
     },
   });
 
   if (!response.ok) {
-    const error = await response.json().catch(() => ({ message: 'Failed to delete user' }));
-    throw new Error(error.message || 'Failed to delete user');
+    const error = await response
+      .json()
+      .catch(() => ({ message: "Failed to delete user" }));
+    throw new Error(error.message || "Failed to delete user");
   }
 };
 
@@ -111,7 +126,7 @@ export const useUsers = () => {
   const { token } = useAuthStore();
 
   return useQuery({
-    queryKey: ['users'],
+    queryKey: ["users"],
     queryFn: () => fetchUsers(token!),
     enabled: !!token,
     staleTime: 5 * 60 * 1000, // 5 minutes
@@ -126,7 +141,7 @@ export const useCreateUser = () => {
     mutationFn: (data: CreateUserRequest) => createUser(data, token!),
     onSuccess: () => {
       // Invalidate and refetch users
-      queryClient.invalidateQueries({ queryKey: ['users'] });
+      queryClient.invalidateQueries({ queryKey: ["users"] });
     },
   });
 };
@@ -136,11 +151,11 @@ export const useUpdateUser = () => {
   const { token } = useAuthStore();
 
   return useMutation({
-    mutationFn: ({ id, data }: { id: string; data: UpdateUserRequest }) => 
+    mutationFn: ({ id, data }: { id: string; data: UpdateUserRequest }) =>
       updateUser(id, data, token!),
     onSuccess: () => {
       // Invalidate and refetch users
-      queryClient.invalidateQueries({ queryKey: ['users'] });
+      queryClient.invalidateQueries({ queryKey: ["users"] });
     },
   });
 };
@@ -153,7 +168,7 @@ export const useDeleteUser = () => {
     mutationFn: (id: string) => deleteUser(id, token!),
     onSuccess: () => {
       // Invalidate and refetch users
-      queryClient.invalidateQueries({ queryKey: ['users'] });
+      queryClient.invalidateQueries({ queryKey: ["users"] });
     },
   });
 };

@@ -1,6 +1,6 @@
 // hooks/useEPG.ts
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { api } from '@/services/api';
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { api } from "@/services/api";
 
 // Types
 export interface EmergencyProcedureGuide {
@@ -26,9 +26,9 @@ export interface EmergencyProcedureGuide {
   water_pollution_response?: string;
   transport_specific_guidance?: string;
   weather_considerations?: string;
-  status: 'ACTIVE' | 'DRAFT' | 'UNDER_REVIEW' | 'ARCHIVED';
+  status: "ACTIVE" | "DRAFT" | "UNDER_REVIEW" | "ARCHIVED";
   status_display: string;
-  severity_level: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+  severity_level: "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
   severity_level_display: string;
   version: string;
   effective_date: string;
@@ -62,7 +62,7 @@ export interface ShipmentEmergencyPlan {
   hospital_locations: Array<any>;
   special_considerations?: string;
   notification_matrix: Record<string, any>;
-  status: 'GENERATED' | 'REVIEWED' | 'APPROVED' | 'ACTIVE' | 'EXPIRED';
+  status: "GENERATED" | "REVIEWED" | "APPROVED" | "ACTIVE" | "EXPIRED";
   status_display: string;
   generated_at: string;
   generated_by?: string;
@@ -152,7 +152,9 @@ export interface EmergencyPlanStatistics {
 const epgAPI = {
   // EPG Management
   getEPGs: async (params: EPGSearchParams = {}) => {
-    const response = await api.get('/epg/emergency-procedure-guides/', { params });
+    const response = await api.get("/epg/emergency-procedure-guides/", {
+      params,
+    });
     return response.data;
   },
 
@@ -162,12 +164,15 @@ const epgAPI = {
   },
 
   createEPG: async (data: Partial<EmergencyProcedureGuide>) => {
-    const response = await api.post('/epg/emergency-procedure-guides/', data);
+    const response = await api.post("/epg/emergency-procedure-guides/", data);
     return response.data;
   },
 
   updateEPG: async (id: string, data: Partial<EmergencyProcedureGuide>) => {
-    const response = await api.patch(`/epg/emergency-procedure-guides/${id}/`, data);
+    const response = await api.patch(
+      `/epg/emergency-procedure-guides/${id}/`,
+      data,
+    );
     return response.data;
   },
 
@@ -176,40 +181,58 @@ const epgAPI = {
   },
 
   searchEPGs: async (searchData: EPGSearchParams) => {
-    const response = await api.post('/epg/emergency-procedure-guides/search/', searchData);
+    const response = await api.post(
+      "/epg/emergency-procedure-guides/search/",
+      searchData,
+    );
     return response.data;
   },
 
-  createFromTemplate: async (data: { hazard_class: string; dangerous_good?: string }) => {
-    const response = await api.post('/epg/emergency-procedure-guides/create_from_template/', data);
+  createFromTemplate: async (data: {
+    hazard_class: string;
+    dangerous_good?: string;
+  }) => {
+    const response = await api.post(
+      "/epg/emergency-procedure-guides/create_from_template/",
+      data,
+    );
     return response.data;
   },
 
   activateEPG: async (id: string) => {
-    const response = await api.post(`/epg/emergency-procedure-guides/${id}/activate/`);
+    const response = await api.post(
+      `/epg/emergency-procedure-guides/${id}/activate/`,
+    );
     return response.data;
   },
 
   archiveEPG: async (id: string) => {
-    const response = await api.post(`/epg/emergency-procedure-guides/${id}/archive/`);
+    const response = await api.post(
+      `/epg/emergency-procedure-guides/${id}/archive/`,
+    );
     return response.data;
   },
 
   getEPGStatistics: async () => {
-    const response = await api.get('/epg/emergency-procedure-guides/statistics/');
+    const response = await api.get(
+      "/epg/emergency-procedure-guides/statistics/",
+    );
     return response.data;
   },
 
   getDueForReview: async (days: number = 30) => {
-    const response = await api.get('/epg/emergency-procedure-guides/due_for_review/', {
-      params: { days }
-    });
+    const response = await api.get(
+      "/epg/emergency-procedure-guides/due_for_review/",
+      {
+        params: { days },
+      },
+    );
     return response.data;
   },
 
   // Emergency Plans
   getEmergencyPlans: async (params: any = {}) => {
-    const response = await api.get('/epg/emergency-plans/', { params });
+    const response = await api.get("/epg/emergency-plans/", { params });
     return response.data;
   },
 
@@ -219,8 +242,8 @@ const epgAPI = {
   },
 
   generateEmergencyPlan: async (shipmentId: string) => {
-    const response = await api.post('/epg/emergency-plans/generate_plan/', {
-      shipment: shipmentId
+    const response = await api.post("/epg/emergency-plans/generate_plan/", {
+      shipment: shipmentId,
     });
     return response.data;
   },
@@ -241,30 +264,32 @@ const epgAPI = {
   },
 
   getEmergencyPlanStatistics: async () => {
-    const response = await api.get('/epg/emergency-plans/statistics/');
+    const response = await api.get("/epg/emergency-plans/statistics/");
     return response.data;
   },
 
   // Incidents
   getIncidents: async (params: any = {}) => {
-    const response = await api.get('/epg/incidents/', { params });
+    const response = await api.get("/epg/incidents/", { params });
     return response.data;
   },
 
   createIncident: async (data: Partial<EmergencyIncident>) => {
-    const response = await api.post('/epg/incidents/', data);
+    const response = await api.post("/epg/incidents/", data);
     return response.data;
   },
 
   getRecentIncidents: async (days: number = 30) => {
-    const response = await api.get('/epg/incidents/recent/', { params: { days } });
+    const response = await api.get("/epg/incidents/recent/", {
+      params: { days },
+    });
     return response.data;
   },
 
   getIncidentsByEffectiveness: async () => {
-    const response = await api.get('/epg/incidents/by_effectiveness/');
+    const response = await api.get("/epg/incidents/by_effectiveness/");
     return response.data;
-  }
+  },
 };
 
 // React Query Hooks
@@ -272,7 +297,7 @@ const epgAPI = {
 // EPG Hooks
 export const useEPGs = (params: EPGSearchParams = {}) => {
   return useQuery({
-    queryKey: ['epgs', params],
+    queryKey: ["epgs", params],
     queryFn: () => epgAPI.getEPGs(params),
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
@@ -280,7 +305,7 @@ export const useEPGs = (params: EPGSearchParams = {}) => {
 
 export const useEPG = (id: string) => {
   return useQuery({
-    queryKey: ['epg', id],
+    queryKey: ["epg", id],
     queryFn: () => epgAPI.getEPG(id),
     enabled: !!id,
   });
@@ -288,38 +313,43 @@ export const useEPG = (id: string) => {
 
 export const useCreateEPG = () => {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: epgAPI.createEPG,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['epgs'] });
-      queryClient.invalidateQueries({ queryKey: ['epg-statistics'] });
+      queryClient.invalidateQueries({ queryKey: ["epgs"] });
+      queryClient.invalidateQueries({ queryKey: ["epg-statistics"] });
     },
   });
 };
 
 export const useUpdateEPG = () => {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
-    mutationFn: ({ id, data }: { id: string; data: Partial<EmergencyProcedureGuide> }) => 
-      epgAPI.updateEPG(id, data),
+    mutationFn: ({
+      id,
+      data,
+    }: {
+      id: string;
+      data: Partial<EmergencyProcedureGuide>;
+    }) => epgAPI.updateEPG(id, data),
     onSuccess: (_, { id }) => {
-      queryClient.invalidateQueries({ queryKey: ['epg', id] });
-      queryClient.invalidateQueries({ queryKey: ['epgs'] });
-      queryClient.invalidateQueries({ queryKey: ['epg-statistics'] });
+      queryClient.invalidateQueries({ queryKey: ["epg", id] });
+      queryClient.invalidateQueries({ queryKey: ["epgs"] });
+      queryClient.invalidateQueries({ queryKey: ["epg-statistics"] });
     },
   });
 };
 
 export const useDeleteEPG = () => {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: epgAPI.deleteEPG,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['epgs'] });
-      queryClient.invalidateQueries({ queryKey: ['epg-statistics'] });
+      queryClient.invalidateQueries({ queryKey: ["epgs"] });
+      queryClient.invalidateQueries({ queryKey: ["epg-statistics"] });
     },
   });
 };
@@ -332,43 +362,43 @@ export const useEPGSearch = () => {
 
 export const useCreateEPGFromTemplate = () => {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: epgAPI.createFromTemplate,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['epgs'] });
-      queryClient.invalidateQueries({ queryKey: ['epg-statistics'] });
+      queryClient.invalidateQueries({ queryKey: ["epgs"] });
+      queryClient.invalidateQueries({ queryKey: ["epg-statistics"] });
     },
   });
 };
 
 export const useActivateEPG = () => {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: epgAPI.activateEPG,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['epgs'] });
-      queryClient.invalidateQueries({ queryKey: ['epg-statistics'] });
+      queryClient.invalidateQueries({ queryKey: ["epgs"] });
+      queryClient.invalidateQueries({ queryKey: ["epg-statistics"] });
     },
   });
 };
 
 export const useArchiveEPG = () => {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: epgAPI.archiveEPG,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['epgs'] });
-      queryClient.invalidateQueries({ queryKey: ['epg-statistics'] });
+      queryClient.invalidateQueries({ queryKey: ["epgs"] });
+      queryClient.invalidateQueries({ queryKey: ["epg-statistics"] });
     },
   });
 };
 
 export const useEPGStatistics = () => {
   return useQuery({
-    queryKey: ['epg-statistics'],
+    queryKey: ["epg-statistics"],
     queryFn: epgAPI.getEPGStatistics,
     staleTime: 10 * 60 * 1000, // 10 minutes
   });
@@ -376,7 +406,7 @@ export const useEPGStatistics = () => {
 
 export const useEPGsDueForReview = (days: number = 30) => {
   return useQuery({
-    queryKey: ['epgs-due-for-review', days],
+    queryKey: ["epgs-due-for-review", days],
     queryFn: () => epgAPI.getDueForReview(days),
     staleTime: 15 * 60 * 1000, // 15 minutes
   });
@@ -385,7 +415,7 @@ export const useEPGsDueForReview = (days: number = 30) => {
 // Emergency Plan Hooks
 export const useEmergencyPlans = (params: any = {}) => {
   return useQuery({
-    queryKey: ['emergency-plans', params],
+    queryKey: ["emergency-plans", params],
     queryFn: () => epgAPI.getEmergencyPlans(params),
     staleTime: 5 * 60 * 1000,
   });
@@ -393,7 +423,7 @@ export const useEmergencyPlans = (params: any = {}) => {
 
 export const useEmergencyPlan = (id: string) => {
   return useQuery({
-    queryKey: ['emergency-plan', id],
+    queryKey: ["emergency-plan", id],
     queryFn: () => epgAPI.getEmergencyPlan(id),
     enabled: !!id,
   });
@@ -401,52 +431,54 @@ export const useEmergencyPlan = (id: string) => {
 
 export const useGenerateEmergencyPlan = () => {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: epgAPI.generateEmergencyPlan,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['emergency-plans'] });
-      queryClient.invalidateQueries({ queryKey: ['emergency-plan-statistics'] });
+      queryClient.invalidateQueries({ queryKey: ["emergency-plans"] });
+      queryClient.invalidateQueries({
+        queryKey: ["emergency-plan-statistics"],
+      });
     },
   });
 };
 
 export const useReviewEmergencyPlan = () => {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: epgAPI.reviewEmergencyPlan,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['emergency-plans'] });
+      queryClient.invalidateQueries({ queryKey: ["emergency-plans"] });
     },
   });
 };
 
 export const useApproveEmergencyPlan = () => {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: epgAPI.approveEmergencyPlan,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['emergency-plans'] });
+      queryClient.invalidateQueries({ queryKey: ["emergency-plans"] });
     },
   });
 };
 
 export const useActivateEmergencyPlan = () => {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: epgAPI.activateEmergencyPlan,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['emergency-plans'] });
+      queryClient.invalidateQueries({ queryKey: ["emergency-plans"] });
     },
   });
 };
 
 export const useEmergencyPlanStatistics = () => {
   return useQuery({
-    queryKey: ['emergency-plan-statistics'],
+    queryKey: ["emergency-plan-statistics"],
     queryFn: epgAPI.getEmergencyPlanStatistics,
     staleTime: 10 * 60 * 1000,
   });
@@ -455,7 +487,7 @@ export const useEmergencyPlanStatistics = () => {
 // Incident Hooks
 export const useIncidents = (params: any = {}) => {
   return useQuery({
-    queryKey: ['incidents', params],
+    queryKey: ["incidents", params],
     queryFn: () => epgAPI.getIncidents(params),
     staleTime: 5 * 60 * 1000,
   });
@@ -463,18 +495,18 @@ export const useIncidents = (params: any = {}) => {
 
 export const useCreateIncident = () => {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: epgAPI.createIncident,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['incidents'] });
+      queryClient.invalidateQueries({ queryKey: ["incidents"] });
     },
   });
 };
 
 export const useRecentIncidents = (days: number = 30) => {
   return useQuery({
-    queryKey: ['recent-incidents', days],
+    queryKey: ["recent-incidents", days],
     queryFn: () => epgAPI.getRecentIncidents(days),
     staleTime: 5 * 60 * 1000,
   });
@@ -482,7 +514,7 @@ export const useRecentIncidents = (days: number = 30) => {
 
 export const useIncidentsByEffectiveness = () => {
   return useQuery({
-    queryKey: ['incidents-by-effectiveness'],
+    queryKey: ["incidents-by-effectiveness"],
     queryFn: epgAPI.getIncidentsByEffectiveness,
     staleTime: 10 * 60 * 1000,
   });

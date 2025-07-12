@@ -1,31 +1,34 @@
 // app/dashboard/live-map/page.tsx
-'use client';
+"use client";
 
-import React, { useState } from 'react';
-import dynamic from 'next/dynamic';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { 
-  RefreshCw, 
-  Truck, 
-  Users, 
-  Activity, 
+import React, { useState } from "react";
+import dynamic from "next/dynamic";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import {
+  RefreshCw,
+  Truck,
+  Users,
+  Activity,
   MapPin,
   Eye,
   Clock,
   Package,
-  AlertTriangle
-} from 'lucide-react';
-import { useFleetStatus, type FleetVehicle } from '@/hooks/useFleetTracking';
-import { useMockFleetStatus } from '@/hooks/useMockAPI';
-import { AuthGuard } from '@/components/auth/auth-guard';
+  AlertTriangle,
+} from "lucide-react";
+import { useFleetStatus, type FleetVehicle } from "@/hooks/useFleetTracking";
+import { useMockFleetStatus } from "@/hooks/useMockAPI";
+import { AuthGuard } from "@/components/auth/auth-guard";
 
 // Dynamically import FleetMap to avoid SSR issues
 const FleetMap = dynamic(
-  () => import('@/components/maps/FleetMap').then(mod => ({ default: mod.FleetMap })),
-  { 
+  () =>
+    import("@/components/maps/FleetMap").then((mod) => ({
+      default: mod.FleetMap,
+    })),
+  {
     ssr: false,
     loading: () => (
       <Card className="h-96">
@@ -36,21 +39,23 @@ const FleetMap = dynamic(
           </div>
         </CardContent>
       </Card>
-    )
-  }
+    ),
+  },
 );
 
 export default function LiveMapPage() {
-  const [selectedVehicle, setSelectedVehicle] = useState<FleetVehicle | null>(null);
+  const [selectedVehicle, setSelectedVehicle] = useState<FleetVehicle | null>(
+    null,
+  );
   const [refreshInterval, setRefreshInterval] = useState(10000); // 10 seconds
-  
+
   // Use mock API for demo
-  const { 
-    data: fleetData, 
-    isLoading, 
-    error, 
-    refetch, 
-    isRefetching 
+  const {
+    data: fleetData,
+    isLoading,
+    error,
+    refetch,
+    isRefetching,
   } = useMockFleetStatus(refreshInterval);
 
   const handleRefresh = () => {
@@ -62,14 +67,17 @@ export default function LiveMapPage() {
   };
 
   const getVehicleStats = () => {
-    if (!fleetData?.vehicles) return { total: 0, active: 0, online: 0, inTransit: 0 };
-    
+    if (!fleetData?.vehicles)
+      return { total: 0, active: 0, online: 0, inTransit: 0 };
+
     const vehicles = fleetData.vehicles;
     return {
       total: vehicles.length,
-      active: vehicles.filter(v => v.active_shipment).length,
-      online: vehicles.filter(v => v.location_is_fresh).length,
-      inTransit: vehicles.filter(v => v.active_shipment?.status === 'IN_TRANSIT').length
+      active: vehicles.filter((v) => v.active_shipment).length,
+      online: vehicles.filter((v) => v.location_is_fresh).length,
+      inTransit: vehicles.filter(
+        (v) => v.active_shipment?.status === "IN_TRANSIT",
+      ).length,
     };
   };
 
@@ -105,13 +113,13 @@ export default function LiveMapPage() {
               Real-time tracking of all active vehicles and shipments
             </p>
           </div>
-          
+
           <div className="flex items-center gap-3">
             {/* Refresh Interval Selector */}
             <div className="flex items-center gap-2 text-sm">
               <span className="text-gray-600">Update every:</span>
-              <select 
-                value={refreshInterval} 
+              <select
+                value={refreshInterval}
                 onChange={(e) => setRefreshInterval(Number(e.target.value))}
                 className="border rounded px-2 py-1 text-sm"
               >
@@ -121,14 +129,16 @@ export default function LiveMapPage() {
                 <option value={60000}>1m</option>
               </select>
             </div>
-            
-            <Button 
-              onClick={handleRefresh} 
-              variant="outline" 
+
+            <Button
+              onClick={handleRefresh}
+              variant="outline"
               size="sm"
               disabled={isRefetching}
             >
-              <RefreshCw className={`h-4 w-4 mr-2 ${isRefetching ? 'animate-spin' : ''}`} />
+              <RefreshCw
+                className={`h-4 w-4 mr-2 ${isRefetching ? "animate-spin" : ""}`}
+              />
               Refresh
             </Button>
           </div>
@@ -140,7 +150,9 @@ export default function LiveMapPage() {
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Total Vehicles</p>
+                  <p className="text-sm font-medium text-gray-600">
+                    Total Vehicles
+                  </p>
                   <p className="text-2xl font-bold">{stats.total}</p>
                 </div>
                 <Truck className="h-8 w-8 text-blue-500" />
@@ -152,7 +164,9 @@ export default function LiveMapPage() {
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Active Shipments</p>
+                  <p className="text-sm font-medium text-gray-600">
+                    Active Shipments
+                  </p>
                   <p className="text-2xl font-bold">{stats.active}</p>
                 </div>
                 <Package className="h-8 w-8 text-green-500" />
@@ -176,7 +190,9 @@ export default function LiveMapPage() {
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">In Transit</p>
+                  <p className="text-sm font-medium text-gray-600">
+                    In Transit
+                  </p>
                   <p className="text-2xl font-bold">{stats.inTransit}</p>
                 </div>
                 <MapPin className="h-8 w-8 text-orange-500" />
@@ -199,8 +215,8 @@ export default function LiveMapPage() {
                 </CardContent>
               </Card>
             ) : (
-              <FleetMap 
-                vehicles={fleetData?.vehicles || []} 
+              <FleetMap
+                vehicles={fleetData?.vehicles || []}
                 onVehicleSelect={handleVehicleSelect}
               />
             )}
@@ -218,12 +234,16 @@ export default function LiveMapPage() {
               </CardHeader>
               <CardContent className="pt-0">
                 <p className="text-sm text-gray-600">
-                  {fleetData?.timestamp ? new Date(fleetData.timestamp).toLocaleString() : 'Never'}
+                  {fleetData?.timestamp
+                    ? new Date(fleetData.timestamp).toLocaleString()
+                    : "Never"}
                 </p>
                 <div className="flex items-center gap-1 mt-1">
-                  <div className={`w-2 h-2 rounded-full ${isRefetching ? 'bg-orange-500 animate-pulse' : 'bg-green-500'}`}></div>
+                  <div
+                    className={`w-2 h-2 rounded-full ${isRefetching ? "bg-orange-500 animate-pulse" : "bg-green-500"}`}
+                  ></div>
                   <span className="text-xs text-gray-500">
-                    {isRefetching ? 'Updating...' : 'Live'}
+                    {isRefetching ? "Updating..." : "Live"}
                   </span>
                 </div>
               </CardContent>
@@ -240,14 +260,20 @@ export default function LiveMapPage() {
                 </CardHeader>
                 <CardContent className="pt-0 space-y-3">
                   <div>
-                    <h3 className="font-semibold">{selectedVehicle.registration_number}</h3>
-                    <p className="text-sm text-gray-600">{selectedVehicle.vehicle_type}</p>
+                    <h3 className="font-semibold">
+                      {selectedVehicle.registration_number}
+                    </h3>
+                    <p className="text-sm text-gray-600">
+                      {selectedVehicle.vehicle_type}
+                    </p>
                   </div>
 
                   {selectedVehicle.assigned_driver && (
                     <div>
                       <p className="text-sm font-medium">Driver</p>
-                      <p className="text-sm text-gray-600">{selectedVehicle.assigned_driver.name}</p>
+                      <p className="text-sm text-gray-600">
+                        {selectedVehicle.assigned_driver.name}
+                      </p>
                     </div>
                   )}
 
@@ -255,17 +281,18 @@ export default function LiveMapPage() {
                     <div>
                       <p className="text-sm font-medium">Location</p>
                       <p className="text-xs font-mono text-gray-600">
-                        {selectedVehicle.location.lat.toFixed(6)}, {selectedVehicle.location.lng.toFixed(6)}
+                        {selectedVehicle.location.lat.toFixed(6)},{" "}
+                        {selectedVehicle.location.lng.toFixed(6)}
                       </p>
-                      <Badge 
-                        variant="outline" 
+                      <Badge
+                        variant="outline"
                         className={`text-xs mt-1 ${
-                          selectedVehicle.location_is_fresh 
-                            ? 'bg-green-50 text-green-700 border-green-200' 
-                            : 'bg-red-50 text-red-700 border-red-200'
+                          selectedVehicle.location_is_fresh
+                            ? "bg-green-50 text-green-700 border-green-200"
+                            : "bg-red-50 text-red-700 border-red-200"
                         }`}
                       >
-                        {selectedVehicle.location_is_fresh ? 'Fresh' : 'Stale'}
+                        {selectedVehicle.location_is_fresh ? "Fresh" : "Stale"}
                       </Badge>
                     </div>
                   )}
@@ -274,9 +301,21 @@ export default function LiveMapPage() {
                     <div className="border-t pt-3">
                       <p className="text-sm font-medium">Active Shipment</p>
                       <div className="space-y-1 text-sm text-gray-600">
-                        <p><span className="font-medium">Tracking:</span> {selectedVehicle.active_shipment.tracking_number}</p>
-                        <p><span className="font-medium">Customer:</span> {selectedVehicle.active_shipment.customer_name}</p>
-                        <p><span className="font-medium">Status:</span> {selectedVehicle.active_shipment.status.replace('_', ' ')}</p>
+                        <p>
+                          <span className="font-medium">Tracking:</span>{" "}
+                          {selectedVehicle.active_shipment.tracking_number}
+                        </p>
+                        <p>
+                          <span className="font-medium">Customer:</span>{" "}
+                          {selectedVehicle.active_shipment.customer_name}
+                        </p>
+                        <p>
+                          <span className="font-medium">Status:</span>{" "}
+                          {selectedVehicle.active_shipment.status.replace(
+                            "_",
+                            " ",
+                          )}
+                        </p>
                       </div>
                     </div>
                   )}
@@ -286,7 +325,9 @@ export default function LiveMapPage() {
               <Card>
                 <CardContent className="p-4 text-center text-gray-500">
                   <MapPin className="h-8 w-8 mx-auto mb-2" />
-                  <p className="text-sm">Click on a vehicle marker to view details</p>
+                  <p className="text-sm">
+                    Click on a vehicle marker to view details
+                  </p>
                 </CardContent>
               </Card>
             )}
@@ -297,15 +338,27 @@ export default function LiveMapPage() {
                 <CardTitle className="text-sm">Quick Actions</CardTitle>
               </CardHeader>
               <CardContent className="pt-0 space-y-2">
-                <Button variant="outline" size="sm" className="w-full justify-start">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full justify-start"
+                >
                   <Users className="h-4 w-4 mr-2" />
                   Manage Drivers
                 </Button>
-                <Button variant="outline" size="sm" className="w-full justify-start">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full justify-start"
+                >
                   <Truck className="h-4 w-4 mr-2" />
                   Vehicle Status
                 </Button>
-                <Button variant="outline" size="sm" className="w-full justify-start">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full justify-start"
+                >
                   <Package className="h-4 w-4 mr-2" />
                   Active Shipments
                 </Button>

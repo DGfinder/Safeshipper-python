@@ -1,43 +1,57 @@
-'use client';
+"use client";
 
-import { useState, useMemo } from 'react';
-import { DashboardLayout } from '@/components/layout/dashboard-layout';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Plus, Search, Edit2, Trash2, AlertCircle, Loader2 } from 'lucide-react';
-import { useUsers, User } from '@/hooks/useUsers';
-import { UserCreateForm } from '@/components/users/UserCreateForm';
-import { UserEditForm } from '@/components/users/UserEditForm';
-import { UserDeleteDialog } from '@/components/users/UserDeleteDialog';
+import { useState, useMemo } from "react";
+import { DashboardLayout } from "@/components/layout/dashboard-layout";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import {
+  Plus,
+  Search,
+  Edit2,
+  Trash2,
+  AlertCircle,
+  Loader2,
+} from "lucide-react";
+import { useUsers, User } from "@/hooks/useUsers";
+import { UserCreateForm } from "@/components/users/UserCreateForm";
+import { UserEditForm } from "@/components/users/UserEditForm";
+import { UserDeleteDialog } from "@/components/users/UserDeleteDialog";
 
 export default function UsersPage() {
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [deletingUser, setDeletingUser] = useState<User | null>(null);
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchTerm, setSearchTerm] = useState("");
 
   const { data: users, isLoading, error, refetch } = useUsers();
 
   // Filter users based on search term
   const filteredUsers = useMemo(() => {
     if (!users || !searchTerm) return users || [];
-    
-    return users.filter(user =>
-      user.username.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.first_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.last_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.role_display?.toLowerCase().includes(searchTerm.toLowerCase())
+
+    return users.filter(
+      (user) =>
+        user.username.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        user.first_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        user.last_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        user.role_display?.toLowerCase().includes(searchTerm.toLowerCase()),
     );
   }, [users, searchTerm]);
 
   const formatLastLogin = (lastLogin: string | null) => {
-    if (!lastLogin) return 'Never';
-    
+    if (!lastLogin) return "Never";
+
     const date = new Date(lastLogin);
     const now = new Date();
     const diffMs = now.getTime() - date.getTime();
@@ -45,10 +59,12 @@ export default function UsersPage() {
     const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
     const diffMinutes = Math.floor(diffMs / (1000 * 60));
 
-    if (diffDays > 0) return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
-    if (diffHours > 0) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
-    if (diffMinutes > 0) return `${diffMinutes} minute${diffMinutes > 1 ? 's' : ''} ago`;
-    return 'Just now';
+    if (diffDays > 0) return `${diffDays} day${diffDays > 1 ? "s" : ""} ago`;
+    if (diffHours > 0)
+      return `${diffHours} hour${diffHours > 1 ? "s" : ""} ago`;
+    if (diffMinutes > 0)
+      return `${diffMinutes} minute${diffMinutes > 1 ? "s" : ""} ago`;
+    return "Just now";
   };
 
   const getUserInitials = (user: User) => {
@@ -60,7 +76,7 @@ export default function UsersPage() {
 
   const getUserDisplayName = (user: User) => {
     if (user.first_name || user.last_name) {
-      return `${user.first_name || ''} ${user.last_name || ''}`.trim();
+      return `${user.first_name || ""} ${user.last_name || ""}`.trim();
     }
     return user.username;
   };
@@ -75,8 +91,12 @@ export default function UsersPage() {
         <div className="space-y-6">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">User Management</h1>
-              <p className="text-gray-600 mt-1">Manage system users, roles, and permissions</p>
+              <h1 className="text-3xl font-bold text-gray-900">
+                User Management
+              </h1>
+              <p className="text-gray-600 mt-1">
+                Manage system users, roles, and permissions
+              </p>
             </div>
           </div>
 
@@ -84,7 +104,12 @@ export default function UsersPage() {
             <AlertCircle className="h-4 w-4" />
             <AlertDescription>
               Failed to load users: {error.message}
-              <Button variant="outline" size="sm" className="ml-2" onClick={() => refetch()}>
+              <Button
+                variant="outline"
+                size="sm"
+                className="ml-2"
+                onClick={() => refetch()}
+              >
                 Try Again
               </Button>
             </AlertDescription>
@@ -100,10 +125,14 @@ export default function UsersPage() {
         {/* Page Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">User Management</h1>
-            <p className="text-gray-600 mt-1">Manage system users, roles, and permissions</p>
+            <h1 className="text-3xl font-bold text-gray-900">
+              User Management
+            </h1>
+            <p className="text-gray-600 mt-1">
+              Manage system users, roles, and permissions
+            </p>
           </div>
-          <Button 
+          <Button
             className="bg-[#153F9F] hover:bg-blue-700"
             onClick={() => setShowCreateForm(true)}
           >
@@ -153,11 +182,21 @@ export default function UsersPage() {
               <table className="w-full">
                 <thead>
                   <tr className="border-b">
-                    <th className="text-left py-3 px-4 font-medium text-gray-900">User</th>
-                    <th className="text-left py-3 px-4 font-medium text-gray-900">Role</th>
-                    <th className="text-left py-3 px-4 font-medium text-gray-900">Status</th>
-                    <th className="text-left py-3 px-4 font-medium text-gray-900">Last Login</th>
-                    <th className="text-left py-3 px-4 font-medium text-gray-900">Actions</th>
+                    <th className="text-left py-3 px-4 font-medium text-gray-900">
+                      User
+                    </th>
+                    <th className="text-left py-3 px-4 font-medium text-gray-900">
+                      Role
+                    </th>
+                    <th className="text-left py-3 px-4 font-medium text-gray-900">
+                      Status
+                    </th>
+                    <th className="text-left py-3 px-4 font-medium text-gray-900">
+                      Last Login
+                    </th>
+                    <th className="text-left py-3 px-4 font-medium text-gray-900">
+                      Actions
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y">
@@ -193,8 +232,13 @@ export default function UsersPage() {
                     ))
                   ) : filteredUsers.length === 0 ? (
                     <tr>
-                      <td colSpan={5} className="py-8 text-center text-gray-500">
-                        {searchTerm ? 'No users found matching your search.' : 'No users found.'}
+                      <td
+                        colSpan={5}
+                        className="py-8 text-center text-gray-500"
+                      >
+                        {searchTerm
+                          ? "No users found matching your search."
+                          : "No users found."}
                       </td>
                     </tr>
                   ) : (
@@ -209,18 +253,20 @@ export default function UsersPage() {
                               <div className="font-medium text-gray-900">
                                 {getUserDisplayName(user)}
                               </div>
-                              <div className="text-sm text-gray-500">{user.email}</div>
+                              <div className="text-sm text-gray-500">
+                                {user.email}
+                              </div>
                             </div>
                           </div>
                         </td>
                         <td className="py-3 px-4">
-                          <Badge variant="secondary">
-                            {user.role_display}
-                          </Badge>
+                          <Badge variant="secondary">{user.role_display}</Badge>
                         </td>
                         <td className="py-3 px-4">
-                          <Badge variant={user.is_active ? 'success' : 'secondary'}>
-                            {user.is_active ? 'Active' : 'Inactive'}
+                          <Badge
+                            variant={user.is_active ? "success" : "secondary"}
+                          >
+                            {user.is_active ? "Active" : "Inactive"}
                           </Badge>
                         </td>
                         <td className="py-3 px-4 text-sm text-gray-600">
@@ -228,15 +274,15 @@ export default function UsersPage() {
                         </td>
                         <td className="py-3 px-4">
                           <div className="flex items-center space-x-2">
-                            <Button 
-                              variant="ghost" 
+                            <Button
+                              variant="ghost"
                               size="sm"
                               onClick={() => setEditingUser(user)}
                             >
                               <Edit2 className="w-4 h-4" />
                             </Button>
-                            <Button 
-                              variant="ghost" 
+                            <Button
+                              variant="ghost"
                               size="sm"
                               onClick={() => setDeletingUser(user)}
                               className="text-red-600 hover:text-red-700 hover:bg-red-50"

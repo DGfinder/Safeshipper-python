@@ -1,9 +1,9 @@
-'use client';
+"use client";
 
-import { toast } from 'react-hot-toast';
-import { AlertTriangle, X } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { useDeleteUser, User } from '@/hooks/useUsers';
+import { toast } from "react-hot-toast";
+import { AlertTriangle, X } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { useDeleteUser, User } from "@/hooks/useUsers";
 
 interface UserDeleteDialogProps {
   user: User;
@@ -11,18 +11,22 @@ interface UserDeleteDialogProps {
   onSuccess?: () => void;
 }
 
-export function UserDeleteDialog({ user, onClose, onSuccess }: UserDeleteDialogProps) {
+export function UserDeleteDialog({
+  user,
+  onClose,
+  onSuccess,
+}: UserDeleteDialogProps) {
   const deleteUserMutation = useDeleteUser();
 
   const handleDelete = async () => {
     try {
       await deleteUserMutation.mutateAsync(user.id);
-      toast.success('User deleted successfully!');
+      toast.success("User deleted successfully!");
       onSuccess?.();
       onClose();
     } catch (error: any) {
-      console.error('Delete user error:', error);
-      toast.error(error.message || 'Failed to delete user');
+      console.error("Delete user error:", error);
+      toast.error(error.message || "Failed to delete user");
     }
   };
 
@@ -46,9 +50,10 @@ export function UserDeleteDialog({ user, onClose, onSuccess }: UserDeleteDialogP
 
         <div className="mb-6">
           <p className="text-gray-600 mb-4">
-            Are you sure you want to delete this user? This action cannot be undone.
+            Are you sure you want to delete this user? This action cannot be
+            undone.
           </p>
-          
+
           <div className="bg-gray-50 rounded-lg p-4">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-[#153F9F] rounded-full flex items-center justify-center text-white font-medium">
@@ -57,10 +62,9 @@ export function UserDeleteDialog({ user, onClose, onSuccess }: UserDeleteDialogP
               </div>
               <div>
                 <div className="font-medium text-gray-900">
-                  {user.first_name || user.last_name 
+                  {user.first_name || user.last_name
                     ? `${user.first_name} ${user.last_name}`.trim()
-                    : user.username
-                  }
+                    : user.username}
                 </div>
                 <div className="text-sm text-gray-500">{user.email}</div>
                 <div className="text-sm text-gray-500">{user.role_display}</div>
@@ -84,7 +88,7 @@ export function UserDeleteDialog({ user, onClose, onSuccess }: UserDeleteDialogP
             className="flex-1 bg-red-600 hover:bg-red-700 text-white"
             disabled={deleteUserMutation.isPending}
           >
-            {deleteUserMutation.isPending ? 'Deleting...' : 'Delete User'}
+            {deleteUserMutation.isPending ? "Deleting..." : "Delete User"}
           </Button>
         </div>
       </div>

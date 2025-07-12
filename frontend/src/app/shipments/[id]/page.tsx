@@ -1,16 +1,16 @@
 // app/shipments/[id]/page.tsx
-'use client';
+"use client";
 
-import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { 
-  Package, 
-  Truck, 
-  User, 
-  MapPin, 
-  Calendar, 
+import React, { useState, useEffect } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import {
+  Package,
+  Truck,
+  User,
+  MapPin,
+  Calendar,
   FileText,
   Eye,
   Edit,
@@ -29,15 +29,15 @@ import {
   Mail,
   Clock,
   ChevronLeft,
-  Plus
-} from 'lucide-react';
-import { AuthGuard } from '@/components/auth/auth-guard';
-import { ActivityLog } from '@/components/communications/ActivityLog';
-import { HazardInspection } from '@/components/inspections/HazardInspection';
-import { ProofOfDelivery } from '@/components/delivery/ProofOfDelivery';
-import DocumentGenerator from '@/components/documents/DocumentGenerator';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import Link from 'next/link';
+  Plus,
+} from "lucide-react";
+import { AuthGuard } from "@/components/auth/auth-guard";
+import { ActivityLog } from "@/components/communications/ActivityLog";
+import { HazardInspection } from "@/components/inspections/HazardInspection";
+import { ProofOfDelivery } from "@/components/delivery/ProofOfDelivery";
+import DocumentGenerator from "@/components/documents/DocumentGenerator";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import Link from "next/link";
 
 interface ShipmentDetailPageProps {
   params: Promise<{
@@ -49,97 +49,101 @@ interface ShipmentDetailPageProps {
 const createMockShipment = (id: string) => ({
   id,
   tracking_number: `SS-${id.toUpperCase()}-2024`,
-  status: 'READY_FOR_DISPATCH',
+  status: "READY_FOR_DISPATCH",
   customer: {
-    name: 'Global Manufacturing Inc.',
-    email: 'logistics@globalmanufacturing.com',
-    phone: '+1 (555) 123-4567'
+    name: "Global Manufacturing Inc.",
+    email: "logistics@globalmanufacturing.com",
+    phone: "+1 (555) 123-4567",
   },
-  origin_location: 'Sydney, NSW, Australia',
-  destination_location: 'Melbourne, VIC, Australia',
-  estimated_delivery_date: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString(),
+  origin_location: "Sydney, NSW, Australia",
+  destination_location: "Melbourne, VIC, Australia",
+  estimated_delivery_date: new Date(
+    Date.now() + 2 * 24 * 60 * 60 * 1000,
+  ).toISOString(),
   created_at: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
   assigned_vehicle: {
-    registration_number: 'TRK-001',
-    driver_name: 'John Smith',
-    vehicle_type: 'Heavy Duty Truck'
+    registration_number: "TRK-001",
+    driver_name: "John Smith",
+    vehicle_type: "Heavy Duty Truck",
   },
   consignment_items: [
     {
-      id: '1',
-      description: 'Lithium Battery Packs',
-      un_number: 'UN3480',
-      dangerous_goods_class: '9',
+      id: "1",
+      description: "Lithium Battery Packs",
+      un_number: "UN3480",
+      dangerous_goods_class: "9",
       quantity: 5,
       weight_kg: 125,
-      dimensions: '1.2×0.8×0.4m'
+      dimensions: "1.2×0.8×0.4m",
     },
     {
-      id: '2',
-      description: 'Diesel Fuel Containers',
-      un_number: 'UN1202', 
-      dangerous_goods_class: '3',
+      id: "2",
+      description: "Diesel Fuel Containers",
+      un_number: "UN1202",
+      dangerous_goods_class: "3",
       quantity: 2,
       weight_kg: 1600,
-      dimensions: '1.0×1.0×1.0m'
+      dimensions: "1.0×1.0×1.0m",
     },
     {
-      id: '3',
-      description: 'Compressed Gas Cylinders',
-      un_number: 'UN1950',
-      dangerous_goods_class: '2',
+      id: "3",
+      description: "Compressed Gas Cylinders",
+      un_number: "UN1950",
+      dangerous_goods_class: "2",
       quantity: 4,
       weight_kg: 200,
-      dimensions: '0.3×0.3×1.5m'
+      dimensions: "0.3×0.3×1.5m",
     },
     {
-      id: '4',
-      description: 'Medical Equipment',
-      dangerous_goods_class: 'GENERAL',
+      id: "4",
+      description: "Medical Equipment",
+      dangerous_goods_class: "GENERAL",
       quantity: 3,
       weight_kg: 600,
-      dimensions: '1.5×1.0×0.8m'
-    }
+      dimensions: "1.5×1.0×0.8m",
+    },
   ],
-  load_plan: null // Will be set when generated
+  load_plan: null, // Will be set when generated
 });
 
 const getStatusColor = (status: string) => {
   switch (status) {
-    case 'READY_FOR_DISPATCH':
-      return 'bg-blue-100 text-blue-800 border-blue-200';
-    case 'IN_TRANSIT':
-      return 'bg-green-100 text-green-800 border-green-200';
-    case 'DELIVERED':
-      return 'bg-emerald-100 text-emerald-800 border-emerald-200';
+    case "READY_FOR_DISPATCH":
+      return "bg-blue-100 text-blue-800 border-blue-200";
+    case "IN_TRANSIT":
+      return "bg-green-100 text-green-800 border-green-200";
+    case "DELIVERED":
+      return "bg-emerald-100 text-emerald-800 border-emerald-200";
     default:
-      return 'bg-gray-100 text-gray-800 border-gray-200';
+      return "bg-gray-100 text-gray-800 border-gray-200";
   }
 };
 
 const getDGClassColor = (dgClass: string) => {
   const colors: { [key: string]: string } = {
-    '1': 'bg-orange-100 text-orange-800 border-orange-200',
-    '2': 'bg-teal-100 text-teal-800 border-teal-200',
-    '3': 'bg-red-100 text-red-800 border-red-200',
-    '4': 'bg-yellow-100 text-yellow-800 border-yellow-200',
-    '5': 'bg-blue-100 text-blue-800 border-blue-200',
-    '6': 'bg-purple-100 text-purple-800 border-purple-200',
-    '7': 'bg-pink-100 text-pink-800 border-pink-200',
-    '8': 'bg-gray-100 text-gray-800 border-gray-200',
-    '9': 'bg-indigo-100 text-indigo-800 border-indigo-200',
-    'GENERAL': 'bg-slate-100 text-slate-800 border-slate-200'
+    "1": "bg-orange-100 text-orange-800 border-orange-200",
+    "2": "bg-teal-100 text-teal-800 border-teal-200",
+    "3": "bg-red-100 text-red-800 border-red-200",
+    "4": "bg-yellow-100 text-yellow-800 border-yellow-200",
+    "5": "bg-blue-100 text-blue-800 border-blue-200",
+    "6": "bg-purple-100 text-purple-800 border-purple-200",
+    "7": "bg-pink-100 text-pink-800 border-pink-200",
+    "8": "bg-gray-100 text-gray-800 border-gray-200",
+    "9": "bg-indigo-100 text-indigo-800 border-indigo-200",
+    GENERAL: "bg-slate-100 text-slate-800 border-slate-200",
   };
-  return colors[dgClass] || colors['GENERAL'];
+  return colors[dgClass] || colors["GENERAL"];
 };
 
-export default function ShipmentDetailPage({ params }: ShipmentDetailPageProps) {
+export default function ShipmentDetailPage({
+  params,
+}: ShipmentDetailPageProps) {
   const [shipmentId, setShipmentId] = useState<string | null>(null);
   const [shipment, setShipment] = useState<any>(null);
-  const [activeTab, setActiveTab] = useState('info');
+  const [activeTab, setActiveTab] = useState("info");
 
   useEffect(() => {
-    params.then(p => {
+    params.then((p) => {
       setShipmentId(p.id);
       setShipment(createMockShipment(p.id));
     });
@@ -158,15 +162,23 @@ export default function ShipmentDetailPage({ params }: ShipmentDetailPageProps) 
     );
   }
 
-  const totalWeight = shipment.consignment_items.reduce((sum: number, item: any) => sum + item.weight_kg, 0);
-  const totalItems = shipment.consignment_items.reduce((sum: number, item: any) => sum + item.quantity, 0);
+  const totalWeight = shipment.consignment_items.reduce(
+    (sum: number, item: any) => sum + item.weight_kg,
+    0,
+  );
+  const totalItems = shipment.consignment_items.reduce(
+    (sum: number, item: any) => sum + item.quantity,
+    0,
+  );
 
   return (
     <AuthGuard>
       <div className="p-6 space-y-6">
         {/* Breadcrumb */}
         <div className="flex items-center gap-2 text-sm text-gray-600">
-          <Link href="/shipments" className="hover:text-gray-900">Shipments</Link>
+          <Link href="/shipments" className="hover:text-gray-900">
+            Shipments
+          </Link>
           <ChevronLeft className="h-4 w-4 rotate-180" />
           <span className="font-medium">{shipment.tracking_number}</span>
         </div>
@@ -177,16 +189,18 @@ export default function ShipmentDetailPage({ params }: ShipmentDetailPageProps) 
             <h1 className="text-3xl font-bold">{shipment.tracking_number}</h1>
             <div className="flex items-center gap-2 mt-1">
               <User className="h-4 w-4 text-gray-500" />
-              <span className="text-gray-600">Client: {shipment.customer.name}</span>
+              <span className="text-gray-600">
+                Client: {shipment.customer.name}
+              </span>
             </div>
           </div>
-          
+
           <div className="flex items-center gap-3">
-            <Badge 
-              variant="outline" 
+            <Badge
+              variant="outline"
               className={`${getStatusColor(shipment.status)}`}
             >
-              {shipment.status.replace('_', ' ')}
+              {shipment.status.replace("_", " ")}
             </Badge>
             <Button className="bg-[#153F9F] hover:bg-[#153F9F]/90">
               Start trip
@@ -195,7 +209,11 @@ export default function ShipmentDetailPage({ params }: ShipmentDetailPageProps) 
         </div>
 
         {/* Tab System */}
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+        <Tabs
+          value={activeTab}
+          onValueChange={setActiveTab}
+          className="space-y-6"
+        >
           <TabsList className="grid w-full grid-cols-6">
             <TabsTrigger value="info" className="flex items-center gap-2">
               <Info className="h-4 w-4" />
@@ -236,38 +254,55 @@ export default function ShipmentDetailPage({ params }: ShipmentDetailPageProps) 
                     <div className="flex items-center gap-3 p-3 bg-green-50 rounded-lg">
                       <div className="w-3 h-3 bg-green-500 rounded-full"></div>
                       <div>
-                        <p className="font-medium text-green-800">TRACKING PLANNED CREATED</p>
-                        <p className="text-sm text-green-600">{shipment.origin_location}</p>
-                        <p className="text-xs text-green-500">12:34 3 Dec 2024</p>
+                        <p className="font-medium text-green-800">
+                          TRACKING PLANNED CREATED
+                        </p>
+                        <p className="text-sm text-green-600">
+                          {shipment.origin_location}
+                        </p>
+                        <p className="text-xs text-green-500">
+                          12:34 3 Dec 2024
+                        </p>
                       </div>
                     </div>
-                    
+
                     <div className="flex items-center gap-3 p-3 bg-blue-50 rounded-lg">
                       <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
                       <div>
-                        <p className="font-medium text-blue-800">OUT FOR DELIVERY</p>
-                        <p className="text-sm text-blue-600">{shipment.origin_location}</p>
+                        <p className="font-medium text-blue-800">
+                          OUT FOR DELIVERY
+                        </p>
+                        <p className="text-sm text-blue-600">
+                          {shipment.origin_location}
+                        </p>
                         <p className="text-xs text-blue-500">3:30 AM</p>
                       </div>
                     </div>
-                    
+
                     <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
                       <div className="w-3 h-3 bg-gray-400 rounded-full"></div>
                       <div>
                         <p className="font-medium text-gray-600">DELIVERED</p>
-                        <p className="text-sm text-gray-500">{shipment.destination_location}</p>
+                        <p className="text-sm text-gray-500">
+                          {shipment.destination_location}
+                        </p>
                         <p className="text-xs text-gray-400">10:00 AM</p>
                       </div>
                     </div>
                   </div>
-                  
+
                   {/* Map placeholder */}
                   <div className="md:col-span-2">
                     <div className="bg-gray-100 rounded-lg h-64 flex items-center justify-center">
                       <div className="text-center">
                         <Map className="h-12 w-12 text-gray-400 mx-auto mb-2" />
-                        <p className="text-gray-500">Interactive map would be displayed here</p>
-                        <p className="text-sm text-gray-400 mt-1">Route: {shipment.origin_location} → {shipment.destination_location}</p>
+                        <p className="text-gray-500">
+                          Interactive map would be displayed here
+                        </p>
+                        <p className="text-sm text-gray-400 mt-1">
+                          Route: {shipment.origin_location} →{" "}
+                          {shipment.destination_location}
+                        </p>
                       </div>
                     </div>
                   </div>
@@ -304,25 +339,44 @@ export default function ShipmentDetailPage({ params }: ShipmentDetailPageProps) 
                 <CardContent className="space-y-4">
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <p className="text-sm font-medium text-gray-600">Total Items</p>
+                      <p className="text-sm font-medium text-gray-600">
+                        Total Items
+                      </p>
                       <p className="font-medium">{totalItems}</p>
                     </div>
                     <div>
-                      <p className="text-sm font-medium text-gray-600">Total Weight</p>
-                      <p className="font-medium">{totalWeight.toLocaleString()} kg</p>
+                      <p className="text-sm font-medium text-gray-600">
+                        Total Weight
+                      </p>
+                      <p className="font-medium">
+                        {totalWeight.toLocaleString()} kg
+                      </p>
                     </div>
                     <div>
-                      <p className="text-sm font-medium text-gray-600">Vehicle</p>
-                      <p className="font-medium">{shipment.assigned_vehicle.registration_number}</p>
+                      <p className="text-sm font-medium text-gray-600">
+                        Vehicle
+                      </p>
+                      <p className="font-medium">
+                        {shipment.assigned_vehicle.registration_number}
+                      </p>
                     </div>
                     <div>
-                      <p className="text-sm font-medium text-gray-600">Driver</p>
-                      <p className="font-medium">{shipment.assigned_vehicle.driver_name}</p>
+                      <p className="text-sm font-medium text-gray-600">
+                        Driver
+                      </p>
+                      <p className="font-medium">
+                        {shipment.assigned_vehicle.driver_name}
+                      </p>
                     </div>
                   </div>
                   <div className="flex items-center gap-2 mt-4">
                     <Clock className="h-4 w-4 text-gray-400" />
-                    <span className="text-sm">ETA: {new Date(shipment.estimated_delivery_date).toLocaleDateString()}</span>
+                    <span className="text-sm">
+                      ETA:{" "}
+                      {new Date(
+                        shipment.estimated_delivery_date,
+                      ).toLocaleDateString()}
+                    </span>
                   </div>
                 </CardContent>
               </Card>
@@ -336,7 +390,10 @@ export default function ShipmentDetailPage({ params }: ShipmentDetailPageProps) 
               <CardContent>
                 <div className="space-y-4">
                   {shipment.consignment_items.map((item: any) => (
-                    <div key={item.id} className="flex items-center justify-between p-4 border rounded-lg">
+                    <div
+                      key={item.id}
+                      className="flex items-center justify-between p-4 border rounded-lg"
+                    >
                       <div className="flex items-center gap-4">
                         <div className="p-2 bg-gray-100 rounded-lg">
                           <Package className="h-5 w-5 text-gray-600" />
@@ -345,8 +402,13 @@ export default function ShipmentDetailPage({ params }: ShipmentDetailPageProps) 
                           <h3 className="font-medium">{item.description}</h3>
                           <div className="flex items-center gap-4 text-sm text-gray-600 mt-1">
                             {item.un_number && (
-                              <Badge className={getDGClassColor(item.dangerous_goods_class)}>
-                                {item.un_number} - Class {item.dangerous_goods_class}
+                              <Badge
+                                className={getDGClassColor(
+                                  item.dangerous_goods_class,
+                                )}
+                              >
+                                {item.un_number} - Class{" "}
+                                {item.dangerous_goods_class}
                               </Badge>
                             )}
                             <span>Qty: {item.quantity}</span>
@@ -369,9 +431,12 @@ export default function ShipmentDetailPage({ params }: ShipmentDetailPageProps) 
                 <div className="bg-gray-100 rounded-lg h-96 flex items-center justify-center">
                   <div className="text-center">
                     <Map className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-                    <p className="text-gray-600 text-lg">Interactive Route Map</p>
+                    <p className="text-gray-600 text-lg">
+                      Interactive Route Map
+                    </p>
                     <p className="text-sm text-gray-500 mt-2">
-                      Real-time tracking from {shipment.origin_location} to {shipment.destination_location}
+                      Real-time tracking from {shipment.origin_location} to{" "}
+                      {shipment.destination_location}
                     </p>
                   </div>
                 </div>
@@ -379,80 +444,84 @@ export default function ShipmentDetailPage({ params }: ShipmentDetailPageProps) 
             </Card>
           </TabsContent>
 
-                      {/* Files Tab */}
-            <TabsContent value="files">
-              <div className="space-y-6">
-                {/* Manifest Upload Section */}
-                <Card className="border-2 border-blue-200 bg-blue-50">
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2 text-blue-900">
-                      <Shield className="h-5 w-5" />
-                      Manifest Validation
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-4">
-                      <p className="text-sm text-blue-800">
-                        Upload and validate PDF manifests to automatically detect dangerous goods and ensure compliance.
-                      </p>
-                      
-                      <div className="space-y-2 text-xs text-blue-700">
-                        <p>✓ Automatic dangerous goods detection</p>
-                        <p>✓ Compatibility rule validation</p>
-                        <p>✓ Compliance document generation</p>
-                        <p>✓ PDF manifest processing</p>
-                      </div>
+          {/* Files Tab */}
+          <TabsContent value="files">
+            <div className="space-y-6">
+              {/* Manifest Upload Section */}
+              <Card className="border-2 border-blue-200 bg-blue-50">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-blue-900">
+                    <Shield className="h-5 w-5" />
+                    Manifest Validation
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <p className="text-sm text-blue-800">
+                      Upload and validate PDF manifests to automatically detect
+                      dangerous goods and ensure compliance.
+                    </p>
 
-                      <Link href={`/shipments/${shipmentId}/validate`}>
-                        <Button className="w-full bg-blue-600 hover:bg-blue-700">
-                          <FileText className="h-4 w-4 mr-2" />
-                          Upload & Validate Manifest
-                        </Button>
-                      </Link>
+                    <div className="space-y-2 text-xs text-blue-700">
+                      <p>✓ Automatic dangerous goods detection</p>
+                      <p>✓ Compatibility rule validation</p>
+                      <p>✓ Compliance document generation</p>
+                      <p>✓ PDF manifest processing</p>
                     </div>
-                  </CardContent>
-                </Card>
 
-                {/* Existing Files */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center justify-between">
-                      Attached Files
-                      <Button size="sm" variant="outline">
-                        <Plus className="h-4 w-4 mr-2" />
-                        Add new file
+                    <Link href={`/shipments/${shipmentId}/validate`}>
+                      <Button className="w-full bg-blue-600 hover:bg-blue-700">
+                        <FileText className="h-4 w-4 mr-2" />
+                        Upload & Validate Manifest
                       </Button>
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-3">
-                      {['EPG', 'EPG', 'EPG', 'EPG', 'SDS'].map((type, index) => (
-                        <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
-                          <div className="flex items-center gap-3">
-                            <FileText className="h-5 w-5 text-gray-400" />
-                            <span className="font-medium">{type}</span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm text-gray-500">{type}</span>
-                            <Button variant="ghost" size="sm">
-                              <Eye className="h-4 w-4" />
-                            </Button>
-                            <Button variant="ghost" size="sm">
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-            </TabsContent>
+                    </Link>
+                  </div>
+                </CardContent>
+              </Card>
 
-                      {/* Hazard Inspection Tab */}
-            <TabsContent value="inspection">
-              <HazardInspection shipmentId={shipmentId} />
-            </TabsContent>
+              {/* Existing Files */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center justify-between">
+                    Attached Files
+                    <Button size="sm" variant="outline">
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add new file
+                    </Button>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    {["EPG", "EPG", "EPG", "EPG", "SDS"].map((type, index) => (
+                      <div
+                        key={index}
+                        className="flex items-center justify-between p-3 border rounded-lg"
+                      >
+                        <div className="flex items-center gap-3">
+                          <FileText className="h-5 w-5 text-gray-400" />
+                          <span className="font-medium">{type}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm text-gray-500">{type}</span>
+                          <Button variant="ghost" size="sm">
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                          <Button variant="ghost" size="sm">
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+
+          {/* Hazard Inspection Tab */}
+          <TabsContent value="inspection">
+            <HazardInspection shipmentId={shipmentId} />
+          </TabsContent>
 
           {/* Load Plan Tab */}
           <TabsContent value="loadplan">
@@ -473,8 +542,12 @@ export default function ShipmentDetailPage({ params }: ShipmentDetailPageProps) 
                   <div className="bg-gray-100 rounded-lg h-64 flex items-center justify-center">
                     <div className="text-center">
                       <LayoutPanelTop className="h-12 w-12 text-gray-400 mx-auto mb-2" />
-                      <p className="text-gray-600">3D Load Plan Visualization</p>
-                      <p className="text-sm text-gray-500 mt-1">Interactive truck loading layout</p>
+                      <p className="text-gray-600">
+                        3D Load Plan Visualization
+                      </p>
+                      <p className="text-sm text-gray-500 mt-1">
+                        Interactive truck loading layout
+                      </p>
                     </div>
                   </div>
                 </CardContent>
@@ -488,11 +561,17 @@ export default function ShipmentDetailPage({ params }: ShipmentDetailPageProps) 
                   <div className="space-y-4">
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <p className="text-sm font-medium text-gray-600">Total Weight</p>
-                        <p className="text-lg font-bold">{totalWeight.toLocaleString()} kg</p>
+                        <p className="text-sm font-medium text-gray-600">
+                          Total Weight
+                        </p>
+                        <p className="text-lg font-bold">
+                          {totalWeight.toLocaleString()} kg
+                        </p>
                       </div>
                       <div>
-                        <p className="text-sm font-medium text-gray-600">Vehicle Capacity</p>
+                        <p className="text-sm font-medium text-gray-600">
+                          Vehicle Capacity
+                        </p>
                         <p className="text-lg font-bold">20,000 kg</p>
                       </div>
                     </div>
@@ -502,8 +581,8 @@ export default function ShipmentDetailPage({ params }: ShipmentDetailPageProps) 
                         <span>{Math.round((totalWeight / 20000) * 100)}%</span>
                       </div>
                       <div className="w-full bg-gray-200 rounded-full h-2">
-                        <div 
-                          className="bg-blue-600 h-2 rounded-full" 
+                        <div
+                          className="bg-blue-600 h-2 rounded-full"
                           style={{ width: `${(totalWeight / 20000) * 100}%` }}
                         ></div>
                       </div>
@@ -525,7 +604,9 @@ export default function ShipmentDetailPage({ params }: ShipmentDetailPageProps) 
                   <div className="text-center">
                     <MessageSquare className="h-12 w-12 text-gray-400 mx-auto mb-2" />
                     <p className="text-gray-600">Real-time Chat</p>
-                    <p className="text-sm text-gray-500 mt-1">Communication with driver and stakeholders</p>
+                    <p className="text-sm text-gray-500 mt-1">
+                      Communication with driver and stakeholders
+                    </p>
                   </div>
                 </div>
               </CardContent>

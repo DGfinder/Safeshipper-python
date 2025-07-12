@@ -1,6 +1,6 @@
 // hooks/useFleetTracking.ts
-import { useQuery } from '@tanstack/react-query';
-import { useAuthStore } from '@/stores/auth-store';
+import { useQuery } from "@tanstack/react-query";
+import { useAuthStore } from "@/stores/auth-store";
 
 // Types
 export interface VehicleLocation {
@@ -47,21 +47,21 @@ export interface FleetStatusResponse {
   timestamp: string;
 }
 
-const API_BASE_URL = '/api/v1';
+const API_BASE_URL = "/api/v1";
 
 // API Functions
 async function getFleetStatus(token: string): Promise<FleetStatusResponse> {
   const response = await fetch(`${API_BASE_URL}/tracking/fleet-status/`, {
-    method: 'GET',
+    method: "GET",
     headers: {
-      'Authorization': `Bearer ${token}`,
-      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
     },
   });
 
   if (!response.ok) {
     const errorData = await response.json();
-    throw new Error(errorData.error || 'Failed to get fleet status');
+    throw new Error(errorData.error || "Failed to get fleet status");
   }
 
   return response.json();
@@ -72,9 +72,9 @@ export function useFleetStatus(pollingInterval = 10000) {
   const { getToken } = useAuthStore();
 
   return useQuery({
-    queryKey: ['fleet-status'],
+    queryKey: ["fleet-status"],
     queryFn: () => {
-      const token = getToken() || 'demo-token'; // Bypass for demo
+      const token = getToken() || "demo-token"; // Bypass for demo
       return getFleetStatus(token);
     },
     enabled: true, // Always enabled for demo

@@ -1,27 +1,27 @@
 // components/communications/ActivityLog.tsx
-'use client';
+"use client";
 
-import React, { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { 
-  MessageSquare, 
-  Send, 
-  User, 
-  Clock, 
+import React, { useState } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import {
+  MessageSquare,
+  Send,
+  User,
+  Clock,
   AlertTriangle,
   CheckCircle,
   Camera,
   FileText,
   MapPin,
   Settings,
-  Loader2
-} from 'lucide-react';
-import { useMockShipmentEvents, useMockAddEvent } from '@/hooks/useMockAPI';
-import { formatDistanceToNow } from 'date-fns';
+  Loader2,
+} from "lucide-react";
+import { useMockShipmentEvents, useMockAddEvent } from "@/hooks/useMockAPI";
+import { formatDistanceToNow } from "date-fns";
 
 interface ActivityLogProps {
   shipmentId: string;
@@ -43,19 +43,19 @@ interface ShipmentEvent {
 
 const getEventIcon = (eventType: string) => {
   switch (eventType) {
-    case 'COMMENT':
+    case "COMMENT":
       return <MessageSquare className="h-4 w-4" />;
-    case 'STATUS_CHANGE':
+    case "STATUS_CHANGE":
       return <Settings className="h-4 w-4" />;
-    case 'INSPECTION':
+    case "INSPECTION":
       return <CheckCircle className="h-4 w-4" />;
-    case 'LOCATION_UPDATE':
+    case "LOCATION_UPDATE":
       return <MapPin className="h-4 w-4" />;
-    case 'PHOTO_UPLOAD':
+    case "PHOTO_UPLOAD":
       return <Camera className="h-4 w-4" />;
-    case 'DOCUMENT_UPLOAD':
+    case "DOCUMENT_UPLOAD":
       return <FileText className="h-4 w-4" />;
-    case 'ALERT':
+    case "ALERT":
       return <AlertTriangle className="h-4 w-4" />;
     default:
       return <MessageSquare className="h-4 w-4" />;
@@ -64,40 +64,45 @@ const getEventIcon = (eventType: string) => {
 
 const getEventColor = (eventType: string) => {
   switch (eventType) {
-    case 'COMMENT':
-      return 'text-blue-600 bg-blue-100';
-    case 'STATUS_CHANGE':
-      return 'text-green-600 bg-green-100';
-    case 'INSPECTION':
-      return 'text-purple-600 bg-purple-100';
-    case 'LOCATION_UPDATE':
-      return 'text-orange-600 bg-orange-100';
-    case 'ALERT':
-      return 'text-red-600 bg-red-100';
+    case "COMMENT":
+      return "text-blue-600 bg-blue-100";
+    case "STATUS_CHANGE":
+      return "text-green-600 bg-green-100";
+    case "INSPECTION":
+      return "text-purple-600 bg-purple-100";
+    case "LOCATION_UPDATE":
+      return "text-orange-600 bg-orange-100";
+    case "ALERT":
+      return "text-red-600 bg-red-100";
     default:
-      return 'text-gray-600 bg-gray-100';
+      return "text-gray-600 bg-gray-100";
   }
 };
 
 const getPriorityColor = (priority: string) => {
   switch (priority) {
-    case 'URGENT':
-      return 'bg-red-100 text-red-800 border-red-200';
-    case 'HIGH':
-      return 'bg-orange-100 text-orange-800 border-orange-200';
-    case 'NORMAL':
-      return 'bg-blue-100 text-blue-800 border-blue-200';
-    case 'LOW':
-      return 'bg-gray-100 text-gray-800 border-gray-200';
+    case "URGENT":
+      return "bg-red-100 text-red-800 border-red-200";
+    case "HIGH":
+      return "bg-orange-100 text-orange-800 border-orange-200";
+    case "NORMAL":
+      return "bg-blue-100 text-blue-800 border-blue-200";
+    case "LOW":
+      return "bg-gray-100 text-gray-800 border-gray-200";
     default:
-      return 'bg-gray-100 text-gray-800 border-gray-200';
+      return "bg-gray-100 text-gray-800 border-gray-200";
   }
 };
 
 export function ActivityLog({ shipmentId, className }: ActivityLogProps) {
-  const [newComment, setNewComment] = useState('');
-  
-  const { data: events, isLoading, error, refetch } = useMockShipmentEvents(shipmentId);
+  const [newComment, setNewComment] = useState("");
+
+  const {
+    data: events,
+    isLoading,
+    error,
+    refetch,
+  } = useMockShipmentEvents(shipmentId);
   const addEventMutation = useMockAddEvent();
 
   const handleAddComment = async (e: React.FormEvent) => {
@@ -107,14 +112,14 @@ export function ActivityLog({ shipmentId, className }: ActivityLogProps) {
     try {
       await addEventMutation.mutateAsync({
         shipmentId,
-        eventType: 'COMMENT',
-        details: newComment.trim()
+        eventType: "COMMENT",
+        details: newComment.trim(),
       });
-      
-      setNewComment('');
+
+      setNewComment("");
       refetch(); // Refresh the events list
     } catch (error) {
-      console.error('Failed to add comment:', error);
+      console.error("Failed to add comment:", error);
     }
   };
 
@@ -141,7 +146,7 @@ export function ActivityLog({ shipmentId, className }: ActivityLogProps) {
           Activity Log
         </CardTitle>
       </CardHeader>
-      
+
       <CardContent className="space-y-4">
         {/* Add Comment Form */}
         <form onSubmit={handleAddComment} className="space-y-3">
@@ -153,8 +158,8 @@ export function ActivityLog({ shipmentId, className }: ActivityLogProps) {
               disabled={addEventMutation.isPending}
               className="flex-1"
             />
-            <Button 
-              type="submit" 
+            <Button
+              type="submit"
               disabled={!newComment.trim() || addEventMutation.isPending}
               size="sm"
             >
@@ -179,10 +184,12 @@ export function ActivityLog({ shipmentId, className }: ActivityLogProps) {
               <div key={event.id} className="border rounded-lg p-3 bg-gray-50">
                 <div className="flex items-start gap-3">
                   {/* Event Icon */}
-                  <div className={`p-2 rounded-full ${getEventColor(event.event_type)}`}>
+                  <div
+                    className={`p-2 rounded-full ${getEventColor(event.event_type)}`}
+                  >
                     {getEventIcon(event.event_type)}
                   </div>
-                  
+
                   {/* Event Content */}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between mb-1">
@@ -193,26 +200,30 @@ export function ActivityLog({ shipmentId, className }: ActivityLogProps) {
                         <Badge variant="outline" className="text-xs">
                           {event.user.role}
                         </Badge>
-                        {event.priority && event.priority !== 'NORMAL' && (
-                          <Badge 
-                            variant="outline" 
+                        {event.priority && event.priority !== "NORMAL" && (
+                          <Badge
+                            variant="outline"
                             className={`text-xs ${getPriorityColor(event.priority)}`}
                           >
                             {event.priority}
                           </Badge>
                         )}
                       </div>
-                      
+
                       <div className="flex items-center gap-1 text-xs text-gray-500">
                         <Clock className="h-3 w-3" />
                         <span>
-                          {formatDistanceToNow(new Date(event.timestamp), { addSuffix: true })}
+                          {formatDistanceToNow(new Date(event.timestamp), {
+                            addSuffix: true,
+                          })}
                         </span>
                       </div>
                     </div>
-                    
-                    <p className="text-sm text-gray-700 mb-2">{event.details}</p>
-                    
+
+                    <p className="text-sm text-gray-700 mb-2">
+                      {event.details}
+                    </p>
+
                     {event.attachment_url && (
                       <div className="mt-2">
                         <Button variant="outline" size="sm" className="text-xs">
@@ -229,11 +240,13 @@ export function ActivityLog({ shipmentId, className }: ActivityLogProps) {
             <div className="text-center py-8 text-gray-500">
               <MessageSquare className="h-8 w-8 mx-auto mb-2 text-gray-400" />
               <p className="text-sm">No activity yet</p>
-              <p className="text-xs text-gray-400">Comments and updates will appear here</p>
+              <p className="text-xs text-gray-400">
+                Comments and updates will appear here
+              </p>
             </div>
           )}
         </div>
-        
+
         {/* Quick Actions */}
         <div className="border-t pt-3">
           <div className="flex gap-2 text-xs">

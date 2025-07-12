@@ -1,18 +1,18 @@
 // app/dg-compliance/page.tsx
-'use client';
+"use client";
 
-import React, { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { 
-  Shield, 
-  AlertTriangle, 
-  CheckCircle, 
-  XCircle, 
-  FileText, 
+import React, { useState } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import {
+  Shield,
+  AlertTriangle,
+  CheckCircle,
+  XCircle,
+  FileText,
   Clock,
   Users,
   TrendingUp,
@@ -20,11 +20,11 @@ import {
   Download,
   RefreshCw,
   Eye,
-  Edit
-} from 'lucide-react';
-import { useDangerousGoods } from '@/hooks/useDangerousGoods';
-import { useShipments } from '@/hooks/useShipments';
-import { AuthGuard } from '@/components/auth/auth-guard';
+  Edit,
+} from "lucide-react";
+import { useDangerousGoods } from "@/hooks/useDangerousGoods";
+import { useShipments } from "@/hooks/useShipments";
+import { AuthGuard } from "@/components/auth/auth-guard";
 
 interface ComplianceMetrics {
   totalShipments: number;
@@ -60,83 +60,98 @@ export default function DGCompliancePage() {
     certificatesValid: 138,
   };
 
-  const complianceRate = ((complianceMetrics.compliantShipments / complianceMetrics.totalShipments) * 100).toFixed(1);
+  const complianceRate = (
+    (complianceMetrics.compliantShipments / complianceMetrics.totalShipments) *
+    100
+  ).toFixed(1);
 
   const recentViolations = [
     {
-      id: '1',
-      shipmentId: 'SS1234567890AB',
-      type: 'Missing Documentation',
-      severity: 'High',
-      date: '2024-01-15',
-      status: 'Open'
+      id: "1",
+      shipmentId: "SS1234567890AB",
+      type: "Missing Documentation",
+      severity: "High",
+      date: "2024-01-15",
+      status: "Open",
     },
     {
-      id: '2',
-      shipmentId: 'SS9876543210CD',
-      type: 'Incorrect Packaging',
-      severity: 'Medium',
-      date: '2024-01-14',
-      status: 'Resolved'
+      id: "2",
+      shipmentId: "SS9876543210CD",
+      type: "Incorrect Packaging",
+      severity: "Medium",
+      date: "2024-01-14",
+      status: "Resolved",
     },
     {
-      id: '3',
-      shipmentId: 'SS5555666677EF',
-      type: 'Label Requirements',
-      severity: 'Low',
-      date: '2024-01-14',
-      status: 'Open'
-    }
+      id: "3",
+      shipmentId: "SS5555666677EF",
+      type: "Label Requirements",
+      severity: "Low",
+      date: "2024-01-14",
+      status: "Open",
+    },
   ];
 
   const pendingInspections = [
     {
-      id: '1',
-      shipmentId: 'SS1111222233GH',
-      type: 'Pre-Trip Inspection',
-      dueDate: '2024-01-16',
-      priority: 'High'
+      id: "1",
+      shipmentId: "SS1111222233GH",
+      type: "Pre-Trip Inspection",
+      dueDate: "2024-01-16",
+      priority: "High",
     },
     {
-      id: '2',
-      shipmentId: 'SS4444555566IJ',
-      type: 'Loading Inspection',
-      dueDate: '2024-01-16',
-      priority: 'Medium'
+      id: "2",
+      shipmentId: "SS4444555566IJ",
+      type: "Loading Inspection",
+      dueDate: "2024-01-16",
+      priority: "Medium",
     },
     {
-      id: '3',
-      shipmentId: 'SS7777888899KL',
-      type: 'Post-Trip Inspection',
-      dueDate: '2024-01-17',
-      priority: 'Low'
-    }
+      id: "3",
+      shipmentId: "SS7777888899KL",
+      type: "Post-Trip Inspection",
+      dueDate: "2024-01-17",
+      priority: "Low",
+    },
   ];
 
   const getSeverityColor = (severity: string) => {
     switch (severity) {
-      case 'High': return 'bg-red-100 text-red-800';
-      case 'Medium': return 'bg-yellow-100 text-yellow-800';
-      case 'Low': return 'bg-blue-100 text-blue-800';
-      default: return 'bg-gray-100 text-gray-800';
+      case "High":
+        return "bg-red-100 text-red-800";
+      case "Medium":
+        return "bg-yellow-100 text-yellow-800";
+      case "Low":
+        return "bg-blue-100 text-blue-800";
+      default:
+        return "bg-gray-100 text-gray-800";
     }
   };
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'Open': return 'bg-red-100 text-red-800';
-      case 'Resolved': return 'bg-green-100 text-green-800';
-      case 'Pending': return 'bg-yellow-100 text-yellow-800';
-      default: return 'bg-gray-100 text-gray-800';
+      case "Open":
+        return "bg-red-100 text-red-800";
+      case "Resolved":
+        return "bg-green-100 text-green-800";
+      case "Pending":
+        return "bg-yellow-100 text-yellow-800";
+      default:
+        return "bg-gray-100 text-gray-800";
     }
   };
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
-      case 'High': return 'bg-red-100 text-red-800';
-      case 'Medium': return 'bg-yellow-100 text-yellow-800';
-      case 'Low': return 'bg-green-100 text-green-800';
-      default: return 'bg-gray-100 text-gray-800';
+      case "High":
+        return "bg-red-100 text-red-800";
+      case "Medium":
+        return "bg-yellow-100 text-yellow-800";
+      case "Low":
+        return "bg-green-100 text-green-800";
+      default:
+        return "bg-gray-100 text-gray-800";
     }
   };
 
@@ -158,8 +173,12 @@ export default function DGCompliancePage() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">DG Compliance Dashboard</h1>
-            <p className="text-gray-600 mt-1">Monitor dangerous goods compliance and safety requirements</p>
+            <h1 className="text-3xl font-bold text-gray-900">
+              DG Compliance Dashboard
+            </h1>
+            <p className="text-gray-600 mt-1">
+              Monitor dangerous goods compliance and safety requirements
+            </p>
           </div>
           <div className="flex items-center gap-3">
             <Button
@@ -168,7 +187,9 @@ export default function DGCompliancePage() {
               disabled={refreshing}
               className="flex items-center gap-2"
             >
-              <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
+              <RefreshCw
+                className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`}
+              />
               Refresh
             </Button>
             <Button className="flex items-center gap-2">
@@ -182,36 +203,51 @@ export default function DGCompliancePage() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Compliance Rate</CardTitle>
+              <CardTitle className="text-sm font-medium">
+                Compliance Rate
+              </CardTitle>
               <Shield className="h-4 w-4 text-green-600" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-green-600">{complianceRate}%</div>
+              <div className="text-2xl font-bold text-green-600">
+                {complianceRate}%
+              </div>
               <p className="text-xs text-muted-foreground">
-                {complianceMetrics.compliantShipments} of {complianceMetrics.totalShipments} shipments
+                {complianceMetrics.compliantShipments} of{" "}
+                {complianceMetrics.totalShipments} shipments
               </p>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Pending Validation</CardTitle>
+              <CardTitle className="text-sm font-medium">
+                Pending Validation
+              </CardTitle>
               <Clock className="h-4 w-4 text-yellow-600" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-yellow-600">{complianceMetrics.pendingValidation}</div>
+              <div className="text-2xl font-bold text-yellow-600">
+                {complianceMetrics.pendingValidation}
+              </div>
               <p className="text-xs text-muted-foreground">Awaiting review</p>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Active Violations</CardTitle>
+              <CardTitle className="text-sm font-medium">
+                Active Violations
+              </CardTitle>
               <AlertTriangle className="h-4 w-4 text-red-600" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-red-600">{complianceMetrics.violations}</div>
-              <p className="text-xs text-muted-foreground">Requires immediate attention</p>
+              <div className="text-2xl font-bold text-red-600">
+                {complianceMetrics.violations}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Requires immediate attention
+              </p>
             </CardContent>
           </Card>
 
@@ -222,9 +258,20 @@ export default function DGCompliancePage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-blue-600">
-                {complianceMetrics.inspectionsPassed}/{complianceMetrics.inspectionsPassed + complianceMetrics.inspectionsFailed}
+                {complianceMetrics.inspectionsPassed}/
+                {complianceMetrics.inspectionsPassed +
+                  complianceMetrics.inspectionsFailed}
               </div>
-              <p className="text-xs text-muted-foreground">Pass rate: {((complianceMetrics.inspectionsPassed / (complianceMetrics.inspectionsPassed + complianceMetrics.inspectionsFailed)) * 100).toFixed(1)}%</p>
+              <p className="text-xs text-muted-foreground">
+                Pass rate:{" "}
+                {(
+                  (complianceMetrics.inspectionsPassed /
+                    (complianceMetrics.inspectionsPassed +
+                      complianceMetrics.inspectionsFailed)) *
+                  100
+                ).toFixed(1)}
+                %
+              </p>
             </CardContent>
           </Card>
         </div>
@@ -234,7 +281,8 @@ export default function DGCompliancePage() {
           <Alert className="border-red-200 bg-red-50">
             <AlertTriangle className="h-4 w-4 text-red-600" />
             <AlertDescription className="text-red-800">
-              You have {complianceMetrics.violations} active compliance violations that require immediate attention.
+              You have {complianceMetrics.violations} active compliance
+              violations that require immediate attention.
             </AlertDescription>
           </Alert>
         )}
@@ -328,7 +376,9 @@ export default function DGCompliancePage() {
                       </div>
 
                       <div className="flex items-center gap-3">
-                        <Badge className={getPriorityColor(inspection.priority)}>
+                        <Badge
+                          className={getPriorityColor(inspection.priority)}
+                        >
                           {inspection.priority}
                         </Badge>
                         <Button variant="outline" size="sm">
@@ -354,15 +404,22 @@ export default function DGCompliancePage() {
               <CardContent>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   <div className="text-center p-6 border rounded-lg">
-                    <div className="text-3xl font-bold text-green-600">{complianceMetrics.documentsUploaded}</div>
+                    <div className="text-3xl font-bold text-green-600">
+                      {complianceMetrics.documentsUploaded}
+                    </div>
                     <p className="text-sm text-gray-600">Documents Uploaded</p>
                   </div>
                   <div className="text-center p-6 border rounded-lg">
-                    <div className="text-3xl font-bold text-blue-600">{complianceMetrics.certificatesValid}</div>
+                    <div className="text-3xl font-bold text-blue-600">
+                      {complianceMetrics.certificatesValid}
+                    </div>
                     <p className="text-sm text-gray-600">Valid Certificates</p>
                   </div>
                   <div className="text-center p-6 border rounded-lg">
-                    <div className="text-3xl font-bold text-yellow-600">{complianceMetrics.documentsUploaded - complianceMetrics.certificatesValid}</div>
+                    <div className="text-3xl font-bold text-yellow-600">
+                      {complianceMetrics.documentsUploaded -
+                        complianceMetrics.certificatesValid}
+                    </div>
                     <p className="text-sm text-gray-600">Pending Review</p>
                   </div>
                 </div>

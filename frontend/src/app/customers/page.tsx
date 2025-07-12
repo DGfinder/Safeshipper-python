@@ -1,16 +1,16 @@
 // app/customers/page.tsx
-'use client';
+"use client";
 
-import React, { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { 
-  Building2, 
-  Users, 
-  Package, 
+import React, { useState } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Building2,
+  Users,
+  Package,
   TrendingUp,
   Search,
   Plus,
@@ -23,10 +23,10 @@ import {
   Calendar,
   DollarSign,
   Star,
-  Filter
-} from 'lucide-react';
-import { useShipments } from '@/hooks/useShipments';
-import { AuthGuard } from '@/components/auth/auth-guard';
+  Filter,
+} from "lucide-react";
+import { useShipments } from "@/hooks/useShipments";
+import { AuthGuard } from "@/components/auth/auth-guard";
 
 interface Customer {
   id: string;
@@ -36,8 +36,8 @@ interface Customer {
   address: string;
   city: string;
   country: string;
-  status: 'ACTIVE' | 'INACTIVE' | 'PENDING';
-  tier: 'BRONZE' | 'SILVER' | 'GOLD' | 'PLATINUM';
+  status: "ACTIVE" | "INACTIVE" | "PENDING";
+  tier: "BRONZE" | "SILVER" | "GOLD" | "PLATINUM";
   joinDate: string;
   totalShipments: number;
   totalValue: number;
@@ -46,9 +46,9 @@ interface Customer {
 }
 
 export default function CustomersPage() {
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState("");
   const [refreshing, setRefreshing] = useState(false);
-  const [selectedTier, setSelectedTier] = useState<string>('ALL');
+  const [selectedTier, setSelectedTier] = useState<string>("ALL");
   const { data: shipments, isLoading: shipmentsLoading } = useShipments();
 
   const handleRefresh = async () => {
@@ -60,135 +60,149 @@ export default function CustomersPage() {
   // Mock customer data - in production this would come from the backend
   const customers: Customer[] = [
     {
-      id: '1',
-      name: 'Global Manufacturing Corp',
-      email: 'logistics@globalmanufacturing.com',
-      phone: '+1-555-0123',
-      address: '123 Industrial Way',
-      city: 'Toronto',
-      country: 'Canada',
-      status: 'ACTIVE',
-      tier: 'PLATINUM',
-      joinDate: '2023-01-15',
+      id: "1",
+      name: "Global Manufacturing Corp",
+      email: "logistics@globalmanufacturing.com",
+      phone: "+1-555-0123",
+      address: "123 Industrial Way",
+      city: "Toronto",
+      country: "Canada",
+      status: "ACTIVE",
+      tier: "PLATINUM",
+      joinDate: "2023-01-15",
       totalShipments: 245,
       totalValue: 1850000,
-      lastShipment: '2024-01-15',
-      rating: 4.8
+      lastShipment: "2024-01-15",
+      rating: 4.8,
     },
     {
-      id: '2',
-      name: 'TechFlow Solutions',
-      email: 'shipping@techflow.com',
-      phone: '+1-555-0456',
-      address: '789 Tech Park Blvd',
-      city: 'Vancouver',
-      country: 'Canada',
-      status: 'ACTIVE',
-      tier: 'GOLD',
-      joinDate: '2023-03-22',
+      id: "2",
+      name: "TechFlow Solutions",
+      email: "shipping@techflow.com",
+      phone: "+1-555-0456",
+      address: "789 Tech Park Blvd",
+      city: "Vancouver",
+      country: "Canada",
+      status: "ACTIVE",
+      tier: "GOLD",
+      joinDate: "2023-03-22",
       totalShipments: 128,
       totalValue: 920000,
-      lastShipment: '2024-01-14',
-      rating: 4.6
+      lastShipment: "2024-01-14",
+      rating: 4.6,
     },
     {
-      id: '3',
-      name: 'Northern Logistics Ltd',
-      email: 'orders@northernlogistics.ca',
-      phone: '+1-555-0789',
-      address: '456 Commerce Street',
-      city: 'Calgary',
-      country: 'Canada',
-      status: 'ACTIVE',
-      tier: 'SILVER',
-      joinDate: '2023-06-10',
+      id: "3",
+      name: "Northern Logistics Ltd",
+      email: "orders@northernlogistics.ca",
+      phone: "+1-555-0789",
+      address: "456 Commerce Street",
+      city: "Calgary",
+      country: "Canada",
+      status: "ACTIVE",
+      tier: "SILVER",
+      joinDate: "2023-06-10",
       totalShipments: 87,
       totalValue: 450000,
-      lastShipment: '2024-01-13',
-      rating: 4.3
+      lastShipment: "2024-01-13",
+      rating: 4.3,
     },
     {
-      id: '4',
-      name: 'Atlantic Imports Inc',
-      email: 'logistics@atlanticimports.com',
-      phone: '+1-555-0321',
-      address: '321 Harbor View',
-      city: 'Halifax',
-      country: 'Canada',
-      status: 'PENDING',
-      tier: 'BRONZE',
-      joinDate: '2024-01-10',
+      id: "4",
+      name: "Atlantic Imports Inc",
+      email: "logistics@atlanticimports.com",
+      phone: "+1-555-0321",
+      address: "321 Harbor View",
+      city: "Halifax",
+      country: "Canada",
+      status: "PENDING",
+      tier: "BRONZE",
+      joinDate: "2024-01-10",
       totalShipments: 12,
       totalValue: 85000,
-      lastShipment: '2024-01-12',
-      rating: 4.1
+      lastShipment: "2024-01-12",
+      rating: 4.1,
     },
     {
-      id: '5',
-      name: 'Prairie Resources Co',
-      email: 'transport@prairieresources.ca',
-      phone: '+1-555-0654',
-      address: '654 Agricultural Road',
-      city: 'Winnipeg',
-      country: 'Canada',
-      status: 'INACTIVE',
-      tier: 'SILVER',
-      joinDate: '2022-11-05',
+      id: "5",
+      name: "Prairie Resources Co",
+      email: "transport@prairieresources.ca",
+      phone: "+1-555-0654",
+      address: "654 Agricultural Road",
+      city: "Winnipeg",
+      country: "Canada",
+      status: "INACTIVE",
+      tier: "SILVER",
+      joinDate: "2022-11-05",
       totalShipments: 203,
       totalValue: 680000,
-      lastShipment: '2023-12-18',
-      rating: 4.0
-    }
+      lastShipment: "2023-12-18",
+      rating: 4.0,
+    },
   ];
 
-  const filteredCustomers = customers.filter(customer => {
-    const matchesSearch = customer.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         customer.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         customer.city.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesTier = selectedTier === 'ALL' || customer.tier === selectedTier;
+  const filteredCustomers = customers.filter((customer) => {
+    const matchesSearch =
+      customer.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      customer.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      customer.city.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesTier =
+      selectedTier === "ALL" || customer.tier === selectedTier;
     return matchesSearch && matchesTier;
   });
 
   const customerStats = {
     total: customers.length,
-    active: customers.filter(c => c.status === 'ACTIVE').length,
-    pending: customers.filter(c => c.status === 'PENDING').length,
-    inactive: customers.filter(c => c.status === 'INACTIVE').length,
+    active: customers.filter((c) => c.status === "ACTIVE").length,
+    pending: customers.filter((c) => c.status === "PENDING").length,
+    inactive: customers.filter((c) => c.status === "INACTIVE").length,
     totalRevenue: customers.reduce((sum, c) => sum + c.totalValue, 0),
-    averageShipments: Math.round(customers.reduce((sum, c) => sum + c.totalShipments, 0) / customers.length),
+    averageShipments: Math.round(
+      customers.reduce((sum, c) => sum + c.totalShipments, 0) /
+        customers.length,
+    ),
   };
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'ACTIVE': return 'bg-green-100 text-green-800';
-      case 'PENDING': return 'bg-yellow-100 text-yellow-800';
-      case 'INACTIVE': return 'bg-gray-100 text-gray-800';
-      default: return 'bg-gray-100 text-gray-800';
+      case "ACTIVE":
+        return "bg-green-100 text-green-800";
+      case "PENDING":
+        return "bg-yellow-100 text-yellow-800";
+      case "INACTIVE":
+        return "bg-gray-100 text-gray-800";
+      default:
+        return "bg-gray-100 text-gray-800";
     }
   };
 
   const getTierColor = (tier: string) => {
     switch (tier) {
-      case 'PLATINUM': return 'bg-purple-100 text-purple-800';
-      case 'GOLD': return 'bg-yellow-100 text-yellow-800';
-      case 'SILVER': return 'bg-gray-100 text-gray-800';
-      case 'BRONZE': return 'bg-orange-100 text-orange-800';
-      default: return 'bg-gray-100 text-gray-800';
+      case "PLATINUM":
+        return "bg-purple-100 text-purple-800";
+      case "GOLD":
+        return "bg-yellow-100 text-yellow-800";
+      case "SILVER":
+        return "bg-gray-100 text-gray-800";
+      case "BRONZE":
+        return "bg-orange-100 text-orange-800";
+      default:
+        return "bg-gray-100 text-gray-800";
     }
   };
 
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-CA', {
-      style: 'currency',
-      currency: 'CAD'
+    return new Intl.NumberFormat("en-CA", {
+      style: "currency",
+      currency: "CAD",
     }).format(amount);
   };
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-CA', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric'
+    return new Date(dateString).toLocaleDateString("en-CA", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
     });
   };
 
@@ -198,8 +212,12 @@ export default function CustomersPage() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Customer Management</h1>
-            <p className="text-gray-600 mt-1">Manage customer relationships and track performance</p>
+            <h1 className="text-3xl font-bold text-gray-900">
+              Customer Management
+            </h1>
+            <p className="text-gray-600 mt-1">
+              Manage customer relationships and track performance
+            </p>
           </div>
           <div className="flex items-center gap-3">
             <Button
@@ -208,7 +226,9 @@ export default function CustomersPage() {
               disabled={refreshing}
               className="flex items-center gap-2"
             >
-              <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
+              <RefreshCw
+                className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`}
+              />
               Refresh
             </Button>
             <Button className="flex items-center gap-2">
@@ -222,7 +242,9 @@ export default function CustomersPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Customers</CardTitle>
+              <CardTitle className="text-sm font-medium">
+                Total Customers
+              </CardTitle>
               <Building2 className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
@@ -235,7 +257,9 @@ export default function CustomersPage() {
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
+              <CardTitle className="text-sm font-medium">
+                Total Revenue
+              </CardTitle>
               <DollarSign className="h-4 w-4 text-green-600" />
             </CardHeader>
             <CardContent>
@@ -248,11 +272,15 @@ export default function CustomersPage() {
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Avg Shipments</CardTitle>
+              <CardTitle className="text-sm font-medium">
+                Avg Shipments
+              </CardTitle>
               <Package className="h-4 w-4 text-blue-600" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-blue-600">{customerStats.averageShipments}</div>
+              <div className="text-2xl font-bold text-blue-600">
+                {customerStats.averageShipments}
+              </div>
               <p className="text-xs text-muted-foreground">Per customer</p>
             </CardContent>
           </Card>
@@ -324,7 +352,9 @@ export default function CustomersPage() {
                           <Building2 className="h-5 w-5 text-blue-600" />
                         </div>
                         <div>
-                          <h3 className="font-medium text-lg">{customer.name}</h3>
+                          <h3 className="font-medium text-lg">
+                            {customer.name}
+                          </h3>
                           <div className="flex items-center gap-4 text-sm text-gray-600 mt-1">
                             <span className="flex items-center gap-1">
                               <Mail className="h-3 w-3" />
@@ -354,14 +384,18 @@ export default function CustomersPage() {
                           </div>
                           <div className="text-sm text-gray-600">
                             <p>{customer.totalShipments} shipments</p>
-                            <p className="font-medium">{formatCurrency(customer.totalValue)}</p>
+                            <p className="font-medium">
+                              {formatCurrency(customer.totalValue)}
+                            </p>
                           </div>
                         </div>
 
                         <div className="text-right">
                           <div className="flex items-center gap-1 mb-1">
                             <Star className="h-3 w-3 text-yellow-500 fill-current" />
-                            <span className="text-sm font-medium">{customer.rating}</span>
+                            <span className="text-sm font-medium">
+                              {customer.rating}
+                            </span>
                           </div>
                           <p className="text-xs text-gray-500">
                             Last: {formatDate(customer.lastShipment)}
@@ -399,7 +433,9 @@ export default function CustomersPage() {
                   <div className="space-y-4">
                     <div className="flex justify-between items-center">
                       <span className="text-sm">This Month</span>
-                      <span className="font-medium text-green-600">+8 customers</span>
+                      <span className="font-medium text-green-600">
+                        +8 customers
+                      </span>
                     </div>
                     <div className="flex justify-between items-center">
                       <span className="text-sm">Last Month</span>
@@ -446,22 +482,25 @@ export default function CustomersPage() {
 
           <TabsContent value="tiers" className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              {['PLATINUM', 'GOLD', 'SILVER', 'BRONZE'].map((tier) => {
-                const tierCustomers = customers.filter(c => c.tier === tier);
-                const tierRevenue = tierCustomers.reduce((sum, c) => sum + c.totalValue, 0);
-                
+              {["PLATINUM", "GOLD", "SILVER", "BRONZE"].map((tier) => {
+                const tierCustomers = customers.filter((c) => c.tier === tier);
+                const tierRevenue = tierCustomers.reduce(
+                  (sum, c) => sum + c.totalValue,
+                  0,
+                );
+
                 return (
                   <Card key={tier}>
                     <CardHeader>
                       <CardTitle className="flex items-center gap-2">
-                        <Badge className={getTierColor(tier)}>
-                          {tier}
-                        </Badge>
+                        <Badge className={getTierColor(tier)}>{tier}</Badge>
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
                       <div className="space-y-2">
-                        <div className="text-2xl font-bold">{tierCustomers.length}</div>
+                        <div className="text-2xl font-bold">
+                          {tierCustomers.length}
+                        </div>
                         <p className="text-sm text-gray-600">Customers</p>
                         <div className="text-lg font-semibold text-green-600">
                           {formatCurrency(tierRevenue)}

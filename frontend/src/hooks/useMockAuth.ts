@@ -3,14 +3,14 @@
 
 export const useMockAuth = () => {
   return {
-    getToken: () => 'demo-token',
+    getToken: () => "demo-token",
     isAuthenticated: true,
     user: {
-      id: 'demo-user',
-      username: 'demo@safeshipper.com',
-      email: 'demo@safeshipper.com',
-      role: 'DISPATCHER',
-      avatar: 'DE'
-    }
+      id: "demo-user",
+      username: "demo@safeshipper.com",
+      email: "demo@safeshipper.com",
+      role: "DISPATCHER",
+      avatar: "DE",
+    },
   };
 };

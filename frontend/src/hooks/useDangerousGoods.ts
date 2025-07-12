@@ -1,5 +1,5 @@
-import { useQuery, useMutation } from '@tanstack/react-query';
-import { useAuthStore } from '@/stores/auth-store';
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { useAuthStore } from "@/stores/auth-store";
 
 // Types
 export interface DangerousGood {
@@ -41,23 +41,28 @@ export interface CompatibilityCheckResponse {
 }
 
 // API functions
-const fetchDangerousGoods = async (token: string, search?: string): Promise<DangerousGood[]> => {
-  const url = new URL('/api/v1/dangerous-goods/', window.location.origin);
-  
+const fetchDangerousGoods = async (
+  token: string,
+  search?: string,
+): Promise<DangerousGood[]> => {
+  const url = new URL("/api/v1/dangerous-goods/", window.location.origin);
+
   if (search) {
-    url.searchParams.append('search', search);
+    url.searchParams.append("search", search);
   }
 
   const response = await fetch(url.toString(), {
     headers: {
-      'Authorization': `Bearer ${token}`,
-      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
     },
   });
 
   if (!response.ok) {
-    const error = await response.json().catch(() => ({ message: 'Failed to fetch dangerous goods' }));
-    throw new Error(error.message || 'Failed to fetch dangerous goods');
+    const error = await response
+      .json()
+      .catch(() => ({ message: "Failed to fetch dangerous goods" }));
+    throw new Error(error.message || "Failed to fetch dangerous goods");
   }
 
   const data = await response.json();
@@ -65,34 +70,42 @@ const fetchDangerousGoods = async (token: string, search?: string): Promise<Dang
 };
 
 const checkCompatibility = async (
-  request: CompatibilityCheckRequest, 
-  token: string
+  request: CompatibilityCheckRequest,
+  token: string,
 ): Promise<CompatibilityCheckResponse> => {
-  const response = await fetch('/api/v1/dangerous-goods/check-compatibility/', {
-    method: 'POST',
+  const response = await fetch("/api/v1/dangerous-goods/check-compatibility/", {
+    method: "POST",
     headers: {
-      'Authorization': `Bearer ${token}`,
-      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
     },
     body: JSON.stringify(request),
   });
 
   if (!response.ok) {
-    const error = await response.json().catch(() => ({ message: 'Failed to check compatibility' }));
-    throw new Error(error.message || 'Failed to check compatibility');
+    const error = await response
+      .json()
+      .catch(() => ({ message: "Failed to check compatibility" }));
+    throw new Error(error.message || "Failed to check compatibility");
   }
 
   return response.json();
 };
 
-const lookupBySynonym = async (query: string, token: string): Promise<DangerousGood | null> => {
-  const url = new URL('/api/v1/dangerous-goods/lookup-by-synonym/', window.location.origin);
-  url.searchParams.append('query', query);
+const lookupBySynonym = async (
+  query: string,
+  token: string,
+): Promise<DangerousGood | null> => {
+  const url = new URL(
+    "/api/v1/dangerous-goods/lookup-by-synonym/",
+    window.location.origin,
+  );
+  url.searchParams.append("query", query);
 
   const response = await fetch(url.toString(), {
     headers: {
-      'Authorization': `Bearer ${token}`,
-      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
     },
   });
 
@@ -101,8 +114,10 @@ const lookupBySynonym = async (query: string, token: string): Promise<DangerousG
   }
 
   if (!response.ok) {
-    const error = await response.json().catch(() => ({ message: 'Failed to lookup synonym' }));
-    throw new Error(error.message || 'Failed to lookup synonym');
+    const error = await response
+      .json()
+      .catch(() => ({ message: "Failed to lookup synonym" }));
+    throw new Error(error.message || "Failed to lookup synonym");
   }
 
   return response.json();
@@ -113,7 +128,7 @@ export const useDangerousGoods = (search?: string) => {
   const { token } = useAuthStore();
 
   return useQuery({
-    queryKey: ['dangerous-goods', search],
+    queryKey: ["dangerous-goods", search],
     queryFn: () => fetchDangerousGoods(token!, search),
     enabled: !!token,
     staleTime: 10 * 60 * 1000, // 10 minutes - DG data doesn't change often
@@ -128,7 +143,7 @@ export const useCheckCompatibility = () => {
   const { token } = useAuthStore();
 
   return useMutation({
-    mutationFn: (request: CompatibilityCheckRequest) => 
+    mutationFn: (request: CompatibilityCheckRequest) =>
       checkCompatibility(request, token!),
   });
 };
@@ -146,7 +161,7 @@ export const useSearchDangerousGoods = (searchTerm: string, enabled = true) => {
   const { token } = useAuthStore();
 
   return useQuery({
-    queryKey: ['dangerous-goods-search', searchTerm],
+    queryKey: ["dangerous-goods-search", searchTerm],
     queryFn: () => fetchDangerousGoods(token!, searchTerm),
     enabled: !!token && enabled && searchTerm.length >= 2,
     staleTime: 5 * 60 * 1000, // 5 minutes
@@ -155,19 +170,27 @@ export const useSearchDangerousGoods = (searchTerm: string, enabled = true) => {
       return data
         .sort((a, b) => {
           // Prioritize UN number matches
-          const aUnMatch = a.un_number.toLowerCase().includes(searchTerm.toLowerCase());
-          const bUnMatch = b.un_number.toLowerCase().includes(searchTerm.toLowerCase());
-          
+          const aUnMatch = a.un_number
+            .toLowerCase()
+            .includes(searchTerm.toLowerCase());
+          const bUnMatch = b.un_number
+            .toLowerCase()
+            .includes(searchTerm.toLowerCase());
+
           if (aUnMatch && !bUnMatch) return -1;
           if (!aUnMatch && bUnMatch) return 1;
-          
+
           // Then by proper shipping name matches
-          const aNameMatch = a.proper_shipping_name.toLowerCase().includes(searchTerm.toLowerCase());
-          const bNameMatch = b.proper_shipping_name.toLowerCase().includes(searchTerm.toLowerCase());
-          
+          const aNameMatch = a.proper_shipping_name
+            .toLowerCase()
+            .includes(searchTerm.toLowerCase());
+          const bNameMatch = b.proper_shipping_name
+            .toLowerCase()
+            .includes(searchTerm.toLowerCase());
+
           if (aNameMatch && !bNameMatch) return -1;
           if (!aNameMatch && bNameMatch) return 1;
-          
+
           // Finally by UN number
           return a.un_number.localeCompare(b.un_number);
         })

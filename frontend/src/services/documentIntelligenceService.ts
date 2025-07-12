@@ -32,7 +32,17 @@ interface DocumentOCRResult {
 
 interface DocumentClassification {
   documentId: string;
-  primaryType: 'manifest' | 'sds' | 'bill_of_lading' | 'dangerous_goods_declaration' | 'certificate' | 'invoice' | 'packing_list' | 'transport_document' | 'compliance_record' | 'other';
+  primaryType:
+    | "manifest"
+    | "sds"
+    | "bill_of_lading"
+    | "dangerous_goods_declaration"
+    | "certificate"
+    | "invoice"
+    | "packing_list"
+    | "transport_document"
+    | "compliance_record"
+    | "other";
   subType?: string;
   confidence: number;
   alternativeTypes: Array<{
@@ -41,13 +51,13 @@ interface DocumentClassification {
   }>;
   detectedFields: Array<{
     fieldName: string;
-    fieldType: 'text' | 'number' | 'date' | 'boolean' | 'table' | 'image';
+    fieldType: "text" | "number" | "date" | "boolean" | "table" | "image";
     required: boolean;
     found: boolean;
     confidence?: number;
     value?: any;
   }>;
-  complianceStatus: 'compliant' | 'non_compliant' | 'needs_review' | 'unknown';
+  complianceStatus: "compliant" | "non_compliant" | "needs_review" | "unknown";
   complianceIssues: string[];
   recommendedActions: string[];
 }
@@ -59,7 +69,7 @@ interface DocumentExtraction {
     shipmentNumber?: string;
     trackingNumber?: string;
     billOfLadingNumber?: string;
-    
+
     // Parties
     shipper?: {
       name: string;
@@ -71,7 +81,7 @@ interface DocumentExtraction {
       address: string;
       contact: string;
     };
-    
+
     // Cargo details
     cargoDescription?: string;
     dangerousGoods?: Array<{
@@ -82,30 +92,30 @@ interface DocumentExtraction {
       quantity: string;
       packaging: string;
     }>;
-    
+
     // Transport details
-    transportMode?: 'road' | 'rail' | 'sea' | 'air';
+    transportMode?: "road" | "rail" | "sea" | "air";
     vesselVoyage?: string;
     portOfLoading?: string;
     portOfDischarge?: string;
     placeOfDelivery?: string;
-    
+
     // Dates
     shippingDate?: string;
     deliveryDate?: string;
-    
+
     // Compliance
     certifications?: string[];
     emergencyContact?: string;
-    
+
     // Custom fields
     customFields?: { [key: string]: any };
   };
   confidence: number;
-  extractionMethod: 'ocr' | 'ai_extraction' | 'template_matching' | 'manual';
+  extractionMethod: "ocr" | "ai_extraction" | "template_matching" | "manual";
   validationResults: Array<{
     field: string;
-    status: 'valid' | 'invalid' | 'warning';
+    status: "valid" | "invalid" | "warning";
     message: string;
   }>;
 }
@@ -118,7 +128,7 @@ interface DocumentTemplate {
   fields: Array<{
     fieldId: string;
     fieldName: string;
-    fieldType: 'text' | 'number' | 'date' | 'boolean' | 'table';
+    fieldType: "text" | "number" | "date" | "boolean" | "table";
     required: boolean;
     validation: {
       pattern?: string;
@@ -128,7 +138,7 @@ interface DocumentTemplate {
     };
     extractionHints: {
       keywords: string[];
-      position: 'top' | 'bottom' | 'left' | 'right' | 'center' | 'anywhere';
+      position: "top" | "bottom" | "left" | "right" | "center" | "anywhere";
       nearbyText?: string[];
     };
   }>;
@@ -157,12 +167,19 @@ interface DocumentWorkflow {
   description: string;
   triggerConditions: {
     documentTypes: string[];
-    automationLevel: 'manual' | 'semi_automatic' | 'fully_automatic';
+    automationLevel: "manual" | "semi_automatic" | "fully_automatic";
     confidenceThreshold: number;
   };
   steps: Array<{
     stepId: string;
-    stepType: 'ocr' | 'classification' | 'extraction' | 'validation' | 'approval' | 'notification' | 'integration';
+    stepType:
+      | "ocr"
+      | "classification"
+      | "extraction"
+      | "validation"
+      | "approval"
+      | "notification"
+      | "integration";
     stepName: string;
     configuration: { [key: string]: any };
     requirements: string[];
@@ -172,7 +189,7 @@ interface DocumentWorkflow {
   notificationRules: Array<{
     event: string;
     recipients: string[];
-    method: 'email' | 'sms' | 'system_notification';
+    method: "email" | "sms" | "system_notification";
   }>;
   integrations: Array<{
     system: string;
@@ -182,7 +199,7 @@ interface DocumentWorkflow {
 }
 
 interface DocumentAnalytics {
-  timeframe: 'day' | 'week' | 'month' | 'quarter';
+  timeframe: "day" | "week" | "month" | "quarter";
   totalDocuments: number;
   processedDocuments: number;
   averageProcessingTime: number; // seconds
@@ -209,7 +226,7 @@ interface DocumentAnalytics {
   errorAnalysis: Array<{
     errorType: string;
     count: number;
-    trend: 'increasing' | 'decreasing' | 'stable';
+    trend: "increasing" | "decreasing" | "stable";
     resolution: string;
   }>;
   trends: {
@@ -220,112 +237,148 @@ interface DocumentAnalytics {
 }
 
 class DocumentIntelligenceService {
-  private baseUrl = '/api/v1';
-  private processingQueue: Map<string, { status: string; progress: number }> = new Map();
+  private baseUrl = "/api/v1";
+  private processingQueue: Map<string, { status: string; progress: number }> =
+    new Map();
 
   // Perform OCR on document
-  async performOCR(documentFile: File, options?: {
-    language?: string;
-    extractTables?: boolean;
-    extractImages?: boolean;
-    confidenceThreshold?: number;
-  }): Promise<DocumentOCRResult> {
+  async performOCR(
+    documentFile: File,
+    options?: {
+      language?: string;
+      extractTables?: boolean;
+      extractImages?: boolean;
+      confidenceThreshold?: number;
+    },
+  ): Promise<DocumentOCRResult> {
     try {
       const formData = new FormData();
-      formData.append('document', documentFile);
-      formData.append('options', JSON.stringify(options || {}));
+      formData.append("document", documentFile);
+      formData.append("options", JSON.stringify(options || {}));
 
-      const response = await fetch(`${this.baseUrl}/document-intelligence/ocr/`, {
-        method: 'POST',
-        body: formData
-      });
+      const response = await fetch(
+        `${this.baseUrl}/document-intelligence/ocr/`,
+        {
+          method: "POST",
+          body: formData,
+        },
+      );
 
       if (!response.ok) {
-        throw new Error('OCR processing failed');
+        throw new Error("OCR processing failed");
       }
 
       return await response.json();
     } catch (error) {
-      console.error('OCR processing failed:', error);
+      console.error("OCR processing failed:", error);
       return this.simulateOCR(documentFile);
     }
   }
 
   // Classify document type
-  async classifyDocument(documentId: string, ocrText: string): Promise<DocumentClassification> {
+  async classifyDocument(
+    documentId: string,
+    ocrText: string,
+  ): Promise<DocumentClassification> {
     try {
-      const response = await fetch(`${this.baseUrl}/document-intelligence/classify/`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          document_id: documentId,
-          ocr_text: ocrText,
-          use_ai_classification: true
-        })
-      });
+      const response = await fetch(
+        `${this.baseUrl}/document-intelligence/classify/`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            document_id: documentId,
+            ocr_text: ocrText,
+            use_ai_classification: true,
+          }),
+        },
+      );
 
       if (!response.ok) {
-        throw new Error('Document classification failed');
+        throw new Error("Document classification failed");
       }
 
       return await response.json();
     } catch (error) {
-      console.error('Document classification failed:', error);
+      console.error("Document classification failed:", error);
       return this.simulateClassification(documentId, ocrText);
     }
   }
 
   // Extract structured data from document
-  async extractDocumentData(documentId: string, documentType: string, ocrResult: DocumentOCRResult): Promise<DocumentExtraction> {
+  async extractDocumentData(
+    documentId: string,
+    documentType: string,
+    ocrResult: DocumentOCRResult,
+  ): Promise<DocumentExtraction> {
     try {
-      const response = await fetch(`${this.baseUrl}/document-intelligence/extract/`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          document_id: documentId,
-          document_type: documentType,
-          ocr_result: ocrResult,
-          extraction_method: 'ai_extraction'
-        })
-      });
+      const response = await fetch(
+        `${this.baseUrl}/document-intelligence/extract/`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            document_id: documentId,
+            document_type: documentType,
+            ocr_result: ocrResult,
+            extraction_method: "ai_extraction",
+          }),
+        },
+      );
 
       if (!response.ok) {
-        throw new Error('Document extraction failed');
+        throw new Error("Document extraction failed");
       }
 
       return await response.json();
     } catch (error) {
-      console.error('Document extraction failed:', error);
+      console.error("Document extraction failed:", error);
       return this.simulateExtraction(documentId, documentType);
     }
   }
 
   // Process document with full workflow
-  async processDocument(documentFile: File, workflowId?: string): Promise<{
+  async processDocument(
+    documentFile: File,
+    workflowId?: string,
+  ): Promise<{
     documentId: string;
     ocrResult: DocumentOCRResult;
     classification: DocumentClassification;
     extraction: DocumentExtraction;
-    status: 'completed' | 'requires_review' | 'failed';
+    status: "completed" | "requires_review" | "failed";
     confidence: number;
   }> {
     const documentId = `doc-${Date.now()}`;
-    
+
     try {
       // Step 1: OCR
       const ocrResult = await this.performOCR(documentFile);
-      
+
       // Step 2: Classification
-      const classification = await this.classifyDocument(documentId, ocrResult.text);
-      
+      const classification = await this.classifyDocument(
+        documentId,
+        ocrResult.text,
+      );
+
       // Step 3: Extraction
-      const extraction = await this.extractDocumentData(documentId, classification.primaryType, ocrResult);
-      
+      const extraction = await this.extractDocumentData(
+        documentId,
+        classification.primaryType,
+        ocrResult,
+      );
+
       // Determine overall status
-      const overallConfidence = (ocrResult.confidence + classification.confidence + extraction.confidence) / 3;
-      const status = overallConfidence > 0.8 && classification.complianceStatus !== 'needs_review' 
-        ? 'completed' 
-        : 'requires_review';
+      const overallConfidence =
+        (ocrResult.confidence +
+          classification.confidence +
+          extraction.confidence) /
+        3;
+      const status =
+        overallConfidence > 0.8 &&
+        classification.complianceStatus !== "needs_review"
+          ? "completed"
+          : "requires_review";
 
       return {
         documentId,
@@ -333,59 +386,70 @@ class DocumentIntelligenceService {
         classification,
         extraction,
         status,
-        confidence: overallConfidence
+        confidence: overallConfidence,
       };
     } catch (error) {
-      console.error('Document processing failed:', error);
+      console.error("Document processing failed:", error);
       throw error;
     }
   }
 
   // Create document template
-  async createDocumentTemplate(template: Omit<DocumentTemplate, 'templateId' | 'created' | 'lastModified'>): Promise<string> {
+  async createDocumentTemplate(
+    template: Omit<DocumentTemplate, "templateId" | "created" | "lastModified">,
+  ): Promise<string> {
     try {
-      const response = await fetch(`${this.baseUrl}/document-intelligence/templates/`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(template)
-      });
+      const response = await fetch(
+        `${this.baseUrl}/document-intelligence/templates/`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(template),
+        },
+      );
 
       if (!response.ok) {
-        throw new Error('Template creation failed');
+        throw new Error("Template creation failed");
       }
 
       const data = await response.json();
       return data.template_id;
     } catch (error) {
-      console.error('Template creation failed:', error);
-      return '';
+      console.error("Template creation failed:", error);
+      return "";
     }
   }
 
   // Get document templates
-  async getDocumentTemplates(documentType?: string): Promise<DocumentTemplate[]> {
+  async getDocumentTemplates(
+    documentType?: string,
+  ): Promise<DocumentTemplate[]> {
     try {
-      const url = documentType 
+      const url = documentType
         ? `${this.baseUrl}/document-intelligence/templates/?type=${documentType}`
         : `${this.baseUrl}/document-intelligence/templates/`;
-      
+
       const response = await fetch(url);
       if (!response.ok) return [];
-      
+
       const data = await response.json();
       return data.templates || [];
     } catch (error) {
-      console.error('Templates fetch failed:', error);
+      console.error("Templates fetch failed:", error);
       return [];
     }
   }
 
   // Validate document against compliance rules
-  async validateDocumentCompliance(documentId: string, extractedData: any, documentType: string): Promise<{
+  async validateDocumentCompliance(
+    documentId: string,
+    extractedData: any,
+    documentType: string,
+  ): Promise<{
     isCompliant: boolean;
     violations: Array<{
       rule: string;
-      severity: 'low' | 'medium' | 'high' | 'critical';
+      severity: "low" | "medium" | "high" | "critical";
       description: string;
       field?: string;
       recommendation: string;
@@ -398,80 +462,95 @@ class DocumentIntelligenceService {
     score: number; // 0-100
   }> {
     try {
-      const response = await fetch(`${this.baseUrl}/document-intelligence/validate-compliance/`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          document_id: documentId,
-          extracted_data: extractedData,
-          document_type: documentType
-        })
-      });
+      const response = await fetch(
+        `${this.baseUrl}/document-intelligence/validate-compliance/`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            document_id: documentId,
+            extracted_data: extractedData,
+            document_type: documentType,
+          }),
+        },
+      );
 
       if (!response.ok) {
-        throw new Error('Compliance validation failed');
+        throw new Error("Compliance validation failed");
       }
 
       return await response.json();
     } catch (error) {
-      console.error('Compliance validation failed:', error);
+      console.error("Compliance validation failed:", error);
       return {
         isCompliant: false,
         violations: [],
         warnings: [],
-        score: 0
+        score: 0,
       };
     }
   }
 
   // Get document analytics
-  async getDocumentAnalytics(timeframe: string = 'month'): Promise<DocumentAnalytics> {
+  async getDocumentAnalytics(
+    timeframe: string = "month",
+  ): Promise<DocumentAnalytics> {
     try {
-      const response = await fetch(`${this.baseUrl}/document-intelligence/analytics/?timeframe=${timeframe}`);
+      const response = await fetch(
+        `${this.baseUrl}/document-intelligence/analytics/?timeframe=${timeframe}`,
+      );
       if (!response.ok) {
-        throw new Error('Analytics fetch failed');
+        throw new Error("Analytics fetch failed");
       }
-      
+
       return await response.json();
     } catch (error) {
-      console.error('Analytics fetch failed:', error);
+      console.error("Analytics fetch failed:", error);
       return this.simulateAnalytics();
     }
   }
 
   // Search documents by content
-  async searchDocuments(query: string, filters?: {
-    documentTypes?: string[];
-    dateRange?: { start: string; end: string };
-    complianceStatus?: string;
-  }): Promise<Array<{
-    documentId: string;
-    documentType: string;
-    title: string;
-    excerpt: string;
-    confidence: number;
-    highlights: string[];
-    metadata: any;
-    url: string;
-  }>> {
+  async searchDocuments(
+    query: string,
+    filters?: {
+      documentTypes?: string[];
+      dateRange?: { start: string; end: string };
+      complianceStatus?: string;
+    },
+  ): Promise<
+    Array<{
+      documentId: string;
+      documentType: string;
+      title: string;
+      excerpt: string;
+      confidence: number;
+      highlights: string[];
+      metadata: any;
+      url: string;
+    }>
+  > {
     try {
-      const response = await fetch(`${this.baseUrl}/document-intelligence/search/`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          query,
-          filters: filters || {}
-        })
-      });
+      const response = await fetch(
+        `${this.baseUrl}/document-intelligence/search/`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            query,
+            filters: filters || {},
+          }),
+        },
+      );
 
       if (!response.ok) {
-        throw new Error('Document search failed');
+        throw new Error("Document search failed");
       }
 
       const data = await response.json();
       return data.results || [];
     } catch (error) {
-      console.error('Document search failed:', error);
+      console.error("Document search failed:", error);
       return [];
     }
   }
@@ -479,7 +558,7 @@ class DocumentIntelligenceService {
   // Simulate OCR for development
   private simulateOCR(file: File): DocumentOCRResult {
     const documentId = `doc-${Date.now()}`;
-    
+
     // Mock OCR text based on common document types
     const mockText = `DANGEROUS GOODS DECLARATION
     
@@ -518,7 +597,7 @@ class DocumentIntelligenceService {
               width: 500,
               height: 30,
               text: "DANGEROUS GOODS DECLARATION",
-              confidence: 0.98
+              confidence: 0.98,
             },
             {
               x: 50,
@@ -526,41 +605,44 @@ class DocumentIntelligenceService {
               width: 300,
               height: 20,
               text: "Shipment Number: SS-1234",
-              confidence: 0.95
-            }
-          ]
-        }
+              confidence: 0.95,
+            },
+          ],
+        },
       ],
       extractedData: {
         shipmentNumber: {
           value: "SS-1234",
           confidence: 0.95,
-          location: { x: 50, y: 150, width: 300, height: 20 }
+          location: { x: 50, y: 150, width: 300, height: 20 },
         },
         unNumber: {
           value: "UN1942",
-          confidence: 0.90,
-          location: { x: 50, y: 250, width: 100, height: 20 }
-        }
+          confidence: 0.9,
+          location: { x: 50, y: 250, width: 100, height: 20 },
+        },
       },
       processingTime: 1500,
-      language: 'en'
+      language: "en",
     };
   }
 
   // Simulate classification for development
-  private simulateClassification(documentId: string, text: string): DocumentClassification {
-    let primaryType: DocumentClassification['primaryType'] = 'other';
+  private simulateClassification(
+    documentId: string,
+    text: string,
+  ): DocumentClassification {
+    let primaryType: DocumentClassification["primaryType"] = "other";
     let confidence = 0.75;
 
-    if (text.toLowerCase().includes('dangerous goods declaration')) {
-      primaryType = 'dangerous_goods_declaration';
+    if (text.toLowerCase().includes("dangerous goods declaration")) {
+      primaryType = "dangerous_goods_declaration";
       confidence = 0.95;
-    } else if (text.toLowerCase().includes('manifest')) {
-      primaryType = 'manifest';
+    } else if (text.toLowerCase().includes("manifest")) {
+      primaryType = "manifest";
       confidence = 0.88;
-    } else if (text.toLowerCase().includes('safety data sheet')) {
-      primaryType = 'sds';
+    } else if (text.toLowerCase().includes("safety data sheet")) {
+      primaryType = "sds";
       confidence = 0.92;
     }
 
@@ -569,144 +651,147 @@ class DocumentIntelligenceService {
       primaryType,
       confidence,
       alternativeTypes: [
-        { type: 'transport_document', confidence: 0.65 },
-        { type: 'compliance_record', confidence: 0.45 }
+        { type: "transport_document", confidence: 0.65 },
+        { type: "compliance_record", confidence: 0.45 },
       ],
       detectedFields: [
         {
-          fieldName: 'shipmentNumber',
-          fieldType: 'text',
+          fieldName: "shipmentNumber",
+          fieldType: "text",
           required: true,
           found: true,
           confidence: 0.95,
-          value: 'SS-1234'
+          value: "SS-1234",
         },
         {
-          fieldName: 'unNumber',
-          fieldType: 'text',
+          fieldName: "unNumber",
+          fieldType: "text",
           required: true,
           found: true,
-          confidence: 0.90,
-          value: 'UN1942'
-        }
+          confidence: 0.9,
+          value: "UN1942",
+        },
       ],
-      complianceStatus: 'compliant',
+      complianceStatus: "compliant",
       complianceIssues: [],
       recommendedActions: [
-        'Verify emergency contact information',
-        'Confirm packaging specifications'
-      ]
+        "Verify emergency contact information",
+        "Confirm packaging specifications",
+      ],
     };
   }
 
   // Simulate extraction for development
-  private simulateExtraction(documentId: string, documentType: string): DocumentExtraction {
+  private simulateExtraction(
+    documentId: string,
+    documentType: string,
+  ): DocumentExtraction {
     return {
       documentId,
       extractedData: {
-        shipmentNumber: 'SS-1234',
+        shipmentNumber: "SS-1234",
         shipper: {
-          name: 'Global Manufacturing Inc.',
-          address: '123 Industrial Drive, Sydney NSW 2000',
-          contact: '+61-2-9999-0001'
+          name: "Global Manufacturing Inc.",
+          address: "123 Industrial Drive, Sydney NSW 2000",
+          contact: "+61-2-9999-0001",
         },
         consignee: {
-          name: 'Chemical Solutions Ltd.',
-          address: '456 Port Road, Melbourne VIC 3000',
-          contact: '+61-3-8888-0002'
+          name: "Chemical Solutions Ltd.",
+          address: "456 Port Road, Melbourne VIC 3000",
+          contact: "+61-3-8888-0002",
         },
         dangerousGoods: [
           {
-            unNumber: 'UN1942',
-            properShippingName: 'AMMONIUM NITRATE',
-            hazardClass: '5.1',
-            packingGroup: 'III',
-            quantity: '500 KG',
-            packaging: 'Drums'
-          }
+            unNumber: "UN1942",
+            properShippingName: "AMMONIUM NITRATE",
+            hazardClass: "5.1",
+            packingGroup: "III",
+            quantity: "500 KG",
+            packaging: "Drums",
+          },
         ],
-        transportMode: 'road' as const,
-        shippingDate: new Date().toISOString().split('T')[0],
-        emergencyContact: '+61-2-9999-0000'
+        transportMode: "road" as const,
+        shippingDate: new Date().toISOString().split("T")[0],
+        emergencyContact: "+61-2-9999-0000",
       },
       confidence: 0.87,
-      extractionMethod: 'ai_extraction',
+      extractionMethod: "ai_extraction",
       validationResults: [
         {
-          field: 'unNumber',
-          status: 'valid',
-          message: 'Valid UN number format'
+          field: "unNumber",
+          status: "valid",
+          message: "Valid UN number format",
         },
         {
-          field: 'emergencyContact',
-          status: 'warning',
-          message: 'Emergency contact format should include country code'
-        }
-      ]
+          field: "emergencyContact",
+          status: "warning",
+          message: "Emergency contact format should include country code",
+        },
+      ],
     };
   }
 
   // Simulate analytics for development
   private simulateAnalytics(): DocumentAnalytics {
     return {
-      timeframe: 'month',
+      timeframe: "month",
       totalDocuments: 1247,
       processedDocuments: 1189,
       averageProcessingTime: 12.5,
       accuracy: {
         ocrAccuracy: 94.2,
         classificationAccuracy: 91.8,
-        extractionAccuracy: 88.6
+        extractionAccuracy: 88.6,
       },
       documentTypes: [
         {
-          type: 'dangerous_goods_declaration',
+          type: "dangerous_goods_declaration",
           count: 456,
           averageConfidence: 0.92,
-          processingTime: 15.2
+          processingTime: 15.2,
         },
         {
-          type: 'manifest',
+          type: "manifest",
           count: 342,
           averageConfidence: 0.89,
-          processingTime: 18.7
+          processingTime: 18.7,
         },
         {
-          type: 'sds',
+          type: "sds",
           count: 231,
           averageConfidence: 0.95,
-          processingTime: 8.4
-        }
+          processingTime: 8.4,
+        },
       ],
       complianceMetrics: {
         compliantDocuments: 1098,
         nonCompliantDocuments: 67,
         pendingReview: 24,
         commonIssues: [
-          { issue: 'Missing emergency contact', count: 23 },
-          { issue: 'Invalid UN number format', count: 18 },
-          { issue: 'Incomplete shipper information', count: 15 }
-        ]
+          { issue: "Missing emergency contact", count: 23 },
+          { issue: "Invalid UN number format", count: 18 },
+          { issue: "Incomplete shipper information", count: 15 },
+        ],
       },
       errorAnalysis: [
         {
-          errorType: 'OCR_QUALITY',
+          errorType: "OCR_QUALITY",
           count: 45,
-          trend: 'decreasing',
-          resolution: 'Improved image preprocessing'
+          trend: "decreasing",
+          resolution: "Improved image preprocessing",
         },
         {
-          errorType: 'CLASSIFICATION_AMBIGUITY',
+          errorType: "CLASSIFICATION_AMBIGUITY",
           count: 23,
-          trend: 'stable',
-          resolution: 'Enhanced training data'
-        }
+          trend: "stable",
+          resolution: "Enhanced training data",
+        },
       ],
       trends: {
         volumeTrend: [1089, 1156, 1203, 1247, 1189],
         accuracyTrend: [89.2, 91.5, 93.1, 94.2, 94.8],
-        processingTimeTrend: [15.8, 14.2, 13.1, 12.5, 11.9]
-      }
+        processingTimeTrend: [15.8, 14.2, 13.1, 12.5, 11.9],
+      },
     };
   }
 }
@@ -719,5 +804,5 @@ export type {
   DocumentExtraction,
   DocumentTemplate,
   DocumentWorkflow,
-  DocumentAnalytics
+  DocumentAnalytics,
 };

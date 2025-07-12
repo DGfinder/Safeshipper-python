@@ -1,15 +1,15 @@
-'use client';
+"use client";
 
-import React, { useEffect } from 'react';
-import { 
-  Truck, 
-  FileSearch, 
-  BarChart3, 
-  MapPin, 
-  Eye, 
-  Star, 
-  ChevronDown, 
-  ChevronUp, 
+import React, { useEffect } from "react";
+import {
+  Truck,
+  FileSearch,
+  BarChart3,
+  MapPin,
+  Eye,
+  Star,
+  ChevronDown,
+  ChevronUp,
   MoreVertical,
   CheckCircle,
   XCircle,
@@ -17,14 +17,20 @@ import {
   FileCheck,
   Clock,
   Activity,
-  AlertTriangle
-} from 'lucide-react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Progress } from '@/components/ui/progress';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { DashboardLayout } from '@/components/layout/dashboard-layout';
-import { useDashboardStore } from '@/stores/dashboard-store';
+  AlertTriangle,
+} from "lucide-react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { DashboardLayout } from "@/components/layout/dashboard-layout";
+import { useDashboardStore } from "@/stores/dashboard-store";
 
 // Types for our data (keeping for future use)
 // interface StatCard {
@@ -53,52 +59,51 @@ interface ShipmentRow {
 
 const shipmentData: ShipmentRow[] = [
   {
-    id: '1',
-    identifier: 'VOL-873454',
-    origin: 'Sicily, Italy',
-    destination: 'Tallin, EST',
-    dangerousGoods: ['Class 3', 'Class 8'],
-    hazchemCode: '3YE',
-    progress: 88
+    id: "1",
+    identifier: "VOL-873454",
+    origin: "Sicily, Italy",
+    destination: "Tallin, EST",
+    dangerousGoods: ["Class 3", "Class 8"],
+    hazchemCode: "3YE",
+    progress: 88,
   },
   {
-    id: '2',
-    identifier: 'VOL-349576',
-    origin: 'Rotterdam',
-    destination: 'Brussels, Belgium',
-    dangerousGoods: ['Class 2', 'Class 9'],
-    hazchemCode: '3YE',
-    progress: 32
+    id: "2",
+    identifier: "VOL-349576",
+    origin: "Rotterdam",
+    destination: "Brussels, Belgium",
+    dangerousGoods: ["Class 2", "Class 9"],
+    hazchemCode: "3YE",
+    progress: 32,
   },
   {
-    id: '3',
-    identifier: 'VOL-345789',
-    origin: 'Abu Dhabi, UAE',
-    destination: 'Boston, USA',
-    dangerousGoods: ['Class 1', 'Class 6'],
-    hazchemCode: '3YE',
-    progress: 45
+    id: "3",
+    identifier: "VOL-345789",
+    origin: "Abu Dhabi, UAE",
+    destination: "Boston, USA",
+    dangerousGoods: ["Class 1", "Class 6"],
+    hazchemCode: "3YE",
+    progress: 45,
   },
   {
-    id: '4',
-    identifier: 'VOL-456890',
-    origin: 'Schipol, Amsterdam',
-    destination: 'Changi, Singapore',
-    dangerousGoods: ['Class 4', 'Class 7'],
-    hazchemCode: '3YE',
-    progress: 67
+    id: "4",
+    identifier: "VOL-456890",
+    origin: "Schipol, Amsterdam",
+    destination: "Changi, Singapore",
+    dangerousGoods: ["Class 4", "Class 7"],
+    hazchemCode: "3YE",
+    progress: 67,
   },
   {
-    id: '5',
-    identifier: 'VOL-983475',
-    origin: 'Cleveland, Ohio, USA',
-    destination: 'Cleveland, Ohio, USA',
-    dangerousGoods: ['Class 5'],
-    hazchemCode: '3YE',
-    progress: 8
-  }
+    id: "5",
+    identifier: "VOL-983475",
+    origin: "Cleveland, Ohio, USA",
+    destination: "Cleveland, Ohio, USA",
+    dangerousGoods: ["Class 5"],
+    hazchemCode: "3YE",
+    progress: 8,
+  },
 ];
-
 
 export default function Dashboard() {
   const { stats, error, fetchStats } = useDashboardStore();
@@ -110,65 +115,70 @@ export default function Dashboard() {
   // Update stat cards with real data
   const statCardsData = [
     {
-      id: '1',
-      title: 'Total Shipments',
+      id: "1",
+      title: "Total Shipments",
       value: stats.totalShipments.toLocaleString(),
-      description: 'Active shipments in transit',
-      change: '+12.5%',
-      trend: 'up',
+      description: "Active shipments in transit",
+      change: "+12.5%",
+      trend: "up",
       icon: Truck,
-      color: 'rgba(21, 63, 159, 0.08)',
-      borderColor: '#153F9F'
+      color: "rgba(21, 63, 159, 0.08)",
+      borderColor: "#153F9F",
     },
     {
-      id: '2',
-      title: 'Pending Reviews',
+      id: "2",
+      title: "Pending Reviews",
       value: stats.pendingReviews.toString(),
-      description: 'Documents requiring approval',
-      change: '-8.2%',
-      trend: 'down',
+      description: "Documents requiring approval",
+      change: "-8.2%",
+      trend: "down",
       icon: FileSearch,
-      color: 'rgba(255, 159, 67, 0.08)',
-      borderColor: '#FF9F43'
+      color: "rgba(255, 159, 67, 0.08)",
+      borderColor: "#FF9F43",
     },
     {
-      id: '3',
-      title: 'Compliance Rate',
+      id: "3",
+      title: "Compliance Rate",
       value: `${stats.complianceRate}%`,
-      description: 'Safety compliance score',
-      change: '+2.1%',
-      trend: 'up',
+      description: "Safety compliance score",
+      change: "+2.1%",
+      trend: "up",
       icon: BarChart3,
-      color: 'rgba(234, 84, 85, 0.08)',
-      borderColor: '#EA5455'
+      color: "rgba(234, 84, 85, 0.08)",
+      borderColor: "#EA5455",
     },
     {
-      id: '4',
-      title: 'Active Routes',
+      id: "4",
+      title: "Active Routes",
       value: stats.activeRoutes.toString(),
-      description: 'Currently operating routes',
-      change: '+5.3%',
-      trend: 'up',
+      description: "Currently operating routes",
+      change: "+5.3%",
+      trend: "up",
       icon: MapPin,
-      color: 'rgba(0, 207, 232, 0.08)',
-      borderColor: '#00CFE8'
-    }
+      color: "rgba(0, 207, 232, 0.08)",
+      borderColor: "#00CFE8",
+    },
   ];
 
   if (error) {
-    console.warn('Dashboard error:', error);
+    console.warn("Dashboard error:", error);
   }
 
   return (
     <DashboardLayout>
       <div className="space-y-6">
-
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {statCardsData.map((card, index) => {
             const Icon = card.icon;
             return (
-              <Card key={card.id} className={index === 0 ? 'border-b-4' : ''} style={index === 0 ? { borderBottomColor: card.borderColor } : {}}>
+              <Card
+                key={card.id}
+                className={index === 0 ? "border-b-4" : ""}
+                style={
+                  index === 0 ? { borderBottomColor: card.borderColor } : {}
+                }
+              >
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between mb-4">
                     <div
@@ -178,7 +188,9 @@ export default function Dashboard() {
                       <Icon className="w-6 h-6" color={card.borderColor} />
                     </div>
                     <div className="text-right">
-                      <div className="text-2xl font-bold text-gray-900">{card.value}</div>
+                      <div className="text-2xl font-bold text-gray-900">
+                        {card.value}
+                      </div>
                     </div>
                   </div>
                   <div className="space-y-1">
@@ -186,7 +198,9 @@ export default function Dashboard() {
                     <div className="flex items-center gap-2">
                       <span
                         className={`text-sm font-semibold ${
-                          card.trend === 'up' ? 'text-green-600' : 'text-red-600'
+                          card.trend === "up"
+                            ? "text-green-600"
+                            : "text-red-600"
                         }`}
                       >
                         {card.change}
@@ -224,7 +238,9 @@ export default function Dashboard() {
                   <span className="font-medium">23</span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600">Failed Inspections</span>
+                  <span className="text-sm text-gray-600">
+                    Failed Inspections
+                  </span>
                   <span className="font-medium text-red-600">3</span>
                 </div>
                 <div className="flex items-center justify-between">
@@ -232,7 +248,10 @@ export default function Dashboard() {
                   <span className="font-medium text-yellow-600">5</span>
                 </div>
                 <div className="w-full bg-gray-200 rounded-full h-2">
-                  <div className="bg-green-600 h-2 rounded-full" style={{ width: '94.2%' }}></div>
+                  <div
+                    className="bg-green-600 h-2 rounded-full"
+                    style={{ width: "94.2%" }}
+                  ></div>
                 </div>
               </div>
             </CardContent>
@@ -255,21 +274,27 @@ export default function Dashboard() {
                   <div className="w-2 h-2 bg-green-500 rounded-full"></div>
                   <div className="flex-1">
                     <p className="text-sm font-medium">Inspection completed</p>
-                    <p className="text-xs text-gray-500">VOL-873454 • 2 min ago</p>
+                    <p className="text-xs text-gray-500">
+                      VOL-873454 • 2 min ago
+                    </p>
                   </div>
                 </div>
                 <div className="flex items-center gap-3 pb-2 border-b">
                   <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
                   <div className="flex-1">
                     <p className="text-sm font-medium">POD captured</p>
-                    <p className="text-xs text-gray-500">VOL-345789 • 5 min ago</p>
+                    <p className="text-xs text-gray-500">
+                      VOL-345789 • 5 min ago
+                    </p>
                   </div>
                 </div>
                 <div className="flex items-center gap-3 pb-2">
                   <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
                   <div className="flex-1">
                     <p className="text-sm font-medium">Status update</p>
-                    <p className="text-xs text-gray-500">VOL-456890 • 8 min ago</p>
+                    <p className="text-xs text-gray-500">
+                      VOL-456890 • 8 min ago
+                    </p>
                   </div>
                 </div>
                 <div className="pt-2">
@@ -300,7 +325,9 @@ export default function Dashboard() {
                   <span className="font-bold text-purple-600">100%</span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600">Digital Signatures</span>
+                  <span className="text-sm text-gray-600">
+                    Digital Signatures
+                  </span>
                   <span className="font-medium">45</span>
                 </div>
                 <div className="flex items-center justify-between">
@@ -308,11 +335,16 @@ export default function Dashboard() {
                   <span className="font-medium">89</span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600">Avg Response Time</span>
+                  <span className="text-sm text-gray-600">
+                    Avg Response Time
+                  </span>
                   <span className="font-medium text-green-600">1.2h</span>
                 </div>
                 <div className="w-full bg-gray-200 rounded-full h-2">
-                  <div className="bg-purple-600 h-2 rounded-full" style={{ width: '100%' }}></div>
+                  <div
+                    className="bg-purple-600 h-2 rounded-full"
+                    style={{ width: "100%" }}
+                  ></div>
                 </div>
               </div>
             </CardContent>
@@ -336,11 +368,17 @@ export default function Dashboard() {
               <div className="flex items-center justify-between">
                 <div className="space-y-6">
                   <div className="flex items-center gap-2">
-                    <span className="text-3xl font-bold text-[#153F9F]">4.89</span>
+                    <span className="text-3xl font-bold text-[#153F9F]">
+                      4.89
+                    </span>
                     <Star className="w-6 h-6 text-[#153F9F] fill-current" />
                   </div>
-                  <p className="text-gray-600 font-semibold">Total 187 reviews</p>
-                  <p className="text-gray-500">All reviews are from genuine customers</p>
+                  <p className="text-gray-600 font-semibold">
+                    Total 187 reviews
+                  </p>
+                  <p className="text-gray-500">
+                    All reviews are from genuine customers
+                  </p>
                   <Badge variant="info">+5 This week</Badge>
                 </div>
                 <div className="w-px h-32 bg-gray-200"></div>
@@ -350,14 +388,18 @@ export default function Dashboard() {
                     { stars: 4, count: 40, width: 30 },
                     { stars: 3, count: 12, width: 19 },
                     { stars: 2, count: 7, width: 9 },
-                    { stars: 1, count: 2, width: 5 }
+                    { stars: 1, count: 2, width: 5 },
                   ].map((item) => (
                     <div key={item.stars} className="flex items-center gap-3">
-                      <span className="text-sm text-gray-600 w-12">{item.stars} Star</span>
+                      <span className="text-sm text-gray-600 w-12">
+                        {item.stars} Star
+                      </span>
                       <div className="flex-1">
                         <Progress value={item.width} className="h-2" />
                       </div>
-                      <span className="text-sm text-gray-600 w-8">{item.count}</span>
+                      <span className="text-sm text-gray-600 w-8">
+                        {item.count}
+                      </span>
                     </div>
                   ))}
                 </div>
@@ -404,17 +446,19 @@ export default function Dashboard() {
                     />
                   </svg>
                   <div className="absolute inset-0 flex flex-col items-center justify-center">
-                    <span className="text-2xl font-bold text-gray-900">78%</span>
+                    <span className="text-2xl font-bold text-gray-900">
+                      78%
+                    </span>
                     <span className="text-gray-600">Total Growth</span>
                   </div>
                 </div>
               </div>
               <div className="flex justify-center gap-4">
                 {[
-                  { label: 'Earnings', color: '#2884C7' },
-                  { label: 'Profit', color: '#538DD2' },
-                  { label: 'Expense', color: '#7EA4DD' },
-                  { label: 'Growth', color: '#A9BFE9' }
+                  { label: "Earnings", color: "#2884C7" },
+                  { label: "Profit", color: "#538DD2" },
+                  { label: "Expense", color: "#7EA4DD" },
+                  { label: "Growth", color: "#A9BFE9" },
                 ].map((item) => (
                   <div key={item.label} className="flex items-center gap-2">
                     <div
@@ -445,13 +489,13 @@ export default function Dashboard() {
                 <thead className="bg-gray-50">
                   <tr>
                     {[
-                      'Identifier',
-                      'Origin',
-                      'Destination',
-                      'Dangerous Goods',
-                      'Hazchem Code',
-                      'Progress',
-                      'Actions'
+                      "Identifier",
+                      "Origin",
+                      "Destination",
+                      "Dangerous Goods",
+                      "Hazchem Code",
+                      "Progress",
+                      "Actions",
                     ].map((header) => (
                       <th
                         key={header}
@@ -489,13 +533,22 @@ export default function Dashboard() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex -space-x-2">
-                          {shipment.dangerousGoods.slice(0, 3).map((dg, index) => (
-                            <Badge key={index} variant="secondary" className="w-8 h-8 rounded-full p-0 text-xs border-2 border-white">
-                              DG
-                            </Badge>
-                          ))}
+                          {shipment.dangerousGoods
+                            .slice(0, 3)
+                            .map((dg, index) => (
+                              <Badge
+                                key={index}
+                                variant="secondary"
+                                className="w-8 h-8 rounded-full p-0 text-xs border-2 border-white"
+                              >
+                                DG
+                              </Badge>
+                            ))}
                           {shipment.dangerousGoods.length > 3 && (
-                            <Badge variant="outline" className="w-8 h-8 rounded-full p-0 text-xs border-2 border-white">
+                            <Badge
+                              variant="outline"
+                              className="w-8 h-8 rounded-full p-0 text-xs border-2 border-white"
+                            >
                               +{shipment.dangerousGoods.length - 3}
                             </Badge>
                           )}
@@ -506,7 +559,10 @@ export default function Dashboard() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center gap-3">
-                          <Progress value={shipment.progress} className="flex-1" />
+                          <Progress
+                            value={shipment.progress}
+                            className="flex-1"
+                          />
                           <span className="text-sm text-gray-600 w-12">
                             {shipment.progress}%
                           </span>
@@ -535,9 +591,7 @@ export default function Dashboard() {
                 <Button variant="outline" size="sm">
                   Previous
                 </Button>
-                <Button size="sm">
-                  1
-                </Button>
+                <Button size="sm">1</Button>
                 <Button variant="outline" size="sm">
                   2
                 </Button>
@@ -560,4 +614,4 @@ export default function Dashboard() {
       </div>
     </DashboardLayout>
   );
-} 
+}

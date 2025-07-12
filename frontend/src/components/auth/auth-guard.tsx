@@ -1,9 +1,9 @@
-'use client';
+"use client";
 
-import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { useAuthStore } from '@/stores/auth-store';
-import { Skeleton } from '@/components/ui/skeleton';
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { useAuthStore } from "@/stores/auth-store";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface AuthGuardProps {
   children: React.ReactNode;
@@ -18,11 +18,11 @@ export function AuthGuard({ children }: AuthGuardProps) {
     if (isHydrated && !isAuthenticated && !user) {
       // Set a demo user to bypass login
       setUser({
-        id: 'demo-user',
-        username: 'demo@safeshipper.com',
-        email: 'demo@safeshipper.com',
-        role: 'DISPATCHER',
-        avatar: 'DE'
+        id: "demo-user",
+        username: "demo@safeshipper.com",
+        email: "demo@safeshipper.com",
+        role: "DISPATCHER",
+        avatar: "DE",
       });
       return;
     }

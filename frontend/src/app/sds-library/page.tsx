@@ -1,17 +1,17 @@
 // app/sds-library/page.tsx
-'use client';
+"use client";
 
-import React, { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { 
-  BookOpen, 
-  Search, 
-  Download, 
+import React, { useState } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import {
+  BookOpen,
+  Search,
+  Download,
   Upload,
   AlertTriangle,
   Calendar,
@@ -23,54 +23,64 @@ import {
   RefreshCw,
   CheckCircle,
   Clock,
-  XCircle
-} from 'lucide-react';
-import { AuthGuard } from '@/components/auth/auth-guard';
-import { 
-  useSafetyDataSheets, 
-  useSDSStatistics, 
-  useExpiringSDS, 
+  XCircle,
+} from "lucide-react";
+import { AuthGuard } from "@/components/auth/auth-guard";
+import {
+  useSafetyDataSheets,
+  useSDSStatistics,
+  useExpiringSDS,
   useSDSDownload,
   useSDSLookup,
   type SafetyDataSheet,
-  type SDSSearchParams 
-} from '@/hooks/useSDS';
+  type SDSSearchParams,
+} from "@/hooks/useSDS";
 
 export default function SDSLibraryPage() {
   const [searchParams, setSearchParams] = useState<SDSSearchParams>({});
   const [selectedSDS, setSelectedSDS] = useState<SafetyDataSheet | null>(null);
-  
-  const { data: sdsData, isLoading: sdsLoading, refetch: refetchSDS } = useSafetyDataSheets(searchParams);
+
+  const {
+    data: sdsData,
+    isLoading: sdsLoading,
+    refetch: refetchSDS,
+  } = useSafetyDataSheets(searchParams);
   const { data: statistics } = useSDSStatistics();
   const { data: expiringSDS } = useExpiringSDS(30);
   const downloadSDS = useSDSDownload();
   const lookupSDS = useSDSLookup();
 
   const handleSearch = (newParams: Partial<SDSSearchParams>) => {
-    setSearchParams(prev => ({ ...prev, ...newParams }));
+    setSearchParams((prev) => ({ ...prev, ...newParams }));
   };
 
-  const handleDownload = (sdsId: string, context: string = 'GENERAL') => {
+  const handleDownload = (sdsId: string, context: string = "GENERAL") => {
     downloadSDS.mutate({ sdsId, context });
   };
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'ACTIVE': return 'bg-green-100 text-green-800';
-      case 'EXPIRED': return 'bg-red-100 text-red-800';
-      case 'SUPERSEDED': return 'bg-gray-100 text-gray-800';
-      case 'UNDER_REVIEW': return 'bg-yellow-100 text-yellow-800';
-      case 'DRAFT': return 'bg-blue-100 text-blue-800';
-      default: return 'bg-gray-100 text-gray-800';
+      case "ACTIVE":
+        return "bg-green-100 text-green-800";
+      case "EXPIRED":
+        return "bg-red-100 text-red-800";
+      case "SUPERSEDED":
+        return "bg-gray-100 text-gray-800";
+      case "UNDER_REVIEW":
+        return "bg-yellow-100 text-yellow-800";
+      case "DRAFT":
+        return "bg-blue-100 text-blue-800";
+      default:
+        return "bg-gray-100 text-gray-800";
     }
   };
 
   const formatFileSize = (bytes: number) => {
-    if (bytes === 0) return '0 Bytes';
+    if (bytes === 0) return "0 Bytes";
     const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const sizes = ["Bytes", "KB", "MB", "GB"];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
   };
 
   return (
@@ -79,8 +89,12 @@ export default function SDSLibraryPage() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Safety Data Sheet Library</h1>
-            <p className="text-gray-600 mt-1">Manage and access safety data sheets for dangerous goods</p>
+            <h1 className="text-3xl font-bold text-gray-900">
+              Safety Data Sheet Library
+            </h1>
+            <p className="text-gray-600 mt-1">
+              Manage and access safety data sheets for dangerous goods
+            </p>
           </div>
           <div className="flex items-center gap-3">
             <Button
@@ -89,7 +103,9 @@ export default function SDSLibraryPage() {
               disabled={sdsLoading}
               className="flex items-center gap-2"
             >
-              <RefreshCw className={`h-4 w-4 ${sdsLoading ? 'animate-spin' : ''}`} />
+              <RefreshCw
+                className={`h-4 w-4 ${sdsLoading ? "animate-spin" : ""}`}
+              />
               Refresh
             </Button>
             <Button className="flex items-center gap-2">
@@ -108,7 +124,9 @@ export default function SDSLibraryPage() {
                 <BookOpen className="h-4 w-4 text-blue-600" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-blue-600">{statistics.total_sds}</div>
+                <div className="text-2xl font-bold text-blue-600">
+                  {statistics.total_sds}
+                </div>
                 <p className="text-xs text-muted-foreground">
                   {statistics.active_sds} active documents
                 </p>
@@ -117,11 +135,15 @@ export default function SDSLibraryPage() {
 
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Expiring Soon</CardTitle>
+                <CardTitle className="text-sm font-medium">
+                  Expiring Soon
+                </CardTitle>
                 <Calendar className="h-4 w-4 text-yellow-600" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-yellow-600">{statistics.expiring_soon}</div>
+                <div className="text-2xl font-bold text-yellow-600">
+                  {statistics.expiring_soon}
+                </div>
                 <p className="text-xs text-muted-foreground">Within 30 days</p>
               </CardContent>
             </Card>
@@ -132,7 +154,9 @@ export default function SDSLibraryPage() {
                 <XCircle className="h-4 w-4 text-red-600" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-red-600">{statistics.expired_sds}</div>
+                <div className="text-2xl font-bold text-red-600">
+                  {statistics.expired_sds}
+                </div>
                 <p className="text-xs text-muted-foreground">Need updating</p>
               </CardContent>
             </Card>
@@ -146,7 +170,9 @@ export default function SDSLibraryPage() {
                 <div className="text-2xl font-bold text-purple-600">
                   {Object.keys(statistics.by_language).length}
                 </div>
-                <p className="text-xs text-muted-foreground">Available languages</p>
+                <p className="text-xs text-muted-foreground">
+                  Available languages
+                </p>
               </CardContent>
             </Card>
           </div>
@@ -157,8 +183,12 @@ export default function SDSLibraryPage() {
           <Alert className="border-yellow-200 bg-yellow-50">
             <AlertTriangle className="h-4 w-4 text-yellow-600" />
             <AlertDescription className="text-yellow-800">
-              You have {expiringSDS.length} SDS documents expiring within 30 days. 
-              <Button variant="link" className="p-0 h-auto text-yellow-700 underline ml-1">
+              You have {expiringSDS.length} SDS documents expiring within 30
+              days.
+              <Button
+                variant="link"
+                className="p-0 h-auto text-yellow-700 underline ml-1"
+              >
                 View expiring documents
               </Button>
             </AlertDescription>
@@ -179,7 +209,7 @@ export default function SDSLibraryPage() {
                 <label className="text-sm font-medium">Search</label>
                 <Input
                   placeholder="Product name, manufacturer, UN number..."
-                  value={searchParams.query || ''}
+                  value={searchParams.query || ""}
                   onChange={(e) => handleSearch({ query: e.target.value })}
                 />
               </div>
@@ -187,7 +217,7 @@ export default function SDSLibraryPage() {
                 <label className="text-sm font-medium">UN Number</label>
                 <Input
                   placeholder="e.g. UN1090"
-                  value={searchParams.un_number || ''}
+                  value={searchParams.un_number || ""}
                   onChange={(e) => handleSearch({ un_number: e.target.value })}
                 />
               </div>
@@ -195,14 +225,16 @@ export default function SDSLibraryPage() {
                 <label className="text-sm font-medium">Manufacturer</label>
                 <Input
                   placeholder="Manufacturer name"
-                  value={searchParams.manufacturer || ''}
-                  onChange={(e) => handleSearch({ manufacturer: e.target.value })}
+                  value={searchParams.manufacturer || ""}
+                  onChange={(e) =>
+                    handleSearch({ manufacturer: e.target.value })
+                  }
                 />
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-medium">Status</label>
                 <select
-                  value={searchParams.status || ''}
+                  value={searchParams.status || ""}
                   onChange={(e) => handleSearch({ status: e.target.value })}
                   className="w-full border border-gray-200 rounded-md px-3 py-2 text-sm"
                 >
@@ -217,7 +249,7 @@ export default function SDSLibraryPage() {
               <div className="space-y-2">
                 <label className="text-sm font-medium">Language</label>
                 <select
-                  value={searchParams.language || ''}
+                  value={searchParams.language || ""}
                   onChange={(e) => handleSearch({ language: e.target.value })}
                   className="w-full border border-gray-200 rounded-md px-3 py-2 text-sm"
                 >
@@ -234,7 +266,9 @@ export default function SDSLibraryPage() {
                   <input
                     type="checkbox"
                     checked={searchParams.include_expired || false}
-                    onChange={(e) => handleSearch({ include_expired: e.target.checked })}
+                    onChange={(e) =>
+                      handleSearch({ include_expired: e.target.checked })
+                    }
                     className="mr-2"
                   />
                   <span className="text-sm">Show expired SDS</span>
@@ -264,7 +298,9 @@ export default function SDSLibraryPage() {
                 {sdsLoading ? (
                   <div className="text-center py-8">
                     <RefreshCw className="h-8 w-8 animate-spin mx-auto text-gray-400" />
-                    <p className="text-gray-500 mt-2">Loading SDS documents...</p>
+                    <p className="text-gray-500 mt-2">
+                      Loading SDS documents...
+                    </p>
                   </div>
                 ) : (
                   <div className="space-y-4">
@@ -278,7 +314,9 @@ export default function SDSLibraryPage() {
                             <BookOpen className="h-5 w-5 text-blue-600" />
                           </div>
                           <div>
-                            <h3 className="font-medium text-lg">{sds.product_name}</h3>
+                            <h3 className="font-medium text-lg">
+                              {sds.product_name}
+                            </h3>
                             <div className="flex items-center gap-4 text-sm text-gray-600 mt-1">
                               <span className="flex items-center gap-1">
                                 <Factory className="h-3 w-3" />
@@ -310,7 +348,11 @@ export default function SDSLibraryPage() {
                             </div>
                             <div className="text-sm text-gray-600">
                               <p>Version {sds.version}</p>
-                              <p>{new Date(sds.revision_date).toLocaleDateString()}</p>
+                              <p>
+                                {new Date(
+                                  sds.revision_date,
+                                ).toLocaleDateString()}
+                              </p>
                             </div>
                           </div>
 
@@ -318,25 +360,32 @@ export default function SDSLibraryPage() {
                             <div className="text-sm text-gray-600 mb-1">
                               <p>{formatFileSize(sds.document.file_size)}</p>
                               {sds.expiration_date && (
-                                <p className={sds.days_until_expiration < 30 ? 'text-yellow-600' : ''}>
-                                  {sds.days_until_expiration < 0 ? 'Expired' : 
-                                   `${sds.days_until_expiration} days left`}
+                                <p
+                                  className={
+                                    sds.days_until_expiration < 30
+                                      ? "text-yellow-600"
+                                      : ""
+                                  }
+                                >
+                                  {sds.days_until_expiration < 0
+                                    ? "Expired"
+                                    : `${sds.days_until_expiration} days left`}
                                 </p>
                               )}
                             </div>
                           </div>
 
                           <div className="flex gap-2">
-                            <Button 
-                              variant="outline" 
+                            <Button
+                              variant="outline"
                               size="sm"
                               onClick={() => setSelectedSDS(sds)}
                             >
                               <Eye className="h-4 w-4 mr-1" />
                               View
                             </Button>
-                            <Button 
-                              variant="outline" 
+                            <Button
+                              variant="outline"
                               size="sm"
                               onClick={() => handleDownload(sds.id)}
                               disabled={downloadSDS.isPending}
@@ -352,8 +401,12 @@ export default function SDSLibraryPage() {
                     {sdsData?.results?.length === 0 && (
                       <div className="text-center py-8">
                         <BookOpen className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                        <h3 className="text-lg font-medium text-gray-900 mb-2">No SDS Found</h3>
-                        <p className="text-gray-600">Try adjusting your search criteria</p>
+                        <h3 className="text-lg font-medium text-gray-900 mb-2">
+                          No SDS Found
+                        </h3>
+                        <p className="text-gray-600">
+                          Try adjusting your search criteria
+                        </p>
                       </div>
                     )}
                   </div>
@@ -374,12 +427,18 @@ export default function SDSLibraryPage() {
                 {expiringSDS && expiringSDS.length > 0 ? (
                   <div className="space-y-4">
                     {expiringSDS.map((sds) => (
-                      <div key={sds.id} className="flex items-center justify-between p-4 border border-yellow-200 bg-yellow-50 rounded-lg">
+                      <div
+                        key={sds.id}
+                        className="flex items-center justify-between p-4 border border-yellow-200 bg-yellow-50 rounded-lg"
+                      >
                         <div className="flex items-center gap-4">
                           <AlertTriangle className="h-6 w-6 text-yellow-600" />
                           <div>
                             <h3 className="font-medium">{sds.product_name}</h3>
-                            <p className="text-sm text-gray-600">{sds.manufacturer} - {sds.dangerous_good.un_number}</p>
+                            <p className="text-sm text-gray-600">
+                              {sds.manufacturer} -{" "}
+                              {sds.dangerous_good.un_number}
+                            </p>
                           </div>
                         </div>
                         <div className="text-right">
@@ -387,7 +446,12 @@ export default function SDSLibraryPage() {
                             {sds.days_until_expiration} days left
                           </Badge>
                           <p className="text-sm text-gray-600 mt-1">
-                            Expires: {sds.expiration_date ? new Date(sds.expiration_date).toLocaleDateString() : 'N/A'}
+                            Expires:{" "}
+                            {sds.expiration_date
+                              ? new Date(
+                                  sds.expiration_date,
+                                ).toLocaleDateString()
+                              : "N/A"}
                           </p>
                         </div>
                       </div>
@@ -396,8 +460,12 @@ export default function SDSLibraryPage() {
                 ) : (
                   <div className="text-center py-8">
                     <CheckCircle className="h-12 w-12 text-green-400 mx-auto mb-4" />
-                    <h3 className="text-lg font-medium text-gray-900 mb-2">All Good!</h3>
-                    <p className="text-gray-600">No SDS documents expiring in the next 30 days</p>
+                    <h3 className="text-lg font-medium text-gray-900 mb-2">
+                      All Good!
+                    </h3>
+                    <p className="text-gray-600">
+                      No SDS documents expiring in the next 30 days
+                    </p>
                   </div>
                 )}
               </CardContent>
@@ -414,12 +482,19 @@ export default function SDSLibraryPage() {
                     </CardHeader>
                     <CardContent>
                       <div className="space-y-3">
-                        {Object.entries(statistics.by_status).map(([status, count]) => (
-                          <div key={status} className="flex justify-between items-center">
-                            <span className="text-sm capitalize">{status.toLowerCase()}</span>
-                            <Badge variant="outline">{count as number}</Badge>
-                          </div>
-                        ))}
+                        {Object.entries(statistics.by_status).map(
+                          ([status, count]) => (
+                            <div
+                              key={status}
+                              className="flex justify-between items-center"
+                            >
+                              <span className="text-sm capitalize">
+                                {status.toLowerCase()}
+                              </span>
+                              <Badge variant="outline">{count as number}</Badge>
+                            </div>
+                          ),
+                        )}
                       </div>
                     </CardContent>
                   </Card>
@@ -430,12 +505,17 @@ export default function SDSLibraryPage() {
                     </CardHeader>
                     <CardContent>
                       <div className="space-y-3">
-                        {Object.entries(statistics.by_language).map(([language, count]) => (
-                          <div key={language} className="flex justify-between items-center">
-                            <span className="text-sm">{language}</span>
-                            <Badge variant="outline">{count as number}</Badge>
-                          </div>
-                        ))}
+                        {Object.entries(statistics.by_language).map(
+                          ([language, count]) => (
+                            <div
+                              key={language}
+                              className="flex justify-between items-center"
+                            >
+                              <span className="text-sm">{language}</span>
+                              <Badge variant="outline">{count as number}</Badge>
+                            </div>
+                          ),
+                        )}
                       </div>
                     </CardContent>
                   </Card>
@@ -446,12 +526,17 @@ export default function SDSLibraryPage() {
                     </CardHeader>
                     <CardContent>
                       <div className="space-y-3">
-                        {statistics.top_manufacturers.slice(0, 10).map(([manufacturer, count]) => (
-                          <div key={manufacturer} className="flex justify-between items-center">
-                            <span className="text-sm">{manufacturer}</span>
-                            <Badge variant="outline">{count} SDS</Badge>
-                          </div>
-                        ))}
+                        {statistics.top_manufacturers
+                          .slice(0, 10)
+                          .map(([manufacturer, count]) => (
+                            <div
+                              key={manufacturer}
+                              className="flex justify-between items-center"
+                            >
+                              <span className="text-sm">{manufacturer}</span>
+                              <Badge variant="outline">{count} SDS</Badge>
+                            </div>
+                          ))}
                       </div>
                     </CardContent>
                   </Card>

@@ -1,11 +1,11 @@
-'use client';
+"use client";
 
-import React, { useState } from 'react';
-import { Document, Page, pdfjs } from 'react-pdf';
-import 'react-pdf/dist/esm/Page/AnnotationLayer.css';
-import 'react-pdf/dist/esm/Page/TextLayer.css';
-import { Button } from '@/components/ui/button';
-import { ChevronLeft, ChevronRight, ZoomIn, ZoomOut } from 'lucide-react';
+import React, { useState } from "react";
+import { Document, Page, pdfjs } from "react-pdf";
+import "react-pdf/dist/Page/AnnotationLayer.css";
+import "react-pdf/dist/Page/TextLayer.css";
+import { Button } from "@/components/ui/button";
+import { ChevronLeft, ChevronRight, ZoomIn, ZoomOut } from "lucide-react";
 
 // Set worker URL
 pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.js`;
@@ -22,7 +22,11 @@ interface PDFViewerProps {
   }>;
 }
 
-export default function PDFViewer({ file, onPageChange, highlightAreas = [] }: PDFViewerProps) {
+export default function PDFViewer({
+  file,
+  onPageChange,
+  highlightAreas = [],
+}: PDFViewerProps) {
   const [numPages, setNumPages] = useState<number>(0);
   const [pageNumber, setPageNumber] = useState<number>(1);
   const [scale, setScale] = useState<number>(1.0);
@@ -63,7 +67,7 @@ export default function PDFViewer({ file, onPageChange, highlightAreas = [] }: P
             <ChevronLeft className="h-4 w-4" />
           </Button>
           <span className="text-sm text-gray-600 min-w-[100px] text-center">
-            Page {pageNumber} of {numPages || '?'}
+            Page {pageNumber} of {numPages || "?"}
           </span>
           <Button
             variant="outline"
@@ -74,7 +78,7 @@ export default function PDFViewer({ file, onPageChange, highlightAreas = [] }: P
             <ChevronRight className="h-4 w-4" />
           </Button>
         </div>
-        
+
         <div className="flex items-center gap-2">
           <Button
             variant="outline"
@@ -115,8 +119,8 @@ export default function PDFViewer({ file, onPageChange, highlightAreas = [] }: P
               </div>
             }
           >
-            <Page 
-              pageNumber={pageNumber} 
+            <Page
+              pageNumber={pageNumber}
               scale={scale}
               renderAnnotationLayer={true}
               renderTextLayer={true}

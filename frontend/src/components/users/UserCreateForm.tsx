@@ -1,12 +1,12 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { useForm } from 'react-hook-form';
-import { toast } from 'react-hot-toast';
-import { X } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { CreateUserRequest, useCreateUser } from '@/hooks/useUsers';
+import { useState } from "react";
+import { useForm } from "react-hook-form";
+import { toast } from "react-hot-toast";
+import { X } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { CreateUserRequest, useCreateUser } from "@/hooks/useUsers";
 
 interface UserCreateFormProps {
   onClose: () => void;
@@ -14,11 +14,11 @@ interface UserCreateFormProps {
 }
 
 const USER_ROLES = [
-  { value: 'ADMIN', label: 'Admin' },
-  { value: 'DISPATCHER', label: 'Dispatcher' },
-  { value: 'COMPLIANCE_OFFICER', label: 'Compliance Officer' },
-  { value: 'DRIVER', label: 'Driver' },
-  { value: 'CUSTOMER', label: 'Customer' },
+  { value: "ADMIN", label: "Admin" },
+  { value: "DISPATCHER", label: "Dispatcher" },
+  { value: "COMPLIANCE_OFFICER", label: "Compliance Officer" },
+  { value: "DRIVER", label: "Driver" },
+  { value: "CUSTOMER", label: "Customer" },
 ];
 
 export function UserCreateForm({ onClose, onSuccess }: UserCreateFormProps) {
@@ -33,32 +33,36 @@ export function UserCreateForm({ onClose, onSuccess }: UserCreateFormProps) {
     setError,
   } = useForm<CreateUserRequest>({
     defaultValues: {
-      role: 'DRIVER',
+      role: "DRIVER",
       is_active: true,
       is_staff: false,
     },
   });
 
-  const password = watch('password');
+  const password = watch("password");
 
   const onSubmit = async (data: CreateUserRequest) => {
     try {
       await createUserMutation.mutateAsync(data);
-      toast.success('User created successfully!');
+      toast.success("User created successfully!");
       onSuccess?.();
       onClose();
     } catch (error: any) {
-      console.error('Create user error:', error);
-      
+      console.error("Create user error:", error);
+
       // Handle validation errors from the backend
-      if (error.message.includes('email')) {
-        setError('email', { message: 'A user with this email already exists' });
-      } else if (error.message.includes('username')) {
-        setError('username', { message: 'A user with this username already exists' });
-      } else if (error.message.includes('password')) {
-        setError('password', { message: 'Password does not meet requirements' });
+      if (error.message.includes("email")) {
+        setError("email", { message: "A user with this email already exists" });
+      } else if (error.message.includes("username")) {
+        setError("username", {
+          message: "A user with this username already exists",
+        });
+      } else if (error.message.includes("password")) {
+        setError("password", {
+          message: "Password does not meet requirements",
+        });
       } else {
-        toast.error(error.message || 'Failed to create user');
+        toast.error(error.message || "Failed to create user");
       }
     }
   };
@@ -67,7 +71,9 @@ export function UserCreateForm({ onClose, onSuccess }: UserCreateFormProps) {
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-semibold text-gray-900">Create New User</h2>
+          <h2 className="text-xl font-semibold text-gray-900">
+            Create New User
+          </h2>
           <button
             onClick={onClose}
             className="text-gray-400 hover:text-gray-600 transition-colors"
@@ -83,15 +89,20 @@ export function UserCreateForm({ onClose, onSuccess }: UserCreateFormProps) {
               Username <span className="text-red-500">*</span>
             </label>
             <Input
-              {...register('username', { 
-                required: 'Username is required',
-                minLength: { value: 3, message: 'Username must be at least 3 characters' }
+              {...register("username", {
+                required: "Username is required",
+                minLength: {
+                  value: 3,
+                  message: "Username must be at least 3 characters",
+                },
               })}
               placeholder="Enter username"
-              className={errors.username ? 'border-red-500' : ''}
+              className={errors.username ? "border-red-500" : ""}
             />
             {errors.username && (
-              <p className="text-red-500 text-sm mt-1">{errors.username.message}</p>
+              <p className="text-red-500 text-sm mt-1">
+                {errors.username.message}
+              </p>
             )}
           </div>
 
@@ -102,18 +113,20 @@ export function UserCreateForm({ onClose, onSuccess }: UserCreateFormProps) {
             </label>
             <Input
               type="email"
-              {...register('email', { 
-                required: 'Email is required',
+              {...register("email", {
+                required: "Email is required",
                 pattern: {
                   value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
-                  message: 'Invalid email address'
-                }
+                  message: "Invalid email address",
+                },
               })}
               placeholder="Enter email address"
-              className={errors.email ? 'border-red-500' : ''}
+              className={errors.email ? "border-red-500" : ""}
             />
             {errors.email && (
-              <p className="text-red-500 text-sm mt-1">{errors.email.message}</p>
+              <p className="text-red-500 text-sm mt-1">
+                {errors.email.message}
+              </p>
             )}
           </div>
 
@@ -122,10 +135,7 @@ export function UserCreateForm({ onClose, onSuccess }: UserCreateFormProps) {
             <label className="block text-sm font-medium text-gray-700 mb-1">
               First Name
             </label>
-            <Input
-              {...register('first_name')}
-              placeholder="Enter first name"
-            />
+            <Input {...register("first_name")} placeholder="Enter first name" />
           </div>
 
           {/* Last Name */}
@@ -133,10 +143,7 @@ export function UserCreateForm({ onClose, onSuccess }: UserCreateFormProps) {
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Last Name
             </label>
-            <Input
-              {...register('last_name')}
-              placeholder="Enter last name"
-            />
+            <Input {...register("last_name")} placeholder="Enter last name" />
           </div>
 
           {/* Role */}
@@ -145,7 +152,7 @@ export function UserCreateForm({ onClose, onSuccess }: UserCreateFormProps) {
               Role <span className="text-red-500">*</span>
             </label>
             <select
-              {...register('role', { required: 'Role is required' })}
+              {...register("role", { required: "Role is required" })}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
               {USER_ROLES.map((role) => (
@@ -165,16 +172,21 @@ export function UserCreateForm({ onClose, onSuccess }: UserCreateFormProps) {
               Password <span className="text-red-500">*</span>
             </label>
             <Input
-              type={showPassword ? 'text' : 'password'}
-              {...register('password', { 
-                required: 'Password is required',
-                minLength: { value: 8, message: 'Password must be at least 8 characters' }
+              type={showPassword ? "text" : "password"}
+              {...register("password", {
+                required: "Password is required",
+                minLength: {
+                  value: 8,
+                  message: "Password must be at least 8 characters",
+                },
               })}
               placeholder="Enter password"
-              className={errors.password ? 'border-red-500' : ''}
+              className={errors.password ? "border-red-500" : ""}
             />
             {errors.password && (
-              <p className="text-red-500 text-sm mt-1">{errors.password.message}</p>
+              <p className="text-red-500 text-sm mt-1">
+                {errors.password.message}
+              </p>
             )}
           </div>
 
@@ -184,16 +196,19 @@ export function UserCreateForm({ onClose, onSuccess }: UserCreateFormProps) {
               Confirm Password <span className="text-red-500">*</span>
             </label>
             <Input
-              type={showPassword ? 'text' : 'password'}
-              {...register('password2', { 
-                required: 'Please confirm your password',
-                validate: (value) => value === password || 'Passwords do not match'
+              type={showPassword ? "text" : "password"}
+              {...register("password2", {
+                required: "Please confirm your password",
+                validate: (value) =>
+                  value === password || "Passwords do not match",
               })}
               placeholder="Confirm password"
-              className={errors.password2 ? 'border-red-500' : ''}
+              className={errors.password2 ? "border-red-500" : ""}
             />
             {errors.password2 && (
-              <p className="text-red-500 text-sm mt-1">{errors.password2.message}</p>
+              <p className="text-red-500 text-sm mt-1">
+                {errors.password2.message}
+              </p>
             )}
           </div>
 
@@ -216,7 +231,7 @@ export function UserCreateForm({ onClose, onSuccess }: UserCreateFormProps) {
             <div className="flex items-center">
               <input
                 type="checkbox"
-                {...register('is_active')}
+                {...register("is_active")}
                 id="is_active"
                 defaultChecked
                 className="mr-2"
@@ -228,7 +243,7 @@ export function UserCreateForm({ onClose, onSuccess }: UserCreateFormProps) {
             <div className="flex items-center">
               <input
                 type="checkbox"
-                {...register('is_staff')}
+                {...register("is_staff")}
                 id="is_staff"
                 className="mr-2"
               />
@@ -254,7 +269,7 @@ export function UserCreateForm({ onClose, onSuccess }: UserCreateFormProps) {
               className="flex-1 bg-[#153F9F] hover:bg-blue-700"
               disabled={isSubmitting}
             >
-              {isSubmitting ? 'Creating...' : 'Create User'}
+              {isSubmitting ? "Creating..." : "Create User"}
             </Button>
           </div>
         </form>

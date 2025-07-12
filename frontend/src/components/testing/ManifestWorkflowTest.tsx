@@ -1,21 +1,21 @@
-'use client';
+"use client";
 
-import React, { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { 
-  Upload, 
-  FileText, 
-  CheckCircle, 
+import React, { useState } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import {
+  Upload,
+  FileText,
+  CheckCircle,
   AlertTriangle,
   Clock,
-  Download
-} from 'lucide-react';
+  Download,
+} from "lucide-react";
 
 interface TestResult {
   step: string;
-  status: 'pending' | 'running' | 'success' | 'error';
+  status: "pending" | "running" | "success" | "error";
   message?: string;
   data?: any;
   duration?: number;
@@ -26,13 +26,19 @@ export default function ManifestWorkflowTest() {
   const [isRunning, setIsRunning] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
-  const updateTestResult = (step: string, status: TestResult['status'], message?: string, data?: any, duration?: number) => {
-    setTestResults(prev => {
-      const existing = prev.find(r => r.step === step);
+  const updateTestResult = (
+    step: string,
+    status: TestResult["status"],
+    message?: string,
+    data?: any,
+    duration?: number,
+  ) => {
+    setTestResults((prev) => {
+      const existing = prev.find((r) => r.step === step);
       const newResult = { step, status, message, data, duration };
-      
+
       if (existing) {
-        return prev.map(r => r.step === step ? newResult : r);
+        return prev.map((r) => (r.step === step ? newResult : r));
       } else {
         return [...prev, newResult];
       }
@@ -41,7 +47,7 @@ export default function ManifestWorkflowTest() {
 
   const runWorkflowTest = async () => {
     if (!selectedFile) {
-      alert('Please select the SAP PDF file first');
+      alert("Please select the SAP PDF file first");
       return;
     }
 
@@ -50,99 +56,155 @@ export default function ManifestWorkflowTest() {
 
     try {
       // Test 1: File Validation
-      updateTestResult('File Validation', 'running', 'Validating PDF file...');
+      updateTestResult("File Validation", "running", "Validating PDF file...");
       const startTime = Date.now();
-      
-      const { manifestService } = await import('@/services/manifestService');
+
+      const { manifestService } = await import("@/services/manifestService");
       const validation = manifestService.validatePDFFile(selectedFile);
-      
+
       if (validation.valid) {
-        updateTestResult('File Validation', 'success', 'PDF file is valid', validation, Date.now() - startTime);
+        updateTestResult(
+          "File Validation",
+          "success",
+          "PDF file is valid",
+          validation,
+          Date.now() - startTime,
+        );
       } else {
-        updateTestResult('File Validation', 'error', validation.errors.join(', '), validation, Date.now() - startTime);
+        updateTestResult(
+          "File Validation",
+          "error",
+          validation.errors.join(", "),
+          validation,
+          Date.now() - startTime,
+        );
         return;
       }
 
       // Test 2: Upload and Analysis
-      updateTestResult('Manifest Analysis', 'running', 'Uploading and analyzing manifest...');
+      updateTestResult(
+        "Manifest Analysis",
+        "running",
+        "Uploading and analyzing manifest...",
+      );
       const analysisStart = Date.now();
-      
+
       const analysisResponse = await manifestService.uploadAndAnalyzeManifest({
         file: selectedFile,
         analysisOptions: {
           detectDangerousGoods: true,
           extractMetadata: true,
-          validateFormat: true
-        }
+          validateFormat: true,
+        },
       });
 
       if (analysisResponse.success) {
-        updateTestResult('Manifest Analysis', 'success', 
-          `Found ${analysisResponse.results?.dangerousGoods.length || 0} dangerous goods`, 
-          analysisResponse.results, 
-          Date.now() - analysisStart
+        updateTestResult(
+          "Manifest Analysis",
+          "success",
+          `Found ${analysisResponse.results?.dangerousGoods.length || 0} dangerous goods`,
+          analysisResponse.results,
+          Date.now() - analysisStart,
         );
       } else {
-        updateTestResult('Manifest Analysis', 'error', analysisResponse.error || 'Analysis failed', null, Date.now() - analysisStart);
+        updateTestResult(
+          "Manifest Analysis",
+          "error",
+          analysisResponse.error || "Analysis failed",
+          null,
+          Date.now() - analysisStart,
+        );
       }
 
       // Test 3: Compatibility Checking
-      if (analysisResponse.results?.dangerousGoods && analysisResponse.results.dangerousGoods.length > 1) {
-        updateTestResult('Compatibility Check', 'running', 'Checking dangerous goods compatibility...');
+      if (
+        analysisResponse.results?.dangerousGoods &&
+        analysisResponse.results.dangerousGoods.length > 1
+      ) {
+        updateTestResult(
+          "Compatibility Check",
+          "running",
+          "Checking dangerous goods compatibility...",
+        );
         const compatStart = Date.now();
-        
-        const { compatibilityService } = await import('@/services/compatibilityService');
-        const dgItems = analysisResponse.results.dangerousGoods.map(dg => ({
+
+        const { compatibilityService } = await import(
+          "@/services/compatibilityService"
+        );
+        const dgItems = analysisResponse.results.dangerousGoods.map((dg) => ({
           id: dg.id,
           un: dg.un,
           class: dg.class,
           subHazard: dg.subHazard,
           packingGroup: dg.packingGroup,
-          properShippingName: dg.properShippingName
+          properShippingName: dg.properShippingName,
         }));
 
-        const compatibilityResult = await compatibilityService.checkCompatibility(dgItems);
-        updateTestResult('Compatibility Check', 'success', 
-          `Compatibility: ${compatibilityResult.compatible ? 'OK' : 'Issues found'}`, 
-          compatibilityResult, 
-          Date.now() - compatStart
+        const compatibilityResult =
+          await compatibilityService.checkCompatibility(dgItems);
+        updateTestResult(
+          "Compatibility Check",
+          "success",
+          `Compatibility: ${compatibilityResult.compatible ? "OK" : "Issues found"}`,
+          compatibilityResult,
+          Date.now() - compatStart,
         );
 
         // Test 4: Document Generation
-        updateTestResult('Document Generation', 'running', 'Generating transport documents...');
+        updateTestResult(
+          "Document Generation",
+          "running",
+          "Generating transport documents...",
+        );
         const docStart = Date.now();
-        
-        const { documentService } = await import('@/services/documentService');
+
+        const { documentService } = await import("@/services/documentService");
         const docRequest = {
-          type: 'COMPLETE_PACKAGE' as const,
-          dangerousGoods: analysisResponse.results.dangerousGoods.map(dg => ({
+          type: "COMPLETE_PACKAGE" as const,
+          dangerousGoods: analysisResponse.results.dangerousGoods.map((dg) => ({
             id: dg.id,
             un: dg.un,
             class: dg.class,
             properShippingName: dg.properShippingName,
-            quantity: dg.quantity || '1000L',
-            weight: dg.weight || '1000kg'
+            quantity: dg.quantity || "1000L",
+            weight: dg.weight || "1000kg",
           })),
           shipmentDetails: {
-            origin: 'Test Origin',
-            destination: 'Test Destination',
-            transportMode: 'Sea'
-          }
+            origin: "Test Origin",
+            destination: "Test Destination",
+            transportMode: "Sea",
+          },
         };
 
-        const docResult = await documentService.generateCompletePackage(docRequest);
-        updateTestResult('Document Generation', docResult.success ? 'success' : 'error', 
-          docResult.success ? 'Documents generated successfully' : docResult.error || 'Generation failed', 
-          docResult, 
-          Date.now() - docStart
+        const docResult =
+          await documentService.generateCompletePackage(docRequest);
+        updateTestResult(
+          "Document Generation",
+          docResult.success ? "success" : "error",
+          docResult.success
+            ? "Documents generated successfully"
+            : docResult.error || "Generation failed",
+          docResult,
+          Date.now() - docStart,
         );
       } else {
-        updateTestResult('Compatibility Check', 'pending', 'Skipped - need multiple DG items');
-        updateTestResult('Document Generation', 'pending', 'Skipped - no DG items to process');
+        updateTestResult(
+          "Compatibility Check",
+          "pending",
+          "Skipped - need multiple DG items",
+        );
+        updateTestResult(
+          "Document Generation",
+          "pending",
+          "Skipped - no DG items to process",
+        );
       }
-
     } catch (error) {
-      updateTestResult('Test Execution', 'error', error instanceof Error ? error.message : 'Unknown error');
+      updateTestResult(
+        "Test Execution",
+        "error",
+        error instanceof Error ? error.message : "Unknown error",
+      );
     } finally {
       setIsRunning(false);
     }
@@ -156,21 +218,31 @@ export default function ManifestWorkflowTest() {
     }
   };
 
-  const getStatusIcon = (status: TestResult['status']) => {
+  const getStatusIcon = (status: TestResult["status"]) => {
     switch (status) {
-      case 'pending': return <Clock className="h-4 w-4 text-gray-400" />;
-      case 'running': return <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600" />;
-      case 'success': return <CheckCircle className="h-4 w-4 text-green-600" />;
-      case 'error': return <AlertTriangle className="h-4 w-4 text-red-600" />;
+      case "pending":
+        return <Clock className="h-4 w-4 text-gray-400" />;
+      case "running":
+        return (
+          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600" />
+        );
+      case "success":
+        return <CheckCircle className="h-4 w-4 text-green-600" />;
+      case "error":
+        return <AlertTriangle className="h-4 w-4 text-red-600" />;
     }
   };
 
-  const getStatusColor = (status: TestResult['status']) => {
+  const getStatusColor = (status: TestResult["status"]) => {
     switch (status) {
-      case 'pending': return 'text-gray-600';
-      case 'running': return 'text-blue-600';
-      case 'success': return 'text-green-600';
-      case 'error': return 'text-red-600';
+      case "pending":
+        return "text-gray-600";
+      case "running":
+        return "text-blue-600";
+      case "success":
+        return "text-green-600";
+      case "error":
+        return "text-red-600";
     }
   };
 
@@ -199,7 +271,7 @@ export default function ManifestWorkflowTest() {
                   className="hidden"
                 />
                 <Button variant="outline">
-                  {selectedFile ? selectedFile.name : 'Choose File'}
+                  {selectedFile ? selectedFile.name : "Choose File"}
                 </Button>
               </label>
             </div>
@@ -210,7 +282,8 @@ export default function ManifestWorkflowTest() {
             <div>
               {selectedFile && (
                 <p className="text-sm text-gray-600">
-                  Selected: {selectedFile.name} ({(selectedFile.size / 1024).toFixed(1)} KB)
+                  Selected: {selectedFile.name} (
+                  {(selectedFile.size / 1024).toFixed(1)} KB)
                 </p>
               )}
             </div>
@@ -219,7 +292,7 @@ export default function ManifestWorkflowTest() {
               disabled={!selectedFile || isRunning}
               className="bg-blue-600 hover:bg-blue-700"
             >
-              {isRunning ? 'Running Tests...' : 'Run Workflow Test'}
+              {isRunning ? "Running Tests..." : "Run Workflow Test"}
             </Button>
           </div>
         </CardContent>
@@ -241,14 +314,20 @@ export default function ManifestWorkflowTest() {
                       <div>
                         <h3 className="font-medium">{result.step}</h3>
                         {result.message && (
-                          <p className={`text-sm ${getStatusColor(result.status)}`}>
+                          <p
+                            className={`text-sm ${getStatusColor(result.status)}`}
+                          >
                             {result.message}
                           </p>
                         )}
                       </div>
                     </div>
                     <div className="text-right">
-                      <Badge variant={result.status === 'success' ? 'default' : 'outline'}>
+                      <Badge
+                        variant={
+                          result.status === "success" ? "default" : "outline"
+                        }
+                      >
                         {result.status}
                       </Badge>
                       {result.duration && (
@@ -258,7 +337,7 @@ export default function ManifestWorkflowTest() {
                       )}
                     </div>
                   </div>
-                  
+
                   {result.data && (
                     <details className="mt-2">
                       <summary className="text-xs text-gray-500 cursor-pointer">

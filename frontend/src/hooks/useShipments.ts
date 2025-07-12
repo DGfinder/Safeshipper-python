@@ -1,13 +1,24 @@
 // hooks/useShipments.ts
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useAuthStore } from '@/stores/auth-store';
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useAuthStore } from "@/stores/auth-store";
 
 // Types
 export interface Shipment {
   id: string;
   tracking_number: string;
   reference_number: string;
-  status: 'PENDING' | 'AWAITING_VALIDATION' | 'PLANNING' | 'READY_FOR_DISPATCH' | 'IN_TRANSIT' | 'AT_HUB' | 'OUT_FOR_DELIVERY' | 'DELIVERED' | 'EXCEPTION' | 'CANCELLED' | 'COMPLETED';
+  status:
+    | "PENDING"
+    | "AWAITING_VALIDATION"
+    | "PLANNING"
+    | "READY_FOR_DISPATCH"
+    | "IN_TRANSIT"
+    | "AT_HUB"
+    | "OUT_FOR_DELIVERY"
+    | "DELIVERED"
+    | "EXCEPTION"
+    | "CANCELLED"
+    | "COMPLETED";
   customer: string;
   carrier: string;
   origin_location: string;
@@ -70,116 +81,128 @@ export interface UpdateShipmentRequest {
   instructions?: string;
 }
 
-const API_BASE_URL = '/api/v1';
+const API_BASE_URL = "/api/v1";
 
 // API Functions
 async function fetchShipments(token: string): Promise<Shipment[]> {
   const response = await fetch(`${API_BASE_URL}/shipments/`, {
     headers: {
-      'Authorization': `Bearer ${token}`,
-      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
     },
   });
 
   if (!response.ok) {
-    throw new Error('Failed to fetch shipments');
+    throw new Error("Failed to fetch shipments");
   }
 
   return response.json();
 }
 
-async function fetchShipment(shipmentId: string, token: string): Promise<Shipment> {
+async function fetchShipment(
+  shipmentId: string,
+  token: string,
+): Promise<Shipment> {
   const response = await fetch(`${API_BASE_URL}/shipments/${shipmentId}/`, {
     headers: {
-      'Authorization': `Bearer ${token}`,
-      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
     },
   });
 
   if (!response.ok) {
     if (response.status === 404) {
-      throw new Error('Shipment not found');
+      throw new Error("Shipment not found");
     }
-    throw new Error('Failed to fetch shipment');
+    throw new Error("Failed to fetch shipment");
   }
 
   return response.json();
 }
 
-async function createShipment(data: CreateShipmentRequest, token: string): Promise<Shipment> {
+async function createShipment(
+  data: CreateShipmentRequest,
+  token: string,
+): Promise<Shipment> {
   const response = await fetch(`${API_BASE_URL}/shipments/`, {
-    method: 'POST',
+    method: "POST",
     headers: {
-      'Authorization': `Bearer ${token}`,
-      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
     },
     body: JSON.stringify(data),
   });
 
   if (!response.ok) {
     const errorData = await response.json();
-    throw new Error(errorData.detail || 'Failed to create shipment');
+    throw new Error(errorData.detail || "Failed to create shipment");
   }
 
   return response.json();
 }
 
 async function updateShipment(
-  shipmentId: string, 
-  data: UpdateShipmentRequest, 
-  token: string
+  shipmentId: string,
+  data: UpdateShipmentRequest,
+  token: string,
 ): Promise<Shipment> {
   const response = await fetch(`${API_BASE_URL}/shipments/${shipmentId}/`, {
-    method: 'PATCH',
+    method: "PATCH",
     headers: {
-      'Authorization': `Bearer ${token}`,
-      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
     },
     body: JSON.stringify(data),
   });
 
   if (!response.ok) {
     const errorData = await response.json();
-    throw new Error(errorData.detail || 'Failed to update shipment');
+    throw new Error(errorData.detail || "Failed to update shipment");
   }
 
   return response.json();
 }
 
 async function updateShipmentStatus(
-  shipmentId: string, 
-  status: string, 
-  token: string
+  shipmentId: string,
+  status: string,
+  token: string,
 ): Promise<Shipment> {
-  const response = await fetch(`${API_BASE_URL}/shipments/${shipmentId}/update-status/`, {
-    method: 'PATCH',
-    headers: {
-      'Authorization': `Bearer ${token}`,
-      'Content-Type': 'application/json',
+  const response = await fetch(
+    `${API_BASE_URL}/shipments/${shipmentId}/update-status/`,
+    {
+      method: "PATCH",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ status }),
     },
-    body: JSON.stringify({ status }),
-  });
+  );
 
   if (!response.ok) {
     const errorData = await response.json();
-    throw new Error(errorData.detail || 'Failed to update shipment status');
+    throw new Error(errorData.detail || "Failed to update shipment status");
   }
 
   return response.json();
 }
 
-async function deleteShipment(shipmentId: string, token: string): Promise<void> {
+async function deleteShipment(
+  shipmentId: string,
+  token: string,
+): Promise<void> {
   const response = await fetch(`${API_BASE_URL}/shipments/${shipmentId}/`, {
-    method: 'DELETE',
+    method: "DELETE",
     headers: {
-      'Authorization': `Bearer ${token}`,
-      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
     },
   });
 
   if (!response.ok) {
     const errorData = await response.json();
-    throw new Error(errorData.detail || 'Failed to delete shipment');
+    throw new Error(errorData.detail || "Failed to delete shipment");
   }
 }
 
@@ -188,10 +211,10 @@ export function useShipments() {
   const { getToken } = useAuthStore();
 
   return useQuery({
-    queryKey: ['shipments'],
+    queryKey: ["shipments"],
     queryFn: () => {
       const token = getToken();
-      if (!token) throw new Error('No authentication token');
+      if (!token) throw new Error("No authentication token");
       return fetchShipments(token);
     },
     enabled: !!getToken(),
@@ -202,10 +225,10 @@ export function useShipment(shipmentId: string) {
   const { getToken } = useAuthStore();
 
   return useQuery({
-    queryKey: ['shipment', shipmentId],
+    queryKey: ["shipment", shipmentId],
     queryFn: () => {
       const token = getToken();
-      if (!token) throw new Error('No authentication token');
+      if (!token) throw new Error("No authentication token");
       return fetchShipment(shipmentId, token);
     },
     enabled: !!shipmentId && !!getToken(),
@@ -219,11 +242,11 @@ export function useCreateShipment() {
   return useMutation({
     mutationFn: (data: CreateShipmentRequest) => {
       const token = getToken();
-      if (!token) throw new Error('No authentication token');
+      if (!token) throw new Error("No authentication token");
       return createShipment(data, token);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['shipments'] });
+      queryClient.invalidateQueries({ queryKey: ["shipments"] });
     },
   });
 }
@@ -233,14 +256,20 @@ export function useUpdateShipment() {
   const { getToken } = useAuthStore();
 
   return useMutation({
-    mutationFn: ({ shipmentId, data }: { shipmentId: string; data: UpdateShipmentRequest }) => {
+    mutationFn: ({
+      shipmentId,
+      data,
+    }: {
+      shipmentId: string;
+      data: UpdateShipmentRequest;
+    }) => {
       const token = getToken();
-      if (!token) throw new Error('No authentication token');
+      if (!token) throw new Error("No authentication token");
       return updateShipment(shipmentId, data, token);
     },
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['shipments'] });
-      queryClient.invalidateQueries({ queryKey: ['shipment', data.id] });
+      queryClient.invalidateQueries({ queryKey: ["shipments"] });
+      queryClient.invalidateQueries({ queryKey: ["shipment", data.id] });
     },
   });
 }
@@ -250,14 +279,20 @@ export function useUpdateShipmentStatus() {
   const { getToken } = useAuthStore();
 
   return useMutation({
-    mutationFn: ({ shipmentId, status }: { shipmentId: string; status: string }) => {
+    mutationFn: ({
+      shipmentId,
+      status,
+    }: {
+      shipmentId: string;
+      status: string;
+    }) => {
       const token = getToken();
-      if (!token) throw new Error('No authentication token');
+      if (!token) throw new Error("No authentication token");
       return updateShipmentStatus(shipmentId, status, token);
     },
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['shipments'] });
-      queryClient.invalidateQueries({ queryKey: ['shipment', data.id] });
+      queryClient.invalidateQueries({ queryKey: ["shipments"] });
+      queryClient.invalidateQueries({ queryKey: ["shipment", data.id] });
     },
   });
 }
@@ -269,85 +304,105 @@ export function useDeleteShipment() {
   return useMutation({
     mutationFn: (shipmentId: string) => {
       const token = getToken();
-      if (!token) throw new Error('No authentication token');
+      if (!token) throw new Error("No authentication token");
       return deleteShipment(shipmentId, token);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['shipments'] });
+      queryClient.invalidateQueries({ queryKey: ["shipments"] });
     },
   });
 }
 
 // Document generation functions
 async function generateShipmentReport(
-  shipmentId: string, 
-  token: string, 
-  includeAudit: boolean = true
+  shipmentId: string,
+  token: string,
+  includeAudit: boolean = true,
 ): Promise<Blob> {
-  const response = await fetch(`${API_BASE_URL}/shipments/${shipmentId}/generate-report/?include_audit=${includeAudit}`, {
-    method: 'GET',
-    headers: {
-      'Authorization': `Bearer ${token}`,
+  const response = await fetch(
+    `${API_BASE_URL}/shipments/${shipmentId}/generate-report/?include_audit=${includeAudit}`,
+    {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
     },
-  });
+  );
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData.detail || 'Failed to generate shipment report');
+    throw new Error(errorData.detail || "Failed to generate shipment report");
   }
 
   return response.blob();
 }
 
-async function generateComplianceCertificate(shipmentId: string, token: string): Promise<Blob> {
-  const response = await fetch(`${API_BASE_URL}/shipments/${shipmentId}/generate-compliance-certificate/`, {
-    method: 'GET',
-    headers: {
-      'Authorization': `Bearer ${token}`,
+async function generateComplianceCertificate(
+  shipmentId: string,
+  token: string,
+): Promise<Blob> {
+  const response = await fetch(
+    `${API_BASE_URL}/shipments/${shipmentId}/generate-compliance-certificate/`,
+    {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
     },
-  });
+  );
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData.detail || 'Failed to generate compliance certificate');
+    throw new Error(
+      errorData.detail || "Failed to generate compliance certificate",
+    );
   }
 
   return response.blob();
 }
 
-async function generateDGManifest(shipmentId: string, token: string): Promise<Blob> {
-  const response = await fetch(`${API_BASE_URL}/shipments/${shipmentId}/generate-dg-manifest/`, {
-    method: 'GET',
-    headers: {
-      'Authorization': `Bearer ${token}`,
+async function generateDGManifest(
+  shipmentId: string,
+  token: string,
+): Promise<Blob> {
+  const response = await fetch(
+    `${API_BASE_URL}/shipments/${shipmentId}/generate-dg-manifest/`,
+    {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
     },
-  });
+  );
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData.detail || 'Failed to generate DG manifest');
+    throw new Error(errorData.detail || "Failed to generate DG manifest");
   }
 
   return response.blob();
 }
 
 async function generateBatchDocuments(
-  shipmentId: string, 
-  token: string, 
-  documentTypes: string[]
+  shipmentId: string,
+  token: string,
+  documentTypes: string[],
 ): Promise<Blob> {
-  const response = await fetch(`${API_BASE_URL}/shipments/${shipmentId}/generate-batch-documents/`, {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${token}`,
-      'Content-Type': 'application/json',
+  const response = await fetch(
+    `${API_BASE_URL}/shipments/${shipmentId}/generate-batch-documents/`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ document_types: documentTypes }),
     },
-    body: JSON.stringify({ document_types: documentTypes }),
-  });
+  );
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData.detail || 'Failed to generate batch documents');
+    throw new Error(errorData.detail || "Failed to generate batch documents");
   }
 
   return response.blob();
@@ -356,7 +411,7 @@ async function generateBatchDocuments(
 // Utility function to download blob as file
 function downloadBlob(blob: Blob, filename: string) {
   const url = window.URL.createObjectURL(blob);
-  const link = document.createElement('a');
+  const link = document.createElement("a");
   link.href = url;
   link.download = filename;
   document.body.appendChild(link);
@@ -370,9 +425,15 @@ export function useGenerateShipmentReport() {
   const { getToken } = useAuthStore();
 
   return useMutation({
-    mutationFn: ({ shipmentId, includeAudit = true }: { shipmentId: string; includeAudit?: boolean }) => {
+    mutationFn: ({
+      shipmentId,
+      includeAudit = true,
+    }: {
+      shipmentId: string;
+      includeAudit?: boolean;
+    }) => {
       const token = getToken();
-      if (!token) throw new Error('No authentication token');
+      if (!token) throw new Error("No authentication token");
       return generateShipmentReport(shipmentId, token, includeAudit);
     },
     onSuccess: (blob, { shipmentId }) => {
@@ -387,7 +448,7 @@ export function useGenerateComplianceCertificate() {
   return useMutation({
     mutationFn: (shipmentId: string) => {
       const token = getToken();
-      if (!token) throw new Error('No authentication token');
+      if (!token) throw new Error("No authentication token");
       return generateComplianceCertificate(shipmentId, token);
     },
     onSuccess: (blob, shipmentId) => {
@@ -402,7 +463,7 @@ export function useGenerateDGManifest() {
   return useMutation({
     mutationFn: (shipmentId: string) => {
       const token = getToken();
-      if (!token) throw new Error('No authentication token');
+      if (!token) throw new Error("No authentication token");
       return generateDGManifest(shipmentId, token);
     },
     onSuccess: (blob, shipmentId) => {
@@ -415,9 +476,15 @@ export function useGenerateBatchDocuments() {
   const { getToken } = useAuthStore();
 
   return useMutation({
-    mutationFn: ({ shipmentId, documentTypes }: { shipmentId: string; documentTypes: string[] }) => {
+    mutationFn: ({
+      shipmentId,
+      documentTypes,
+    }: {
+      shipmentId: string;
+      documentTypes: string[];
+    }) => {
       const token = getToken();
-      if (!token) throw new Error('No authentication token');
+      if (!token) throw new Error("No authentication token");
       return generateBatchDocuments(shipmentId, token, documentTypes);
     },
     onSuccess: (blob, { shipmentId }) => {

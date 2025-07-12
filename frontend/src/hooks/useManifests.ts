@@ -1,12 +1,18 @@
 // hooks/useManifests.ts
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useAuthStore } from '@/stores/auth-store';
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useAuthStore } from "@/stores/auth-store";
 
 // Types
 export interface Document {
   id: string;
   document_type: string;
-  status: 'UPLOADED' | 'QUEUED' | 'PROCESSING' | 'VALIDATED_OK' | 'VALIDATED_WITH_ERRORS' | 'PROCESSING_FAILED';
+  status:
+    | "UPLOADED"
+    | "QUEUED"
+    | "PROCESSING"
+    | "VALIDATED_OK"
+    | "VALIDATED_WITH_ERRORS"
+    | "PROCESSING_FAILED";
   file_url: string;
   original_filename: string;
   file_extension: string;
@@ -53,10 +59,10 @@ export interface DangerousGoodMatch {
   hazard_class: string;
   packing_group?: string;
   found_text: string;
-  matched_term: string;  // The specific synonym or term that triggered the match
+  matched_term: string; // The specific synonym or term that triggered the match
   page_number: number;
   confidence_score: number;
-  match_type: 'un_number' | 'proper_name' | 'simplified_name' | 'synonym';
+  match_type: "un_number" | "proper_name" | "simplified_name" | "synonym";
   quantity?: number;
   weight_kg?: number;
 }
@@ -72,91 +78,110 @@ export interface DangerousGoodConfirmation {
   page_number?: number;
 }
 
-const API_BASE_URL = '/api/v1';
+const API_BASE_URL = "/api/v1";
 
 // API Functions
-async function uploadManifest(shipmentId: string, file: File, token: string): Promise<{
+async function uploadManifest(
+  shipmentId: string,
+  file: File,
+  token: string,
+): Promise<{
   id: string;
   status: string;
   message: string;
 }> {
   const formData = new FormData();
-  formData.append('file', file);
-  formData.append('shipment_id', shipmentId);
+  formData.append("file", file);
+  formData.append("shipment_id", shipmentId);
 
   const response = await fetch(`${API_BASE_URL}/manifest-upload/`, {
-    method: 'POST',
+    method: "POST",
     headers: {
-      'Authorization': `Bearer ${token}`,
+      Authorization: `Bearer ${token}`,
     },
     body: formData,
   });
 
   if (!response.ok) {
     const errorData = await response.json();
-    throw new Error(errorData.error || 'Failed to upload manifest');
+    throw new Error(errorData.error || "Failed to upload manifest");
   }
 
   return response.json();
 }
 
-async function getDocumentStatus(documentId: string, token: string): Promise<DocumentStatus> {
-  const response = await fetch(`${API_BASE_URL}/documents/${documentId}/status/`, {
-    method: 'GET',
-    headers: {
-      'Authorization': `Bearer ${token}`,
-      'Content-Type': 'application/json',
+async function getDocumentStatus(
+  documentId: string,
+  token: string,
+): Promise<DocumentStatus> {
+  const response = await fetch(
+    `${API_BASE_URL}/documents/${documentId}/status/`,
+    {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
     },
-  });
+  );
 
   if (!response.ok) {
     const errorData = await response.json();
-    throw new Error(errorData.error || 'Failed to get document status');
+    throw new Error(errorData.error || "Failed to get document status");
   }
 
   return response.json();
 }
 
-async function getValidationResults(documentId: string, token: string): Promise<ManifestValidationResult> {
-  const response = await fetch(`${API_BASE_URL}/documents/${documentId}/validation-results/`, {
-    method: 'GET',
-    headers: {
-      'Authorization': `Bearer ${token}`,
-      'Content-Type': 'application/json',
+async function getValidationResults(
+  documentId: string,
+  token: string,
+): Promise<ManifestValidationResult> {
+  const response = await fetch(
+    `${API_BASE_URL}/documents/${documentId}/validation-results/`,
+    {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
     },
-  });
+  );
 
   if (!response.ok) {
     const errorData = await response.json();
-    throw new Error(errorData.error || 'Failed to get validation results');
+    throw new Error(errorData.error || "Failed to get validation results");
   }
 
   return response.json();
 }
 
 async function confirmDangerousGoods(
-  documentId: string, 
-  confirmedDGs: DangerousGoodConfirmation[], 
-  token: string
+  documentId: string,
+  confirmedDGs: DangerousGoodConfirmation[],
+  token: string,
 ): Promise<{
   message: string;
   confirmed_count: number;
   document_status: string;
 }> {
-  const response = await fetch(`${API_BASE_URL}/documents/${documentId}/confirm-dangerous-goods/`, {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${token}`,
-      'Content-Type': 'application/json',
+  const response = await fetch(
+    `${API_BASE_URL}/documents/${documentId}/confirm-dangerous-goods/`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        confirmed_dangerous_goods: confirmedDGs,
+      }),
     },
-    body: JSON.stringify({
-      confirmed_dangerous_goods: confirmedDGs,
-    }),
-  });
+  );
 
   if (!response.ok) {
     const errorData = await response.json();
-    throw new Error(errorData.error || 'Failed to confirm dangerous goods');
+    throw new Error(errorData.error || "Failed to confirm dangerous goods");
   }
 
   return response.json();
@@ -203,18 +228,24 @@ export interface CompatibilityError {
 }
 
 // Enhanced API functions for manifest workflow
-async function pollManifestStatus(shipmentId: string, token: string): Promise<ManifestStatus> {
-  const response = await fetch(`${API_BASE_URL}/manifests/poll-status/${shipmentId}/`, {
-    method: 'GET',
-    headers: {
-      'Authorization': `Bearer ${token}`,
-      'Content-Type': 'application/json',
+async function pollManifestStatus(
+  shipmentId: string,
+  token: string,
+): Promise<ManifestStatus> {
+  const response = await fetch(
+    `${API_BASE_URL}/manifests/poll-status/${shipmentId}/`,
+    {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
     },
-  });
+  );
 
   if (!response.ok) {
     const errorData = await response.json();
-    throw new Error(errorData.error || 'Failed to get manifest status');
+    throw new Error(errorData.error || "Failed to get manifest status");
   }
 
   return response.json();
@@ -223,27 +254,30 @@ async function pollManifestStatus(shipmentId: string, token: string): Promise<Ma
 async function confirmManifestDangerousGoods(
   manifestId: string,
   confirmedUnNumbers: string[],
-  token: string
+  token: string,
 ): Promise<{
   message: string;
   confirmed_count: number;
   compatibility_result: any;
   manifest: any;
 }> {
-  const response = await fetch(`${API_BASE_URL}/manifests/${manifestId}/confirm_dangerous_goods/`, {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${token}`,
-      'Content-Type': 'application/json',
+  const response = await fetch(
+    `${API_BASE_URL}/manifests/${manifestId}/confirm_dangerous_goods/`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        confirmed_un_numbers: confirmedUnNumbers,
+      }),
     },
-    body: JSON.stringify({
-      confirmed_un_numbers: confirmedUnNumbers,
-    }),
-  });
+  );
 
   if (!response.ok) {
     const errorData = await response.json();
-    throw new Error(errorData.error || 'Failed to confirm dangerous goods');
+    throw new Error(errorData.error || "Failed to confirm dangerous goods");
   }
 
   return response.json();
@@ -252,36 +286,44 @@ async function confirmManifestDangerousGoods(
 async function finalizeManifest(
   manifestId: string,
   confirmedDGs: DangerousGoodConfirmation[],
-  token: string
+  token: string,
 ): Promise<{
   message: string;
   created_items_count: number;
   compatibility_result: any;
   manifest: any;
 }> {
-  const response = await fetch(`${API_BASE_URL}/manifests/${manifestId}/finalize/`, {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${token}`,
-      'Content-Type': 'application/json',
+  const response = await fetch(
+    `${API_BASE_URL}/manifests/${manifestId}/finalize/`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        confirmed_dangerous_goods: confirmedDGs,
+      }),
     },
-    body: JSON.stringify({
-      confirmed_dangerous_goods: confirmedDGs,
-    }),
-  });
+  );
 
   if (!response.ok) {
     const errorData = await response.json();
-    
+
     // Check if this is a compatibility error
-    if (errorData.compatibility_result && !errorData.compatibility_result.is_compatible) {
-      const compatError = new Error(errorData.error || 'Dangerous goods are not compatible') as any;
+    if (
+      errorData.compatibility_result &&
+      !errorData.compatibility_result.is_compatible
+    ) {
+      const compatError = new Error(
+        errorData.error || "Dangerous goods are not compatible",
+      ) as any;
       compatError.isCompatibilityError = true;
       compatError.compatibilityResult = errorData.compatibility_result;
       throw compatError;
     }
-    
-    throw new Error(errorData.error || 'Failed to finalize manifest');
+
+    throw new Error(errorData.error || "Failed to finalize manifest");
   }
 
   return response.json();
@@ -292,7 +334,7 @@ async function finalizeShipmentFromManifest(
   shipmentId: string,
   documentId: string,
   confirmedDGs: DangerousGoodConfirmation[],
-  token: string
+  token: string,
 ): Promise<{
   message: string;
   shipment: any;
@@ -301,30 +343,38 @@ async function finalizeShipmentFromManifest(
   generated_documents: any[];
   document_status: string;
 }> {
-  const response = await fetch(`${API_BASE_URL}/shipments/${shipmentId}/finalize-from-manifest/`, {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${token}`,
-      'Content-Type': 'application/json',
+  const response = await fetch(
+    `${API_BASE_URL}/shipments/${shipmentId}/finalize-from-manifest/`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        document_id: documentId,
+        confirmed_dangerous_goods: confirmedDGs,
+      }),
     },
-    body: JSON.stringify({
-      document_id: documentId,
-      confirmed_dangerous_goods: confirmedDGs,
-    }),
-  });
+  );
 
   if (!response.ok) {
     const errorData = await response.json();
-    
+
     // Check if this is a compatibility error
-    if (errorData.compatibility_result && !errorData.compatibility_result.is_compatible) {
-      const compatError = new Error(errorData.error || 'Dangerous goods are not compatible') as any;
+    if (
+      errorData.compatibility_result &&
+      !errorData.compatibility_result.is_compatible
+    ) {
+      const compatError = new Error(
+        errorData.error || "Dangerous goods are not compatible",
+      ) as any;
       compatError.isCompatibilityError = true;
       compatError.compatibilityResult = errorData.compatibility_result;
       throw compatError;
     }
-    
-    throw new Error(errorData.error || 'Failed to finalize shipment');
+
+    throw new Error(errorData.error || "Failed to finalize shipment");
   }
 
   return response.json();
@@ -338,26 +388,33 @@ export function useUploadManifest() {
   return useMutation({
     mutationFn: ({ shipmentId, file }: { shipmentId: string; file: File }) => {
       const token = getToken();
-      if (!token) throw new Error('No authentication token');
+      if (!token) throw new Error("No authentication token");
       return uploadManifest(shipmentId, file, token);
     },
     onSuccess: (data, variables) => {
       // Invalidate and refetch related queries
-      queryClient.invalidateQueries({ queryKey: ['shipment', variables.shipmentId] });
-      queryClient.invalidateQueries({ queryKey: ['manifest-status', variables.shipmentId] });
-      queryClient.invalidateQueries({ queryKey: ['manifests'] });
+      queryClient.invalidateQueries({
+        queryKey: ["shipment", variables.shipmentId],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["manifest-status", variables.shipmentId],
+      });
+      queryClient.invalidateQueries({ queryKey: ["manifests"] });
     },
   });
 }
 
-export function useDocumentStatus(documentId: string | null, pollingInterval = 3000) {
+export function useDocumentStatus(
+  documentId: string | null,
+  pollingInterval = 3000,
+) {
   const { getToken } = useAuthStore();
 
   return useQuery({
-    queryKey: ['document-status', documentId],
+    queryKey: ["document-status", documentId],
     queryFn: () => {
       const token = getToken();
-      if (!token || !documentId) throw new Error('No token or document ID');
+      if (!token || !documentId) throw new Error("No token or document ID");
       return getDocumentStatus(documentId, token);
     },
     enabled: !!documentId && !!getToken(),
@@ -376,10 +433,10 @@ export function useValidationResults(documentId: string | null) {
   const { getToken } = useAuthStore();
 
   return useQuery({
-    queryKey: ['validation-results', documentId],
+    queryKey: ["validation-results", documentId],
     queryFn: () => {
       const token = getToken();
-      if (!token || !documentId) throw new Error('No token or document ID');
+      if (!token || !documentId) throw new Error("No token or document ID");
       return getValidationResults(documentId, token);
     },
     enabled: !!documentId && !!getToken(),
@@ -391,41 +448,51 @@ export function useConfirmDangerousGoods() {
   const { getToken } = useAuthStore();
 
   return useMutation({
-    mutationFn: ({ 
-      documentId, 
-      confirmedDGs 
-    }: { 
-      documentId: string; 
-      confirmedDGs: DangerousGoodConfirmation[] 
+    mutationFn: ({
+      documentId,
+      confirmedDGs,
+    }: {
+      documentId: string;
+      confirmedDGs: DangerousGoodConfirmation[];
     }) => {
       const token = getToken();
-      if (!token) throw new Error('No authentication token');
+      if (!token) throw new Error("No authentication token");
       return confirmDangerousGoods(documentId, confirmedDGs, token);
     },
     onSuccess: (data, variables) => {
       // Invalidate document status and validation results
-      queryClient.invalidateQueries({ queryKey: ['document-status', variables.documentId] });
-      queryClient.invalidateQueries({ queryKey: ['validation-results', variables.documentId] });
+      queryClient.invalidateQueries({
+        queryKey: ["document-status", variables.documentId],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["validation-results", variables.documentId],
+      });
     },
   });
 }
 
 // Enhanced hooks for manifest-based workflow
-export function useManifestStatus(shipmentId: string | null, pollingInterval = 5000) {
+export function useManifestStatus(
+  shipmentId: string | null,
+  pollingInterval = 5000,
+) {
   const { getToken } = useAuthStore();
 
   return useQuery({
-    queryKey: ['manifest-status', shipmentId],
+    queryKey: ["manifest-status", shipmentId],
     queryFn: () => {
       const token = getToken();
-      if (!token || !shipmentId) throw new Error('No token or shipment ID');
+      if (!token || !shipmentId) throw new Error("No token or shipment ID");
       return pollManifestStatus(shipmentId, token);
     },
     enabled: !!shipmentId && !!getToken(),
     refetchInterval: (query) => {
       // Keep polling if any manifest is still processing
       const data = query.state.data as ManifestStatus | undefined;
-      if (data?.overall_status === 'analyzing' || data?.overall_status === 'processing') {
+      if (
+        data?.overall_status === "analyzing" ||
+        data?.overall_status === "processing"
+      ) {
         return pollingInterval;
       }
       return false;
@@ -439,21 +506,25 @@ export function useConfirmManifestDangerousGoods() {
   const { getToken } = useAuthStore();
 
   return useMutation({
-    mutationFn: ({ 
-      manifestId, 
-      confirmedUnNumbers 
-    }: { 
-      manifestId: string; 
-      confirmedUnNumbers: string[] 
+    mutationFn: ({
+      manifestId,
+      confirmedUnNumbers,
+    }: {
+      manifestId: string;
+      confirmedUnNumbers: string[];
     }) => {
       const token = getToken();
-      if (!token) throw new Error('No authentication token');
-      return confirmManifestDangerousGoods(manifestId, confirmedUnNumbers, token);
+      if (!token) throw new Error("No authentication token");
+      return confirmManifestDangerousGoods(
+        manifestId,
+        confirmedUnNumbers,
+        token,
+      );
     },
     onSuccess: (data, variables) => {
       // Invalidate manifest status and related queries
-      queryClient.invalidateQueries({ queryKey: ['manifest-status'] });
-      queryClient.invalidateQueries({ queryKey: ['manifests'] });
+      queryClient.invalidateQueries({ queryKey: ["manifest-status"] });
+      queryClient.invalidateQueries({ queryKey: ["manifests"] });
     },
   });
 }
@@ -463,22 +534,22 @@ export function useFinalizeManifest() {
   const { getToken } = useAuthStore();
 
   return useMutation({
-    mutationFn: ({ 
-      manifestId, 
-      confirmedDGs 
-    }: { 
-      manifestId: string; 
-      confirmedDGs: DangerousGoodConfirmation[] 
+    mutationFn: ({
+      manifestId,
+      confirmedDGs,
+    }: {
+      manifestId: string;
+      confirmedDGs: DangerousGoodConfirmation[];
     }) => {
       const token = getToken();
-      if (!token) throw new Error('No authentication token');
+      if (!token) throw new Error("No authentication token");
       return finalizeManifest(manifestId, confirmedDGs, token);
     },
     onSuccess: (data, variables) => {
       // Invalidate and refetch related queries
-      queryClient.invalidateQueries({ queryKey: ['manifest-status'] });
-      queryClient.invalidateQueries({ queryKey: ['manifests'] });
-      queryClient.invalidateQueries({ queryKey: ['shipments'] });
+      queryClient.invalidateQueries({ queryKey: ["manifest-status"] });
+      queryClient.invalidateQueries({ queryKey: ["manifests"] });
+      queryClient.invalidateQueries({ queryKey: ["shipments"] });
     },
   });
 }
@@ -489,25 +560,36 @@ export function useFinalizeShipmentFromManifest() {
   const { getToken } = useAuthStore();
 
   return useMutation({
-    mutationFn: ({ 
-      shipmentId, 
-      documentId, 
-      confirmedDGs 
-    }: { 
-      shipmentId: string; 
-      documentId: string; 
-      confirmedDGs: DangerousGoodConfirmation[] 
+    mutationFn: ({
+      shipmentId,
+      documentId,
+      confirmedDGs,
+    }: {
+      shipmentId: string;
+      documentId: string;
+      confirmedDGs: DangerousGoodConfirmation[];
     }) => {
       const token = getToken();
-      if (!token) throw new Error('No authentication token');
-      return finalizeShipmentFromManifest(shipmentId, documentId, confirmedDGs, token);
+      if (!token) throw new Error("No authentication token");
+      return finalizeShipmentFromManifest(
+        shipmentId,
+        documentId,
+        confirmedDGs,
+        token,
+      );
     },
     onSuccess: (data, variables) => {
       // Invalidate and refetch related queries
-      queryClient.invalidateQueries({ queryKey: ['shipment', variables.shipmentId] });
-      queryClient.invalidateQueries({ queryKey: ['shipments'] });
-      queryClient.invalidateQueries({ queryKey: ['document-status', variables.documentId] });
-      queryClient.invalidateQueries({ queryKey: ['manifest-status', variables.shipmentId] });
+      queryClient.invalidateQueries({
+        queryKey: ["shipment", variables.shipmentId],
+      });
+      queryClient.invalidateQueries({ queryKey: ["shipments"] });
+      queryClient.invalidateQueries({
+        queryKey: ["document-status", variables.documentId],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["manifest-status", variables.shipmentId],
+      });
     },
   });
 }
