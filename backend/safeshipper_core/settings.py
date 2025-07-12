@@ -47,6 +47,8 @@ INSTALLED_APPS = [
     'django_otp.plugins.otp_totp',
     'django_otp.plugins.otp_static',
     'corsheaders',
+    'django_elasticsearch_dsl',
+    'django_elasticsearch_dsl_drf',
     
     # Local apps (minimal set for frontend)
     'users',
@@ -236,21 +238,74 @@ CORS_ALLOW_METHODS = [
 # Celery Configuration
 CELERY_BROKER_URL = config('CELERY_BROKER_URL', default='redis://localhost:6379/0')
 CELERY_RESULT_BACKEND = config('CELERY_RESULT_BACKEND', default='redis://localhost:6379/0')
+
+# Basic Celery Settings
 CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TIMEZONE = TIME_ZONE
+CELERY_ENABLE_UTC = True
+
+# Task Settings
+CELERY_TASK_TRACK_STARTED = True
+CELERY_TASK_TIME_LIMIT = config('CELERY_TASK_TIME_LIMIT', default=300, cast=int)  # 5 minutes
+CELERY_TASK_SOFT_TIME_LIMIT = config('CELERY_TASK_SOFT_TIME_LIMIT', default=240, cast=int)  # 4 minutes
+CELERY_TASK_MAX_RETRIES = config('CELERY_TASK_MAX_RETRIES', default=3, cast=int)
+CELERY_TASK_DEFAULT_RETRY_DELAY = config('CELERY_TASK_DEFAULT_RETRY_DELAY', default=60, cast=int)
+
+# Result Settings
+CELERY_RESULT_EXPIRES = config('CELERY_RESULT_EXPIRES', default=3600, cast=int)  # 1 hour
+CELERY_RESULT_PERSISTENT = True
+
+# Worker Settings
+CELERY_WORKER_PREFETCH_MULTIPLIER = config('CELERY_WORKER_PREFETCH_MULTIPLIER', default=1, cast=int)
+CELERY_WORKER_MAX_TASKS_PER_CHILD = config('CELERY_WORKER_MAX_TASKS_PER_CHILD', default=1000, cast=int)
+CELERY_WORKER_DISABLE_RATE_LIMITS = False
+
+# Monitoring Settings
+CELERY_SEND_TASK_EVENTS = True
+CELERY_SEND_EVENTS = True
+CELERY_TASK_SEND_SENT_EVENT = True
+
+# Redis Connection Pool Settings
+CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
+CELERY_BROKER_CONNECTION_RETRY = True
+CELERY_BROKER_CONNECTION_MAX_RETRIES = 5
+CELERY_REDIS_MAX_CONNECTIONS = config('CELERY_REDIS_MAX_CONNECTIONS', default=20, cast=int)
 
 # Celery Beat Settings (for periodic tasks)
 CELERY_BEAT_SCHEDULE = {
-    # Add periodic tasks here if needed
+    'cleanup-expired-results': {
+        'task': 'celery.backend_cleanup',
+        'schedule': config('CELERY_CLEANUP_INTERVAL', default=300.0, cast=float),  # 5 minutes
+    },
+    'health-check': {
+        'task': 'core.tasks.health_check',
+        'schedule': config('CELERY_HEALTH_CHECK_INTERVAL', default=60.0, cast=float),  # 1 minute
+    },
 }
 
-# Celery Task Settings
+# Celery Task Routes
 CELERY_TASK_ROUTES = {
+    # Manifest processing tasks
     'manifests.tasks.process_manifest_validation': {'queue': 'manifests'},
+    'manifests.tasks.extract_dangerous_goods': {'queue': 'manifests'},
+    'manifests.tasks.ocr_document': {'queue': 'ocr'},
+    
+    # Document processing tasks
+    'documents.tasks.process_document': {'queue': 'documents'},
+    'documents.tasks.generate_document': {'queue': 'documents'},
+    
+    # Email and notification tasks
+    'communications.tasks.send_email': {'queue': 'emails'},
+    'communications.tasks.send_notification': {'queue': 'notifications'},
+    
+    # Background maintenance tasks
+    'core.tasks.cleanup_old_files': {'queue': 'maintenance'},
+    'core.tasks.update_search_indexes': {'queue': 'maintenance'},
 }
 
+# Queue Configuration
 CELERY_TASK_DEFAULT_QUEUE = 'default'
 CELERY_TASK_QUEUES = {
     'default': {
@@ -260,15 +315,67 @@ CELERY_TASK_QUEUES = {
     'manifests': {
         'exchange': 'manifests',
         'routing_key': 'manifests',
+        'queue_arguments': {'x-max-priority': 10},
+    },
+    'documents': {
+        'exchange': 'documents',
+        'routing_key': 'documents',
+        'queue_arguments': {'x-max-priority': 5},
+    },
+    'ocr': {
+        'exchange': 'ocr',
+        'routing_key': 'ocr',
+        'queue_arguments': {'x-max-priority': 8},
+    },
+    'emails': {
+        'exchange': 'emails',
+        'routing_key': 'emails',
+        'queue_arguments': {'x-max-priority': 3},
+    },
+    'notifications': {
+        'exchange': 'notifications',
+        'routing_key': 'notifications',
+        'queue_arguments': {'x-max-priority': 2},
+    },
+    'maintenance': {
+        'exchange': 'maintenance',
+        'routing_key': 'maintenance',
+        'queue_arguments': {'x-max-priority': 1},
     },
 }
 
 # Elasticsearch settings
 ELASTICSEARCH_DSL = {
     'default': {
-        'hosts': config('ELASTICSEARCH_HOST', default='localhost:9200')
+        'hosts': config('ELASTICSEARCH_HOST', default='localhost:9200'),
+        'http_auth': (
+            config('ELASTICSEARCH_USERNAME', default=''),
+            config('ELASTICSEARCH_PASSWORD', default='')
+        ) if config('ELASTICSEARCH_USERNAME', default='') else None,
+        'use_ssl': config('ELASTICSEARCH_USE_SSL', default=False, cast=bool),
+        'verify_certs': config('ELASTICSEARCH_VERIFY_CERTS', default=True, cast=bool),
+        'ssl_show_warn': config('ELASTICSEARCH_SSL_SHOW_WARN', default=True, cast=bool),
+        'timeout': config('ELASTICSEARCH_TIMEOUT', default=30, cast=int),
+        'max_retries': config('ELASTICSEARCH_MAX_RETRIES', default=3, cast=int),
+        'retry_on_timeout': config('ELASTICSEARCH_RETRY_ON_TIMEOUT', default=True, cast=bool),
     },
 }
+
+# Elasticsearch indices configuration
+ELASTICSEARCH_DSL_INDEX_SETTINGS = {
+    'number_of_shards': config('ELASTICSEARCH_SHARDS', default=1, cast=int),
+    'number_of_replicas': config('ELASTICSEARCH_REPLICAS', default=0, cast=int),
+    'max_result_window': config('ELASTICSEARCH_MAX_RESULT_WINDOW', default=10000, cast=int),
+}
+
+# Elasticsearch auto sync (disable in production)
+ELASTICSEARCH_DSL_AUTOSYNC = config('ELASTICSEARCH_AUTOSYNC', default=DEBUG, cast=bool)
+
+# Elasticsearch signal processor
+ELASTICSEARCH_DSL_SIGNAL_PROCESSOR = config(
+    'ELASTICSEARCH_SIGNAL_PROCESSOR', 
+    default='django_elasticsearch_dsl.signals.RealTimeSignalProcessor'
+)
 
 # File storage settings
 DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'

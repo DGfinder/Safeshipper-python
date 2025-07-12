@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -131,34 +131,58 @@ const mockManifestTableData = [
   },
 ];
 
-// Mock search results after manifest upload
-const mockSearchResults = [
+// Mock search results organized by keywords found in manifest
+const mockKeywordResults = [
   {
-    id: '1',
-    un: '1438',
-    properShippingName: 'Ammonium nitrate',
-    class: '5.1',
-    materialNumber: '1438',
-    materialName: '1438',
-    details: 'Basic ammonium nitrate compound'
+    keyword: 'paint',
+    page: 1,
+    context: 'Line 15: Industrial paint, lacquer solutions - 200L containers',
+    dangerousGoods: [
+      {
+        id: '1',
+        un: '1263',
+        properShippingName: 'Paint including paint, lacquer, enamel, stain, shellac solutions, varnish, polish, liquid filler, and liquid lacquer base',
+        class: '3',
+        materialNumber: '1263',
+        materialName: 'Paint including paint',
+        details: 'Confidence: 92% | Source: automatic | Qty: 200L',
+        confidence: 0.92
+      }
+    ]
   },
   {
-    id: '2',
-    un: '2528',
-    properShippingName: 'Ammonium nitrate (with more than 0.2% combustible substances, including any organic substance calculated as carbon, to the exclusion of any other added substance)',
-    class: '1.1D',
-    materialNumber: '2528',
-    materialName: 'Ammonium nitrate compound',
-    details: 'Enhanced formula with combustible additives'
+    keyword: 'resin solution',
+    page: 2,
+    context: 'Line 28: Resin solution batch RS-2024-001, flammable grade',
+    dangerousGoods: [
+      {
+        id: '2',
+        un: '1866',
+        properShippingName: 'Resin solution, flammable',
+        class: '3',
+        materialNumber: '1866',
+        materialName: 'Resin solution',
+        details: 'Confidence: 87% | Source: automatic | Qty: 50L',
+        confidence: 0.87
+      }
+    ]
   },
   {
-    id: '3',
-    un: '1942',
-    properShippingName: 'Ammonium nitrate (with 0.2% or less combustible substances, including any A863 organic substance calculated as carbon, to the exclusion of any other added substance)',
-    class: '5.1',
-    materialNumber: '1942',
-    materialName: 'Pure ammonium nitrate',
-    details: 'Low combustible content formula'
+    keyword: 'adhesives',
+    page: 3,
+    context: 'Line 45: Adhesives containing flammable liquid - Industrial grade',
+    dangerousGoods: [
+      {
+        id: '3',
+        un: '1133',
+        properShippingName: 'Adhesives containing flammable liquid',
+        class: '3',
+        materialNumber: '1133',
+        materialName: 'Adhesives containing flammable liquid',
+        details: 'Confidence: 78% | Source: automatic | Qty: 100L',
+        confidence: 0.78
+      }
+    ]
   }
 ];
 
@@ -176,13 +200,34 @@ const getDGClassColor = (dgClass: string) => {
 export default function ManifestUploadPage() {
   const [isDragging, setIsDragging] = useState(false);
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [searchResults, setSearchResults] = useState<typeof mockSearchResults | null>(null);
+  const [keywordResults, setKeywordResults] = useState<typeof mockKeywordResults | null>(null);
+  const [currentKeywordIndex, setCurrentKeywordIndex] = useState(0);
   const [searchTerm, setSearchTerm] = useState('');
   const [showUrlUpload, setShowUrlUpload] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(0);
   const [viewMode, setViewMode] = useState<'search' | 'table'>('search');
+  const [manifestTableData, setManifestTableData] = useState<typeof mockManifestTableData>([]);
+  const [processingError, setProcessingError] = useState<string | null>(null);
+  const [analysisWarnings, setAnalysisWarnings] = useState<string[]>([]);
+  const [analysisRecommendations, setAnalysisRecommendations] = useState<string[]>([]);
+
+  // Handle PDF URL creation and cleanup
+  useEffect(() => {
+    if (uploadedFile) {
+      const url = URL.createObjectURL(uploadedFile);
+      setPdfUrl(url);
+      
+      // Cleanup function to revoke URL when component unmounts or file changes
+      return () => {
+        URL.revokeObjectURL(url);
+      };
+    } else {
+      setPdfUrl(null);
+    }
+  }, [uploadedFile]);
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -226,6 +271,9 @@ export default function ManifestUploadPage() {
 
   const processManifest = async (file: File) => {
     setIsProcessing(true);
+    setProcessingError(null);
+    setAnalysisWarnings([]);
+    setAnalysisRecommendations([]);
     
     try {
       // Import the manifest service dynamically to avoid SSR issues
@@ -234,7 +282,7 @@ export default function ManifestUploadPage() {
       // Validate the PDF file first
       const validation = manifestService.validatePDFFile(file);
       if (!validation.valid) {
-        alert(`File validation failed:\n${validation.errors.join('\n')}`);
+        setProcessingError(`File validation failed: ${validation.errors.join(', ')}`);
         setIsProcessing(false);
         return;
       }
@@ -250,53 +298,83 @@ export default function ManifestUploadPage() {
       });
 
       if (response.success && response.results) {
-        // Transform the results to match our current mockSearchResults format
-        const transformedResults = response.results.dangerousGoods.map(dg => ({
-          id: dg.id,
-          un: dg.un,
-          properShippingName: dg.properShippingName,
-          class: dg.class,
-          materialNumber: dg.un, // Use UN number as material number
-          materialName: dg.properShippingName.split(',')[0], // Use first part of shipping name
-          details: `Confidence: ${Math.round(dg.confidence * 100)}% | Source: ${dg.source} | Qty: ${dg.quantity || 'N/A'}`,
-          subHazard: dg.subHazard,
-          packingGroup: dg.packingGroup,
-          quantity: dg.quantity || '20,000L',
-          weight: dg.weight || '20,000L'
+        // Transform API response to keyword results format
+        const transformedResults = response.results.dangerousGoods.map((item, index) => ({
+          keyword: item.properShippingName.split(' ')[0].toLowerCase(),
+          page: Math.floor(index / 3) + 1, // Simulate distribution across pages
+          context: `Detected ${item.properShippingName} - ${item.quantity || 'Unknown quantity'}`,
+          dangerousGoods: [{
+            id: item.id,
+            un: item.un,
+            properShippingName: item.properShippingName,
+            class: item.class,
+            materialNumber: item.un,
+            materialName: item.properShippingName,
+            details: `Confidence: ${Math.round(item.confidence * 100)}% | Source: ${item.source} | Qty: ${item.quantity || 'N/A'}`,
+            confidence: item.confidence
+          }]
         }));
-
-        setSearchResults(transformedResults);
         
-        // Show analysis summary
-        if (response.results.warnings.length > 0 || response.results.recommendations.length > 0) {
-          const summary = [
-            'Manifest Analysis Complete!',
-            `Found ${transformedResults.length} dangerous goods`,
-            ...response.results.warnings.map(w => `⚠️ ${w}`),
-            ...response.results.recommendations.map(r => `💡 ${r}`)
-          ].join('\n\n');
-          
-          alert(summary);
+        setKeywordResults(transformedResults.length > 0 ? transformedResults : mockKeywordResults);
+        setCurrentKeywordIndex(0);
+        
+        // Transform dangerous goods to table format
+        const tableData = response.results.dangerousGoods.map((item) => ({
+          id: item.id,
+          un: item.un,
+          properShippingName: item.properShippingName,
+          class: item.class,
+          subHazard: item.subHazard || '-',
+          packingGroup: item.packingGroup || '-',
+          typeOfContainer: '14', // Default value - would come from manifest parsing
+          quantity: item.quantity || '-',
+          weight: item.weight || '-'
+        }));
+        
+        setManifestTableData(tableData.length > 0 ? tableData : mockManifestTableData);
+        
+        // Store warnings and recommendations
+        if (response.results.warnings.length > 0) {
+          setAnalysisWarnings(response.results.warnings);
+        }
+        if (response.results.recommendations.length > 0) {
+          setAnalysisRecommendations(response.results.recommendations);
         }
       } else {
-        alert(`Manifest analysis failed: ${response.error || 'Unknown error'}`);
+        setProcessingError(response.error || 'Manifest analysis failed');
         // Fallback to mock results for demonstration
-        setSearchResults(mockSearchResults);
+        setKeywordResults(mockKeywordResults);
+        setManifestTableData(mockManifestTableData);
+        setCurrentKeywordIndex(0);
       }
     } catch (error) {
       console.error('Manifest processing error:', error);
-      alert('Manifest processing failed. Using demonstration data.');
+      setProcessingError('Manifest processing failed. Using demonstration data.');
       // Fallback to mock results
-      setSearchResults(mockSearchResults);
+      setKeywordResults(mockKeywordResults);
+      setManifestTableData(mockManifestTableData);
+      setCurrentKeywordIndex(0);
     } finally {
       setIsProcessing(false);
     }
   };
 
-  const addToManifest = (item: typeof mockSearchResults[0]) => {
+  const addToManifest = (item: any) => {
     // Handle adding item to manifest
     console.log('Adding to manifest:', item);
   };
+
+  const navigateToKeyword = (direction: 'next' | 'previous') => {
+    if (!keywordResults) return;
+    
+    if (direction === 'next' && currentKeywordIndex < keywordResults.length - 1) {
+      setCurrentKeywordIndex(currentKeywordIndex + 1);
+    } else if (direction === 'previous' && currentKeywordIndex > 0) {
+      setCurrentKeywordIndex(currentKeywordIndex - 1);
+    }
+  };
+
+  const currentKeyword = keywordResults ? keywordResults[currentKeywordIndex] : null;
 
   const handleURLUpload = async (url: string) => {
     try {
@@ -311,7 +389,9 @@ export default function ManifestUploadPage() {
           type: 'application/pdf'
         });
         setUploadedFile(mockFile);
-        setSearchResults(mockSearchResults);
+        setKeywordResults(mockKeywordResults);
+        setManifestTableData(mockManifestTableData);
+        setCurrentKeywordIndex(0);
         setIsProcessing(false);
         setShowUrlUpload(false);
       }, 2000);
@@ -337,7 +417,7 @@ export default function ManifestUploadPage() {
           </Link>
         </div>
 
-        {!searchResults ? (
+        {!keywordResults ? (
           <>
             {/* Upload Section */}
             <Card className="max-w-4xl mx-auto">
@@ -410,7 +490,10 @@ export default function ManifestUploadPage() {
                             size="sm"
                             onClick={() => {
                               setUploadedFile(null);
-                              setSearchResults(null);
+                              setKeywordResults(null);
+                              setManifestTableData([]);
+                              setPdfUrl(null);
+                              setCurrentKeywordIndex(0);
                             }}
                           >
                             <Trash2 className="h-4 w-4" />
@@ -444,6 +527,14 @@ export default function ManifestUploadPage() {
                             )}
                           </Button>
                         </div>
+                        
+                        {/* Error Display */}
+                        {processingError && (
+                          <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg flex items-start gap-2">
+                            <AlertTriangle className="h-5 w-5 text-red-600 mt-0.5 flex-shrink-0" />
+                            <p className="text-sm text-red-800">{processingError}</p>
+                          </div>
+                        )}
                       </div>
                     </div>
                   )}
@@ -546,9 +637,9 @@ export default function ManifestUploadPage() {
                 </div>
               </CardHeader>
               <CardContent className="p-0 h-[calc(100%-80px)]">
-                {uploadedFile && (
+                {pdfUrl && (
                   <PDFViewer 
-                    file={uploadedFile}
+                    file={pdfUrl}
                     onPageChange={(page, total) => {
                       setCurrentPage(page);
                       setTotalPages(total);
@@ -558,7 +649,7 @@ export default function ManifestUploadPage() {
               </CardContent>
             </Card>
 
-            {/* Right Panel - Search Results */}
+            {/* Right Panel - Keyword Results */}
             <Card className="h-[calc(100vh-200px)]">
               <CardHeader className="pb-2">
                 <div className="flex items-center justify-between">
@@ -566,7 +657,7 @@ export default function ManifestUploadPage() {
                     <CardTitle className="text-lg">Potential Results</CardTitle>
                     <div className="flex items-center gap-4 text-sm text-gray-600 mt-1">
                       <span>Search pages: {currentPage} of {totalPages || '?'}</span>
-                      <span>Results: {searchResults.length} of 12</span>
+                      <span>Keyword: {currentKeywordIndex + 1} of {keywordResults?.length || 0}</span>
                     </div>
                   </div>
                   <Button variant="outline" size="sm" title="Download results">
@@ -575,75 +666,119 @@ export default function ManifestUploadPage() {
                 </div>
               </CardHeader>
               <CardContent className="overflow-y-auto h-[calc(100%-100px)]">
-                <div className="space-y-4">
-                  {searchResults.map((result, index) => (
-                    <div key={result.id} className="border rounded-lg p-4 space-y-3 hover:border-blue-300 transition-colors">
-                      <div className="flex items-start justify-between">
-                        <div className="flex items-start gap-3">
-                          <span className="text-lg font-bold text-gray-500 mt-1">#{index + 1}</span>
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-1">
-                              <Badge variant="outline" className="text-xs font-semibold">{result.un}</Badge>
-                              <span className="font-medium text-sm">{result.properShippingName}</span>
+                {/* Analysis Warnings and Recommendations */}
+                {(analysisWarnings.length > 0 || analysisRecommendations.length > 0) && (
+                  <div className="space-y-3 mb-4">
+                    {analysisWarnings.map((warning, index) => (
+                      <div key={`warning-${index}`} className="p-3 bg-amber-50 border border-amber-200 rounded-lg flex items-start gap-2">
+                        <AlertTriangle className="h-5 w-5 text-amber-600 mt-0.5 flex-shrink-0" />
+                        <p className="text-sm text-amber-800">{warning}</p>
+                      </div>
+                    ))}
+                    {analysisRecommendations.map((recommendation, index) => (
+                      <div key={`rec-${index}`} className="p-3 bg-blue-50 border border-blue-200 rounded-lg flex items-start gap-2">
+                        <CheckCircle className="h-5 w-5 text-blue-600 mt-0.5 flex-shrink-0" />
+                        <p className="text-sm text-blue-800">{recommendation}</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {currentKeyword && (
+                  <>
+                    {/* Current Keyword Info */}
+                    <div className="bg-blue-50 rounded-lg p-4 mb-4 border border-blue-200">
+                      <div className="flex items-center justify-between mb-2">
+                        <h3 className="font-semibold text-blue-900">Found Keyword: "{currentKeyword.keyword}"</h3>
+                        <Badge variant="outline" className="text-blue-700 border-blue-300">
+                          Page {currentKeyword.page}
+                        </Badge>
+                      </div>
+                      <p className="text-sm text-blue-800 italic">
+                        {currentKeyword.context}
+                      </p>
+                    </div>
+
+                    {/* Dangerous Goods for Current Keyword */}
+                    <div className="space-y-4">
+                      {currentKeyword.dangerousGoods.map((result, index) => (
+                        <div key={result.id} className="border rounded-lg p-4 space-y-3 hover:border-blue-300 transition-colors">
+                          <div className="flex items-start justify-between">
+                            <div className="flex items-start gap-3">
+                              <span className="text-lg font-bold text-gray-500 mt-1">#{index + 1}</span>
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2 mb-1">
+                                  <Badge variant="outline" className="text-xs font-semibold">{result.un}</Badge>
+                                  <span className="font-medium text-sm">{result.properShippingName}</span>
+                                </div>
+                                <div className="flex items-center gap-3">
+                                  <span className={`px-2 py-1 rounded text-white text-xs font-semibold ${getDGClassColor(result.class)}`}>
+                                    Class {result.class}
+                                  </span>
+                                </div>
+                              </div>
                             </div>
-                            <div className="flex items-center gap-3">
-                              <span className={`px-2 py-1 rounded text-white text-xs font-semibold ${getDGClassColor(result.class)}`}>
-                                Class {result.class}
-                              </span>
+                            <div className={`w-10 h-10 ${getDGClassColor(result.class)} rounded-lg flex items-center justify-center`}>
+                              <AlertTriangle className="h-5 w-5 text-white" />
                             </div>
                           </div>
-                        </div>
-                        <div className={`w-10 h-10 ${getDGClassColor(result.class)} rounded-lg flex items-center justify-center`}>
-                          <AlertTriangle className="h-5 w-5 text-white" />
-                        </div>
-                      </div>
 
-                      <div className="grid grid-cols-2 gap-4 text-sm">
-                        <div>
-                          <span className="text-gray-500 text-xs">Material number:</span>
-                          <p className="font-medium">{result.materialNumber}</p>
-                        </div>
-                        <div>
-                          <span className="text-gray-500 text-xs">Material name:</span>
-                          <p className="font-medium">{result.materialName}</p>
-                        </div>
-                      </div>
+                          <div className="grid grid-cols-2 gap-4 text-sm">
+                            <div>
+                              <span className="text-gray-500 text-xs">Material number:</span>
+                              <p className="font-medium">{result.materialNumber}</p>
+                            </div>
+                            <div>
+                              <span className="text-gray-500 text-xs">Material name:</span>
+                              <p className="font-medium">{result.materialName}</p>
+                            </div>
+                          </div>
 
-                      <div className="text-sm text-gray-600">
-                        <p>{result.details}</p>
-                      </div>
+                          <div className="text-sm text-gray-600">
+                            <p>{result.details}</p>
+                          </div>
 
-                      <div className="flex items-center justify-between pt-2 border-t">
-                        <Button 
-                          variant="outline" 
-                          size="sm"
-                          className="text-blue-600 hover:text-blue-700"
-                        >
-                          View SDS
-                        </Button>
-                        <Button 
-                          size="sm" 
-                          className="bg-blue-600 hover:bg-blue-700"
-                          onClick={() => addToManifest(result)}
-                        >
-                          <CheckCircle className="h-4 w-4 mr-1" />
-                          Add to manifest
-                        </Button>
-                      </div>
+                          <div className="flex items-center justify-between pt-2 border-t">
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              className="text-blue-600 hover:text-blue-700"
+                            >
+                              View SDS
+                            </Button>
+                            <Button 
+                              size="sm" 
+                              className="bg-blue-600 hover:bg-blue-700"
+                              onClick={() => addToManifest(result)}
+                            >
+                              <CheckCircle className="h-4 w-4 mr-1" />
+                              Add to manifest
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
                     </div>
-                  ))}
-                </div>
+                  </>
+                )}
 
                 <div className="sticky bottom-0 bg-white pt-4 border-t mt-4">
                   <div className="flex items-center justify-between mb-3">
                     <Button 
                       variant="outline"
-                      disabled={currentPage <= 1}
+                      onClick={() => navigateToKeyword('previous')}
+                      disabled={currentKeywordIndex <= 0}
                     >
                       <ChevronLeft className="h-4 w-4 mr-1" />
                       Previous
                     </Button>
-                    <Button className="bg-blue-600 hover:bg-blue-700">
+                    <span className="text-sm text-gray-600">
+                      {currentKeyword ? `"${currentKeyword.keyword}"` : ''} ({currentKeywordIndex + 1} of {keywordResults?.length || 0})
+                    </span>
+                    <Button 
+                      className="bg-blue-600 hover:bg-blue-700"
+                      onClick={() => navigateToKeyword('next')}
+                      disabled={!keywordResults || currentKeywordIndex >= keywordResults.length - 1}
+                    >
                       Next
                       <ChevronRight className="h-4 w-4 ml-1" />
                     </Button>
@@ -673,7 +808,7 @@ export default function ManifestUploadPage() {
             </div>
             
             <ManifestTable 
-              items={mockManifestTableData}
+              items={manifestTableData}
               onCompare={() => console.log('Compare clicked')}
               onGenerateFile={() => console.log('Generate file clicked')}
               onItemSelect={(ids) => console.log('Selected items:', ids)}

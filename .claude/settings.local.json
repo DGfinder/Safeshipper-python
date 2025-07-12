@@ -42,7 +42,8 @@
       "Bash(python manage.py startapp:*)",
       "Bash(dos2unix:*)",
       "Bash(npm run dev:*)",
-      "Bash(pip3 install:*)"
+      "Bash(pip3 install:*)",
+      "Bash(touch:*)"
     ],
     "deny": []
   }
