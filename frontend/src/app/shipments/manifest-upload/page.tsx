@@ -381,7 +381,7 @@ export default function ManifestUploadPage() {
                 y: 470 + (index * 25), // Stack results vertically
                 width: keyword.length * 8 + 40, // Approximate width based on keyword length
                 height: 15,
-                color: item.confidence > 0.8 ? 'green' as const : 'yellow' as const,
+                color: 'yellow' as const,
                 keyword,
                 id: resultId
               },
