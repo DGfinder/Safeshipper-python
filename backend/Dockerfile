@@ -20,6 +20,11 @@ RUN apt-get update \
         libtesseract-dev \
         tesseract-ocr \
         curl \
+        gdal-bin \
+        libgdal-dev \
+        libgeos-dev \
+        libproj-dev \
+        binutils \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Python dependencies

@@ -16,7 +16,7 @@
       "command": "npx",
       "args": [
         "-y", 
-        "@modelcontextprotocol/server-git",
+        "@cyanheads/git-mcp-server",
         "/mnt/c/Users/Hayden/Desktop/Safeshipper Home"
       ]
     },
@@ -26,6 +26,17 @@
         "-y",
         "@modelcontextprotocol/server-memory"
       ]
+    },
+    "manim": {
+      "command": "docker",
+      "args": [
+        "exec",
+        "-i",
+        "mcp-manim-server",
+        "python3",
+        "/workspace/run_server.py"
+      ],
+      "cwd": "/mnt/c/Users/Hayden/Desktop/Safeshipper Home/mcp-tools/mcp-manim"
     }
   }
 }
