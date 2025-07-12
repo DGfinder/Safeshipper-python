@@ -18,6 +18,7 @@ from .services import (
     list_available_vehicles_for_depot,
     get_vehicle_by_registration
 )
+from .adg_safety_services import ADGComplianceValidator, ADGSafetyEquipmentService
 
 class IsStaffOrReadOnly(permissions.BasePermission):
     """
@@ -287,4 +288,50 @@ class SafetyEquipmentCertificationViewSet(viewsets.ModelViewSet):
         )
         
         serializer = self.get_serializer(certifications, many=True)
-        return Response(serializer.data) 
+        return Response(serializer.data)
+
+
+# ADG-specific API endpoints
+
+@action(detail=True, methods=['get'], url_path='adg-compliance')
+def adg_safety_compliance(self, request, pk=None):
+    """Check vehicle ADG Code 7.9 safety equipment compliance"""
+    vehicle = self.get_object()
+    adg_classes = request.query_params.getlist('adg_classes', ['ALL_CLASSES'])
+    
+    compliance_result = ADGComplianceValidator.validate_comprehensive_adg_compliance(
+        vehicle, adg_classes
+    )
+    
+    return Response(compliance_result)
+
+
+@action(detail=False, methods=['get'], url_path='adg-fleet-report')
+def adg_fleet_compliance_report(self, request):
+    """Generate comprehensive ADG fleet compliance report"""
+    company_id = request.query_params.get('company_id')
+    
+    report = ADGSafetyEquipmentService.generate_adg_fleet_compliance_report(company_id)
+    
+    return Response(report)
+
+
+@action(detail=False, methods=['get'], url_path='adg-inspections-due')
+def adg_inspections_due(self, request):
+    """Get ADG equipment inspections due in the next N days"""
+    days_ahead = int(request.query_params.get('days_ahead', 30))
+    
+    inspections = ADGSafetyEquipmentService.get_upcoming_adg_inspections(days_ahead)
+    
+    return Response({
+        'inspections_due': inspections,
+        'total_count': len(inspections),
+        'days_ahead': days_ahead,
+        'regulatory_framework': 'ADG Code 7.9'
+    })
+
+
+# Add ADG methods to the VehicleViewSet class
+VehicleViewSet.adg_safety_compliance = adg_safety_compliance
+VehicleViewSet.adg_fleet_compliance_report = adg_fleet_compliance_report
+VehicleViewSet.adg_inspections_due = adg_inspections_due 

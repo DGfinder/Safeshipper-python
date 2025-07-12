@@ -159,3 +159,82 @@ class VehicleSafetyComplianceSerializer(serializers.Serializer):
                 'equipment_summary': equipment_summary
             }
         return super().to_representation(instance)
+
+
+class ADGComplianceSerializer(serializers.Serializer):
+    """Serializer for ADG Code 7.9 compliance results"""
+    
+    vehicle_id = serializers.UUIDField(read_only=True)
+    vehicle_registration = serializers.CharField(read_only=True)
+    adg_classes = serializers.ListField(child=serializers.CharField(), read_only=True)
+    compliant = serializers.BooleanField(read_only=True)
+    compliance_level = serializers.CharField(read_only=True)
+    issues = serializers.ListField(child=serializers.CharField(), read_only=True)
+    
+    # Fire extinguisher compliance details
+    fire_extinguisher_compliance = serializers.DictField(read_only=True)
+    
+    # General equipment compliance details
+    equipment_compliance = serializers.DictField(read_only=True)
+    
+    # ADG-specific checks
+    adg_specific_checks = serializers.DictField(read_only=True)
+    
+    # Metadata
+    validation_timestamp = serializers.DateTimeField(read_only=True)
+    regulatory_framework = serializers.CharField(read_only=True)
+    
+    def to_representation(self, instance):
+        """Enhanced representation with equipment details"""
+        data = super().to_representation(instance)
+        
+        # Add equipment summary for easier frontend consumption
+        if 'equipment_compliance' in data and 'equipment_status' in data['equipment_compliance']:
+            equipment_summary = []
+            for equipment_name, status_info in data['equipment_compliance']['equipment_status'].items():
+                equipment_summary.append({
+                    'name': equipment_name,
+                    'status': status_info['status'],
+                    'adg_compliant': status_info.get('adg_compliant', False),
+                    'issue': status_info.get('issue'),
+                    'serial_number': status_info['equipment'].serial_number if status_info.get('equipment') else None
+                })
+            data['equipment_summary'] = equipment_summary
+        
+        return data
+
+
+class ADGFleetReportSerializer(serializers.Serializer):
+    """Serializer for ADG fleet compliance reports"""
+    
+    total_vehicles = serializers.IntegerField(read_only=True)
+    adg_compliant_vehicles = serializers.IntegerField(read_only=True)
+    non_compliant_vehicles = serializers.IntegerField(read_only=True)
+    vehicles_without_equipment = serializers.IntegerField(read_only=True)
+    
+    compliance_by_level = serializers.DictField(read_only=True)
+    compliance_summary = serializers.ListField(read_only=True)
+    critical_issues = serializers.ListField(read_only=True)
+    australian_standards_compliance = serializers.IntegerField(read_only=True)
+    
+    upcoming_adg_inspections = serializers.ListField(read_only=True)
+    generated_at = serializers.DateTimeField(read_only=True)
+    regulatory_framework = serializers.CharField(read_only=True)
+    
+    def to_representation(self, instance):
+        """Add compliance percentage calculations"""
+        data = super().to_representation(instance)
+        
+        total = data.get('total_vehicles', 0)
+        if total > 0:
+            data['compliance_percentage'] = round(
+                (data.get('adg_compliant_vehicles', 0) / total) * 100, 2
+            )
+            data['australian_standards_percentage'] = round(
+                (data.get('australian_standards_compliance', 0) / total) * 100, 2
+            )
+        else:
+            data['compliance_percentage'] = 0
+            data['australian_standards_percentage'] = 0
+        
+        return data

@@ -132,10 +132,58 @@ class Shipment(models.Model):
         ]
 
 class ConsignmentItem(models.Model):
+    
+    class DGQuantityType(models.TextChoices):
+        STANDARD_DG = 'STANDARD_DG', _('Standard Dangerous Goods')
+        LIMITED_QUANTITY = 'LIMITED_QUANTITY', _('Limited Quantity (LQ)')
+        DOMESTIC_CONSUMABLE = 'DOMESTIC_CONSUMABLE', _('Domestic Consumable (DC)')
+        EXCEPTED_QUANTITY = 'EXCEPTED_QUANTITY', _('Excepted Quantity (EQ)')
+        
+    class ReceptacleType(models.TextChoices):
+        PACKAGE = 'PACKAGE', _('Package/Box')
+        DRUM = 'DRUM', _('Drum')
+        IBC = 'IBC', _('Intermediate Bulk Container')
+        TANK = 'TANK', _('Tank/Portable Tank')
+        CYLINDER = 'CYLINDER', _('Gas Cylinder')
+        BAG = 'BAG', _('Bag/Sack')
+        BOTTLE = 'BOTTLE', _('Bottle/Container')
+        OTHER = 'OTHER', _('Other')
+    
     shipment = models.ForeignKey(Shipment, related_name='items', on_delete=models.CASCADE)
     description = models.TextField(help_text=_("Description of the item."))
     quantity = models.PositiveIntegerField(default=1)
     weight_kg = models.DecimalField(_("Weight per unit (kg)"), max_digits=10, decimal_places=2, null=True, blank=True)
+    
+    # Volume fields for placard calculations
+    volume_l = models.DecimalField(_("Volume per unit (L)"), max_digits=10, decimal_places=2, null=True, blank=True)
+    
+    # Receptacle information for ADG placard calculations
+    receptacle_type = models.CharField(
+        _("Receptacle Type"),
+        max_length=20,
+        choices=ReceptacleType.choices,
+        default=ReceptacleType.PACKAGE,
+        help_text=_("Type of receptacle/packaging")
+    )
+    
+    receptacle_capacity_kg = models.DecimalField(
+        _("Receptacle Capacity (kg)"),
+        max_digits=10,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text=_("Maximum capacity of individual receptacle in kg")
+    )
+    
+    receptacle_capacity_l = models.DecimalField(
+        _("Receptacle Capacity (L)"),
+        max_digits=10,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text=_("Maximum capacity of individual receptacle in litres")
+    )
+    
     length_cm = models.DecimalField(_("Length per unit (cm)"), max_digits=7, decimal_places=2, null=True, blank=True)
     width_cm = models.DecimalField(_("Width per unit (cm)"), max_digits=7, decimal_places=2, null=True, blank=True)
     height_cm = models.DecimalField(_("Height per unit (cm)"), max_digits=7, decimal_places=2, null=True, blank=True)
@@ -145,6 +193,29 @@ class ConsignmentItem(models.Model):
         null=True, blank=True, related_name='consignment_items',
         help_text=_("Link to the master DangerousGood entry if this item is a DG.")
     )
+    
+    # ADG-specific fields for placard calculations
+    dg_quantity_type = models.CharField(
+        _("DG Quantity Type"),
+        max_length=25,
+        choices=DGQuantityType.choices,
+        default=DGQuantityType.STANDARD_DG,
+        help_text=_("Type of dangerous goods quantity classification")
+    )
+    
+    # Special provisions that might affect placarding
+    is_aerosol = models.BooleanField(
+        _("Is Aerosol"),
+        default=False,
+        help_text=_("True if this is an aerosol product (affects Class 2.1 placarding)")
+    )
+    
+    is_fumigated_unit = models.BooleanField(
+        _("Is Fumigated Unit"),
+        default=False,
+        help_text=_("True if this is UN3359 Fumigated Unit")
+    )
+    
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -155,6 +226,53 @@ class ConsignmentItem(models.Model):
 
     def __str__(self):
         return f"{self.quantity} x {self.description[:50]}"
+    
+    @property
+    def total_weight_kg(self):
+        """Calculate total weight for all units of this item"""
+        if self.weight_kg and self.quantity:
+            return float(self.weight_kg) * self.quantity
+        return 0
+    
+    @property
+    def total_volume_l(self):
+        """Calculate total volume for all units of this item"""
+        if self.volume_l and self.quantity:
+            return float(self.volume_l) * self.quantity
+        return 0
+    
+    @property
+    def has_large_receptacle(self):
+        """Check if any receptacle exceeds 500kg/L (ADG large receptacle threshold)"""
+        if self.receptacle_capacity_kg and self.receptacle_capacity_kg > 500:
+            return True
+        if self.receptacle_capacity_l and self.receptacle_capacity_l > 500:
+            return True
+        return False
+    
+    @property
+    def is_class_2_1_flammable_gas(self):
+        """Check if this is Class 2.1 flammable gas (excluding aerosols)"""
+        if (self.is_dangerous_good and 
+            self.dangerous_good_entry and 
+            self.dangerous_good_entry.hazard_class == '2.1' and 
+            not self.is_aerosol):
+            return True
+        return False
+    
+    def get_placard_relevant_quantity(self):
+        """Get quantity relevant for placard calculations based on DG type"""
+        result = {
+            'weight_kg': self.total_weight_kg,
+            'volume_l': self.total_volume_l,
+            'is_limited_quantity': self.dg_quantity_type == self.DGQuantityType.LIMITED_QUANTITY,
+            'is_domestic_consumable': self.dg_quantity_type == self.DGQuantityType.DOMESTIC_CONSUMABLE,
+            'is_standard_dg': self.dg_quantity_type == self.DGQuantityType.STANDARD_DG,
+            'has_large_receptacle': self.has_large_receptacle,
+            'is_class_2_1_flammable': self.is_class_2_1_flammable_gas,
+            'is_fumigated': self.is_fumigated_unit
+        }
+        return result
 
     class Meta:
         ordering = ['id']
