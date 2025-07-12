@@ -7,18 +7,24 @@ import "react-pdf/dist/Page/TextLayer.css";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight, ZoomIn, ZoomOut } from "lucide-react";
 
-// Set worker URL with fallbacks
+// Set worker URL - use local worker file to avoid CORS issues
 if (typeof window !== 'undefined') {
-  // Try multiple worker sources for better reliability
-  const workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.js`;
+  // Use local worker file served from public directory
+  const localWorkerSrc = '/pdf-worker/pdf.worker.min.js';
   const fallbackWorkerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
   
-  pdfjs.GlobalWorkerOptions.workerSrc = workerSrc;
+  pdfjs.GlobalWorkerOptions.workerSrc = localWorkerSrc;
   
-  // Set up fallback worker if primary fails
-  if (!pdfjs.GlobalWorkerOptions.workerSrc) {
-    pdfjs.GlobalWorkerOptions.workerSrc = fallbackWorkerSrc;
-  }
+  // Set up fallback worker if local worker fails
+  const originalConsoleError = console.error;
+  console.error = (...args) => {
+    if (args[0]?.includes?.('Failed to fetch dynamically imported module') && 
+        args[0]?.includes?.(localWorkerSrc)) {
+      console.log('Local PDF worker failed, falling back to CDN worker...');
+      pdfjs.GlobalWorkerOptions.workerSrc = fallbackWorkerSrc;
+    }
+    originalConsoleError.apply(console, args);
+  };
 }
 
 interface PDFViewerProps {
@@ -67,8 +73,9 @@ export default function PDFViewer({
       setError(null);
       setRetryCount(prev => prev + 1);
       
-      // Try alternative worker URL on retry
-      if (retryCount === 1) {
+      // Try alternative worker URL on second retry only
+      if (retryCount === 1 && pdfjs.GlobalWorkerOptions.workerSrc?.includes('/pdf-worker/')) {
+        console.log('Switching to CDN worker for retry...');
         pdfjs.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
       }
       

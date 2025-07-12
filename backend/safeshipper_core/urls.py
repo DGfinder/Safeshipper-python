@@ -29,9 +29,33 @@ from drf_spectacular.views import (
     SpectacularSwaggerView,
 )
 from health_check.views import MainView
+from rest_framework.views import APIView
+from rest_framework.response import Response
+
+# Basic search endpoint for popular searches
+class PopularSearchesView(APIView):
+    """
+    Simple endpoint to return popular search terms for the search component.
+    """
+    def get(self, request):
+        # Return basic popular searches - this can be enhanced later
+        popular_searches = [
+            "lithium battery shipments",
+            "Class 3 flammable liquids", 
+            "expired documents",
+            "delayed shipments",
+            "Sydney to Melbourne",
+            "compliance violations",
+            "ready for dispatch",
+            "dangerous goods manifest"
+        ]
+        
+        limit = int(request.GET.get('limit', 10))
+        return Response({
+            'popular_searches': popular_searches[:limit]
+        })
 
 # safeshipper_core/urls.py
-# ... other imports ...
 urlpatterns = [
     # Admin
     path('admin/', admin.site.urls),
@@ -69,6 +93,8 @@ urlpatterns = [
         path('inspections/', include('inspections.urls')),  # Inspection management
         path('communications/', include('communications.urls')),  # Communication and activity logs
         path('manifests/', include('manifests.urls')),  # Enabled for DG manifest processing
+        # Basic search endpoints
+        path('search/popular/', PopularSearchesView.as_view(), name='popular-searches'),
         # Temporarily disabled apps:
         # path('locations/', include('locations.urls')),
         # path('hazard-assessments/', include('hazard_assessments.urls')),

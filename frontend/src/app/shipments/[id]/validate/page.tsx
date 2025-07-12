@@ -26,8 +26,18 @@ import {
 } from "lucide-react";
 import { ManifestDropzone } from "@/components/manifests/ManifestDropzone";
 import { DangerousGoodsConfirmation } from "@/components/manifests/DangerousGoodsConfirmation";
-import { PDFViewer } from "@/components/manifests/PDFViewer";
 import { CompatibilityErrorDialog } from "@/components/manifests/CompatibilityErrorDialog";
+import dynamic from "next/dynamic";
+
+// Use the better PDF viewer component with proper PDF.js integration
+const PDFViewer = dynamic(() => import("@/components/pdf/PDFViewer"), {
+  ssr: false,
+  loading: () => (
+    <div className="flex items-center justify-center h-64">
+      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+    </div>
+  ),
+});
 import {
   useUploadManifest,
   useDocumentStatus,
@@ -353,11 +363,6 @@ export default function ShipmentValidationPage() {
                   <CardContent>
                     <PDFViewer
                       file={selectedFile}
-                      highlightedTexts={
-                        validationResults?.potential_dangerous_goods.map(
-                          (dg) => dg.found_text,
-                        ) || []
-                      }
                     />
                   </CardContent>
                 )}
