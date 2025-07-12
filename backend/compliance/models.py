@@ -288,6 +288,18 @@ class ComplianceEvent(models.Model):
         INCIDENT_REPORT = 'INCIDENT_REPORT', 'Incident Reported'
         CHECKPOINT = 'CHECKPOINT', 'Checkpoint Reached'
         EMERGENCY_STOP = 'EMERGENCY_STOP', 'Emergency Stop'
+        # Emergency incident types
+        EMERGENCY_FIRE = 'EMERGENCY_FIRE', 'Fire Emergency'
+        EMERGENCY_SPILL = 'EMERGENCY_SPILL', 'Chemical Spill Emergency'
+        EMERGENCY_ACCIDENT = 'EMERGENCY_ACCIDENT', 'Vehicle Accident Emergency'
+        EMERGENCY_MEDICAL = 'EMERGENCY_MEDICAL', 'Medical Emergency'
+        EMERGENCY_SECURITY = 'EMERGENCY_SECURITY', 'Security Emergency'
+        EMERGENCY_MECHANICAL = 'EMERGENCY_MECHANICAL', 'Mechanical Breakdown Emergency'
+        EMERGENCY_WEATHER = 'EMERGENCY_WEATHER', 'Weather-Related Emergency'
+        EMERGENCY_OTHER = 'EMERGENCY_OTHER', 'Other Emergency'
+        # Accident prevention
+        EMERGENCY_FALSE_ALARM = 'EMERGENCY_FALSE_ALARM', 'False Emergency Alarm'
+        EMERGENCY_TEST = 'EMERGENCY_TEST', 'Emergency System Test'
     
     class Severity(models.TextChoices):
         INFO = 'INFO', 'Information'
@@ -362,6 +374,60 @@ class ComplianceEvent(models.Model):
     automated_action_taken = models.BooleanField(default=False)
     automated_action_details = models.TextField(blank=True)
     
+    # Emergency-specific fields
+    emergency_activation_method = models.CharField(
+        max_length=20,
+        blank=True,
+        choices=[
+            ('PANIC_BUTTON', 'Panic Button'),
+            ('VOICE_COMMAND', 'Voice Command'),
+            ('AUTO_DETECTED', 'Auto Detected'),
+            ('EXTERNAL_REPORT', 'External Report'),
+            ('FALSE_ALARM', 'False Alarm')
+        ],
+        help_text="How the emergency was activated"
+    )
+    
+    emergency_severity_level = models.CharField(
+        max_length=15,
+        blank=True,
+        choices=[
+            ('LOW', 'Low - Minor incident'),
+            ('MEDIUM', 'Medium - Significant incident'),
+            ('HIGH', 'High - Major incident'),
+            ('CRITICAL', 'Critical - Life-threatening'),
+            ('CATASTROPHIC', 'Catastrophic - Multi-agency response')
+        ],
+        help_text="Emergency severity assessment"
+    )
+    
+    # Accident prevention tracking
+    false_alarm_count = models.PositiveIntegerField(
+        default=0,
+        help_text="Number of false alarms by this user (accident prevention)"
+    )
+    
+    activation_verification = models.JSONField(
+        default=dict,
+        help_text="Emergency activation verification data (PIN, countdown, etc.)"
+    )
+    
+    emergency_contacts_notified = models.JSONField(
+        default=list,
+        help_text="List of emergency contacts that were automatically notified"
+    )
+    
+    emergency_services_notified = models.BooleanField(
+        default=False,
+        help_text="Whether emergency services (000) were automatically notified"
+    )
+    
+    emergency_response_time = models.DurationField(
+        null=True,
+        blank=True,
+        help_text="Time from emergency activation to first responder arrival"
+    )
+    
     created_at = models.DateTimeField(auto_now_add=True)
     
     class Meta:
@@ -391,6 +457,227 @@ class ComplianceEvent(models.Model):
         self.resolved_at = timezone.now()
         self.resolution_notes = notes
         self.save(update_fields=['resolved_by', 'resolved_at', 'resolution_notes'])
+    
+    @property
+    def is_emergency(self) -> bool:
+        """Check if this event is an emergency incident"""
+        emergency_types = [
+            self.EventType.EMERGENCY_FIRE,
+            self.EventType.EMERGENCY_SPILL,
+            self.EventType.EMERGENCY_ACCIDENT,
+            self.EventType.EMERGENCY_MEDICAL,
+            self.EventType.EMERGENCY_SECURITY,
+            self.EventType.EMERGENCY_MECHANICAL,
+            self.EventType.EMERGENCY_WEATHER,
+            self.EventType.EMERGENCY_OTHER,
+        ]
+        return self.event_type in emergency_types
+    
+    @property
+    def is_false_alarm(self) -> bool:
+        """Check if this is a false alarm"""
+        return self.event_type == self.EventType.EMERGENCY_FALSE_ALARM
+    
+    def mark_false_alarm(self, user: User, reason: str = ""):
+        """Mark emergency as false alarm and update user's false alarm count"""
+        self.event_type = self.EventType.EMERGENCY_FALSE_ALARM
+        self.emergency_activation_method = 'FALSE_ALARM'
+        self.resolved_by = user
+        self.resolved_at = timezone.now()
+        self.resolution_notes = f"Marked as false alarm: {reason}"
+        
+        # Increment false alarm count for accident prevention
+        self.false_alarm_count += 1
+        
+        self.save(update_fields=[
+            'event_type', 'emergency_activation_method', 'resolved_by', 
+            'resolved_at', 'resolution_notes', 'false_alarm_count'
+        ])
+    
+    def get_emergency_data_packet(self) -> Dict:
+        """Assemble comprehensive emergency data packet from existing systems"""
+        if not self.is_emergency:
+            return {}
+        
+        session = self.monitoring_session
+        shipment = session.shipment
+        vehicle = session.vehicle
+        driver = session.driver
+        
+        # Assemble emergency packet from existing data
+        emergency_packet = {
+            'emergency_id': str(self.id),
+            'timestamp': self.timestamp.isoformat(),
+            'incident_type': self.get_event_type_display(),
+            'severity': self.emergency_severity_level or 'UNKNOWN',
+            
+            # Location data (from existing GPS tracking)
+            'location': {
+                'latitude': self.location.y if self.location else None,
+                'longitude': self.location.x if self.location else None,
+                'nearest_address': self.event_data.get('nearest_address', 'Unknown'),
+                'landmark_description': self.event_data.get('landmark_description', ''),
+            },
+            
+            # Shipment and cargo data (from existing manifest)
+            'shipment': {
+                'tracking_number': shipment.tracking_number,
+                'dangerous_goods': self._get_dangerous_goods_summary(shipment),
+                'emergency_response_guides': self._get_emergency_response_guides(shipment),
+                'total_weight_kg': getattr(shipment, 'dead_weight_kg', 0),
+                'origin': shipment.origin_location,
+                'destination': shipment.destination_location,
+            },
+            
+            # Vehicle data (from existing compliance)
+            'vehicle': {
+                'registration': vehicle.registration_number,
+                'type': vehicle.get_vehicle_type_display(),
+                'capacity_kg': vehicle.capacity_kg,
+                'safety_equipment': self._get_safety_equipment_summary(vehicle),
+            },
+            
+            # Driver data (from existing training system)
+            'driver': {
+                'name': driver.get_full_name(),
+                'phone': getattr(driver, 'phone', ''),
+                'qualifications': self._get_driver_qualifications(driver),
+                'experience_years': self._get_driver_experience(driver),
+            },
+            
+            # Emergency contacts (from existing EIP system)
+            'emergency_contacts': self._get_emergency_contacts(shipment),
+            
+            # Response data
+            'response_status': {
+                'emergency_services_notified': self.emergency_services_notified,
+                'contacts_notified': self.emergency_contacts_notified,
+                'activation_method': self.emergency_activation_method,
+                'verification_status': self.activation_verification,
+            }
+        }
+        
+        return emergency_packet
+    
+    def _get_dangerous_goods_summary(self, shipment) -> List[Dict]:
+        """Get dangerous goods summary from shipment manifest"""
+        dangerous_items = []
+        
+        for item in shipment.items.filter(is_dangerous_good=True):
+            if item.dangerous_good_entry:
+                dg = item.dangerous_good_entry
+                dangerous_items.append({
+                    'un_number': dg.un_number,
+                    'proper_shipping_name': dg.proper_shipping_name,
+                    'hazard_class': dg.hazard_class,
+                    'packing_group': dg.packing_group,
+                    'quantity': item.quantity,
+                    'weight_kg': getattr(item, 'weight_kg', 0),
+                    'erg_guide': dg.erg_guide_number,
+                })
+        
+        return dangerous_items
+    
+    def _get_emergency_response_guides(self, shipment) -> List[str]:
+        """Get ERG guide numbers from dangerous goods"""
+        erg_guides = []
+        
+        for item in shipment.items.filter(is_dangerous_good=True):
+            if item.dangerous_good_entry and item.dangerous_good_entry.erg_guide_number:
+                if item.dangerous_good_entry.erg_guide_number not in erg_guides:
+                    erg_guides.append(item.dangerous_good_entry.erg_guide_number)
+        
+        return erg_guides
+    
+    def _get_safety_equipment_summary(self, vehicle) -> List[Dict]:
+        """Get vehicle safety equipment from existing compliance system"""
+        equipment_summary = []
+        
+        try:
+            equipment = vehicle.safety_equipment.filter(status='ACTIVE')
+            for item in equipment:
+                equipment_summary.append({
+                    'type': item.equipment_type.name,
+                    'location': item.location_on_vehicle,
+                    'capacity': getattr(item, 'capacity', ''),
+                    'expiry_date': item.expiry_date.isoformat() if item.expiry_date else None,
+                    'compliant': item.is_compliant,
+                })
+        except:
+            pass  # Graceful handling if safety equipment not available
+        
+        return equipment_summary
+    
+    def _get_driver_qualifications(self, driver) -> Dict:
+        """Get driver qualifications from training system"""
+        try:
+            if hasattr(driver, 'competency_profile'):
+                profile = driver.competency_profile
+                return {
+                    'overall_status': profile.overall_status,
+                    'qualified_hazard_classes': profile.qualified_hazard_classes,
+                    'compliance_percentage': float(profile.compliance_percentage),
+                    'last_assessment': profile.last_assessment_date.isoformat() if profile.last_assessment_date else None,
+                }
+        except:
+            pass
+        
+        return {'status': 'UNKNOWN'}
+    
+    def _get_driver_experience(self, driver) -> float:
+        """Get driver experience from training system"""
+        try:
+            if hasattr(driver, 'competency_profile'):
+                return float(driver.competency_profile.years_experience or 0)
+        except:
+            pass
+        
+        return 0.0
+    
+    def _get_emergency_contacts(self, shipment) -> List[Dict]:
+        """Get emergency contacts from EIP system"""
+        try:
+            # This would integrate with the existing EIP emergency contacts
+            from dangerous_goods.emergency_info_panel import EmergencyContact
+            
+            # Get dangerous goods classes from shipment
+            hazard_classes = []
+            for item in shipment.items.filter(is_dangerous_good=True):
+                if item.dangerous_good_entry:
+                    main_class = item.dangerous_good_entry.hazard_class.split('.')[0]
+                    if main_class not in hazard_classes:
+                        hazard_classes.append(main_class)
+            
+            # Find relevant emergency contacts
+            contacts = EmergencyContact.objects.filter(
+                models.Q(hazard_classes_covered__overlap=hazard_classes) |
+                models.Q(hazard_classes_covered__contains=[]) |  # General contacts
+                models.Q(is_24_7_available=True)
+            ).order_by('priority')[:10]
+            
+            contact_list = []
+            for contact in contacts:
+                contact_list.append({
+                    'organization': contact.organization_name,
+                    'contact_name': contact.contact_name,
+                    'phone': contact.phone_number,
+                    'type': contact.get_contact_type_display(),
+                    'coverage_area': contact.coverage_area,
+                    'available_24_7': contact.is_24_7_available,
+                })
+            
+            return contact_list
+            
+        except Exception as e:
+            # Fallback emergency contacts
+            return [
+                {
+                    'organization': 'Emergency Services',
+                    'phone': '000',
+                    'type': 'Primary Emergency',
+                    'available_24_7': True,
+                }
+            ]
 
 
 class ComplianceAlert(models.Model):

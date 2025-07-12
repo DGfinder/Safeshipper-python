@@ -260,6 +260,54 @@ class ApiService {
   async getUnreadEventCount(): Promise<{unread_count: number}> {
     return this.makeRequest<{unread_count: number}>('/communications/events/unread_count/');
   }
+
+  // Emergency Response System
+  async initiateEmergency(shipmentId: string, emergencyType: string): Promise<any> {
+    return this.makeRequest<any>('/compliance/emergency/initiate/', {
+      method: 'POST',
+      body: JSON.stringify({
+        shipment_id: shipmentId,
+        emergency_type: emergencyType,
+      }),
+    });
+  }
+
+  async confirmEmergency(activationToken: string, pin: string, confirmText: string): Promise<any> {
+    return this.makeRequest<any>('/compliance/emergency/confirm/', {
+      method: 'POST',
+      body: JSON.stringify({
+        activation_token: activationToken,
+        pin: pin,
+        confirm_text: confirmText,
+      }),
+    });
+  }
+
+  async activateEmergency(activationToken: string, locationData: any, notes: string, severityLevel: string): Promise<any> {
+    return this.makeRequest<any>('/compliance/emergency/activate/', {
+      method: 'POST',
+      body: JSON.stringify({
+        activation_token: activationToken,
+        location: locationData,
+        notes: notes,
+        severity_level: severityLevel,
+      }),
+    });
+  }
+
+  async markFalseAlarm(emergencyId: string, reason: string): Promise<any> {
+    return this.makeRequest<any>('/compliance/emergency/false-alarm/', {
+      method: 'POST',
+      body: JSON.stringify({
+        emergency_id: emergencyId,
+        reason: reason,
+      }),
+    });
+  }
+
+  async getEmergencyStatus(emergencyId: string): Promise<any> {
+    return this.makeRequest<any>(`/compliance/emergency/status/${emergencyId}/`);
+  }
 }
 
 export const apiService = new ApiService();

@@ -24,6 +24,7 @@ import Toast from 'react-native-toast-message';
 import {apiService} from '../services/api';
 import {cameraService, PhotoResult} from '../services/camera';
 import SignatureCapture from '../components/SignatureCapture';
+import EmergencyButton from '../components/EmergencyButton';
 
 type RouteParams = {
   shipmentId: string;
@@ -205,7 +206,12 @@ const PODCaptureScreen: React.FC = () => {
           <Text style={styles.backButtonText}>← Back</Text>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Proof of Delivery</Text>
-        <View style={styles.headerSpacer} />
+        <EmergencyButton
+          shipmentId={shipmentId}
+          shipmentTrackingNumber={shipmentTrackingNumber}
+          size="small"
+          style={styles.emergencyButton}
+        />
       </View>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
@@ -388,8 +394,8 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#1f2937',
   },
-  headerSpacer: {
-    width: 60,
+  emergencyButton: {
+    marginRight: 8,
   },
   content: {
     flex: 1,
