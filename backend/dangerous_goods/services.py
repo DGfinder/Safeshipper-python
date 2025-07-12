@@ -1,6 +1,6 @@
 # dangerous_goods/services.py
 from typing import List, Optional, Dict, Union, Set
-from .models import DangerousGood, DGProductSynonym, SegregationGroup, SegregationRule, PackingGroup
+from .models import DangerousGood, DGProductSynonym, SegregationGroup, SegregationRule, PackingGroup, PHSegregationRule, ChemicalReactivityProfile
 from shipments.models import ConsignmentItem # Import ConsignmentItem
 from django.db.models import Q
 from .safety_rules import ( # Import from our new safety_rules module
@@ -499,4 +499,592 @@ def _apply_group_safety_rules(dg_items: List[DangerousGood], reasons: List[str])
 #     except ConsignmentItem.DoesNotExist:
 #         return {"compatible": False, "reasons": ["One or both consignment items not found."]}
 #     return check_dg_compatibility(item1, item2)
+
+
+# === pH-Based Segregation Services ===
+
+def get_ph_segregation_rules_for_value(ph_value: float, target_types: List[str] = None) -> List[PHSegregationRule]:
+    """
+    Get applicable pH segregation rules for a given pH value.
+    
+    Args:
+        ph_value: The pH value to check rules for
+        target_types: Optional list of target types to filter by
+        
+    Returns:
+        List of applicable pH segregation rules
+    """
+    # Start with all rules
+    rules = PHSegregationRule.objects.all()
+    
+    # Filter by target types if specified
+    if target_types:
+        rules = rules.filter(target_type__in=target_types)
+    
+    # Filter to only rules that apply to this pH value
+    applicable_rules = []
+    for rule in rules:
+        if rule.applies_to_ph(ph_value):
+            applicable_rules.append(rule)
+    
+    # Sort by severity (most severe first)
+    severity_order = {
+        PHSegregationRule.SeverityLevel.PROHIBITED: 0,
+        PHSegregationRule.SeverityLevel.CRITICAL: 1,
+        PHSegregationRule.SeverityLevel.HIGH: 2,
+        PHSegregationRule.SeverityLevel.MEDIUM: 3,
+        PHSegregationRule.SeverityLevel.LOW: 4,
+        PHSegregationRule.SeverityLevel.CAUTION: 5,
+    }
+    
+    applicable_rules.sort(key=lambda rule: severity_order.get(rule.severity_level, 999))
+    
+    return applicable_rules
+
+
+def check_ph_based_food_compatibility(ph_value: float) -> Dict:
+    """
+    Check compatibility of a pH value with food and food packaging.
+    Applies standard Class 8 segregation rules regardless of pH level.
+    
+    Args:
+        ph_value: The pH value to assess
+        
+    Returns:
+        Dictionary with compatibility assessment
+    """
+    food_target_types = [
+        PHSegregationRule.TargetType.FOOD,
+        PHSegregationRule.TargetType.FOOD_PACKAGING,
+        PHSegregationRule.TargetType.FOOD_GRADE_MATERIALS
+    ]
+    
+    rules = get_ph_segregation_rules_for_value(ph_value, food_target_types)
+    
+    result = {
+        'compatible_with_food': False,  # All Class 8 materials incompatible with food
+        'segregation_required': True,   # Always required for Class 8
+        'risk_level': 'high',          # Standard Class 8 risk level
+        'applicable_rules': [],
+        'most_severe_rule': None,
+        'min_separation_distance': 5,  # Standard Class 8 separation (3-5m)
+        'prohibited_items': [],
+        'requirements': [
+            'Apply standard Class 8 corrosive segregation from food (3-5 meters)',
+            'Follow dangerous goods segregation table requirements'
+        ],
+        'safety_recommendations': [
+            'Use appropriate containment for corrosive materials',
+            'Ensure proper ventilation in storage areas',
+            'Follow standard dangerous goods protocols'
+        ]
+    }
+    
+    if not rules:
+        # No specific rules found, apply standard Class 8 food separation
+        result['requirements'].append('Standard dangerous goods separation applies - pH level does not enhance food restrictions')
+        return result
+    
+    # Process rules - maintain standard Class 8 food separation regardless of pH
+    most_severe_rule = rules[0]  # Rules are sorted by severity
+    result['most_severe_rule'] = most_severe_rule
+    result['applicable_rules'] = [rule.id for rule in rules]
+    
+    # All Class 8 materials remain incompatible with food regardless of pH
+    # Only collect additional requirements from rules without overriding base separation
+    additional_requirements = set(result['requirements'])  # Start with base requirements
+    additional_recommendations = set(result['safety_recommendations'])  # Start with base recommendations
+    base_distance = result['min_separation_distance']  # Keep standard Class 8 distance
+    
+    for rule in rules:
+        # Add any additional requirements from pH rules
+        if rule.requirements:
+            additional_requirements.update(rule.requirements)
+        if rule.safety_recommendations:
+            additional_recommendations.update(rule.safety_recommendations)
+        
+        # Note: We maintain standard Class 8 food separation distance regardless of pH
+        # pH-specific distances only apply to acid-alkali incompatibility, not food separation
+        
+        if rule.severity_level == PHSegregationRule.SeverityLevel.PROHIBITED:
+            if rule.target_type == PHSegregationRule.TargetType.FOOD:
+                result['prohibited_items'].append('Food and foodstuffs')
+            elif rule.target_type == PHSegregationRule.TargetType.FOOD_PACKAGING:
+                result['prohibited_items'].append('Food packaging and containers')
+            elif rule.target_type == PHSegregationRule.TargetType.FOOD_GRADE_MATERIALS:
+                result['prohibited_items'].append('Food grade materials')
+    
+    result['requirements'] = list(additional_requirements)
+    result['safety_recommendations'] = list(additional_recommendations)
+    # Keep standard Class 8 separation distance for food
+    result['min_separation_distance'] = base_distance
+    
+    return result
+
+
+def get_ph_segregation_recommendations(ph_value: float, target_material_types: List[str] = None) -> Dict:
+    """
+    Get comprehensive segregation recommendations for a given pH value.
+    Focuses on acid-alkali incompatibility with standard Class 8 food separation.
+    
+    Args:
+        ph_value: The pH value to get recommendations for
+        target_material_types: Optional list of target material types to check against
+        
+    Returns:
+        Dictionary with segregation recommendations
+    """
+    if target_material_types is None:
+        target_material_types = [choice[0] for choice in PHSegregationRule.TargetType.choices]
+    
+    rules = get_ph_segregation_rules_for_value(ph_value, target_material_types)
+    
+    recommendations = {
+        'ph_value': ph_value,
+        'ph_classification': _classify_ph_value(ph_value),
+        'overall_risk_level': 'medium',  # Default for Class 8 materials
+        'segregation_requirements': [
+            'Apply standard Class 8 corrosive segregation from food (3-5 meters)',
+            'Follow dangerous goods segregation table requirements'
+        ],
+        'prohibited_combinations': [],
+        'minimum_distances': {
+            'Food and Foodstuffs': 5,  # Standard Class 8 distance
+            'Food Packaging and Containers': 5,  # Standard Class 8 distance
+            'Food Grade Materials': 5  # Standard Class 8 distance
+        },
+        'special_requirements': [],
+        'safety_recommendations': [
+            'Use appropriate containment for corrosive materials',
+            'Ensure proper ventilation in storage areas',
+            'Follow standard dangerous goods protocols'
+        ],
+        'regulatory_notes': [
+            'Food separation: Standard Class 8 dangerous goods segregation applies regardless of pH level'
+        ]
+    }
+    
+    if not rules:
+        recommendations['regulatory_notes'].append('No specific pH segregation rules found - apply standard Class 8 requirements')
+        return recommendations
+    
+    # Determine overall risk level - focus on acid-alkali incompatibility
+    severity_levels = [rule.severity_level for rule in rules]
+    acid_alkali_rules = [rule for rule in rules if rule.target_type in [
+        PHSegregationRule.TargetType.ALKALINE_MATERIALS,
+        PHSegregationRule.TargetType.ACIDIC_MATERIALS
+    ]]
+    
+    if acid_alkali_rules:
+        if PHSegregationRule.SeverityLevel.PROHIBITED in [rule.severity_level for rule in acid_alkali_rules]:
+            recommendations['overall_risk_level'] = 'critical'
+        elif PHSegregationRule.SeverityLevel.CRITICAL in [rule.severity_level for rule in acid_alkali_rules]:
+            recommendations['overall_risk_level'] = 'critical'
+        elif PHSegregationRule.SeverityLevel.HIGH in [rule.severity_level for rule in acid_alkali_rules]:
+            recommendations['overall_risk_level'] = 'high'
+    
+    # Process each rule - separate food rules from acid-alkali rules
+    for rule in rules:
+        target_display = rule.get_target_type_display()
+        
+        # Handle acid-alkali incompatibility rules (these can override distances)
+        if rule.target_type in [PHSegregationRule.TargetType.ALKALINE_MATERIALS, PHSegregationRule.TargetType.ACIDIC_MATERIALS]:
+            if rule.severity_level == PHSegregationRule.SeverityLevel.PROHIBITED:
+                recommendations['prohibited_combinations'].append(target_display)
+            
+            if rule.min_separation_distance:
+                recommendations['minimum_distances'][target_display] = rule.min_separation_distance
+            
+            if rule.requirements:
+                recommendations['segregation_requirements'].extend(rule.requirements)
+            
+            if rule.safety_recommendations:
+                recommendations['safety_recommendations'].extend(rule.safety_recommendations)
+        
+        # Handle food-related rules (maintain standard Class 8 distances)
+        elif rule.target_type in [PHSegregationRule.TargetType.FOOD, PHSegregationRule.TargetType.FOOD_PACKAGING, PHSegregationRule.TargetType.FOOD_GRADE_MATERIALS]:
+            # For food, always maintain standard Class 8 separation regardless of pH
+            # Do not override the standard distances already set
+            
+            if rule.requirements:
+                # Only add non-distance related requirements for food
+                non_distance_requirements = [req for req in rule.requirements if 'meter' not in req.lower() and 'distance' not in req.lower()]
+                recommendations['segregation_requirements'].extend(non_distance_requirements)
+            
+            if rule.safety_recommendations:
+                recommendations['safety_recommendations'].extend(rule.safety_recommendations)
+        
+        # Add regulatory notes for all rules
+        if rule.regulatory_basis:
+            recommendations['regulatory_notes'].append(f"{target_display}: {rule.regulatory_basis}")
+    
+    # Remove duplicates while preserving order
+    recommendations['segregation_requirements'] = list(dict.fromkeys(recommendations['segregation_requirements']))
+    recommendations['safety_recommendations'] = list(dict.fromkeys(recommendations['safety_recommendations']))
+    recommendations['regulatory_notes'] = list(dict.fromkeys(recommendations['regulatory_notes']))
+    
+    return recommendations
+
+
+def _classify_ph_value(ph_value: float) -> str:
+    """
+    Classify a pH value into standard categories.
+    
+    Args:
+        ph_value: The pH value to classify
+        
+    Returns:
+        String classification of the pH value
+    """
+    if ph_value < 2:
+        return 'strongly_acidic'
+    elif ph_value < 7:
+        return 'acidic'
+    elif ph_value <= 7.5:
+        return 'neutral'
+    elif ph_value <= 12.5:
+        return 'alkaline'
+    else:
+        return 'strongly_alkaline'
+
+
+def initialize_default_ph_segregation_rules():
+    """
+    Initialize default pH segregation rules focusing on acid-alkali incompatibility.
+    Standard Class 8 food separation applies regardless of pH level.
+    This function can be called during system setup or migration.
+    """
+    default_rules = [
+        # Standard Class 8 food separation rules (apply to all pH levels)
+        {
+            'ph_range_type': PHSegregationRule.PHRangeType.STRONGLY_ACIDIC,
+            'target_type': PHSegregationRule.TargetType.FOOD,
+            'severity_level': PHSegregationRule.SeverityLevel.HIGH,
+            'min_separation_distance': 5,
+            'requirements': [
+                'Apply standard Class 8 corrosive segregation from food (3-5 meters)',
+                'Follow dangerous goods segregation table requirements',
+                'Use appropriate containment for corrosive materials'
+            ],
+            'safety_recommendations': [
+                'Use acid-resistant storage containers',
+                'Ensure proper ventilation',
+                'Follow standard dangerous goods protocols'
+            ],
+            'regulatory_basis': 'Dangerous Goods Segregation Table - Class 8 vs Food',
+            'notes': 'Standard dangerous goods separation applies - pH level does not enhance food restrictions'
+        },
+        {
+            'ph_range_type': PHSegregationRule.PHRangeType.ALKALINE,
+            'target_type': PHSegregationRule.TargetType.FOOD,
+            'severity_level': PHSegregationRule.SeverityLevel.HIGH,
+            'min_separation_distance': 5,
+            'requirements': [
+                'Apply standard Class 8 corrosive segregation from food (3-5 meters)',
+                'Follow dangerous goods segregation table requirements',
+                'Use appropriate containment for corrosive materials'
+            ],
+            'safety_recommendations': [
+                'Use caustic-resistant storage containers',
+                'Ensure proper ventilation',
+                'Follow standard dangerous goods protocols'
+            ],
+            'regulatory_basis': 'Dangerous Goods Segregation Table - Class 8 vs Food',
+            'notes': 'Standard dangerous goods separation applies - pH level does not enhance food restrictions'
+        },
+        
+        # CRITICAL: Acid-Alkali Incompatibility Rules
+        {
+            'ph_range_type': PHSegregationRule.PHRangeType.STRONGLY_ACIDIC,
+            'target_type': PHSegregationRule.TargetType.ALKALINE_MATERIALS,
+            'severity_level': PHSegregationRule.SeverityLevel.PROHIBITED,
+            'min_separation_distance': 15,
+            'requirements': [
+                'CRITICAL: Never store strongly acidic (pH < 2) with strongly alkaline materials (pH > 12.5)',
+                'Minimum 15-meter separation from strongly alkaline materials',
+                'Minimum 10-meter separation from moderately alkaline materials (pH > 10)',
+                'Use separate storage areas with independent ventilation systems',
+                'Install emergency acid neutralization systems'
+            ],
+            'safety_recommendations': [
+                'Emergency neutralization materials (sodium bicarbonate) readily available',
+                'Spill response plans for potential acid-alkali mixing incidents',
+                'Specialized training for personnel handling both material types',
+                'Install chemical vapor detection systems if required',
+                'Regular inspection of storage container integrity'
+            ],
+            'regulatory_basis': 'Chemical Incompatibility Standards - Acid-Alkali Reactions',
+            'notes': 'Mixing can cause violent exothermic reactions, toxic gas generation, and container rupture'
+        },
+        {
+            'ph_range_type': PHSegregationRule.PHRangeType.STRONGLY_ALKALINE,
+            'target_type': PHSegregationRule.TargetType.ACIDIC_MATERIALS,
+            'severity_level': PHSegregationRule.SeverityLevel.PROHIBITED,
+            'min_separation_distance': 15,
+            'requirements': [
+                'CRITICAL: Never store strongly alkaline (pH > 12.5) with strongly acidic materials (pH < 2)',
+                'Minimum 15-meter separation from strongly acidic materials',
+                'Minimum 10-meter separation from moderately acidic materials (pH < 4)',
+                'Use separate storage areas with independent ventilation systems',
+                'Install emergency alkali neutralization systems'
+            ],
+            'safety_recommendations': [
+                'Emergency neutralization materials (weak acid solutions) readily available',
+                'Spill response plans for potential acid-alkali mixing incidents',
+                'Specialized training for caustic material handling personnel',
+                'Install caustic vapor detection systems if required',
+                'Use specialized caustic-resistant containment materials'
+            ],
+            'regulatory_basis': 'Chemical Incompatibility Standards - Acid-Alkali Reactions',
+            'notes': 'Mixing can cause violent exothermic reactions, toxic gas generation, and explosive conditions'
+        },
+        
+        # Moderate acid-alkali separations
+        {
+            'ph_range_type': PHSegregationRule.PHRangeType.ACIDIC,
+            'target_type': PHSegregationRule.TargetType.ALKALINE_MATERIALS,
+            'severity_level': PHSegregationRule.SeverityLevel.HIGH,
+            'min_separation_distance': 10,
+            'requirements': [
+                'Keep acidic materials (pH 2-6.9) separated from strongly alkaline materials (pH > 12.5)',
+                'Minimum 10-meter separation from strongly alkaline materials',
+                'Minimum 5-meter separation from moderately alkaline materials',
+                'Monitor storage areas for pH changes'
+            ],
+            'safety_recommendations': [
+                'Regular monitoring of storage conditions',
+                'Emergency neutralization procedures available',
+                'Proper ventilation to prevent vapor accumulation'
+            ],
+            'regulatory_basis': 'Chemical Incompatibility Guidelines',
+            'notes': 'Moderate reaction risk - requires careful separation'
+        },
+        {
+            'ph_range_type': PHSegregationRule.PHRangeType.ALKALINE,
+            'target_type': PHSegregationRule.TargetType.ACIDIC_MATERIALS,
+            'severity_level': PHSegregationRule.SeverityLevel.HIGH,
+            'min_separation_distance': 10,
+            'requirements': [
+                'Keep alkaline materials (pH 7.6-12.5) separated from strongly acidic materials (pH < 2)',
+                'Minimum 10-meter separation from strongly acidic materials',
+                'Minimum 5-meter separation from moderately acidic materials',
+                'Monitor storage areas for pH changes'
+            ],
+            'safety_recommendations': [
+                'Regular monitoring of storage conditions',
+                'Emergency neutralization procedures available',
+                'Proper ventilation to prevent vapor accumulation'
+            ],
+            'regulatory_basis': 'Chemical Incompatibility Guidelines',
+            'notes': 'Moderate reaction risk - requires careful separation'
+        }
+    ]
+    
+    # Create rules if they don't exist
+    created_count = 0
+    for rule_data in default_rules:
+        rule, created = PHSegregationRule.objects.get_or_create(
+            ph_range_type=rule_data['ph_range_type'],
+            target_type=rule_data['target_type'],
+            defaults=rule_data
+        )
+        if created:
+            created_count += 1
+    
+    return created_count
+
+
+# === Chemical Name Pattern Matching ===
+
+def detect_chemical_reactivity_from_name(material_name: str, un_number: str = None) -> Dict:
+    """
+    Detect chemical reactivity type from material name using pattern matching.
+    Useful for creating ChemicalReactivityProfile records automatically.
+    
+    Args:
+        material_name: The proper shipping name or common name
+        un_number: Optional UN number for additional context
+        
+    Returns:
+        Dictionary with detected reactivity information
+    """
+    name_lower = material_name.lower()
+    
+    # Strong acid patterns
+    strong_acid_patterns = [
+        'sulfuric acid', 'sulphuric acid', 'hydrochloric acid', 'nitric acid',
+        'perchloric acid', 'hydrobromic acid', 'hydroiodic acid', 'phosphoric acid',
+        'hydrogen chloride', 'hydrogen bromide', 'hydrogen iodide'
+    ]
+    
+    # Strong alkali patterns
+    strong_alkali_patterns = [
+        'sodium hydroxide', 'potassium hydroxide', 'lithium hydroxide',
+        'caesium hydroxide', 'cesium hydroxide', 'rubidium hydroxide',
+        'barium hydroxide', 'calcium hydroxide', 'strontium hydroxide'
+    ]
+    
+    # Moderate acid patterns
+    moderate_acid_patterns = [
+        'acetic acid', 'formic acid', 'citric acid', 'oxalic acid',
+        'tartaric acid', 'malic acid', 'lactic acid'
+    ]
+    
+    # Moderate alkali patterns
+    moderate_alkali_patterns = [
+        'ammonia', 'ammonium hydroxide', 'sodium carbonate',
+        'potassium carbonate', 'sodium bicarbonate'
+    ]
+    
+    # Oxidizer patterns
+    oxidizer_patterns = [
+        'hydrogen peroxide', 'sodium hypochlorite', 'chlorine dioxide',
+        'potassium permanganate', 'sodium dichromate', 'chromic acid',
+        'nitrous oxide', 'oxygen'
+    ]
+    
+    result = {
+        'detected': False,
+        'reactivity_type': None,
+        'strength_level': None,
+        'confidence': 0.0,
+        'matched_patterns': [],
+        'typical_ph_range': None,
+        'incompatible_with': [],
+        'notes': ''
+    }
+    
+    # Check for strong acids
+    for pattern in strong_acid_patterns:
+        if pattern in name_lower:
+            result.update({
+                'detected': True,
+                'reactivity_type': ChemicalReactivityProfile.ReactivityType.STRONG_ACID,
+                'strength_level': ChemicalReactivityProfile.StrengthLevel.STRONG,
+                'confidence': 0.9,
+                'matched_patterns': [pattern],
+                'typical_ph_range': (0.0, 2.0),
+                'incompatible_with': [
+                    ChemicalReactivityProfile.ReactivityType.STRONG_ALKALI,
+                    ChemicalReactivityProfile.ReactivityType.MODERATE_ALKALI
+                ],
+                'notes': f'Strong acid detected from name pattern: {pattern}'
+            })
+            break
+    
+    # Check for strong alkalis
+    if not result['detected']:
+        for pattern in strong_alkali_patterns:
+            if pattern in name_lower:
+                result.update({
+                    'detected': True,
+                    'reactivity_type': ChemicalReactivityProfile.ReactivityType.STRONG_ALKALI,
+                    'strength_level': ChemicalReactivityProfile.StrengthLevel.STRONG,
+                    'confidence': 0.9,
+                    'matched_patterns': [pattern],
+                    'typical_ph_range': (12.0, 14.0),
+                    'incompatible_with': [
+                        ChemicalReactivityProfile.ReactivityType.STRONG_ACID,
+                        ChemicalReactivityProfile.ReactivityType.MODERATE_ACID
+                    ],
+                    'notes': f'Strong alkali detected from name pattern: {pattern}'
+                })
+                break
+    
+    # Check for moderate acids
+    if not result['detected']:
+        for pattern in moderate_acid_patterns:
+            if pattern in name_lower:
+                result.update({
+                    'detected': True,
+                    'reactivity_type': ChemicalReactivityProfile.ReactivityType.MODERATE_ACID,
+                    'strength_level': ChemicalReactivityProfile.StrengthLevel.MODERATE,
+                    'confidence': 0.7,
+                    'matched_patterns': [pattern],
+                    'typical_ph_range': (2.0, 4.0),
+                    'incompatible_with': [
+                        ChemicalReactivityProfile.ReactivityType.STRONG_ALKALI
+                    ],
+                    'notes': f'Moderate acid detected from name pattern: {pattern}'
+                })
+                break
+    
+    # Check for moderate alkalis
+    if not result['detected']:
+        for pattern in moderate_alkali_patterns:
+            if pattern in name_lower:
+                result.update({
+                    'detected': True,
+                    'reactivity_type': ChemicalReactivityProfile.ReactivityType.MODERATE_ALKALI,
+                    'strength_level': ChemicalReactivityProfile.StrengthLevel.MODERATE,
+                    'confidence': 0.7,
+                    'matched_patterns': [pattern],
+                    'typical_ph_range': (10.0, 12.0),
+                    'incompatible_with': [
+                        ChemicalReactivityProfile.ReactivityType.STRONG_ACID
+                    ],
+                    'notes': f'Moderate alkali detected from name pattern: {pattern}'
+                })
+                break
+    
+    # Check for oxidizers
+    if not result['detected']:
+        for pattern in oxidizer_patterns:
+            if pattern in name_lower:
+                result.update({
+                    'detected': True,
+                    'reactivity_type': ChemicalReactivityProfile.ReactivityType.OXIDIZER,
+                    'strength_level': ChemicalReactivityProfile.StrengthLevel.MODERATE,
+                    'confidence': 0.8,
+                    'matched_patterns': [pattern],
+                    'typical_ph_range': None,  # Oxidizers don't have specific pH
+                    'incompatible_with': [
+                        ChemicalReactivityProfile.ReactivityType.REDUCER
+                    ],
+                    'notes': f'Oxidizing agent detected from name pattern: {pattern}'
+                })
+                break
+    
+    # Additional context from UN number
+    if un_number and result['detected']:
+        result['notes'] += f' (UN{un_number})'
+    
+    return result
+
+
+def create_reactivity_profile_from_detection(dangerous_good: DangerousGood, 
+                                           detection_result: Dict, 
+                                           source: str = 'EXPERT_KNOWLEDGE') -> ChemicalReactivityProfile:
+    """
+    Create a ChemicalReactivityProfile from chemical name detection results.
+    
+    Args:
+        dangerous_good: The DangerousGood instance
+        detection_result: Result from detect_chemical_reactivity_from_name
+        source: Data source for the profile
+        
+    Returns:
+        Created ChemicalReactivityProfile instance
+    """
+    if not detection_result['detected']:
+        raise ValueError("No chemical reactivity detected - cannot create profile")
+    
+    ph_min, ph_max = detection_result['typical_ph_range'] or (None, None)
+    
+    profile = ChemicalReactivityProfile.objects.create(
+        dangerous_good=dangerous_good,
+        reactivity_type=detection_result['reactivity_type'],
+        strength_level=detection_result['strength_level'],
+        typical_ph_min=ph_min,
+        typical_ph_max=ph_max,
+        incompatible_with=detection_result['incompatible_with'],
+        min_segregation_distance=15 if 'STRONG' in detection_result['strength_level'] else 10,
+        data_source=getattr(ChemicalReactivityProfile.DataSource, source, 
+                          ChemicalReactivityProfile.DataSource.EXPERT_KNOWLEDGE),
+        confidence_level=detection_result['confidence'],
+        notes=detection_result['notes'],
+        regulatory_basis='Chemical name pattern matching - Expert knowledge'
+    )
+    
+    return profile
 

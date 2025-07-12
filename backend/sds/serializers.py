@@ -37,6 +37,13 @@ class SafetyDataSheetSerializer(serializers.ModelSerializer):
     is_current = serializers.BooleanField(read_only=True)
     days_until_expiration = serializers.IntegerField(read_only=True)
     
+    # pH-related computed fields
+    has_ph_data = serializers.BooleanField(read_only=True)
+    ph_value = serializers.FloatField(read_only=True)
+    is_corrosive_class_8 = serializers.BooleanField(read_only=True)
+    ph_classification = serializers.CharField(read_only=True)
+    ph_source_display = serializers.CharField(source='get_ph_source_display', read_only=True)
+    
     class Meta:
         model = SafetyDataSheet
         fields = [
@@ -44,12 +51,22 @@ class SafetyDataSheetSerializer(serializers.ModelSerializer):
             'document', 'version', 'revision_date', 'supersedes_version', 'status', 'status_display',
             'expiration_date', 'language', 'language_display', 'country_code', 'regulatory_standard',
             'emergency_contacts', 'flash_point_celsius', 'auto_ignition_temp_celsius',
-            'physical_state', 'color', 'odor', 'hazard_statements', 'precautionary_statements',
+            'physical_state', 'color', 'odor',
+            
+            # pH fields for Class 8 corrosive materials
+            'ph_value_min', 'ph_value_max', 'ph_measurement_conditions', 
+            'ph_extraction_confidence', 'ph_source', 'ph_source_display', 'ph_updated_at',
+            'has_ph_data', 'ph_value', 'is_corrosive_class_8', 'ph_classification',
+            
+            'hazard_statements', 'precautionary_statements',
             'first_aid_measures', 'fire_fighting_measures', 'spill_cleanup_procedures',
             'storage_requirements', 'handling_precautions', 'disposal_methods',
             'created_by', 'created_at', 'updated_at', 'is_expired', 'is_current', 'days_until_expiration'
         ]
-        read_only_fields = ['id', 'created_at', 'updated_at', 'created_by']
+        read_only_fields = [
+            'id', 'created_at', 'updated_at', 'created_by', 
+            'has_ph_data', 'ph_value', 'is_corrosive_class_8', 'ph_classification', 'ph_source_display'
+        ]
 
 class SafetyDataSheetCreateSerializer(serializers.ModelSerializer):
     """Serializer for creating new SDS records"""
@@ -132,3 +149,35 @@ class SDSLookupSerializer(serializers.Serializer):
             return value
         except DangerousGood.DoesNotExist:
             raise serializers.ValidationError(_("Dangerous good not found"))
+
+
+class SDSPhDataSerializer(serializers.ModelSerializer):
+    """
+    Specialized serializer for pH data from SDS documents.
+    Focused on Class 8 corrosive materials pH information.
+    """
+    dangerous_good = DangerousGoodBasicSerializer(read_only=True)
+    has_ph_data = serializers.BooleanField(read_only=True)
+    ph_value = serializers.FloatField(read_only=True)
+    is_corrosive_class_8 = serializers.BooleanField(read_only=True)
+    ph_classification = serializers.CharField(read_only=True)
+    ph_source_display = serializers.CharField(source='get_ph_source_display', read_only=True)
+    
+    class Meta:
+        model = SafetyDataSheet
+        fields = [
+            'id', 'dangerous_good', 'product_name', 'manufacturer', 'version', 
+            'revision_date', 'status',
+            
+            # pH-specific fields
+            'ph_value_min', 'ph_value_max', 'ph_value', 'ph_measurement_conditions',
+            'ph_extraction_confidence', 'ph_source', 'ph_source_display', 'ph_updated_at',
+            'has_ph_data', 'is_corrosive_class_8', 'ph_classification',
+            
+            'created_at', 'updated_at'
+        ]
+        read_only_fields = [
+            'id', 'dangerous_good', 'product_name', 'manufacturer', 'version',
+            'revision_date', 'status', 'has_ph_data', 'ph_value', 'is_corrosive_class_8',
+            'ph_classification', 'ph_source_display', 'created_at', 'updated_at'
+        ]

@@ -77,6 +77,8 @@ urlpatterns = [
         # path('handling-unit-types/', include('handling_unit_types.urls')),
         path('sds/', include('sds.urls')),  # Enabled for Safety Data Sheets
         path('epg/', include('epg.urls')),  # Enabled for Emergency Procedure Guides
+        # Compatibility endpoint redirects for mobile app
+        path('compatibility/', include('dangerous_goods.urls')),  # Mobile app compatibility endpoint
     ])),
 ]
 

@@ -164,6 +164,54 @@ class SafetyDataSheet(models.Model):
     color = models.CharField(_("Color"), max_length=100, blank=True)
     odor = models.CharField(_("Odor"), max_length=100, blank=True)
     
+    # pH properties (specific to Class 8 corrosive materials)
+    ph_value_min = models.FloatField(
+        _("pH Value (Minimum)"),
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(0.0), MaxValueValidator(14.0)],
+        help_text=_("Minimum pH value for Class 8 corrosive materials (0-14 scale)")
+    )
+    ph_value_max = models.FloatField(
+        _("pH Value (Maximum)"),
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(0.0), MaxValueValidator(14.0)],
+        help_text=_("Maximum pH value for Class 8 corrosive materials (0-14 scale)")
+    )
+    ph_measurement_conditions = models.CharField(
+        _("pH Measurement Conditions"),
+        max_length=200,
+        blank=True,
+        help_text=_("Temperature, concentration, and other conditions during pH measurement")
+    )
+    ph_extraction_confidence = models.FloatField(
+        _("pH Extraction Confidence"),
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(0.0), MaxValueValidator(1.0)],
+        help_text=_("AI extraction confidence score (0.0-1.0) for pH data quality")
+    )
+    ph_source = models.CharField(
+        _("pH Data Source"),
+        max_length=50,
+        choices=[
+            ('SDS_EXTRACTED', _('Extracted from SDS Document')),
+            ('MANUAL_ENTRY', _('Manually Entered')),
+            ('CALCULATED', _('Calculated from Chemical Properties')),
+            ('LITERATURE', _('Literature Value')),
+            ('MANUFACTURER', _('Manufacturer Specification')),
+        ],
+        blank=True,
+        help_text=_("Source of the pH information")
+    )
+    ph_updated_at = models.DateTimeField(
+        _("pH Data Last Updated"),
+        null=True,
+        blank=True,
+        help_text=_("When pH information was last updated")
+    )
+    
     # Hazard information (stored as JSON for flexibility)
     hazard_statements = models.JSONField(
         _("Hazard Statements"),
@@ -240,6 +288,8 @@ class SafetyDataSheet(models.Model):
             models.Index(fields=['status', 'expiration_date']),
             models.Index(fields=['language', 'country_code']),
             models.Index(fields=['version', 'revision_date']),
+            models.Index(fields=['ph_value_min', 'ph_value_max']),
+            models.Index(fields=['dangerous_good__hazard_class', 'ph_value_min']),
         ]
         unique_together = [
             ['dangerous_good', 'version', 'language', 'country_code']
@@ -268,6 +318,106 @@ class SafetyDataSheet(models.Model):
             return 365  # Default if no expiration
         delta = self.expiration_date - timezone.now().date()
         return max(0, delta.days)
+    
+    @property
+    def has_ph_data(self) -> bool:
+        """
+        Check if pH information is available from SDS extraction or regulatory knowledge.
+        """
+        # Check SDS-extracted pH data first
+        if self.ph_value_min is not None or self.ph_value_max is not None:
+            return True
+        
+        # Check if we have regulatory knowledge with pH information
+        try:
+            if hasattr(self.dangerous_good, 'reactivity_profile'):
+                profile = self.dangerous_good.reactivity_profile
+                return profile.get_typical_ph() is not None
+        except AttributeError:
+            pass
+        
+        return False
+    
+    @property
+    def ph_value(self) -> float:
+        """
+        Get representative pH value.
+        Uses SDS-extracted pH data first, then falls back to typical regulatory values.
+        """
+        # First try SDS-extracted pH data (most accurate)
+        if self.ph_value_min is not None and self.ph_value_max is not None:
+            return (self.ph_value_min + self.ph_value_max) / 2
+        elif self.ph_value_min is not None:
+            return self.ph_value_min
+        elif self.ph_value_max is not None:
+            return self.ph_value_max
+        
+        # Fall back to typical pH from regulatory knowledge
+        try:
+            if hasattr(self.dangerous_good, 'reactivity_profile'):
+                profile = self.dangerous_good.reactivity_profile
+                typical_ph = profile.get_typical_ph()
+                if typical_ph is not None:
+                    return typical_ph
+        except AttributeError:
+            pass
+        
+        return None
+    
+    @property
+    def is_corrosive_class_8(self) -> bool:
+        """Check if this SDS is for a Class 8 (corrosive) dangerous good"""
+        return self.dangerous_good.hazard_class == '8'
+    
+    @property
+    def ph_classification(self) -> str:
+        """
+        Get pH-based classification for corrosive materials.
+        Uses regulatory knowledge from ChemicalReactivityProfile first,
+        then falls back to SDS-extracted pH data.
+        """
+        # First check if we have regulatory knowledge from ChemicalReactivityProfile
+        try:
+            if hasattr(self.dangerous_good, 'reactivity_profile'):
+                profile = self.dangerous_good.reactivity_profile
+                
+                # Map reactivity types to pH classifications
+                reactivity_to_ph_class = {
+                    profile.ReactivityType.STRONG_ACID: 'strongly_acidic',
+                    profile.ReactivityType.MODERATE_ACID: 'acidic',
+                    profile.ReactivityType.WEAK_ACID: 'acidic',
+                    profile.ReactivityType.STRONG_ALKALI: 'strongly_alkaline',
+                    profile.ReactivityType.MODERATE_ALKALI: 'alkaline',
+                    profile.ReactivityType.WEAK_ALKALI: 'alkaline',
+                    profile.ReactivityType.NEUTRAL: 'neutral',
+                    profile.ReactivityType.OXIDIZER: 'oxidizing',
+                    profile.ReactivityType.REDUCER: 'reducing'
+                }
+                
+                if profile.reactivity_type in reactivity_to_ph_class:
+                    return reactivity_to_ph_class[profile.reactivity_type]
+        except AttributeError:
+            # No reactivity profile exists, continue to pH-based classification
+            pass
+        
+        # Fall back to SDS-extracted pH data
+        if not self.has_ph_data:
+            return 'unknown'
+        
+        ph = self.ph_value
+        if ph is None:
+            return 'unknown'
+        
+        if ph < 2:
+            return 'strongly_acidic'
+        elif ph < 7:
+            return 'acidic'
+        elif ph <= 7.5:
+            return 'neutral'
+        elif ph <= 12.5:
+            return 'alkaline'
+        else:
+            return 'strongly_alkaline'
     
     def get_emergency_phone(self, country_code: str = None) -> str:
         """Get emergency phone number for specified country"""

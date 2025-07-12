@@ -1,0 +1,31 @@
+{
+  "mcpServers": {
+    "filesystem": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-filesystem",
+        "/mnt/c/Users/Hayden/Desktop/Safeshipper Home",
+        "/mnt/c/Users/Hayden/Desktop/Safeshipper Home/frontend",
+        "/mnt/c/Users/Hayden/Desktop/Safeshipper Home/backend", 
+        "/mnt/c/Users/Hayden/Desktop/Safeshipper Home/mobile",
+        "/mnt/c/Users/Hayden/Desktop/Safeshipper Home/mcp-tools"
+      ]
+    },
+    "git": {
+      "command": "npx",
+      "args": [
+        "-y", 
+        "@modelcontextprotocol/server-git",
+        "/mnt/c/Users/Hayden/Desktop/Safeshipper Home"
+      ]
+    },
+    "memory": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-memory"
+      ]
+    }
+  }
+}
