@@ -365,23 +365,40 @@ export default function ManifestUploadPage() {
       if (response.success && response.results) {
         // Transform API response to keyword results format
         const transformedResults = response.results.dangerousGoods.map(
-          (item, index) => ({
-            keyword: item.properShippingName.split(" ")[0].toLowerCase(),
-            page: Math.floor(index / 3) + 1, // Simulate distribution across pages
-            context: `Detected ${item.properShippingName} - ${item.quantity || "Unknown quantity"}`,
-            dangerousGoods: [
-              {
-                id: item.id,
-                un: item.un,
-                properShippingName: item.properShippingName,
-                class: item.class,
-                materialNumber: item.un,
-                materialName: item.properShippingName,
-                details: `Confidence: ${Math.round(item.confidence * 100)}% | Source: ${item.source} | Qty: ${item.quantity || "N/A"}`,
-                confidence: item.confidence,
+          (item, index) => {
+            const keyword = item.properShippingName.split(" ")[0].toLowerCase();
+            const resultId = `api-result-${index}`;
+            const page = Math.floor(index / 3) + 1; // Simulate distribution across pages
+            
+            return {
+              id: resultId,
+              keyword,
+              page,
+              context: `Detected ${item.properShippingName} - ${item.quantity || "Unknown quantity"}`,
+              highlightArea: {
+                page,
+                x: 85 + (index % 3) * 5, // Slightly offset each result
+                y: 470 + (index * 25), // Stack results vertically
+                width: keyword.length * 8 + 40, // Approximate width based on keyword length
+                height: 15,
+                color: item.confidence > 0.8 ? 'green' as const : 'yellow' as const,
+                keyword,
+                id: resultId
               },
-            ],
-          }),
+              dangerousGoods: [
+                {
+                  id: item.id,
+                  un: item.un,
+                  properShippingName: item.properShippingName,
+                  class: item.class,
+                  materialNumber: item.un,
+                  materialName: item.properShippingName,
+                  details: `Confidence: ${Math.round(item.confidence * 100)}% | Source: ${item.source} | Qty: ${item.quantity || "N/A"}`,
+                  confidence: item.confidence,
+                },
+              ],
+            };
+          }
         );
 
         setKeywordResults(
