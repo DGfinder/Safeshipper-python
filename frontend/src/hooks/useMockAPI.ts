@@ -28,6 +28,27 @@ const mockFleetData = {
         estimated_delivery_date: new Date(
           Date.now() + 24 * 60 * 60 * 1000,
         ).toISOString(),
+        has_dangerous_goods: true,
+        dangerous_goods: [
+          {
+            un_number: "1203",
+            proper_shipping_name: "GASOLINE",
+            hazard_class: "3",
+            packing_group: "II",
+            quantity: "2000L",
+            is_marine_pollutant: false,
+          },
+          {
+            un_number: "1791", 
+            proper_shipping_name: "HYPOCHLORITE SOLUTION",
+            hazard_class: "8",
+            packing_group: "III",
+            quantity: "500L",
+            is_marine_pollutant: false,
+          },
+        ],
+        emergency_contact: "+61-1800-555-0123",
+        special_instructions: "Handle with extreme care - flammable and corrosive materials. Keep away from heat sources.",
       },
       company: {
         id: "company-1",
@@ -52,8 +73,104 @@ const mockFleetData = {
         name: "SafeShipper Logistics",
       },
     },
+    {
+      id: "vehicle-3",
+      registration_number: "TRK-003",
+      vehicle_type: "Hazmat Tanker",
+      status: "IN_TRANSIT",
+      location: { lat: -34.9285, lng: 138.6007 }, // Adelaide
+      location_is_fresh: true,
+      assigned_driver: {
+        id: "driver-3",
+        name: "Mike Chen",
+        email: "mike.chen@safeshipper.com",
+      },
+      active_shipment: {
+        id: "hazmat-shipment-1",
+        tracking_number: "SS-HAZ-2024-001",
+        status: "IN_TRANSIT",
+        origin_location: "Adelaide, SA",
+        destination_location: "Perth, WA",
+        customer_name: "ChemTech Industries",
+        estimated_delivery_date: new Date(
+          Date.now() + 48 * 60 * 60 * 1000,
+        ).toISOString(),
+        has_dangerous_goods: true,
+        dangerous_goods: [
+          {
+            un_number: "2794",
+            proper_shipping_name: "BATTERIES, WET, FILLED WITH ACID",
+            hazard_class: "8",
+            packing_group: "III",
+            quantity: "50 units",
+            is_marine_pollutant: false,
+          },
+        ],
+        emergency_contact: "+61-1800-HAZ-CHEM",
+        special_instructions: "Corrosive material - avoid tipping or rough handling. Keep upright at all times.",
+      },
+      company: {
+        id: "company-2",
+        name: "HazChem Logistics",
+      },
+    },
+    {
+      id: "vehicle-4",
+      registration_number: "TRK-004",
+      vehicle_type: "Light Truck",
+      status: "OUT_FOR_DELIVERY",
+      location: { lat: -27.4698, lng: 153.0251 }, // Brisbane
+      location_is_fresh: false, // Offline/stale location
+      assigned_driver: {
+        id: "driver-4",
+        name: "Emma Wilson",
+        email: "emma.wilson@safeshipper.com",
+      },
+      active_shipment: {
+        id: "medical-shipment-1",
+        tracking_number: "SS-MED-2024-007",
+        status: "OUT_FOR_DELIVERY",
+        origin_location: "Brisbane, QLD",
+        destination_location: "Gold Coast, QLD",
+        customer_name: "Metro Hospital",
+        estimated_delivery_date: new Date(
+          Date.now() + 6 * 60 * 60 * 1000,
+        ).toISOString(),
+        has_dangerous_goods: true,
+        dangerous_goods: [
+          {
+            un_number: "3373",
+            proper_shipping_name: "BIOLOGICAL SUBSTANCE, CATEGORY B",
+            hazard_class: "6.2",
+            packing_group: "",
+            quantity: "12 packages",
+            is_marine_pollutant: false,
+          },
+        ],
+        emergency_contact: "+61-7-3000-1234",
+        special_instructions: "Medical specimens - maintain cold chain. Priority delivery required.",
+      },
+      company: {
+        id: "company-3",
+        name: "MedTrans Express",
+      },
+    },
+    {
+      id: "vehicle-5",
+      registration_number: "TRK-005",
+      vehicle_type: "Box Truck",
+      status: "AVAILABLE",
+      location: { lat: -12.4634, lng: 130.8456 }, // Darwin
+      location_is_fresh: false, // Parked/offline
+      assigned_driver: null,
+      active_shipment: null,
+      company: {
+        id: "company-1",
+        name: "SafeShipper Logistics",
+      },
+    },
   ],
-  total_vehicles: 2,
+  total_vehicles: 5,
   timestamp: new Date().toISOString(),
 };
 

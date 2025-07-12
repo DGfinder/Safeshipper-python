@@ -16,8 +16,17 @@ import {
   AlertCircle,
   Wifi,
   WifiOff,
+  ExternalLink,
+  Phone,
+  AlertTriangle,
+  Filter,
+  X,
 } from "lucide-react";
 import { type FleetVehicle } from "@/hooks/useFleetTracking";
+import { HazardSymbol } from "@/components/ui/hazard-symbol";
+import { Button } from "@/components/ui/button";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
 
 // Import Leaflet CSS
 import "leaflet/dist/leaflet.css";
@@ -26,12 +35,22 @@ interface FleetMapProps {
   vehicles: FleetVehicle[];
   onVehicleSelect?: (vehicle: FleetVehicle) => void;
   className?: string;
+  showFilters?: boolean;
+}
+
+interface FilterState {
+  showOffline: boolean;
+  showDangerousGoods: boolean;
+  vehicleStatus: string[];
+  hazardClasses: string[];
 }
 
 // Create custom vehicle markers
 const createVehicleIcon = (vehicle: FleetVehicle): DivIcon => {
   const isOnline = vehicle.location_is_fresh;
   const hasActiveShipment = !!vehicle.active_shipment;
+  const hasDangerousGoods = vehicle.active_shipment?.has_dangerous_goods || false;
+  const dangerousGoods = vehicle.active_shipment?.dangerous_goods || [];
 
   let color = "gray";
   if (hasActiveShipment && isOnline) {
@@ -39,6 +58,9 @@ const createVehicleIcon = (vehicle: FleetVehicle): DivIcon => {
   } else if (isOnline) {
     color = "orange";
   }
+
+  // Get primary hazard class for symbol
+  const primaryHazardClass = dangerousGoods.length > 0 ? dangerousGoods[0].hazard_class : null;
 
   return new DivIcon({
     html: `
@@ -49,11 +71,21 @@ const createVehicleIcon = (vehicle: FleetVehicle): DivIcon => {
           </svg>
         </div>
         ${!isOnline ? '<div class="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full border border-white"></div>' : ""}
+        ${hasDangerousGoods ? `
+          <div class="absolute -bottom-1 -right-1 w-4 h-4 bg-orange-500 border border-white rounded-sm flex items-center justify-center">
+            <span class="text-white text-xs font-bold">${primaryHazardClass || "DG"}</span>
+          </div>
+        ` : ""}
+        ${dangerousGoods.length > 1 ? `
+          <div class="absolute -top-1 -left-1 w-3 h-3 bg-yellow-500 border border-white rounded-full flex items-center justify-center">
+            <span class="text-black text-xs font-bold">${dangerousGoods.length}</span>
+          </div>
+        ` : ""}
       </div>
     `,
     className: "vehicle-marker",
-    iconSize: [32, 32],
-    iconAnchor: [16, 16],
+    iconSize: [40, 40],
+    iconAnchor: [20, 20],
   });
 };
 
@@ -78,16 +110,61 @@ export function FleetMap({
   vehicles,
   onVehicleSelect,
   className,
+  showFilters = true,
 }: FleetMapProps) {
-  // Filter vehicles that have location data
-  const vehiclesWithLocation = useMemo(
-    () =>
-      vehicles.filter(
-        (vehicle) =>
-          vehicle.location && vehicle.location.lat && vehicle.location.lng,
-      ),
-    [vehicles],
-  );
+  const router = useRouter();
+  const [filters, setFilters] = useState<FilterState>({
+    showOffline: true,
+    showDangerousGoods: true,
+    vehicleStatus: [],
+    hazardClasses: [],
+  });
+  const [showFilterPanel, setShowFilterPanel] = useState(false);
+
+  // Navigation functions
+  const navigateToShipment = (shipmentId: string) => {
+    router.push(`/shipments/${shipmentId}`);
+  };
+
+  const callEmergencyContact = (contact: string) => {
+    window.open(`tel:${contact}`, '_self');
+  };
+
+  // Filter vehicles that have location data and match current filters
+  const vehiclesWithLocation = useMemo(() => {
+    return vehicles.filter((vehicle) => {
+      // Must have location data
+      if (!vehicle.location || !vehicle.location.lat || !vehicle.location.lng) {
+        return false;
+      }
+
+      // Filter by online status
+      if (!filters.showOffline && !vehicle.location_is_fresh) {
+        return false;
+      }
+
+      // Filter by dangerous goods
+      if (!filters.showDangerousGoods && vehicle.active_shipment?.has_dangerous_goods) {
+        return false;
+      }
+
+      // Filter by vehicle status
+      if (filters.vehicleStatus.length > 0 && !filters.vehicleStatus.includes(vehicle.status)) {
+        return false;
+      }
+
+      // Filter by hazard classes
+      if (filters.hazardClasses.length > 0) {
+        const vehicleHazardClasses = vehicle.active_shipment?.dangerous_goods?.map(dg => dg.hazard_class) || [];
+        const hasMatchingHazardClass = filters.hazardClasses.some(hc => vehicleHazardClasses.includes(hc));
+        if (!hasMatchingHazardClass) {
+          return false;
+        }
+      }
+
+      return true;
+    });
+  }, [vehicles, filters]);
 
   // Calculate map center based on vehicle locations
   const mapCenter = useMemo(() => {
@@ -196,15 +273,72 @@ export function FleetMap({
             Live Fleet Map
           </span>
           <div className="flex items-center gap-4 text-sm text-gray-600">
-            <span>{vehiclesWithLocation.length} vehicles on map</span>
+            <span>{vehiclesWithLocation.length} vehicles visible</span>
+            {showFilters && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowFilterPanel(!showFilterPanel)}
+                className="flex items-center gap-2"
+              >
+                <Filter className="h-4 w-4" />
+                Filters
+              </Button>
+            )}
             <div className="flex items-center gap-2">
               <Wifi className="h-4 w-4 text-green-600" />
               <span className="text-green-600">Online</span>
               <WifiOff className="h-4 w-4 text-gray-400" />
               <span className="text-gray-500">Offline</span>
+              <AlertTriangle className="h-4 w-4 text-orange-500" />
+              <span className="text-orange-600">DG</span>
             </div>
           </div>
         </CardTitle>
+        
+        {/* Filter Panel */}
+        {showFilterPanel && showFilters && (
+          <div className="mt-4 p-4 bg-gray-50 rounded-lg border">
+            <div className="flex items-center justify-between mb-3">
+              <h4 className="font-medium">Map Filters</h4>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowFilterPanel(false)}
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-4">
+              {/* Online/Offline Filter */}
+              <div>
+                <label className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={filters.showOffline}
+                    onChange={(e) => setFilters(prev => ({ ...prev, showOffline: e.target.checked }))}
+                    className="rounded"
+                  />
+                  <span className="text-sm">Show offline vehicles</span>
+                </label>
+              </div>
+              
+              {/* Dangerous Goods Filter */}
+              <div>
+                <label className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={filters.showDangerousGoods}
+                    onChange={(e) => setFilters(prev => ({ ...prev, showDangerousGoods: e.target.checked }))}
+                    className="rounded"
+                  />
+                  <span className="text-sm">Show dangerous goods</span>
+                </label>
+              </div>
+            </div>
+          </div>
+        )}
       </CardHeader>
       <CardContent className="p-0">
         <div className="h-96 w-full relative">
@@ -229,7 +363,7 @@ export function FleetMap({
                 }}
               >
                 <Popup className="vehicle-popup">
-                  <div className="min-w-64 space-y-3">
+                  <div className="min-w-72 space-y-3">
                     {/* Vehicle Header */}
                     <div className="flex items-center justify-between">
                       <h3 className="font-semibold text-lg">
@@ -262,10 +396,19 @@ export function FleetMap({
 
                     {/* Active Shipment */}
                     {vehicle.active_shipment && (
-                      <div className="border-t pt-2 space-y-1">
-                        <div className="flex items-center gap-2 text-sm">
-                          <Package className="h-4 w-4 text-blue-500" />
-                          <span className="font-medium">Active Shipment</span>
+                      <div className="border-t pt-2 space-y-2">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2 text-sm">
+                            <Package className="h-4 w-4 text-blue-500" />
+                            <span className="font-medium">Active Shipment</span>
+                          </div>
+                          <button 
+                            onClick={() => navigateToShipment(vehicle.active_shipment!.id)}
+                            className="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800"
+                          >
+                            <ExternalLink className="h-3 w-3" />
+                            View Details
+                          </button>
                         </div>
                         <div className="text-sm text-gray-600 space-y-1">
                           <p>
@@ -292,7 +435,52 @@ export function FleetMap({
                               </span>
                             </div>
                           )}
+                          
+                          {/* Special Instructions */}
+                          {vehicle.active_shipment.special_instructions && (
+                            <div className="mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded text-xs">
+                              <span className="font-medium text-yellow-800">Special Instructions:</span>
+                              <p className="text-yellow-700 mt-1">{vehicle.active_shipment.special_instructions}</p>
+                            </div>
+                          )}
                         </div>
+                      </div>
+                    )}
+
+                    {/* Dangerous Goods Section */}
+                    {vehicle.active_shipment?.dangerous_goods && vehicle.active_shipment.dangerous_goods.length > 0 && (
+                      <div className="border-t pt-2 space-y-2">
+                        <div className="flex items-center gap-2 text-sm">
+                          <AlertTriangle className="h-4 w-4 text-orange-500" />
+                          <span className="font-medium text-orange-700">Dangerous Goods on Board</span>
+                        </div>
+                        <div className="space-y-1">
+                          {vehicle.active_shipment.dangerous_goods.map((dg, index) => (
+                            <div key={index} className="flex items-center gap-2 p-2 bg-orange-50 border border-orange-200 rounded">
+                              <HazardSymbol hazardClass={dg.hazard_class} size="sm" />
+                              <div className="flex-1 text-xs">
+                                <p className="font-medium">UN{dg.un_number} - Class {dg.hazard_class}</p>
+                                <p className="text-gray-600 truncate">{dg.proper_shipping_name}</p>
+                                {dg.quantity && (
+                                  <p className="text-gray-500">Qty: {dg.quantity}</p>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                        
+                        {/* Emergency Contact */}
+                        {vehicle.active_shipment.emergency_contact && (
+                          <div className="mt-2">
+                            <button
+                              onClick={() => callEmergencyContact(vehicle.active_shipment!.emergency_contact!)}
+                              className="flex items-center gap-2 text-xs bg-red-100 text-red-700 hover:bg-red-200 px-2 py-1 rounded border border-red-300"
+                            >
+                              <Phone className="h-3 w-3" />
+                              Emergency Contact: {vehicle.active_shipment.emergency_contact}
+                            </button>
+                          </div>
+                        )}
                       </div>
                     )}
 

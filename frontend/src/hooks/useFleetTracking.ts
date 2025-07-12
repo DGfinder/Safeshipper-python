@@ -8,6 +8,15 @@ export interface VehicleLocation {
   lng: number;
 }
 
+export interface DangerousGoodsInfo {
+  un_number: string;
+  proper_shipping_name: string;
+  hazard_class: string;
+  packing_group?: string;
+  quantity?: string;
+  is_marine_pollutant?: boolean;
+}
+
 export interface ActiveShipment {
   id: string;
   tracking_number: string;
@@ -16,6 +25,10 @@ export interface ActiveShipment {
   destination_location: string;
   customer_name: string;
   estimated_delivery_date?: string;
+  dangerous_goods?: DangerousGoodsInfo[];
+  has_dangerous_goods?: boolean;
+  emergency_contact?: string;
+  special_instructions?: string;
 }
 
 export interface AssignedDriver {

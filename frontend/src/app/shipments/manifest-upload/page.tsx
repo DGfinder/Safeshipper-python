@@ -22,8 +22,11 @@ import {
 } from "lucide-react";
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
 import { HazardSymbol, HazardClassBadge } from "@/components/ui/hazard-symbol";
+import { CollapsibleNotification } from "@/components/ui/collapsible-notification";
 import Link from "next/link";
 import dynamic from "next/dynamic";
+import { useRef } from "react";
+import type { PDFViewerRef, HighlightArea } from "@/components/pdf/PDFViewer";
 
 // Dynamically import PDF viewer to avoid SSR issues
 const PDFViewer = dynamic(() => import("@/components/pdf/PDFViewer"), {
@@ -141,9 +144,20 @@ const mockManifestTableData = [
 // Mock search results organized by keywords found in manifest
 const mockKeywordResults = [
   {
+    id: "paint-1",
     keyword: "paint",
     page: 1,
     context: "Line 15: Industrial paint, lacquer solutions - 200L containers",
+    highlightArea: {
+      page: 1,
+      x: 85,
+      y: 470,
+      width: 120,
+      height: 15,
+      color: 'green' as const,
+      keyword: "paint",
+      id: "paint-1"
+    },
     dangerousGoods: [
       {
         id: "1",
@@ -159,9 +173,20 @@ const mockKeywordResults = [
     ],
   },
   {
+    id: "resin-1",
     keyword: "resin solution",
-    page: 2,
+    page: 1,
     context: "Line 28: Resin solution batch RS-2024-001, flammable grade",
+    highlightArea: {
+      page: 1,
+      x: 85,
+      y: 495,
+      width: 150,
+      height: 15,
+      color: 'green' as const,
+      keyword: "resin solution",
+      id: "resin-1"
+    },
     dangerousGoods: [
       {
         id: "2",
@@ -176,10 +201,21 @@ const mockKeywordResults = [
     ],
   },
   {
+    id: "adhesives-1",
     keyword: "adhesives",
-    page: 3,
+    page: 1,
     context:
       "Line 45: Adhesives containing flammable liquid - Industrial grade",
+    highlightArea: {
+      page: 1,
+      x: 85,
+      y: 520,
+      width: 110,
+      height: 15,
+      color: 'yellow' as const,
+      keyword: "adhesives",
+      id: "adhesives-1"
+    },
     dangerousGoods: [
       {
         id: "3",
@@ -207,6 +243,7 @@ const getDGClassColor = (dgClass: string) => {
 };
 
 export default function ManifestUploadPage() {
+  const pdfViewerRef = useRef<PDFViewerRef>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
@@ -228,6 +265,13 @@ export default function ManifestUploadPage() {
   const [analysisRecommendations, setAnalysisRecommendations] = useState<
     string[]
   >([]);
+  const [notifications, setNotifications] = useState<Array<{
+    id: string;
+    type: "warning" | "recommendation" | "info" | "error";
+    title: string;
+    message: string;
+    dismissible?: boolean;
+  }>>([]);
 
   // Handle PDF URL creation and cleanup
   useEffect(() => {
@@ -371,12 +415,56 @@ export default function ManifestUploadPage() {
         if (response.results.recommendations.length > 0) {
           setAnalysisRecommendations(response.results.recommendations);
         }
+
+        // Create notifications
+        const newNotifications = [
+          ...response.results.warnings.map((warning, index) => ({
+            id: `warning-${index}`,
+            type: "warning" as const,
+            title: "Dangerous Goods Detected",
+            message: warning,
+            dismissible: true,
+          })),
+          ...response.results.recommendations.map((rec, index) => ({
+            id: `rec-${index}`,
+            type: "recommendation" as const,
+            title: "Recommendation",
+            message: rec,
+            dismissible: true,
+          })),
+        ];
+        setNotifications(newNotifications);
       } else {
         setProcessingError(response.error || "Manifest analysis failed");
         // Fallback to mock results for demonstration
         setKeywordResults(mockKeywordResults);
         setManifestTableData(mockManifestTableData);
         setCurrentKeywordIndex(0);
+        
+        // Set default notifications for demo
+        setNotifications([
+          {
+            id: "warning-1",
+            type: "warning",
+            title: "Low Confidence Detection",
+            message: "Some dangerous goods were detected with low confidence. Manual verification recommended.",
+            dismissible: true,
+          },
+          {
+            id: "warning-2", 
+            type: "warning",
+            title: "Flammable Liquids Detected",
+            message: "Flammable liquids detected. Ensure proper ventilation and fire safety measures.",
+            dismissible: true,
+          },
+          {
+            id: "rec-1",
+            type: "recommendation",
+            title: "Review Detected Items",
+            message: "Review all detected dangerous goods for accuracy before finalizing manifest.",
+            dismissible: true,
+          },
+        ]);
       }
     } catch (error) {
       console.error("Manifest processing error:", error);
@@ -387,6 +475,31 @@ export default function ManifestUploadPage() {
       setKeywordResults(mockKeywordResults);
       setManifestTableData(mockManifestTableData);
       setCurrentKeywordIndex(0);
+      
+      // Set default notifications for demo
+      setNotifications([
+        {
+          id: "warning-1",
+          type: "warning", 
+          title: "Low Confidence Detection",
+          message: "Some dangerous goods were detected with low confidence. Manual verification recommended.",
+          dismissible: true,
+        },
+        {
+          id: "warning-2",
+          type: "warning",
+          title: "Flammable Liquids Detected", 
+          message: "Flammable liquids detected. Ensure proper ventilation and fire safety measures.",
+          dismissible: true,
+        },
+        {
+          id: "rec-1",
+          type: "recommendation",
+          title: "Review Detected Items",
+          message: "Review all detected dangerous goods for accuracy before finalizing manifest.",
+          dismissible: true,
+        },
+      ]);
     } finally {
       setIsProcessing(false);
     }
@@ -400,13 +513,24 @@ export default function ManifestUploadPage() {
   const navigateToKeyword = (direction: "next" | "previous") => {
     if (!keywordResults) return;
 
+    let newIndex = currentKeywordIndex;
     if (
       direction === "next" &&
       currentKeywordIndex < keywordResults.length - 1
     ) {
-      setCurrentKeywordIndex(currentKeywordIndex + 1);
+      newIndex = currentKeywordIndex + 1;
     } else if (direction === "previous" && currentKeywordIndex > 0) {
-      setCurrentKeywordIndex(currentKeywordIndex - 1);
+      newIndex = currentKeywordIndex - 1;
+    }
+
+    if (newIndex !== currentKeywordIndex) {
+      setCurrentKeywordIndex(newIndex);
+      const currentResult = keywordResults[newIndex];
+      
+      // Navigate PDF to the highlight
+      if (currentResult.highlightArea && pdfViewerRef.current) {
+        pdfViewerRef.current.navigateToHighlight(currentResult.highlightArea.id);
+      }
     }
   };
 
@@ -415,6 +539,15 @@ export default function ManifestUploadPage() {
     : null;
 
   const hasKeywordResults = keywordResults && Array.isArray(keywordResults) && keywordResults.length > 0;
+
+  // Notification management
+  const dismissNotification = (id: string) => {
+    setNotifications(prev => prev.filter(n => n.id !== id));
+  };
+
+  const dismissAllNotifications = () => {
+    setNotifications([]);
+  };
 
   const handleURLUpload = async (url: string) => {
     try {
@@ -729,36 +862,21 @@ export default function ManifestUploadPage() {
           </>
         ) : viewMode === "search" ? (
           <>
-            {/* Analysis Warnings and View Toggle */}
-            <div className="flex justify-between items-start mb-4">
-              <div className="flex-1 max-w-2xl">
-                {(analysisWarnings.length > 0 ||
-                  analysisRecommendations.length > 0) && (
-                  <div className="space-y-2">
-                    {analysisWarnings.slice(0, 2).map((warning, index) => (
-                      <div
-                        key={`warning-${index}`}
-                        className="p-2 bg-amber-50 border border-amber-200 rounded text-sm text-amber-800"
-                      >
-                        <AlertTriangle className="h-4 w-4 inline mr-2" />
-                        {warning}
-                      </div>
-                    ))}
-                    {analysisRecommendations.slice(0, 1).map((recommendation, index) => (
-                      <div
-                        key={`rec-${index}`}
-                        className="p-2 bg-blue-50 border border-blue-200 rounded text-sm text-blue-800"
-                      >
-                        <CheckCircle className="h-4 w-4 inline mr-2" />
-                        {recommendation}
-                      </div>
-                    ))}
-                  </div>
+            {/* Collapsible Notifications and View Toggle */}
+            <div className="flex justify-between items-start gap-4 mb-4">
+              <div className="flex-1">
+                {notifications.length > 0 && (
+                  <CollapsibleNotification
+                    notifications={notifications}
+                    onDismiss={dismissNotification}
+                    onDismissAll={dismissAllNotifications}
+                    defaultExpanded={false}
+                  />
                 )}
               </div>
               <Button
                 onClick={() => setViewMode("table")}
-                className="bg-blue-600 hover:bg-blue-700 ml-4"
+                className="bg-blue-600 hover:bg-blue-700 flex-shrink-0"
               >
                 View as Table
               </Button>
@@ -779,12 +897,21 @@ export default function ManifestUploadPage() {
                   </div>
                 </CardHeader>
                 <CardContent className="p-0 h-[calc(100%-80px)]">
-                  {pdfUrl && (
+                  {pdfUrl && keywordResults && (
                     <PDFViewer
+                      ref={pdfViewerRef}
                       file={pdfUrl}
                       onPageChange={(page, total) => {
                         setCurrentPage(page);
                         setTotalPages(total);
+                      }}
+                      highlightAreas={keywordResults.map(result => result.highlightArea)}
+                      currentHighlight={currentKeyword?.highlightArea?.id}
+                      onHighlightClick={(highlight) => {
+                        const index = keywordResults.findIndex(r => r.highlightArea.id === highlight.id);
+                        if (index !== -1) {
+                          setCurrentKeywordIndex(index);
+                        }
                       }}
                     />
                   )}
@@ -819,7 +946,7 @@ export default function ManifestUploadPage() {
                   </div>
                 </CardHeader>
                 <CardContent className="overflow-y-auto h-[calc(100%-100px)] p-0">
-                  {keywordResults && Array.isArray(keywordResults) && keywordResults.length > 0 ? (
+                  {currentKeyword && currentKeyword.dangerousGoods.length > 0 ? (
                     <div className="overflow-x-auto">
                       <table className="w-full">
                         <thead className="bg-gray-50 border-b">
@@ -839,68 +966,76 @@ export default function ManifestUploadPage() {
                           </tr>
                         </thead>
                         <tbody>
-                          {keywordResults.flatMap((keyword, keywordIndex) =>
-                            keyword.dangerousGoods.map((item, itemIndex) => {
-                              const globalIndex = keywordResults
-                                .slice(0, keywordIndex)
-                                .reduce((acc, kw) => acc + kw.dangerousGoods.length, 0) + itemIndex + 1;
-                              
-                              return (
-                                <tr
-                                  key={`${keywordIndex}-${itemIndex}`}
-                                  className="border-b hover:bg-gray-50"
-                                >
-                                  <td className="py-3 px-4 text-sm font-medium">
-                                    {globalIndex}
-                                  </td>
-                                  <td className="py-3 px-4">
-                                    <Badge variant="outline" className="font-semibold">
-                                      {item.un}
-                                    </Badge>
-                                  </td>
-                                  <td className="py-3 px-4">
-                                    <div>
-                                      <p className="text-sm font-medium text-gray-900">
-                                        {item.properShippingName}
-                                      </p>
-                                      <div className="flex items-center gap-4 mt-1">
-                                        <span className="text-xs text-gray-500">
-                                          Material number: {item.materialNumber}
-                                        </span>
-                                        <span className="text-xs text-gray-500">
-                                          Material name: {item.materialName}
-                                        </span>
-                                      </div>
-                                      <div className="flex items-center gap-2 mt-1">
-                                        <Button
-                                          variant="outline"
-                                          size="sm"
-                                          className="text-xs h-6 px-2"
-                                        >
-                                          View SDS
-                                        </Button>
-                                        <Button
-                                          size="sm"
-                                          className="bg-blue-600 hover:bg-blue-700 text-xs h-6 px-2"
-                                          onClick={() => addToManifest(item)}
-                                        >
-                                          Add to manifest
-                                        </Button>
-                                      </div>
-                                    </div>
-                                  </td>
-                                  <td className="py-3 px-4">
-                                    <div className="flex items-center gap-2">
-                                      <HazardSymbol hazardClass={item.class} size="sm" />
-                                      <HazardClassBadge hazardClass={item.class} />
-                                    </div>
-                                  </td>
-                                </tr>
-                              );
-                            })
-                          )}
+                          {currentKeyword.dangerousGoods.map((item, itemIndex) => (
+                            <tr
+                              key={`current-${itemIndex}`}
+                              className="border-b hover:bg-gray-50"
+                            >
+                              <td className="py-3 px-4 text-sm font-medium">
+                                {itemIndex + 1}
+                              </td>
+                              <td className="py-3 px-4">
+                                <Badge variant="outline" className="font-semibold">
+                                  {item.un}
+                                </Badge>
+                              </td>
+                              <td className="py-3 px-4">
+                                <div>
+                                  <p className="text-sm font-medium text-gray-900">
+                                    {item.properShippingName}
+                                  </p>
+                                  <div className="flex items-center gap-4 mt-1">
+                                    <span className="text-xs text-gray-500">
+                                      Material number: {item.materialNumber}
+                                    </span>
+                                    <span className="text-xs text-gray-500">
+                                      Material name: {item.materialName}
+                                    </span>
+                                  </div>
+                                  <p className="text-xs text-gray-500 mt-1">
+                                    {item.details}
+                                  </p>
+                                  <div className="flex items-center gap-2 mt-2">
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      className="text-xs h-6 px-2"
+                                    >
+                                      View SDS
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      className="bg-blue-600 hover:bg-blue-700 text-xs h-6 px-2"
+                                      onClick={() => addToManifest(item)}
+                                    >
+                                      Add to manifest
+                                    </Button>
+                                  </div>
+                                </div>
+                              </td>
+                              <td className="py-3 px-4">
+                                <div className="flex items-center gap-2">
+                                  <HazardSymbol hazardClass={item.class} size="sm" />
+                                  <HazardClassBadge hazardClass={item.class} />
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
                         </tbody>
                       </table>
+                      
+                      {/* Context Information */}
+                      <div className="p-4 bg-gray-50 border-t">
+                        <h4 className="text-sm font-medium text-gray-900 mb-2">
+                          Context: "{currentKeyword.keyword}"
+                        </h4>
+                        <p className="text-xs text-gray-600">
+                          {currentKeyword.context}
+                        </p>
+                        <p className="text-xs text-gray-500 mt-1">
+                          Page {currentKeyword.page} of document
+                        </p>
+                      </div>
                     </div>
                   ) : (
                     <div className="flex items-center justify-center h-full">

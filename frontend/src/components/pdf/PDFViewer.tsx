@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useImperativeHandle, forwardRef } from "react";
 import { Document, Page, pdfjs } from "react-pdf";
 import "react-pdf/dist/Page/AnnotationLayer.css";
 import "react-pdf/dist/Page/TextLayer.css";
@@ -27,23 +27,38 @@ if (typeof window !== 'undefined') {
   };
 }
 
+interface HighlightArea {
+  page: number;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  color?: 'green' | 'yellow' | 'orange';
+  keyword?: string;
+  id?: string;
+}
+
 interface PDFViewerProps {
   file: File | string;
   onPageChange?: (page: number, totalPages: number) => void;
-  highlightAreas?: Array<{
-    page: number;
-    x: number;
-    y: number;
-    width: number;
-    height: number;
-  }>;
+  highlightAreas?: HighlightArea[];
+  currentHighlight?: string;
+  onHighlightClick?: (highlight: HighlightArea) => void;
 }
 
-export default function PDFViewer({
+export interface PDFViewerRef {
+  navigateToHighlight: (highlightId: string) => void;
+  changePage: (offset: number) => void;
+  setPage: (page: number) => void;
+}
+
+const PDFViewer = forwardRef<PDFViewerRef, PDFViewerProps>(function PDFViewer({
   file,
   onPageChange,
   highlightAreas = [],
-}: PDFViewerProps) {
+  currentHighlight,
+  onHighlightClick,
+}, ref) {
   const [numPages, setNumPages] = useState<number>(0);
   const [pageNumber, setPageNumber] = useState<number>(1);
   const [scale, setScale] = useState<number>(1.0);
@@ -101,6 +116,49 @@ export default function PDFViewer({
     setScale(newScale);
   }
 
+  // Navigate to a specific highlight
+  function navigateToHighlight(highlightId: string) {
+    const highlight = highlightAreas.find(h => h.id === highlightId);
+    if (highlight && highlight.page !== pageNumber) {
+      setPageNumber(highlight.page);
+      if (onPageChange) {
+        onPageChange(highlight.page, numPages);
+      }
+    }
+  }
+
+  // Get highlights for current page
+  const currentPageHighlights = highlightAreas.filter(h => h.page === pageNumber);
+
+  // Get highlight color class
+  const getHighlightColor = (color: HighlightArea['color'], isCurrent: boolean) => {
+    const opacity = isCurrent ? '0.6' : '0.3';
+    switch (color) {
+      case 'green':
+        return `rgba(34, 197, 94, ${opacity})`; // green-500
+      case 'yellow':
+        return `rgba(250, 204, 21, ${opacity})`; // yellow-400
+      case 'orange':
+        return `rgba(249, 115, 22, ${opacity})`; // orange-500
+      default:
+        return `rgba(59, 130, 246, ${opacity})`; // blue-500
+    }
+  };
+
+  // Expose functions to parent component
+  useImperativeHandle(ref, () => ({
+    navigateToHighlight,
+    changePage,
+    setPage: (page: number) => {
+      if (page >= 1 && page <= numPages) {
+        setPageNumber(page);
+        if (onPageChange) {
+          onPageChange(page, numPages);
+        }
+      }
+    },
+  }));
+
   return (
     <div className="flex flex-col h-full">
       {/* Controls */}
@@ -153,51 +211,87 @@ export default function PDFViewer({
       {/* PDF Document */}
       <div className="flex-1 overflow-auto bg-gray-100 p-4">
         <div className="flex justify-center">
-          <Document
-            file={file}
-            onLoadSuccess={onDocumentLoadSuccess}
-            onLoadError={onDocumentLoadError}
-            loading={
-              <div className="flex items-center justify-center h-96">
-                <div className="text-center">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
-                  <p className="text-gray-600">Loading PDF...</p>
+          <div className="relative">
+            <Document
+              file={file}
+              onLoadSuccess={onDocumentLoadSuccess}
+              onLoadError={onDocumentLoadError}
+              loading={
+                <div className="flex items-center justify-center h-96">
+                  <div className="text-center">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
+                    <p className="text-gray-600">Loading PDF...</p>
+                  </div>
                 </div>
-              </div>
-            }
-            error={
-              <div className="flex items-center justify-center h-96">
-                <div className="text-center text-red-600 max-w-md">
-                  <p className="font-medium">Error loading PDF</p>
-                  {error && <p className="text-sm mt-1">{error}</p>}
-                  <p className="text-xs text-gray-500 mt-2">
-                    Please check if the file is a valid PDF
-                  </p>
-                  {retryCount < 3 && (
-                    <Button
-                      onClick={retryLoad}
-                      variant="outline"
-                      size="sm"
-                      className="mt-3"
-                      disabled={isRetrying}
-                    >
-                      {isRetrying ? "Retrying..." : `Retry (${3 - retryCount} attempts left)`}
-                    </Button>
-                  )}
+              }
+              error={
+                <div className="flex items-center justify-center h-96">
+                  <div className="text-center text-red-600 max-w-md">
+                    <p className="font-medium">Error loading PDF</p>
+                    {error && <p className="text-sm mt-1">{error}</p>}
+                    <p className="text-xs text-gray-500 mt-2">
+                      Please check if the file is a valid PDF
+                    </p>
+                    {retryCount < 3 && (
+                      <Button
+                        onClick={retryLoad}
+                        variant="outline"
+                        size="sm"
+                        className="mt-3"
+                        disabled={isRetrying}
+                      >
+                        {isRetrying ? "Retrying..." : `Retry (${3 - retryCount} attempts left)`}
+                      </Button>
+                    )}
+                  </div>
                 </div>
+              }
+            >
+              <div className="relative">
+                <Page
+                  pageNumber={pageNumber}
+                  scale={scale}
+                  renderAnnotationLayer={true}
+                  renderTextLayer={true}
+                  className="shadow-lg"
+                />
+                
+                {/* Highlight Overlays */}
+                {currentPageHighlights.length > 0 && (
+                  <div className="absolute top-0 left-0 pointer-events-none">
+                    {currentPageHighlights.map((highlight, index) => (
+                      <div
+                        key={highlight.id || index}
+                        className="absolute pointer-events-auto cursor-pointer"
+                        style={{
+                          left: `${highlight.x * scale}px`,
+                          top: `${highlight.y * scale}px`,
+                          width: `${highlight.width * scale}px`,
+                          height: `${highlight.height * scale}px`,
+                          backgroundColor: getHighlightColor(
+                            highlight.color,
+                            highlight.id === currentHighlight
+                          ),
+                          border: highlight.id === currentHighlight 
+                            ? '2px solid rgba(59, 130, 246, 0.8)' 
+                            : '1px solid rgba(0, 0, 0, 0.1)',
+                          borderRadius: '2px',
+                          transition: 'all 0.2s ease-in-out',
+                        }}
+                        onClick={() => onHighlightClick?.(highlight)}
+                        title={`${highlight.keyword || 'Highlight'} - Click to view details`}
+                      />
+                    ))}
+                  </div>
+                )}
               </div>
-            }
-          >
-            <Page
-              pageNumber={pageNumber}
-              scale={scale}
-              renderAnnotationLayer={true}
-              renderTextLayer={true}
-              className="shadow-lg"
-            />
-          </Document>
+            </Document>
+          </div>
         </div>
       </div>
     </div>
   );
-}
+});
+
+export default PDFViewer;
+export type { HighlightArea, PDFViewerRef };
