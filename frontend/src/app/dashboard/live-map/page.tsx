@@ -20,7 +20,7 @@ import {
 } from "lucide-react";
 import { useFleetStatus, type FleetVehicle } from "@/hooks/useFleetTracking";
 import { useMockFleetStatus } from "@/hooks/useMockAPI";
-import { AuthGuard } from "@/components/auth/auth-guard";
+import { MapDashboardLayout } from "@/components/layout/map-dashboard-layout";
 
 // Dynamically import FleetMap to avoid SSR issues
 const FleetMap = dynamic(
@@ -85,7 +85,10 @@ export default function LiveMapPage() {
 
   if (error) {
     return (
-      <AuthGuard>
+      <MapDashboardLayout 
+        mapTitle="Live Fleet Map - Error"
+        mapDescription="Failed to load fleet data"
+      >
         <div className="p-6">
           <Alert className="border-red-200 bg-red-50">
             <AlertTriangle className="h-4 w-4 text-red-600" />
@@ -98,51 +101,48 @@ export default function LiveMapPage() {
             Retry
           </Button>
         </div>
-      </AuthGuard>
+      </MapDashboardLayout>
     );
   }
 
+  const headerActions = (
+    <>
+      {/* Refresh Interval Selector */}
+      <div className="flex items-center gap-2 text-sm">
+        <span className="text-gray-600">Update every:</span>
+        <select
+          value={refreshInterval}
+          onChange={(e) => setRefreshInterval(Number(e.target.value))}
+          className="border rounded px-2 py-1 text-sm"
+        >
+          <option value={5000}>5s</option>
+          <option value={10000}>10s</option>
+          <option value={30000}>30s</option>
+          <option value={60000}>1m</option>
+        </select>
+      </div>
+
+      <Button
+        onClick={handleRefresh}
+        variant="outline"
+        size="sm"
+        disabled={isRefetching}
+      >
+        <RefreshCw
+          className={`h-4 w-4 mr-2 ${isRefetching ? "animate-spin" : ""}`}
+        />
+        Refresh
+      </Button>
+    </>
+  );
+
   return (
-    <AuthGuard>
-      <div className="p-6 space-y-6">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold">Live Fleet Map</h1>
-            <p className="text-gray-600 mt-1">
-              Real-time tracking of all active vehicles and shipments
-            </p>
-          </div>
-
-          <div className="flex items-center gap-3">
-            {/* Refresh Interval Selector */}
-            <div className="flex items-center gap-2 text-sm">
-              <span className="text-gray-600">Update every:</span>
-              <select
-                value={refreshInterval}
-                onChange={(e) => setRefreshInterval(Number(e.target.value))}
-                className="border rounded px-2 py-1 text-sm"
-              >
-                <option value={5000}>5s</option>
-                <option value={10000}>10s</option>
-                <option value={30000}>30s</option>
-                <option value={60000}>1m</option>
-              </select>
-            </div>
-
-            <Button
-              onClick={handleRefresh}
-              variant="outline"
-              size="sm"
-              disabled={isRefetching}
-            >
-              <RefreshCw
-                className={`h-4 w-4 mr-2 ${isRefetching ? "animate-spin" : ""}`}
-              />
-              Refresh
-            </Button>
-          </div>
-        </div>
+    <MapDashboardLayout 
+      mapTitle="Live Fleet Map"
+      mapDescription="Real-time tracking of all active vehicles and shipments"
+      headerActions={headerActions}
+    >
+      <div className="h-full flex flex-col p-6 space-y-6">
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -202,11 +202,11 @@ export default function LiveMapPage() {
         </div>
 
         {/* Main Content Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 flex-1 min-h-0">
           {/* Map */}
-          <div className="lg:col-span-2">
+          <div className="lg:col-span-3 h-full">
             {isLoading ? (
-              <Card className="h-96">
+              <Card className="h-full min-h-[500px]">
                 <CardContent className="flex items-center justify-center h-full">
                   <div className="text-center">
                     <RefreshCw className="h-8 w-8 mx-auto mb-2 text-gray-400 animate-spin" />
@@ -215,10 +215,12 @@ export default function LiveMapPage() {
                 </CardContent>
               </Card>
             ) : (
-              <FleetMap
-                vehicles={fleetData?.vehicles || []}
-                onVehicleSelect={handleVehicleSelect}
-              />
+              <div className="h-full min-h-[500px]">
+                <FleetMap
+                  vehicles={fleetData?.vehicles || []}
+                  onVehicleSelect={handleVehicleSelect}
+                />
+              </div>
             )}
           </div>
 
@@ -367,6 +369,6 @@ export default function LiveMapPage() {
           </div>
         </div>
       </div>
-    </AuthGuard>
+    </MapDashboardLayout>
   );
 }
