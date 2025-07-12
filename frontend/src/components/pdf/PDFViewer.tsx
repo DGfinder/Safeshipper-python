@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight, ZoomIn, ZoomOut } from "lucide-react";
 
 // Set worker URL
-pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.js`;
+pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.js`;
 
 interface PDFViewerProps {
   file: File | string;
@@ -30,12 +30,19 @@ export default function PDFViewer({
   const [numPages, setNumPages] = useState<number>(0);
   const [pageNumber, setPageNumber] = useState<number>(1);
   const [scale, setScale] = useState<number>(1.0);
+  const [error, setError] = useState<string | null>(null);
 
   function onDocumentLoadSuccess({ numPages }: { numPages: number }) {
     setNumPages(numPages);
+    setError(null);
     if (onPageChange) {
       onPageChange(1, numPages);
     }
+  }
+
+  function onDocumentLoadError(error: Error) {
+    console.error("PDF load error:", error);
+    setError(`Failed to load PDF: ${error.message}`);
   }
 
   function changePage(offset: number) {
@@ -108,14 +115,24 @@ export default function PDFViewer({
           <Document
             file={file}
             onLoadSuccess={onDocumentLoadSuccess}
+            onLoadError={onDocumentLoadError}
             loading={
               <div className="flex items-center justify-center h-96">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                <div className="text-center">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
+                  <p className="text-gray-600">Loading PDF...</p>
+                </div>
               </div>
             }
             error={
-              <div className="flex items-center justify-center h-96 text-red-600">
-                Error loading PDF
+              <div className="flex items-center justify-center h-96">
+                <div className="text-center text-red-600">
+                  <p className="font-medium">Error loading PDF</p>
+                  {error && <p className="text-sm mt-1">{error}</p>}
+                  <p className="text-xs text-gray-500 mt-2">
+                    Please check if the file is a valid PDF
+                  </p>
+                </div>
               </div>
             }
           >

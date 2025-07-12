@@ -20,7 +20,7 @@ import {
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
-import { AuthGuard } from "@/components/auth/auth-guard";
+import { DashboardLayout } from "@/components/layout/dashboard-layout";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 
@@ -409,9 +409,11 @@ export default function ManifestUploadPage() {
     }
   };
 
-  const currentKeyword = keywordResults
+  const currentKeyword = keywordResults && Array.isArray(keywordResults)
     ? keywordResults[currentKeywordIndex]
     : null;
+
+  const hasKeywordResults = keywordResults && Array.isArray(keywordResults) && keywordResults.length > 0;
 
   const handleURLUpload = async (url: string) => {
     try {
@@ -443,8 +445,8 @@ export default function ManifestUploadPage() {
   };
 
   return (
-    <AuthGuard>
-      <div className="p-6 space-y-6">
+    <DashboardLayout>
+      <div className="space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
@@ -578,13 +580,38 @@ export default function ManifestUploadPage() {
                           </Button>
                         </div>
 
-                        {/* Error Display */}
+                        {/* Enhanced Error Display */}
                         {processingError && (
-                          <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg flex items-start gap-2">
-                            <AlertTriangle className="h-5 w-5 text-red-600 mt-0.5 flex-shrink-0" />
-                            <p className="text-sm text-red-800">
-                              {processingError}
-                            </p>
+                          <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+                            <div className="flex items-start gap-2">
+                              <AlertTriangle className="h-5 w-5 text-red-600 mt-0.5 flex-shrink-0" />
+                              <div>
+                                <p className="text-sm font-medium text-red-800 mb-1">
+                                  Processing Error
+                                </p>
+                                <p className="text-sm text-red-700">
+                                  {processingError}
+                                </p>
+                                <p className="text-xs text-red-600 mt-2">
+                                  Try uploading the file again or contact support if the issue persists.
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Success feedback */}
+                        {!processingError && hasKeywordResults && (
+                          <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg flex items-start gap-2">
+                            <CheckCircle className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
+                            <div>
+                              <p className="text-sm font-medium text-green-800">
+                                Analysis Complete
+                              </p>
+                              <p className="text-xs text-green-700">
+                                Found {(keywordResults as typeof mockKeywordResults)?.length || 0} potential dangerous goods matches.
+                              </p>
+                            </div>
                           </div>
                         )}
                       </div>
@@ -766,28 +793,26 @@ export default function ManifestUploadPage() {
                   </div>
                 </CardHeader>
                 <CardContent className="overflow-y-auto h-[calc(100%-100px)]">
-                  {/* Analysis Warnings and Recommendations */}
+                  {/* Simplified Analysis Summary */}
                   {(analysisWarnings.length > 0 ||
                     analysisRecommendations.length > 0) && (
-                    <div className="space-y-3 mb-4">
-                      {analysisWarnings.map((warning, index) => (
+                    <div className="space-y-2 mb-4">
+                      {analysisWarnings.slice(0, 2).map((warning, index) => (
                         <div
                           key={`warning-${index}`}
-                          className="p-3 bg-amber-50 border border-amber-200 rounded-lg flex items-start gap-2"
+                          className="p-2 bg-amber-50 border border-amber-200 rounded text-sm text-amber-800"
                         >
-                          <AlertTriangle className="h-5 w-5 text-amber-600 mt-0.5 flex-shrink-0" />
-                          <p className="text-sm text-amber-800">{warning}</p>
+                          <AlertTriangle className="h-4 w-4 inline mr-2" />
+                          {warning}
                         </div>
                       ))}
-                      {analysisRecommendations.map((recommendation, index) => (
+                      {analysisRecommendations.slice(0, 1).map((recommendation, index) => (
                         <div
                           key={`rec-${index}`}
-                          className="p-3 bg-blue-50 border border-blue-200 rounded-lg flex items-start gap-2"
+                          className="p-2 bg-blue-50 border border-blue-200 rounded text-sm text-blue-800"
                         >
-                          <CheckCircle className="h-5 w-5 text-blue-600 mt-0.5 flex-shrink-0" />
-                          <p className="text-sm text-blue-800">
-                            {recommendation}
-                          </p>
+                          <CheckCircle className="h-4 w-4 inline mr-2" />
+                          {recommendation}
                         </div>
                       ))}
                     </div>
@@ -813,70 +838,45 @@ export default function ManifestUploadPage() {
                         </p>
                       </div>
 
-                      {/* Dangerous Goods for Current Keyword */}
-                      <div className="space-y-4">
+                      {/* Simplified Dangerous Goods Cards */}
+                      <div className="space-y-3">
                         {currentKeyword.dangerousGoods.map((result, index) => (
                           <div
                             key={result.id}
-                            className="border rounded-lg p-4 space-y-3 hover:border-blue-300 transition-colors"
+                            className="border rounded-lg p-3 hover:border-blue-300 transition-colors"
                           >
-                            <div className="flex items-start justify-between">
-                              <div className="flex items-start gap-3">
-                                <span className="text-lg font-bold text-gray-500 mt-1">
-                                  #{index + 1}
+                            <div className="flex items-center justify-between mb-2">
+                              <div className="flex items-center gap-2">
+                                <Badge
+                                  variant="outline"
+                                  className="text-xs font-semibold"
+                                >
+                                  {result.un}
+                                </Badge>
+                                <span
+                                  className={`px-2 py-1 rounded text-white text-xs font-semibold ${getDGClassColor(result.class)}`}
+                                >
+                                  {result.class}
                                 </span>
-                                <div className="flex-1">
-                                  <div className="flex items-center gap-2 mb-1">
-                                    <Badge
-                                      variant="outline"
-                                      className="text-xs font-semibold"
-                                    >
-                                      {result.un}
-                                    </Badge>
-                                    <span className="font-medium text-sm">
-                                      {result.properShippingName}
-                                    </span>
-                                  </div>
-                                  <div className="flex items-center gap-3">
-                                    <span
-                                      className={`px-2 py-1 rounded text-white text-xs font-semibold ${getDGClassColor(result.class)}`}
-                                    >
-                                      Class {result.class}
-                                    </span>
-                                  </div>
-                                </div>
                               </div>
                               <div
-                                className={`w-10 h-10 ${getDGClassColor(result.class)} rounded-lg flex items-center justify-center`}
+                                className={`w-8 h-8 ${getDGClassColor(result.class)} rounded flex items-center justify-center`}
                               >
-                                <AlertTriangle className="h-5 w-5 text-white" />
+                                <AlertTriangle className="h-4 w-4 text-white" />
                               </div>
                             </div>
 
-                            <div className="grid grid-cols-2 gap-4 text-sm">
-                              <div>
-                                <span className="text-gray-500 text-xs">
-                                  Material number:
-                                </span>
-                                <p className="font-medium">
-                                  {result.materialNumber}
-                                </p>
-                              </div>
-                              <div>
-                                <span className="text-gray-500 text-xs">
-                                  Material name:
-                                </span>
-                                <p className="font-medium">
-                                  {result.materialName}
-                                </p>
-                              </div>
+                            <div className="mb-2">
+                              <p className="font-medium text-sm text-gray-900">
+                                {result.properShippingName}
+                              </p>
                             </div>
 
-                            <div className="text-sm text-gray-600">
-                              <p>{result.details}</p>
+                            <div className="text-xs text-gray-600 mb-3">
+                              {result.details.split('|')[0]} {/* Show only confidence */}
                             </div>
 
-                            <div className="flex items-center justify-between pt-2 border-t">
+                            <div className="flex items-center justify-between">
                               <Button
                                 variant="outline"
                                 size="sm"
@@ -889,7 +889,7 @@ export default function ManifestUploadPage() {
                                 className="bg-blue-600 hover:bg-blue-700"
                                 onClick={() => addToManifest(result)}
                               >
-                                <CheckCircle className="h-4 w-4 mr-1" />
+                                <Plus className="h-4 w-4 mr-1" />
                                 Add to manifest
                               </Button>
                             </div>
@@ -939,7 +939,7 @@ export default function ManifestUploadPage() {
             </div>
           </>
         ) : (
-          /* Table View */
+          /* Simplified Table View */
           <>
             <div className="flex justify-between items-center mb-4">
               <Button onClick={() => setViewMode("search")} variant="outline">
@@ -947,12 +947,75 @@ export default function ManifestUploadPage() {
               </Button>
             </div>
 
-            <ManifestTable
-              items={manifestTableData}
-              onCompare={() => console.log("Compare clicked")}
-              onGenerateFile={() => console.log("Generate file clicked")}
-              onItemSelect={(ids) => console.log("Selected items:", ids)}
-            />
+            <Card>
+              <CardHeader>
+                <CardTitle>Detected Dangerous Goods</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b border-gray-200">
+                        <th className="text-left py-3 px-2 text-sm font-medium text-gray-500">
+                          UN Number
+                        </th>
+                        <th className="text-left py-3 px-2 text-sm font-medium text-gray-500">
+                          Proper Shipping Name
+                        </th>
+                        <th className="text-left py-3 px-2 text-sm font-medium text-gray-500">
+                          Class
+                        </th>
+                        <th className="text-left py-3 px-2 text-sm font-medium text-gray-500">
+                          Packing Group
+                        </th>
+                        <th className="text-left py-3 px-2 text-sm font-medium text-gray-500">
+                          Actions
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {manifestTableData.map((item) => (
+                        <tr
+                          key={item.id}
+                          className="border-b border-gray-100 hover:bg-gray-50"
+                        >
+                          <td className="py-3 px-2">
+                            <Badge variant="outline" className="font-semibold">
+                              {item.un}
+                            </Badge>
+                          </td>
+                          <td className="py-3 px-2 text-sm">
+                            {item.properShippingName}
+                          </td>
+                          <td className="py-3 px-2">
+                            <span
+                              className={`px-2 py-1 rounded text-white text-xs font-semibold ${getDGClassColor(item.class)}`}
+                            >
+                              {item.class}
+                            </span>
+                          </td>
+                          <td className="py-3 px-2 text-sm">{item.packingGroup}</td>
+                          <td className="py-3 px-2">
+                            <div className="flex items-center gap-2">
+                              <Button variant="outline" size="sm">
+                                <Eye className="h-4 w-4" />
+                              </Button>
+                              <Button 
+                                size="sm" 
+                                className="bg-blue-600 hover:bg-blue-700"
+                                onClick={() => addToManifest(item)}
+                              >
+                                <Plus className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </CardContent>
+            </Card>
           </>
         )}
 
@@ -963,6 +1026,6 @@ export default function ManifestUploadPage() {
           onUpload={handleURLUpload}
         />
       </div>
-    </AuthGuard>
+    </DashboardLayout>
   );
 }
