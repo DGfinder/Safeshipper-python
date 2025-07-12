@@ -21,6 +21,7 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
+import { HazardSymbol, HazardClassBadge } from "@/components/ui/hazard-symbol";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 
@@ -728,11 +729,36 @@ export default function ManifestUploadPage() {
           </>
         ) : viewMode === "search" ? (
           <>
-            {/* View Toggle */}
-            <div className="flex justify-end mb-4">
+            {/* Analysis Warnings and View Toggle */}
+            <div className="flex justify-between items-start mb-4">
+              <div className="flex-1 max-w-2xl">
+                {(analysisWarnings.length > 0 ||
+                  analysisRecommendations.length > 0) && (
+                  <div className="space-y-2">
+                    {analysisWarnings.slice(0, 2).map((warning, index) => (
+                      <div
+                        key={`warning-${index}`}
+                        className="p-2 bg-amber-50 border border-amber-200 rounded text-sm text-amber-800"
+                      >
+                        <AlertTriangle className="h-4 w-4 inline mr-2" />
+                        {warning}
+                      </div>
+                    ))}
+                    {analysisRecommendations.slice(0, 1).map((recommendation, index) => (
+                      <div
+                        key={`rec-${index}`}
+                        className="p-2 bg-blue-50 border border-blue-200 rounded text-sm text-blue-800"
+                      >
+                        <CheckCircle className="h-4 w-4 inline mr-2" />
+                        {recommendation}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
               <Button
                 onClick={() => setViewMode("table")}
-                className="bg-blue-600 hover:bg-blue-700"
+                className="bg-blue-600 hover:bg-blue-700 ml-4"
               >
                 View as Table
               </Button>
@@ -765,7 +791,7 @@ export default function ManifestUploadPage() {
                 </CardContent>
               </Card>
 
-              {/* Right Panel - Keyword Results */}
+              {/* Right Panel - Results Table */}
               <Card className="h-[calc(100vh-200px)]">
                 <CardHeader className="pb-2">
                   <div className="flex items-center justify-between">
@@ -778,8 +804,8 @@ export default function ManifestUploadPage() {
                           Search pages: {currentPage} of {totalPages || "?"}
                         </span>
                         <span>
-                          Keyword: {currentKeywordIndex + 1} of{" "}
-                          {keywordResults?.length || 0}
+                          Results: {manifestTableData.length} of{" "}
+                          {(keywordResults as typeof mockKeywordResults)?.reduce((acc, kw) => acc + kw.dangerousGoods.length, 0) || 0}
                         </span>
                       </div>
                     </div>
@@ -792,148 +818,137 @@ export default function ManifestUploadPage() {
                     </Button>
                   </div>
                 </CardHeader>
-                <CardContent className="overflow-y-auto h-[calc(100%-100px)]">
-                  {/* Simplified Analysis Summary */}
-                  {(analysisWarnings.length > 0 ||
-                    analysisRecommendations.length > 0) && (
-                    <div className="space-y-2 mb-4">
-                      {analysisWarnings.slice(0, 2).map((warning, index) => (
-                        <div
-                          key={`warning-${index}`}
-                          className="p-2 bg-amber-50 border border-amber-200 rounded text-sm text-amber-800"
-                        >
-                          <AlertTriangle className="h-4 w-4 inline mr-2" />
-                          {warning}
-                        </div>
-                      ))}
-                      {analysisRecommendations.slice(0, 1).map((recommendation, index) => (
-                        <div
-                          key={`rec-${index}`}
-                          className="p-2 bg-blue-50 border border-blue-200 rounded text-sm text-blue-800"
-                        >
-                          <CheckCircle className="h-4 w-4 inline mr-2" />
-                          {recommendation}
-                        </div>
-                      ))}
+                <CardContent className="overflow-y-auto h-[calc(100%-100px)] p-0">
+                  {keywordResults && Array.isArray(keywordResults) && keywordResults.length > 0 ? (
+                    <div className="overflow-x-auto">
+                      <table className="w-full">
+                        <thead className="bg-gray-50 border-b">
+                          <tr>
+                            <th className="text-left py-3 px-4 text-sm font-medium text-gray-500 w-12">
+                              #
+                            </th>
+                            <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">
+                              UN
+                            </th>
+                            <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">
+                              PROPER SHIPPING NAME
+                            </th>
+                            <th className="text-left py-3 px-4 text-sm font-medium text-gray-500 w-20">
+                              CLASS
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {keywordResults.flatMap((keyword, keywordIndex) =>
+                            keyword.dangerousGoods.map((item, itemIndex) => {
+                              const globalIndex = keywordResults
+                                .slice(0, keywordIndex)
+                                .reduce((acc, kw) => acc + kw.dangerousGoods.length, 0) + itemIndex + 1;
+                              
+                              return (
+                                <tr
+                                  key={`${keywordIndex}-${itemIndex}`}
+                                  className="border-b hover:bg-gray-50"
+                                >
+                                  <td className="py-3 px-4 text-sm font-medium">
+                                    {globalIndex}
+                                  </td>
+                                  <td className="py-3 px-4">
+                                    <Badge variant="outline" className="font-semibold">
+                                      {item.un}
+                                    </Badge>
+                                  </td>
+                                  <td className="py-3 px-4">
+                                    <div>
+                                      <p className="text-sm font-medium text-gray-900">
+                                        {item.properShippingName}
+                                      </p>
+                                      <div className="flex items-center gap-4 mt-1">
+                                        <span className="text-xs text-gray-500">
+                                          Material number: {item.materialNumber}
+                                        </span>
+                                        <span className="text-xs text-gray-500">
+                                          Material name: {item.materialName}
+                                        </span>
+                                      </div>
+                                      <div className="flex items-center gap-2 mt-1">
+                                        <Button
+                                          variant="outline"
+                                          size="sm"
+                                          className="text-xs h-6 px-2"
+                                        >
+                                          View SDS
+                                        </Button>
+                                        <Button
+                                          size="sm"
+                                          className="bg-blue-600 hover:bg-blue-700 text-xs h-6 px-2"
+                                          onClick={() => addToManifest(item)}
+                                        >
+                                          Add to manifest
+                                        </Button>
+                                      </div>
+                                    </div>
+                                  </td>
+                                  <td className="py-3 px-4">
+                                    <div className="flex items-center gap-2">
+                                      <HazardSymbol hazardClass={item.class} size="sm" />
+                                      <HazardClassBadge hazardClass={item.class} />
+                                    </div>
+                                  </td>
+                                </tr>
+                              );
+                            })
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-center h-full">
+                      <div className="text-center text-gray-500">
+                        <Package className="h-12 w-12 mx-auto mb-4 text-gray-400" />
+                        <p className="text-lg font-medium">No dangerous goods detected</p>
+                        <p className="text-sm">Upload and analyze a manifest to see results</p>
+                      </div>
                     </div>
                   )}
 
-                  {currentKeyword && (
-                    <>
-                      {/* Current Keyword Info */}
-                      <div className="bg-blue-50 rounded-lg p-4 mb-4 border border-blue-200">
-                        <div className="flex items-center justify-between mb-2">
-                          <h3 className="font-semibold text-blue-900">
-                            Found Keyword: "{currentKeyword.keyword}"
-                          </h3>
-                          <Badge
-                            variant="outline"
-                            className="text-blue-700 border-blue-300"
-                          >
-                            Page {currentKeyword.page}
-                          </Badge>
-                        </div>
-                        <p className="text-sm text-blue-800 italic">
-                          {currentKeyword.context}
+                  {keywordResults && Array.isArray(keywordResults) && keywordResults.length > 0 && (
+                    <div className="border-t bg-white p-4">
+                      <div className="flex items-center justify-between mb-3">
+                        <Button
+                          variant="outline"
+                          onClick={() => navigateToKeyword("previous")}
+                          disabled={currentKeywordIndex <= 0}
+                        >
+                          <ChevronLeft className="h-4 w-4 mr-1" />
+                          Previous
+                        </Button>
+                        <span className="text-sm text-gray-600">
+                          {currentKeyword ? `"${currentKeyword.keyword}"` : ""} (
+                          {currentKeywordIndex + 1} of{" "}
+                          {keywordResults?.length || 0})
+                        </span>
+                        <Button
+                          className="bg-blue-600 hover:bg-blue-700"
+                          onClick={() => navigateToKeyword("next")}
+                          disabled={
+                            !keywordResults ||
+                            currentKeywordIndex >= keywordResults.length - 1
+                          }
+                        >
+                          Next
+                          <ChevronRight className="h-4 w-4 ml-1" />
+                        </Button>
+                      </div>
+
+                      <div className="p-3 bg-amber-50 rounded-lg flex items-start gap-2">
+                        <AlertTriangle className="h-5 w-5 text-amber-600 mt-0.5 flex-shrink-0" />
+                        <p className="text-sm text-amber-800">
+                          These results may require further investigation
                         </p>
                       </div>
-
-                      {/* Simplified Dangerous Goods Cards */}
-                      <div className="space-y-3">
-                        {currentKeyword.dangerousGoods.map((result, index) => (
-                          <div
-                            key={result.id}
-                            className="border rounded-lg p-3 hover:border-blue-300 transition-colors"
-                          >
-                            <div className="flex items-center justify-between mb-2">
-                              <div className="flex items-center gap-2">
-                                <Badge
-                                  variant="outline"
-                                  className="text-xs font-semibold"
-                                >
-                                  {result.un}
-                                </Badge>
-                                <span
-                                  className={`px-2 py-1 rounded text-white text-xs font-semibold ${getDGClassColor(result.class)}`}
-                                >
-                                  {result.class}
-                                </span>
-                              </div>
-                              <div
-                                className={`w-8 h-8 ${getDGClassColor(result.class)} rounded flex items-center justify-center`}
-                              >
-                                <AlertTriangle className="h-4 w-4 text-white" />
-                              </div>
-                            </div>
-
-                            <div className="mb-2">
-                              <p className="font-medium text-sm text-gray-900">
-                                {result.properShippingName}
-                              </p>
-                            </div>
-
-                            <div className="text-xs text-gray-600 mb-3">
-                              {result.details.split('|')[0]} {/* Show only confidence */}
-                            </div>
-
-                            <div className="flex items-center justify-between">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                className="text-blue-600 hover:text-blue-700"
-                              >
-                                View SDS
-                              </Button>
-                              <Button
-                                size="sm"
-                                className="bg-blue-600 hover:bg-blue-700"
-                                onClick={() => addToManifest(result)}
-                              >
-                                <Plus className="h-4 w-4 mr-1" />
-                                Add to manifest
-                              </Button>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </>
+                    </div>
                   )}
-
-                  <div className="sticky bottom-0 bg-white pt-4 border-t mt-4">
-                    <div className="flex items-center justify-between mb-3">
-                      <Button
-                        variant="outline"
-                        onClick={() => navigateToKeyword("previous")}
-                        disabled={currentKeywordIndex <= 0}
-                      >
-                        <ChevronLeft className="h-4 w-4 mr-1" />
-                        Previous
-                      </Button>
-                      <span className="text-sm text-gray-600">
-                        {currentKeyword ? `"${currentKeyword.keyword}"` : ""} (
-                        {currentKeywordIndex + 1} of{" "}
-                        {keywordResults?.length || 0})
-                      </span>
-                      <Button
-                        className="bg-blue-600 hover:bg-blue-700"
-                        onClick={() => navigateToKeyword("next")}
-                        disabled={
-                          !keywordResults ||
-                          currentKeywordIndex >= keywordResults.length - 1
-                        }
-                      >
-                        Next
-                        <ChevronRight className="h-4 w-4 ml-1" />
-                      </Button>
-                    </div>
-
-                    <div className="p-3 bg-amber-50 rounded-lg flex items-start gap-2">
-                      <AlertTriangle className="h-5 w-5 text-amber-600 mt-0.5 flex-shrink-0" />
-                      <p className="text-sm text-amber-800">
-                        These results may require further investigation
-                      </p>
-                    </div>
-                  </div>
                 </CardContent>
               </Card>
             </div>
@@ -988,11 +1003,10 @@ export default function ManifestUploadPage() {
                             {item.properShippingName}
                           </td>
                           <td className="py-3 px-2">
-                            <span
-                              className={`px-2 py-1 rounded text-white text-xs font-semibold ${getDGClassColor(item.class)}`}
-                            >
-                              {item.class}
-                            </span>
+                            <div className="flex items-center gap-2">
+                              <HazardSymbol hazardClass={item.class} size="sm" />
+                              <HazardClassBadge hazardClass={item.class} />
+                            </div>
                           </td>
                           <td className="py-3 px-2 text-sm">{item.packingGroup}</td>
                           <td className="py-3 px-2">

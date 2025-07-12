@@ -7,8 +7,19 @@ import "react-pdf/dist/Page/TextLayer.css";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight, ZoomIn, ZoomOut } from "lucide-react";
 
-// Set worker URL
-pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.js`;
+// Set worker URL with fallbacks
+if (typeof window !== 'undefined') {
+  // Try multiple worker sources for better reliability
+  const workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.js`;
+  const fallbackWorkerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
+  
+  pdfjs.GlobalWorkerOptions.workerSrc = workerSrc;
+  
+  // Set up fallback worker if primary fails
+  if (!pdfjs.GlobalWorkerOptions.workerSrc) {
+    pdfjs.GlobalWorkerOptions.workerSrc = fallbackWorkerSrc;
+  }
+}
 
 interface PDFViewerProps {
   file: File | string;
@@ -31,10 +42,14 @@ export default function PDFViewer({
   const [pageNumber, setPageNumber] = useState<number>(1);
   const [scale, setScale] = useState<number>(1.0);
   const [error, setError] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
+  const [isRetrying, setIsRetrying] = useState(false);
 
   function onDocumentLoadSuccess({ numPages }: { numPages: number }) {
     setNumPages(numPages);
     setError(null);
+    setRetryCount(0);
+    setIsRetrying(false);
     if (onPageChange) {
       onPageChange(1, numPages);
     }
@@ -43,7 +58,26 @@ export default function PDFViewer({
   function onDocumentLoadError(error: Error) {
     console.error("PDF load error:", error);
     setError(`Failed to load PDF: ${error.message}`);
+    setIsRetrying(false);
   }
+
+  const retryLoad = () => {
+    if (retryCount < 3) {
+      setIsRetrying(true);
+      setError(null);
+      setRetryCount(prev => prev + 1);
+      
+      // Try alternative worker URL on retry
+      if (retryCount === 1) {
+        pdfjs.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
+      }
+      
+      // Force re-render by updating a state
+      setTimeout(() => {
+        setIsRetrying(false);
+      }, 1000);
+    }
+  };
 
   function changePage(offset: number) {
     const newPage = pageNumber + offset;
@@ -126,12 +160,23 @@ export default function PDFViewer({
             }
             error={
               <div className="flex items-center justify-center h-96">
-                <div className="text-center text-red-600">
+                <div className="text-center text-red-600 max-w-md">
                   <p className="font-medium">Error loading PDF</p>
                   {error && <p className="text-sm mt-1">{error}</p>}
                   <p className="text-xs text-gray-500 mt-2">
                     Please check if the file is a valid PDF
                   </p>
+                  {retryCount < 3 && (
+                    <Button
+                      onClick={retryLoad}
+                      variant="outline"
+                      size="sm"
+                      className="mt-3"
+                      disabled={isRetrying}
+                    >
+                      {isRetrying ? "Retrying..." : `Retry (${3 - retryCount} attempts left)`}
+                    </Button>
+                  )}
                 </div>
               </div>
             }

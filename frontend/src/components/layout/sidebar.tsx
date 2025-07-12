@@ -31,6 +31,8 @@ import {
   ClipboardCheck,
   TrendingUp,
   BarChart,
+  Brain,
+  TestTube,
 } from "lucide-react";
 
 interface NavigationItem {
@@ -56,13 +58,11 @@ const navigation: NavigationItem[] = [
     icon: Package,
     children: [
       { name: "All Shipments", href: "/shipments", icon: Package },
-      { name: "Create Shipment", href: "/shipments/create", icon: Plus },
       {
         name: "Manifest Upload",
         href: "/shipments/manifest-upload",
         icon: Upload,
       },
-      { name: "Public Tracking", href: "/track", icon: Search },
     ],
   },
   {
@@ -92,8 +92,22 @@ const navigation: NavigationItem[] = [
     icon: Database,
     children: [
       { name: "SDS Library", href: "/sds-library", icon: Database },
+      { name: "SDS Enhanced", href: "/sds-enhanced", icon: BookOpen },
       { name: "DG Checker", href: "/dg-checker", icon: Search },
-      { name: "Documentation", href: "/documentation", icon: FileText },
+    ],
+  },
+  {
+    name: "AI Tools",
+    icon: Brain,
+    children: [
+      { name: "AI Insights", href: "/ai-insights", icon: Brain },
+    ],
+  },
+  {
+    name: "Public Services",
+    icon: MapPin,
+    children: [
+      { name: "Track Shipment", href: "/track", icon: Search },
     ],
   },
   {
@@ -101,7 +115,6 @@ const navigation: NavigationItem[] = [
     icon: BarChart3,
     children: [
       { name: "Reports Dashboard", href: "/reports", icon: BarChart },
-      { name: "Analytics", href: "/analytics", icon: TrendingUp },
     ],
   },
   {
