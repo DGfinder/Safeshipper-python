@@ -864,7 +864,7 @@ def public_pod_info(request, tracking_number):
     """
     try:
         from shipments.models import Shipment, ProofOfDelivery
-        from shipments.serializers import ProofOfDeliverySerializer
+        # from shipments.serializers import ProofOfDeliverySerializer
         
         # Find shipment
         try:
@@ -884,10 +884,10 @@ def public_pod_info(request, tracking_number):
         
         try:
             pod = ProofOfDelivery.objects.get(shipment=shipment)
-            serializer = ProofOfDeliverySerializer(pod)
+            # serializer = ProofOfDeliverySerializer(pod)\n            # Temporary: return basic POD data without serializer\n            pod_data = {\n                'id': str(pod.id),\n                'delivered_at': pod.delivered_at,\n                'recipient_name': pod.recipient_name,\n                'delivery_notes': pod.delivery_notes\n            }
             
             logger.info(f"Public POD access: {tracking_number}")
-            return Response(serializer.data)
+            return Response(pod_data)
             
         except ProofOfDelivery.DoesNotExist:
             return Response(

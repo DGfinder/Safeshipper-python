@@ -37,6 +37,7 @@ import { HazardInspection } from "@/components/inspections/HazardInspection";
 import { ProofOfDelivery } from "@/components/delivery/ProofOfDelivery";
 import DocumentGenerator from "@/components/documents/DocumentGenerator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ShipmentEmergencyPlanViewer } from "@/components/epg/ShipmentEmergencyPlanViewer";
 import Link from "next/link";
 
 interface ShipmentDetailPageProps {
@@ -214,7 +215,7 @@ export default function ShipmentDetailPage({
           onValueChange={setActiveTab}
           className="space-y-6"
         >
-          <TabsList className="grid w-full grid-cols-6">
+          <TabsList className="grid w-full grid-cols-7">
             <TabsTrigger value="info" className="flex items-center gap-2">
               <Info className="h-4 w-4" />
               Info
@@ -238,6 +239,10 @@ export default function ShipmentDetailPage({
             <TabsTrigger value="chat" className="flex items-center gap-2">
               <MessageSquare className="h-4 w-4" />
               Chat
+            </TabsTrigger>
+            <TabsTrigger value="emergency" className="flex items-center gap-2">
+              <Shield className="h-4 w-4" />
+              Emergency Plan
             </TabsTrigger>
           </TabsList>
 
@@ -611,6 +616,14 @@ export default function ShipmentDetailPage({
                 </div>
               </CardContent>
             </Card>
+          </TabsContent>
+
+          {/* Emergency Plan Tab */}
+          <TabsContent value="emergency">
+            <ShipmentEmergencyPlanViewer
+              shipmentId={shipmentId}
+              shipmentData={shipment}
+            />
           </TabsContent>
         </Tabs>
       </div>

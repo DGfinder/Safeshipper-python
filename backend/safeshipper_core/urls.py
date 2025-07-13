@@ -76,23 +76,23 @@ urlpatterns = [
     # Monitoring
     path('', include('django_prometheus.urls')),
     
-    # Application URLs (minimal set for frontend)
+    # Application URLs (minimal set for EPG functionality)
     path('api/v1/', include([
         path('shipments/', include('shipments.urls')),
         path('users/', include('users.urls')),
-        path('dashboard/', include('dashboards.urls')),
+        # path('dashboard/', include('dashboards.urls')),  # Temporarily disabled
         path('dangerous-goods/', include('dangerous_goods.urls')),
         path('companies/', include('companies.urls')),
         path('freight-types/', include('freight_types.urls')),
         path('vehicles/', include('vehicles.urls')),
         # path('tracking/', include('tracking.urls')),  # Temporarily disabled due to GIS dependencies
-        path('documents/', include('documents.urls')),  # Enabled for manifest functionality
-        path('audits/', include('audits.urls')),  # Enabled for audit functionality
-        path('auth/', include('enterprise_auth.urls')),  # Enterprise authentication
-        path('iot/', include('iot_devices.urls')),  # IoT device management
-        path('inspections/', include('inspections.urls')),  # Inspection management
-        path('communications/', include('communications.urls')),  # Communication and activity logs
-        path('manifests/', include('manifests.urls')),  # Enabled for DG manifest processing
+        # path('documents/', include('documents.urls')),  # Temporarily disabled due to Celery circular import
+        # path('audits/', include('audits.urls')),  # Temporarily disabled
+        # path('auth/', include('enterprise_auth.urls')),  # Temporarily disabled due to import issues
+        # path('iot/', include('iot_devices.urls')),  # Temporarily disabled
+        # path('inspections/', include('inspections.urls')),  # Temporarily disabled
+        # path('communications/', include('communications.urls')),  # Temporarily disabled
+        # path('manifests/', include('manifests.urls')),  # Temporarily disabled
         # Basic search endpoints
         path('search/popular/', PopularSearchesView.as_view(), name='popular-searches'),
         # Temporarily disabled apps:
@@ -101,7 +101,7 @@ urlpatterns = [
         # path('load-plans/', include('load_plans.urls')),
         # path('emergency-procedures/', include('emergency_procedures.urls')),
         # path('handling-unit-types/', include('handling_unit_types.urls')),
-        path('sds/', include('sds.urls')),  # Enabled for Safety Data Sheets
+        # path('sds/', include('sds.urls')),  # Temporarily disabled due to syntax error
         path('epg/', include('epg.urls')),  # Enabled for Emergency Procedure Guides
         # Compatibility endpoint redirects for mobile app
         path('compatibility/', include('dangerous_goods.urls')),  # Mobile app compatibility endpoint

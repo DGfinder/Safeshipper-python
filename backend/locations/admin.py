@@ -22,20 +22,20 @@ class RegionAdmin(admin.ModelAdmin):
 
 @admin.register(GeoLocation)
 class GeoLocationAdmin(admin.ModelAdmin):
-    list_display = ('name', 'location_type', 'country', 'is_active_display', 'is_depot_display', 'created_at')
-    search_fields = ('name', 'country__name', 'address_structured') 
+    list_display = ('name', 'location_type', 'country', 'is_active_display', 'created_at')
+    search_fields = ('name', 'country', 'address')  # Fixed field names 
     list_filter = ('location_type', 'country', 'is_active')
     ordering = ('name',)
-    filter_horizontal = ('operational_regions',)
+    # filter_horizontal = ('operational_regions',)  # Field doesn't exist
     # Remove 'owning_company' from autocomplete_fields if it's not an actual field on GeoLocation model
     # or ensure CompanyAdmin is registered with search_fields if 'owning_company' FK exists.
-    autocomplete_fields = ['country'] # Assuming owning_company FK is not on GeoLocation model for now
+    # autocomplete_fields = ['country'] # Country is CharField, not FK in this model
     
     fieldsets = (
         (None, {'fields': ('name', 'location_type', 'country', 'is_active')}),
-        ('Address & Coordinates', {'fields': ('address_structured', ('latitude', 'longitude'))}),
+        ('Address & Coordinates', {'fields': ('address', ('latitude', 'longitude'))}),
         ('Depot Specific Info', {
-            'fields': ('safe_fill_limits', 'operational_regions'), 
+            'fields': ('demurrage_enabled', 'free_time_hours'),  # Updated with actual fields 
             'classes': ('collapse',),
             # Add 'owning_company' here if you add the ForeignKey to the GeoLocation model
         }),
@@ -45,6 +45,6 @@ class GeoLocationAdmin(admin.ModelAdmin):
     def is_active_display(self, obj):
         return obj.is_active
 
-    @admin.display(boolean=True, description='Is Depot?')
-    def is_depot_display(self, obj): # This method uses the @property from the GeoLocation model
-        return obj.is_depot
+    # @admin.display(boolean=True, description='Is Depot?')
+    # def is_depot_display(self, obj): # Removed - no is_depot property exists
+    #     return obj.is_depot

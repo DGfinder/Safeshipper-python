@@ -4,7 +4,7 @@ from rest_framework.routers import DefaultRouter
 from .api_views import (
     DangerousGoodViewSet, 
     DGCompatibilityCheckView, 
-    PHAnalysisView,
+    # PHAnalysisView,  # Temporarily disabled
     ADGPlacardCalculationView,
     ADGPlacardRuleViewSet,
     PlacardCalculationLogView,
@@ -38,7 +38,7 @@ router.register(r'lq-limits', LimitedQuantityLimitViewSet, basename='lq-limit')
 urlpatterns = [
     path('', include(router.urls)),
     path('check-compatibility/', DGCompatibilityCheckView.as_view(), name='dg-compatibility-check'),
-    path('ph-analysis/', PHAnalysisView.as_view(), name='ph-analysis'),
+    # path('ph-analysis/', PHAnalysisView.as_view(), name='ph-analysis'),  # Temporarily disabled
     path('calculate-placards/', ADGPlacardCalculationView.as_view(), name='adg-placard-calculation'),
     path('placard-calculation-logs/', PlacardCalculationLogView.as_view(), name='placard-calculation-logs'),
     path('generate-placards/', DigitalPlacardGenerationView.as_view(), name='generate-digital-placards'),

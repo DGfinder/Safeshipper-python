@@ -6,8 +6,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
   Shield,
   Search,
@@ -26,6 +28,11 @@ import {
   BookOpen,
 } from "lucide-react";
 import { AuthGuard } from "@/components/auth/auth-guard";
+import { EPGCreateForm } from "@/components/epg/EPGCreateForm";
+import { EPGEditForm } from "@/components/epg/EPGEditForm";
+import { EPGTemplateSelectionDialog } from "@/components/epg/EPGTemplateSelectionDialog";
+import { EPGBulkOperations } from "@/components/epg/EPGBulkOperations";
+import { EPGLiveStatistics } from "@/components/epg/EPGLiveStatistics";
 import {
   useEPGs,
   useEPGStatistics,
@@ -42,6 +49,11 @@ export default function EmergencyProceduresPage() {
   const [selectedEPG, setSelectedEPG] =
     useState<EmergencyProcedureGuide | null>(null);
   const [showCreateForm, setShowCreateForm] = useState(false);
+  const [showEditForm, setShowEditForm] = useState(false);
+  const [showTemplateDialog, setShowTemplateDialog] = useState(false);
+  const [editingEPGId, setEditingEPGId] = useState<string | null>(null);
+  const [selectedEPGs, setSelectedEPGs] = useState<string[]>([]);
+  const [showBulkOperations, setShowBulkOperations] = useState(false);
 
   const {
     data: epgData,
@@ -68,7 +80,33 @@ export default function EmergencyProceduresPage() {
 
   const handleCreateFromTemplate = (hazardClass: string) => {
     createFromTemplate.mutate({ hazard_class: hazardClass });
+    setShowTemplateDialog(false);
+  };
+
+  const handleTemplateSuccess = () => {
+    setShowTemplateDialog(false);
+    refetchEPGs();
+  };
+
+  const handleEditEPG = (epgId: string) => {
+    setEditingEPGId(epgId);
+    setShowEditForm(true);
+  };
+
+  const handleCreateSuccess = (epg: EmergencyProcedureGuide) => {
     setShowCreateForm(false);
+    refetchEPGs();
+  };
+
+  const handleEditSuccess = (epg: EmergencyProcedureGuide) => {
+    setShowEditForm(false);
+    setEditingEPGId(null);
+    refetchEPGs();
+  };
+
+  const handleCloseEdit = () => {
+    setShowEditForm(false);
+    setEditingEPGId(null);
   };
 
   const getStatusColor = (status: string) => {
@@ -127,6 +165,22 @@ export default function EmergencyProceduresPage() {
               Refresh
             </Button>
             <Button
+              onClick={() => setShowTemplateDialog(true)}
+              variant="outline"
+              className="flex items-center gap-2"
+            >
+              <FileText className="h-4 w-4" />
+              From Template
+            </Button>
+            <Button
+              onClick={() => setShowBulkOperations(!showBulkOperations)}
+              variant={showBulkOperations ? "default" : "outline"}
+              className="flex items-center gap-2"
+            >
+              <CheckCircle className="h-4 w-4" />
+              {showBulkOperations ? "Hide" : "Bulk"} Operations
+            </Button>
+            <Button
               onClick={() => setShowCreateForm(true)}
               className="flex items-center gap-2"
             >
@@ -136,74 +190,8 @@ export default function EmergencyProceduresPage() {
           </div>
         </div>
 
-        {/* Statistics Cards */}
-        {statistics && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">
-                  Total EPGs
-                </CardTitle>
-                <Shield className="h-4 w-4 text-blue-600" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-blue-600">
-                  {statistics.total_epgs}
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  {statistics.active_epgs} active guides
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">
-                  Due for Review
-                </CardTitle>
-                <Clock className="h-4 w-4 text-yellow-600" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-yellow-600">
-                  {statistics.due_for_review}
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  Require attention
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">
-                  Under Review
-                </CardTitle>
-                <AlertCircle className="h-4 w-4 text-orange-600" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-orange-600">
-                  {statistics.under_review}
-                </div>
-                <p className="text-xs text-muted-foreground">Being reviewed</p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">
-                  Draft EPGs
-                </CardTitle>
-                <Edit className="h-4 w-4 text-purple-600" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-purple-600">
-                  {statistics.draft_epgs}
-                </div>
-                <p className="text-xs text-muted-foreground">In development</p>
-              </CardContent>
-            </Card>
-          </div>
-        )}
+        {/* Live Statistics */}
+        <EPGLiveStatistics refreshInterval={30000} showTrends={true} />
 
         {/* Due for Review Alert */}
         {dueForReview && dueForReview.length > 0 && (
@@ -325,6 +313,16 @@ export default function EmergencyProceduresPage() {
           </CardContent>
         </Card>
 
+        {/* Bulk Operations */}
+        {showBulkOperations && (
+          <EPGBulkOperations
+            epgs={epgData?.results || []}
+            selectedEPGs={selectedEPGs}
+            onSelectionChange={setSelectedEPGs}
+            onRefresh={refetchEPGs}
+          />
+        )}
+
         {/* Main Content Tabs */}
         <Tabs defaultValue="epgs" className="space-y-6">
           <TabsList className="grid w-full grid-cols-4">
@@ -356,6 +354,18 @@ export default function EmergencyProceduresPage() {
                         className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50"
                       >
                         <div className="flex items-center gap-4">
+                          {showBulkOperations && (
+                            <Checkbox
+                              checked={selectedEPGs.includes(epg.id)}
+                              onCheckedChange={(checked) => {
+                                if (checked) {
+                                  setSelectedEPGs([...selectedEPGs, epg.id]);
+                                } else {
+                                  setSelectedEPGs(selectedEPGs.filter(id => id !== epg.id));
+                                }
+                              }}
+                            />
+                          )}
                           <div className="p-2 bg-blue-100 rounded-lg">
                             <Shield className="h-5 w-5 text-blue-600" />
                           </div>
@@ -416,6 +426,14 @@ export default function EmergencyProceduresPage() {
                             >
                               <Eye className="h-4 w-4 mr-1" />
                               View
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleEditEPG(epg.id)}
+                            >
+                              <Edit className="h-4 w-4 mr-1" />
+                              Edit
                             </Button>
                             {epg.status === "DRAFT" && (
                               <Button
@@ -647,6 +665,42 @@ export default function EmergencyProceduresPage() {
             </div>
           </TabsContent>
         </Tabs>
+
+        {/* Create EPG Dialog */}
+        <Dialog open={showCreateForm} onOpenChange={setShowCreateForm}>
+          <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Create Emergency Procedure Guide</DialogTitle>
+            </DialogHeader>
+            <EPGCreateForm
+              onSuccess={handleCreateSuccess}
+              onCancel={() => setShowCreateForm(false)}
+            />
+          </DialogContent>
+        </Dialog>
+
+        {/* Edit EPG Dialog */}
+        <Dialog open={showEditForm} onOpenChange={setShowEditForm}>
+          <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Edit Emergency Procedure Guide</DialogTitle>
+            </DialogHeader>
+            {editingEPGId && (
+              <EPGEditForm
+                epgId={editingEPGId}
+                onSuccess={handleEditSuccess}
+                onCancel={handleCloseEdit}
+              />
+            )}
+          </DialogContent>
+        </Dialog>
+
+        {/* Template Selection Dialog */}
+        <EPGTemplateSelectionDialog
+          open={showTemplateDialog}
+          onOpenChange={setShowTemplateDialog}
+          onSuccess={handleTemplateSuccess}
+        />
       </div>
     </AuthGuard>
   );

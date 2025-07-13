@@ -50,36 +50,29 @@ INSTALLED_APPS = [
     'django_elasticsearch_dsl',
     'django_elasticsearch_dsl_drf',
     
-    # Local apps (minimal set for frontend)
+    # Local apps (minimal set for EPG functionality)
     'users',
     'companies',
     'locations',
     'shipments',
     'dangerous_goods',
-    'sds',
+    # 'sds',  # Temporarily disabled due to missing migration
     'vehicles',
     'freight_types',
-    'enterprise_auth',
-    'incidents',
-    'training',
-    'iot_devices',
-    # 'documents',  # Enabled for manifest functionality (temporarily disabled due to celery import issues)
-    'manifests',  # Enabled for DG manifest processing
-    'audits',     # Enabled for audit functionality
-    'inspections', # Enabled for inspection management
-    'communications', # Enabled for activity logs
-    'dashboards', # Enabled for dashboard statistics
-    # 'locations',  # Temporarily disabled due to GIS dependencies (already added above)
-    # 'tracking',  # Temporarily disabled due to GIS dependencies
-    # 'hazard_assessments',
-    'load_plans',
-    # 'handling_unit_types',
-    # 'sds',        # Enabled for Safety Data Sheets (already added above)
+    # 'enterprise_auth',  # Temporarily disabled due to import issues
+    # 'incidents',
+    # 'training',
+    # 'iot_devices',
+    'documents',  # Re-enabled for EPG dependencies
+    # 'manifests',  # Temporarily disabled - depends on documents
+    # 'audits',     # Temporarily disabled
+    # 'inspections', # Temporarily disabled
+    # 'communications', # Temporarily disabled
+    # 'dashboards', # Temporarily disabled
+    # 'load_plans', # Temporarily disabled
     'epg',        # Enabled for Emergency Procedure Guides
-    # 'emergency_procedures',
-    'capacity_marketplace',
-    'routes',
-    # 'pricing',
+    # 'capacity_marketplace', # Temporarily disabled
+    # 'routes', # Temporarily disabled
 ]
 
 # Middleware

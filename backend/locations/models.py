@@ -108,11 +108,11 @@ class GeoLocation(models.Model):
             ('OTHER', 'Other'),
         ]
     )
-    address = models.TextField()
-    city = models.CharField(max_length=100)
-    state = models.CharField(max_length=100)
-    country = models.CharField(max_length=100)
-    postal_code = models.CharField(max_length=20)
+    address = models.TextField(default="Unknown Address")
+    city = models.CharField(max_length=100, default="Unknown City")
+    state = models.CharField(max_length=100, default="Unknown State")
+    country = models.CharField(max_length=100, default="Unknown Country")
+    postal_code = models.CharField(max_length=20, default="00000")
     
     # Geographic coordinates (temporarily using simple fields instead of GIS)
     latitude = models.DecimalField(
@@ -158,7 +158,9 @@ class GeoLocation(models.Model):
     company = models.ForeignKey(
         'companies.Company',
         on_delete=models.CASCADE,
-        related_name='locations'
+        related_name='locations',
+        null=True,
+        blank=True
     )
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
