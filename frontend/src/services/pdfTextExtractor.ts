@@ -34,7 +34,13 @@ export class PDFTextExtractor {
     
     try {
       // Load the PDF document
-      const loadingTask = pdfjsLib.getDocument(file);
+      let documentData: string | ArrayBuffer;
+      if (file instanceof File) {
+        documentData = await file.arrayBuffer();
+      } else {
+        documentData = file;
+      }
+      const loadingTask = pdfjsLib.getDocument(documentData);
       const pdf = await loadingTask.promise;
       
       // Process each page

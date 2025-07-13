@@ -248,9 +248,32 @@ export default function ManifestUploadPage() {
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [keywordResults, setKeywordResults] = useState<
-    typeof mockKeywordResults | null
-  >(null);
+  const [keywordResults, setKeywordResults] = useState<Array<{
+    id: string;
+    keyword: string;
+    page: number;
+    context: string;
+    highlightArea: {
+      page: number;
+      x: number;
+      y: number;
+      width: number;
+      height: number;
+      color: 'green' | 'yellow' | 'orange';
+      keyword: string;
+      id: string;
+    };
+    dangerousGoods: Array<{
+      id: string;
+      un: string;
+      properShippingName: string;
+      class: string;
+      materialNumber: string;
+      materialName: string;
+      details: string;
+      confidence: number;
+    }>;
+  }> | null>(null);
   const [currentKeywordIndex, setCurrentKeywordIndex] = useState(0);
   const [searchTerm, setSearchTerm] = useState("");
   const [showUrlUpload, setShowUrlUpload] = useState(false);
@@ -413,7 +436,9 @@ export default function ManifestUploadPage() {
               context: `Detected ${item.properShippingName} - ${item.quantity || "Unknown quantity"}`,
               highlightArea: {
                 ...matchingHighlight,
-                id: resultId
+                id: resultId,
+                color: matchingHighlight.color || 'yellow' as const,
+                keyword: matchingHighlight.keyword || keyword
               },
               dangerousGoods: [
                 {
@@ -490,10 +515,18 @@ export default function ManifestUploadPage() {
           const highlightAreas = await PDFTextExtractor.searchDangerousGoods(file, mockKeywords);
           
           // Update mock results with real positions
-          const updatedMockResults = mockKeywordResults.map((result, index) => ({
-            ...result,
-            highlightArea: highlightAreas[index] || result.highlightArea
-          }));
+          const updatedMockResults = mockKeywordResults.map((result, index) => {
+            const foundHighlight = highlightAreas[index];
+            return {
+              ...result,
+              highlightArea: foundHighlight ? {
+                ...foundHighlight,
+                color: foundHighlight.color || 'yellow' as const,
+                keyword: foundHighlight.keyword || result.keyword,
+                id: foundHighlight.id || result.id
+              } : result.highlightArea
+            };
+          });
           
           setKeywordResults(updatedMockResults);
         } catch (error) {
@@ -541,10 +574,18 @@ export default function ManifestUploadPage() {
         const highlightAreas = await PDFTextExtractor.searchDangerousGoods(file, mockKeywords);
         
         // Update mock results with real positions
-        const updatedMockResults = mockKeywordResults.map((result, index) => ({
-          ...result,
-          highlightArea: highlightAreas[index] || result.highlightArea
-        }));
+        const updatedMockResults = mockKeywordResults.map((result, index) => {
+          const foundHighlight = highlightAreas[index];
+          return {
+            ...result,
+            highlightArea: foundHighlight ? {
+              ...foundHighlight,
+              color: foundHighlight.color || 'yellow' as const,
+              keyword: foundHighlight.keyword || result.keyword,
+              id: foundHighlight.id || result.id
+            } : result.highlightArea
+          };
+        });
         
         setKeywordResults(updatedMockResults);
       } catch (extractError) {
