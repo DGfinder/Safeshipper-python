@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect } from "react";
+import React from "react";
 import {
   Truck,
   FileSearch,
@@ -30,7 +30,13 @@ import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
-import { useDashboardStore } from "@/stores/dashboard-store";
+import { 
+  useDashboardStats, 
+  useInspectionStats, 
+  useRecentActivity, 
+  usePODStats, 
+  useRecentShipments 
+} from "@/hooks/useDashboard";
 
 // Types for our data (keeping for future use)
 // interface StatCard {
@@ -55,72 +61,23 @@ interface ShipmentRow {
   progress: number;
 }
 
-// Sample data for shipments table
-
-const shipmentData: ShipmentRow[] = [
-  {
-    id: "1",
-    identifier: "VOL-873454",
-    origin: "Sicily, Italy",
-    destination: "Tallin, EST",
-    dangerousGoods: ["Class 3", "Class 8"],
-    hazchemCode: "3YE",
-    progress: 88,
-  },
-  {
-    id: "2",
-    identifier: "VOL-349576",
-    origin: "Rotterdam",
-    destination: "Brussels, Belgium",
-    dangerousGoods: ["Class 2", "Class 9"],
-    hazchemCode: "3YE",
-    progress: 32,
-  },
-  {
-    id: "3",
-    identifier: "VOL-345789",
-    origin: "Abu Dhabi, UAE",
-    destination: "Boston, USA",
-    dangerousGoods: ["Class 1", "Class 6"],
-    hazchemCode: "3YE",
-    progress: 45,
-  },
-  {
-    id: "4",
-    identifier: "VOL-456890",
-    origin: "Schipol, Amsterdam",
-    destination: "Changi, Singapore",
-    dangerousGoods: ["Class 4", "Class 7"],
-    hazchemCode: "3YE",
-    progress: 67,
-  },
-  {
-    id: "5",
-    identifier: "VOL-983475",
-    origin: "Cleveland, Ohio, USA",
-    destination: "Cleveland, Ohio, USA",
-    dangerousGoods: ["Class 5"],
-    hazchemCode: "3YE",
-    progress: 8,
-  },
-];
-
 export default function Dashboard() {
-  const { stats, error, fetchStats } = useDashboardStore();
-
-  useEffect(() => {
-    fetchStats();
-  }, [fetchStats]);
+  // Fetch live data using our new hooks
+  const { data: stats, error: statsError, isLoading: statsLoading } = useDashboardStats();
+  const { data: inspectionStats, isLoading: inspectionLoading } = useInspectionStats();
+  const { data: recentActivity, isLoading: activityLoading } = useRecentActivity(5);
+  const { data: podStats, isLoading: podLoading } = usePODStats();
+  const { data: recentShipments, isLoading: shipmentsLoading } = useRecentShipments(5);
 
   // Update stat cards with real data
   const statCardsData = [
     {
       id: "1",
       title: "Total Shipments",
-      value: stats.totalShipments.toLocaleString(),
+      value: stats?.totalShipments?.toLocaleString() || "0",
       description: "Active shipments in transit",
-      change: "+12.5%",
-      trend: "up",
+      change: stats?.trends?.shipments_change || "+0%",
+      trend: (stats?.trends?.shipments_change?.startsWith('+') ? "up" : "down") as "up" | "down",
       icon: Truck,
       color: "rgba(21, 63, 159, 0.08)",
       borderColor: "#153F9F",
@@ -128,10 +85,10 @@ export default function Dashboard() {
     {
       id: "2",
       title: "Pending Reviews",
-      value: stats.pendingReviews.toString(),
+      value: stats?.pendingReviews?.toString() || "0",
       description: "Documents requiring approval",
-      change: "-8.2%",
-      trend: "down",
+      change: "-8.2%", // TODO: Add to backend API
+      trend: "down" as const,
       icon: FileSearch,
       color: "rgba(255, 159, 67, 0.08)",
       borderColor: "#FF9F43",
@@ -139,10 +96,10 @@ export default function Dashboard() {
     {
       id: "3",
       title: "Compliance Rate",
-      value: `${stats.complianceRate}%`,
+      value: `${stats?.complianceRate || 0}%`,
       description: "Safety compliance score",
-      change: "+2.1%",
-      trend: "up",
+      change: stats?.trends?.compliance_trend || "+0%",
+      trend: (stats?.trends?.compliance_trend?.startsWith('+') ? "up" : "down") as "up" | "down",
       icon: BarChart3,
       color: "rgba(234, 84, 85, 0.08)",
       borderColor: "#EA5455",
@@ -150,18 +107,18 @@ export default function Dashboard() {
     {
       id: "4",
       title: "Active Routes",
-      value: stats.activeRoutes.toString(),
+      value: stats?.activeRoutes?.toString() || "0",
       description: "Currently operating routes",
-      change: "+5.3%",
-      trend: "up",
+      change: stats?.trends?.routes_change || "+0%",
+      trend: (stats?.trends?.routes_change?.startsWith('+') ? "up" : "down") as "up" | "down",
       icon: MapPin,
       color: "rgba(0, 207, 232, 0.08)",
       borderColor: "#00CFE8",
     },
   ];
 
-  if (error) {
-    console.warn("Dashboard error:", error);
+  if (statsError) {
+    console.warn("Dashboard error:", statsError);
   }
 
   return (
@@ -224,36 +181,42 @@ export default function Dashboard() {
                   <CheckCircle className="h-5 w-5 text-green-600" />
                   <CardTitle>Inspection Performance</CardTitle>
                 </div>
-                <Badge variant="success">94.2%</Badge>
+                <Badge variant="success">{inspectionStats?.pass_rate || 0}%</Badge>
               </div>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600">Pass Rate</span>
-                  <span className="font-bold text-green-600">94.2%</span>
+              {inspectionLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
                 </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600">Completed Today</span>
-                  <span className="font-medium">23</span>
+              ) : (
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-600">Pass Rate</span>
+                    <span className="font-bold text-green-600">{inspectionStats?.pass_rate || 0}%</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-600">Completed Today</span>
+                    <span className="font-medium">{inspectionStats?.completed_today || 0}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-600">
+                      Failed Inspections
+                    </span>
+                    <span className="font-medium text-red-600">{inspectionStats?.failed_count || 0}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-600">Pending Reviews</span>
+                    <span className="font-medium text-yellow-600">{inspectionStats?.pending_count || 0}</span>
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-2">
+                    <div
+                      className="bg-green-600 h-2 rounded-full"
+                      style={{ width: `${inspectionStats?.pass_rate || 0}%` }}
+                    ></div>
+                  </div>
                 </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600">
-                    Failed Inspections
-                  </span>
-                  <span className="font-medium text-red-600">3</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600">Pending Reviews</span>
-                  <span className="font-medium text-yellow-600">5</span>
-                </div>
-                <div className="w-full bg-gray-200 rounded-full h-2">
-                  <div
-                    className="bg-green-600 h-2 rounded-full"
-                    style={{ width: "94.2%" }}
-                  ></div>
-                </div>
-              </div>
+              )}
             </CardContent>
           </Card>
 
@@ -265,45 +228,44 @@ export default function Dashboard() {
                   <MessageSquare className="h-5 w-5 text-blue-600" />
                   <CardTitle>Communication Activity</CardTitle>
                 </div>
-                <Badge variant="info">Live</Badge>
+                <Badge variant="info">{recentActivity?.unread_count ? `${recentActivity.unread_count} New` : 'Live'}</Badge>
               </div>
             </CardHeader>
             <CardContent>
-              <div className="space-y-3">
-                <div className="flex items-center gap-3 pb-2 border-b">
-                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                  <div className="flex-1">
-                    <p className="text-sm font-medium">Inspection completed</p>
-                    <p className="text-xs text-gray-500">
-                      VOL-873454 • 2 min ago
+              {activityLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {recentActivity?.events?.slice(0, 3).map((event, index) => (
+                    <div key={event.id} className={`flex items-center gap-3 ${index < 2 ? 'pb-2 border-b' : ''}`}>
+                      <div className={`w-2 h-2 rounded-full ${
+                        event.priority === 'HIGH' ? 'bg-red-500' : 
+                        event.priority === 'MEDIUM' ? 'bg-yellow-500' : 
+                        'bg-green-500'
+                      }`}></div>
+                      <div className="flex-1">
+                        <p className="text-sm font-medium">{event.title}</p>
+                        <p className="text-xs text-gray-500">
+                          {event.shipment_identifier} • {new Date(event.timestamp).toLocaleTimeString()}
+                        </p>
+                      </div>
+                    </div>
+                  )) || []}
+                  {!recentActivity?.events?.length && (
+                    <div className="text-center py-4 text-gray-500">
+                      <p className="text-sm">No recent activity</p>
+                    </div>
+                  )}
+                  <div className="pt-2">
+                    <p className="text-xs text-gray-500 text-center">
+                      <Activity className="h-3 w-3 inline mr-1" />
+                      {recentActivity?.total_events || 0} events total
                     </p>
                   </div>
                 </div>
-                <div className="flex items-center gap-3 pb-2 border-b">
-                  <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                  <div className="flex-1">
-                    <p className="text-sm font-medium">POD captured</p>
-                    <p className="text-xs text-gray-500">
-                      VOL-345789 • 5 min ago
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3 pb-2">
-                  <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
-                  <div className="flex-1">
-                    <p className="text-sm font-medium">Status update</p>
-                    <p className="text-xs text-gray-500">
-                      VOL-456890 • 8 min ago
-                    </p>
-                  </div>
-                </div>
-                <div className="pt-2">
-                  <p className="text-xs text-gray-500 text-center">
-                    <Activity className="h-3 w-3 inline mr-1" />
-                    127 events today
-                  </p>
-                </div>
-              </div>
+              )}
             </CardContent>
           </Card>
 
@@ -315,38 +277,44 @@ export default function Dashboard() {
                   <FileCheck className="h-5 w-5 text-purple-600" />
                   <CardTitle>Proof of Delivery</CardTitle>
                 </div>
-                <Badge variant="success">100%</Badge>
+                <Badge variant="success">{podStats?.capture_rate || 0}%</Badge>
               </div>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600">Capture Rate</span>
-                  <span className="font-bold text-purple-600">100%</span>
+              {podLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
                 </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600">
-                    Digital Signatures
-                  </span>
-                  <span className="font-medium">45</span>
+              ) : (
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-600">Capture Rate</span>
+                    <span className="font-bold text-purple-600">{podStats?.capture_rate || 0}%</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-600">
+                      Digital Signatures
+                    </span>
+                    <span className="font-medium">{podStats?.digital_signatures || 0}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-600">Photos Captured</span>
+                    <span className="font-medium">{podStats?.photos_captured || 0}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-600">
+                      Avg Response Time
+                    </span>
+                    <span className="font-medium text-green-600">{podStats?.avg_response_time_hours || 0}h</span>
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-2">
+                    <div
+                      className="bg-purple-600 h-2 rounded-full"
+                      style={{ width: `${podStats?.capture_rate || 0}%` }}
+                    ></div>
+                  </div>
                 </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600">Photos Captured</span>
-                  <span className="font-medium">89</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600">
-                    Avg Response Time
-                  </span>
-                  <span className="font-medium text-green-600">1.2h</span>
-                </div>
-                <div className="w-full bg-gray-200 rounded-full h-2">
-                  <div
-                    className="bg-purple-600 h-2 rounded-full"
-                    style={{ width: "100%" }}
-                  ></div>
-                </div>
-              </div>
+              )}
             </CardContent>
           </Card>
         </div>
@@ -513,79 +481,96 @@ export default function Dashboard() {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {shipmentData.map((shipment) => (
-                    <tr key={shipment.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center">
-                            <Truck className="w-5 h-5 text-gray-600" />
-                          </div>
-                          <span className="font-semibold text-gray-900">
-                            {shipment.identifier}
-                          </span>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-gray-900">
-                        {shipment.origin}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-gray-900">
-                        {shipment.destination}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex -space-x-2">
-                          {shipment.dangerousGoods
-                            .slice(0, 3)
-                            .map((dg, index) => (
-                              <Badge
-                                key={index}
-                                variant="secondary"
-                                className="w-8 h-8 rounded-full p-0 text-xs border-2 border-white"
-                              >
-                                DG
-                              </Badge>
-                            ))}
-                          {shipment.dangerousGoods.length > 3 && (
-                            <Badge
-                              variant="outline"
-                              className="w-8 h-8 rounded-full p-0 text-xs border-2 border-white"
-                            >
-                              +{shipment.dangerousGoods.length - 3}
-                            </Badge>
-                          )}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-gray-900">
-                        {shipment.hazchemCode}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center gap-3">
-                          <Progress
-                            value={shipment.progress}
-                            className="flex-1"
-                          />
-                          <span className="text-sm text-gray-600 w-12">
-                            {shipment.progress}%
-                          </span>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center gap-2">
-                          <Button variant="ghost" size="icon">
-                            <Eye className="w-4 h-4" />
-                          </Button>
-                          <Button variant="ghost" size="icon">
-                            <MapPin className="w-4 h-4" />
-                          </Button>
+                  {shipmentsLoading ? (
+                    <tr>
+                      <td colSpan={7} className="px-6 py-8 text-center">
+                        <div className="flex items-center justify-center">
+                          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
                         </div>
                       </td>
                     </tr>
-                  ))}
+                  ) : recentShipments?.shipments?.length ? (
+                    recentShipments.shipments.map((shipment) => (
+                      <tr key={shipment.id} className="hover:bg-gray-50">
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center">
+                              <Truck className="w-5 h-5 text-gray-600" />
+                            </div>
+                            <span className="font-semibold text-gray-900">
+                              {shipment.identifier}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-gray-900">
+                          {shipment.origin}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-gray-900">
+                          {shipment.destination}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex -space-x-2">
+                            {shipment.dangerous_goods
+                              ?.slice(0, 3)
+                              .map((dg, index) => (
+                                <Badge
+                                  key={index}
+                                  variant="secondary"
+                                  className="w-8 h-8 rounded-full p-0 text-xs border-2 border-white"
+                                  title={dg}
+                                >
+                                  DG
+                                </Badge>
+                              ))}
+                            {(shipment.dangerous_goods?.length || 0) > 3 && (
+                              <Badge
+                                variant="outline"
+                                className="w-8 h-8 rounded-full p-0 text-xs border-2 border-white"
+                              >
+                                +{(shipment.dangerous_goods?.length || 0) - 3}
+                              </Badge>
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-gray-900">
+                          {shipment.hazchem_code}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex items-center gap-3">
+                            <Progress
+                              value={shipment.progress}
+                              className="flex-1"
+                            />
+                            <span className="text-sm text-gray-600 w-12">
+                              {shipment.progress}%
+                            </span>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex items-center gap-2">
+                            <Button variant="ghost" size="icon">
+                              <Eye className="w-4 h-4" />
+                            </Button>
+                            <Button variant="ghost" size="icon">
+                              <MapPin className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan={7} className="px-6 py-8 text-center text-gray-500">
+                        No recent shipments found
+                      </td>
+                    </tr>
+                  )}
                 </tbody>
               </table>
             </div>
             <div className="flex items-center justify-between pt-4">
               <p className="text-sm text-gray-700">
-                Showing 1 to 5 of 100 entries
+                Showing 1 to {recentShipments?.shipments?.length || 0} of {recentShipments?.total || 0} entries
               </p>
               <div className="flex items-center gap-2">
                 <Button variant="outline" size="sm">
