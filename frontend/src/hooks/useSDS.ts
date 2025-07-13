@@ -93,6 +93,12 @@ export interface SDSUploadRequest {
   country_code?: string;
 }
 
+export interface SDSBulkStatusUpdateRequest {
+  sds_ids: string[];
+  new_status: string;
+  reason: string;
+}
+
 export interface SDSStatistics {
   total_sds: number;
   active_sds: number;
@@ -294,6 +300,48 @@ async function uploadSDS(
   return response.json();
 }
 
+async function bulkStatusUpdate(
+  updateData: SDSBulkStatusUpdateRequest,
+  token: string,
+): Promise<{
+  message: string;
+  updated_count: number;
+  new_status: string;
+  reason: string;
+}> {
+  const response = await fetch(`${API_BASE_URL}/sds/safety-data-sheets/bulk_status_update/`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(updateData),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.error || "Failed to update SDS status");
+  }
+
+  return response.json();
+}
+
+async function bulkDownload(
+  sdsIds: string[],
+  token: string,
+): Promise<void> {
+  // Download each SDS individually since there's no bulk download endpoint
+  for (const sdsId of sdsIds) {
+    try {
+      const downloadData = await downloadSDS(sdsId, "BULK_DOWNLOAD", token);
+      // Open each download URL
+      window.open(downloadData.download_url, "_blank");
+    } catch (error) {
+      console.error(`Failed to download SDS ${sdsId}:`, error);
+    }
+  }
+}
+
 // Hooks
 export function useSafetyDataSheets(params: SDSSearchParams = {}) {
   const { getToken } = useAuthStore();
@@ -394,6 +442,36 @@ export function useSDSUpload() {
       // Invalidate and refetch related queries
       queryClient.invalidateQueries({ queryKey: ["safety-data-sheets"] });
       queryClient.invalidateQueries({ queryKey: ["sds-statistics"] });
+    },
+  });
+}
+
+export function useSDSBulkStatusUpdate() {
+  const queryClient = useQueryClient();
+  const { getToken } = useAuthStore();
+
+  return useMutation({
+    mutationFn: (updateData: SDSBulkStatusUpdateRequest) => {
+      const token = getToken();
+      if (!token) throw new Error("No authentication token");
+      return bulkStatusUpdate(updateData, token);
+    },
+    onSuccess: () => {
+      // Invalidate and refetch related queries
+      queryClient.invalidateQueries({ queryKey: ["safety-data-sheets"] });
+      queryClient.invalidateQueries({ queryKey: ["sds-statistics"] });
+    },
+  });
+}
+
+export function useSDSBulkDownload() {
+  const { getToken } = useAuthStore();
+
+  return useMutation({
+    mutationFn: (sdsIds: string[]) => {
+      const token = getToken();
+      if (!token) throw new Error("No authentication token");
+      return bulkDownload(sdsIds, token);
     },
   });
 }

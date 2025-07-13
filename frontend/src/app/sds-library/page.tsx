@@ -26,12 +26,18 @@ import {
   XCircle,
 } from "lucide-react";
 import { AuthGuard } from "@/components/auth/auth-guard";
+import SDSUploadModal from "@/components/sds/SDSUploadModal";
+import SDSAdvancedSearch from "@/components/sds/SDSAdvancedSearch";
+import SDSBulkOperations from "@/components/sds/SDSBulkOperations";
+import SDSViewerModal from "@/components/sds/SDSViewerModal";
 import {
   useSafetyDataSheets,
   useSDSStatistics,
   useExpiringSDS,
   useSDSDownload,
   useSDSLookup,
+  useSDSBulkStatusUpdate,
+  useSDSBulkDownload,
   type SafetyDataSheet,
   type SDSSearchParams,
 } from "@/hooks/useSDS";
@@ -39,6 +45,9 @@ import {
 export default function SDSLibraryPage() {
   const [searchParams, setSearchParams] = useState<SDSSearchParams>({});
   const [selectedSDS, setSelectedSDS] = useState<SafetyDataSheet | null>(null);
+  const [showUploadModal, setShowUploadModal] = useState(false);
+  const [selectedSDSIds, setSelectedSDSIds] = useState<string[]>([]);
+  const [showViewerModal, setShowViewerModal] = useState(false);
 
   const {
     data: sdsData,
@@ -49,6 +58,8 @@ export default function SDSLibraryPage() {
   const { data: expiringSDS } = useExpiringSDS(30);
   const downloadSDS = useSDSDownload();
   const lookupSDS = useSDSLookup();
+  const bulkStatusUpdate = useSDSBulkStatusUpdate();
+  const bulkDownload = useSDSBulkDownload();
 
   const handleSearch = (newParams: Partial<SDSSearchParams>) => {
     setSearchParams((prev) => ({ ...prev, ...newParams }));
@@ -56,6 +67,33 @@ export default function SDSLibraryPage() {
 
   const handleDownload = (sdsId: string, context: string = "GENERAL") => {
     downloadSDS.mutate({ sdsId, context });
+  };
+
+  const handleUploadSuccess = (sdsId: string) => {
+    // Refresh the SDS list after successful upload
+    refetchSDS();
+    setShowUploadModal(false);
+  };
+
+  const handleSearchReset = () => {
+    setSearchParams({});
+  };
+
+  const handleBulkStatusUpdate = async (sdsIds: string[], newStatus: string, reason: string) => {
+    await bulkStatusUpdate.mutateAsync({
+      sds_ids: sdsIds,
+      new_status: newStatus,
+      reason,
+    });
+  };
+
+  const handleBulkDownload = async (sdsIds: string[]) => {
+    await bulkDownload.mutateAsync(sdsIds);
+  };
+
+  const handleViewSDS = (sds: SafetyDataSheet) => {
+    setSelectedSDS(sds);
+    setShowViewerModal(true);
   };
 
   const getStatusColor = (status: string) => {
@@ -108,7 +146,10 @@ export default function SDSLibraryPage() {
               />
               Refresh
             </Button>
-            <Button className="flex items-center gap-2">
+            <Button 
+              className="flex items-center gap-2"
+              onClick={() => setShowUploadModal(true)}
+            >
               <Upload className="h-4 w-4" />
               Upload SDS
             </Button>
@@ -195,88 +236,12 @@ export default function SDSLibraryPage() {
           </Alert>
         )}
 
-        {/* Search and Filters */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Search className="h-5 w-5" />
-              Search & Filter
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Search</label>
-                <Input
-                  placeholder="Product name, manufacturer, UN number..."
-                  value={searchParams.query || ""}
-                  onChange={(e) => handleSearch({ query: e.target.value })}
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium">UN Number</label>
-                <Input
-                  placeholder="e.g. UN1090"
-                  value={searchParams.un_number || ""}
-                  onChange={(e) => handleSearch({ un_number: e.target.value })}
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Manufacturer</label>
-                <Input
-                  placeholder="Manufacturer name"
-                  value={searchParams.manufacturer || ""}
-                  onChange={(e) =>
-                    handleSearch({ manufacturer: e.target.value })
-                  }
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Status</label>
-                <select
-                  value={searchParams.status || ""}
-                  onChange={(e) => handleSearch({ status: e.target.value })}
-                  className="w-full border border-gray-200 rounded-md px-3 py-2 text-sm"
-                >
-                  <option value="">All Status</option>
-                  <option value="ACTIVE">Active</option>
-                  <option value="EXPIRED">Expired</option>
-                  <option value="SUPERSEDED">Superseded</option>
-                  <option value="UNDER_REVIEW">Under Review</option>
-                  <option value="DRAFT">Draft</option>
-                </select>
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Language</label>
-                <select
-                  value={searchParams.language || ""}
-                  onChange={(e) => handleSearch({ language: e.target.value })}
-                  className="w-full border border-gray-200 rounded-md px-3 py-2 text-sm"
-                >
-                  <option value="">All Languages</option>
-                  <option value="EN">English</option>
-                  <option value="FR">French</option>
-                  <option value="ES">Spanish</option>
-                  <option value="DE">German</option>
-                </select>
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Include Expired</label>
-                <div className="flex items-center">
-                  <input
-                    type="checkbox"
-                    checked={searchParams.include_expired || false}
-                    onChange={(e) =>
-                      handleSearch({ include_expired: e.target.checked })
-                    }
-                    className="mr-2"
-                  />
-                  <span className="text-sm">Show expired SDS</span>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        {/* Advanced Search and Filters */}
+        <SDSAdvancedSearch
+          searchParams={searchParams}
+          onSearchChange={handleSearch}
+          onReset={handleSearchReset}
+        />
 
         {/* SDS Table */}
         <Tabs defaultValue="list" className="space-y-6">
@@ -302,115 +267,28 @@ export default function SDSLibraryPage() {
                       Loading SDS documents...
                     </p>
                   </div>
+                ) : sdsData?.results && sdsData.results.length > 0 ? (
+                  <SDSBulkOperations
+                    sdsDocuments={sdsData.results}
+                    selectedIds={selectedSDSIds}
+                    onSelectionChange={setSelectedSDSIds}
+                    onBulkStatusUpdate={handleBulkStatusUpdate}
+                    onBulkDownload={handleBulkDownload}
+                    onViewSDS={handleViewSDS}
+                    isLoading={bulkStatusUpdate.isPending || bulkDownload.isPending}
+                  />
                 ) : (
-                  <div className="space-y-4">
-                    {sdsData?.results?.map((sds) => (
-                      <div
-                        key={sds.id}
-                        className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50"
-                      >
-                        <div className="flex items-center gap-4">
-                          <div className="p-2 bg-blue-100 rounded-lg">
-                            <BookOpen className="h-5 w-5 text-blue-600" />
-                          </div>
-                          <div>
-                            <h3 className="font-medium text-lg">
-                              {sds.product_name}
-                            </h3>
-                            <div className="flex items-center gap-4 text-sm text-gray-600 mt-1">
-                              <span className="flex items-center gap-1">
-                                <Factory className="h-3 w-3" />
-                                {sds.manufacturer}
-                              </span>
-                              <span className="flex items-center gap-1">
-                                <FileText className="h-3 w-3" />
-                                {sds.dangerous_good.un_number}
-                              </span>
-                              <span className="flex items-center gap-1">
-                                <Globe className="h-3 w-3" />
-                                {sds.language_display}
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-
-                        <div className="flex items-center gap-4">
-                          <div className="text-right">
-                            <div className="flex items-center gap-2 mb-1">
-                              <Badge className={getStatusColor(sds.status)}>
-                                {sds.status_display}
-                              </Badge>
-                              {sds.is_expired && (
-                                <Badge className="bg-red-100 text-red-800">
-                                  Expired
-                                </Badge>
-                              )}
-                            </div>
-                            <div className="text-sm text-gray-600">
-                              <p>Version {sds.version}</p>
-                              <p>
-                                {new Date(
-                                  sds.revision_date,
-                                ).toLocaleDateString()}
-                              </p>
-                            </div>
-                          </div>
-
-                          <div className="text-right">
-                            <div className="text-sm text-gray-600 mb-1">
-                              <p>{formatFileSize(sds.document.file_size)}</p>
-                              {sds.expiration_date && (
-                                <p
-                                  className={
-                                    sds.days_until_expiration < 30
-                                      ? "text-yellow-600"
-                                      : ""
-                                  }
-                                >
-                                  {sds.days_until_expiration < 0
-                                    ? "Expired"
-                                    : `${sds.days_until_expiration} days left`}
-                                </p>
-                              )}
-                            </div>
-                          </div>
-
-                          <div className="flex gap-2">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => setSelectedSDS(sds)}
-                            >
-                              <Eye className="h-4 w-4 mr-1" />
-                              View
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleDownload(sds.id)}
-                              disabled={downloadSDS.isPending}
-                            >
-                              <Download className="h-4 w-4 mr-1" />
-                              Download
-                            </Button>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-
-                    {sdsData?.results?.length === 0 && (
-                      <div className="text-center py-8">
-                        <BookOpen className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                        <h3 className="text-lg font-medium text-gray-900 mb-2">
-                          No SDS Found
-                        </h3>
-                        <p className="text-gray-600">
-                          Try adjusting your search criteria
-                        </p>
-                      </div>
-                    )}
+                  <div className="text-center py-8">
+                    <BookOpen className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                    <h3 className="text-lg font-medium text-gray-900 mb-2">
+                      No SDS Found
+                    </h3>
+                    <p className="text-gray-600">
+                      Try adjusting your search criteria
+                    </p>
                   </div>
                 )}
+
               </CardContent>
             </Card>
           </TabsContent>
@@ -545,6 +423,21 @@ export default function SDSLibraryPage() {
             </div>
           </TabsContent>
         </Tabs>
+
+        {/* Upload Modal */}
+        <SDSUploadModal
+          open={showUploadModal}
+          onOpenChange={setShowUploadModal}
+          onUploadSuccess={handleUploadSuccess}
+        />
+
+        {/* SDS Viewer Modal */}
+        <SDSViewerModal
+          sds={selectedSDS}
+          open={showViewerModal}
+          onOpenChange={setShowViewerModal}
+          onDownload={(sdsId) => handleDownload(sdsId, "PREVIEW")}
+        />
       </div>
     </AuthGuard>
   );
