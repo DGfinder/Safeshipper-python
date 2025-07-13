@@ -175,3 +175,30 @@ config.local.json
 .sass-cache/
 *.css.map
 *.js.map
+
+# ================================================
+# SECURITY / CREDENTIALS
+# ================================================
+
+# Credentials and service account files
+**/credentials.json
+**/*credentials*.json
+**/*service-account*.json
+**/client_secret*.json
+**/.serviceAccountKey.json
+**/firebase-adminsdk*.json
+
+# AWS credentials
+**/.aws/credentials
+**/.aws/config
+
+# Google Cloud credentials
+**/gcloud/
+**/.gcp/
+**/application_default_credentials.json
+
+# API keys and secrets
+**/secrets.json
+**/*secrets*.json
+**/api-keys.json
+**/*api-keys*.json
