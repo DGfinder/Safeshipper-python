@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>Search PDF into Google Spreadsheet api</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link href="https://fonts.googleapis.com/css?family=Open+Sans:300,400,600,700" rel="stylesheet" />
+  <link rel="stylesheet" media="all" href="{{ url_for('static', filename='fonts/font-awesome/css/font-awesome.min.css')}}">
+  <link rel="stylesheet" media="all" href="{{ url_for('static', filename='css/argon-dashboard.css')}}">
+  <link rel="stylesheet" media="all" href="{{ url_for('static', filename='custom.css')}}">
+</head>
+
+<body class="g-sidenav-show bg-gray-100 g-sidenav-hidden">
+  {% include 'partials/upper.html' %}
+
+  {% include "partials/sidebar.html" %}
+
+  <main class="main-content position-relative border-radius-lg">
+    {% include "partials/navbar.html" %}
+
+    <div class="container-fluid py-4">
+      <div class="row mt-4">
+        <div class="col-12">
+          <div class="card">
+            <div class="card-header">
+              <h5 class="mb-0">SDS List</h5>
+            </div>
+            <div class="px-4"><a class="btn btn-danger pull-right" href="{{ url_for('sds.add') }}">Add SDS</a></div>
+            <div class="table-responsive">
+              <table class="table table-flush" id="datatable-search">
+                <thead class="thead-light">
+                  <tr>
+                    <th>Material Number</th>
+                    <th>Material Name</th>
+                    <th>Un Number</th>
+                    <th>PSN</th>
+                    <th>Class</th>
+                    <th>Hazard Label</th>
+                    <th>SDS Attached</th>
+                    <th>SDS Link</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                {% for sds in sdss %}
+                  <tr>
+                    <td>{{sds.material_number}}</td>
+                    <td>{{sds.material_name}}</td>
+                    <td>{{sds.un_number}}</td>
+                    <td>{{sds.psn}}</td>
+                    <td>{{sds.class_name}}</td>
+                    <td>{{sds.hazard_label}}</td>
+                    <td>{{sds.attachment}}</td>
+                    <td><a class="btn btn-danger btn-xs" href="{{ sds.link }}">View SDS</a></td>
+                    <td>
+                      <a class="btn btn-link text-danger px-0 mb-0 me-2" href="{{ url_for('sds.delete', sds_id=sds.id) }}">
+                        <i class="fa fa-trash" aria-hidden="true"></i> Delete
+                      </a>
+                      <a class="btn btn-link text-dark px-0 mb-0" href="{{ url_for('sds.edit', sds_id=sds.id) }}">
+                        <i class="fa fa-pencil text-dark" aria-hidden="true"></i> Edit
+                      </a>
+                    </td>
+                  </tr>
+                {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {% include "partials/footer.html" %}
+    </div>
+  </main>
+
+  {% include "partials/sidenav.html" %}
+
+  <script src="{{ url_for('static', filename='jquery.min.js')}}"></script>
+  <script src="{{ url_for('static', filename='js/core/bootstrap.min.js')}}"></script>
+  <script src="{{ url_for('static', filename='js/plugins/datatables.js')}}"></script>
+  <script src="{{ url_for('static', filename='js/argon-dashboard.js')}}"></script>
+
+  <script>
+    const dataTableSearch = new simpleDatatables.DataTable("#datatable-search", {
+      searchable: true,
+      fixedHeight: true
+    });
+  </script>
+</body>
+
+</html>

@@ -265,7 +265,7 @@ export function FleetMap({
   }
 
   return (
-    <Card className={className}>
+    <Card className={`flex flex-col h-full ${className || ''}`}>
       <CardHeader>
         <CardTitle className="flex items-center justify-between">
           <span className="flex items-center gap-2">
@@ -340,8 +340,8 @@ export function FleetMap({
           </div>
         )}
       </CardHeader>
-      <CardContent className="p-0">
-        <div className="h-96 w-full relative">
+      <CardContent className="p-0 flex-1">
+        <div className="h-full w-full relative">
           <MapContainer
             center={mapCenter as [number, number]}
             zoom={10}

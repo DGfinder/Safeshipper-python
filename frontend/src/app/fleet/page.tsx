@@ -103,111 +103,115 @@ export default function FleetPage() {
 
   return (
     <AuthGuard>
-      <div className="p-6 space-y-6">
+      <div className="h-screen flex flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">
-              Fleet Management
-            </h1>
-            <p className="text-gray-600 mt-1">
-              Monitor and manage your vehicle fleet
-            </p>
-          </div>
-          <div className="flex items-center gap-3">
-            <Button
-              onClick={handleRefresh}
-              variant="outline"
-              disabled={refreshing}
-              className="flex items-center gap-2"
-            >
-              <RefreshCw
-                className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`}
-              />
-              Refresh
-            </Button>
-            <Button className="flex items-center gap-2">
-              <Plus className="h-4 w-4" />
-              Add Vehicle
-            </Button>
-          </div>
-        </div>
-
-        {/* Fleet Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">
-                Total Vehicles
-              </CardTitle>
-              <Truck className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{vehicles.length}</div>
-              <p className="text-xs text-muted-foreground">Fleet size</p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Active</CardTitle>
-              <Activity className="h-4 w-4 text-green-600" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-green-600">
-                {activeVehicles}
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Ready for dispatch
+        <div className="p-6 pb-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900">
+                Fleet Management
+              </h1>
+              <p className="text-gray-600 mt-1">
+                Monitor and manage your vehicle fleet
               </p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">In Transit</CardTitle>
-              <MapPin className="h-4 w-4 text-blue-600" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-blue-600">
-                {inTransitVehicles}
-              </div>
-              <p className="text-xs text-muted-foreground">On delivery</p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Maintenance</CardTitle>
-              <AlertTriangle className="h-4 w-4 text-yellow-600" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-yellow-600">
-                {maintenanceVehicles}
-              </div>
-              <p className="text-xs text-muted-foreground">Needs attention</p>
-            </CardContent>
-          </Card>
+            </div>
+            <div className="flex items-center gap-3">
+              <Button
+                onClick={handleRefresh}
+                variant="outline"
+                disabled={refreshing}
+                className="flex items-center gap-2"
+              >
+                <RefreshCw
+                  className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`}
+                />
+                Refresh
+              </Button>
+              <Button className="flex items-center gap-2">
+                <Plus className="h-4 w-4" />
+                Add Vehicle
+              </Button>
+            </div>
+          </div>
         </div>
 
-        {/* Fleet Tabs */}
-        <Tabs defaultValue="live-map" className="space-y-6">
+        {/* Main content area with flex-1 to fill remaining space */}
+        <div className="flex-1 overflow-auto px-6 pb-6">
+          {/* Fleet Stats */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">
+                  Total Vehicles
+                </CardTitle>
+                <Truck className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{vehicles.length}</div>
+                <p className="text-xs text-muted-foreground">Fleet size</p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Active</CardTitle>
+                <Activity className="h-4 w-4 text-green-600" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-green-600">
+                  {activeVehicles}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Ready for dispatch
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">In Transit</CardTitle>
+                <MapPin className="h-4 w-4 text-blue-600" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-blue-600">
+                  {inTransitVehicles}
+                </div>
+                <p className="text-xs text-muted-foreground">On delivery</p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Maintenance</CardTitle>
+                <AlertTriangle className="h-4 w-4 text-yellow-600" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-yellow-600">
+                  {maintenanceVehicles}
+                </div>
+                <p className="text-xs text-muted-foreground">Needs attention</p>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Fleet Tabs - flex-1 to fill remaining height */}
+          <Tabs defaultValue="live-map" className="flex flex-col flex-1">
           <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="live-map">Live Map</TabsTrigger>
             <TabsTrigger value="vehicles">Vehicles</TabsTrigger>
             <TabsTrigger value="analytics">Analytics</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="live-map" className="space-y-6">
-            <Card>
+          <TabsContent value="live-map" className="flex-1 flex flex-col">
+            <Card className="flex-1 flex flex-col">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <MapPin className="h-5 w-5" />
                   Fleet Live Tracking
                 </CardTitle>
               </CardHeader>
-              <CardContent>
-                <div className="h-96 rounded-lg border">
+              <CardContent className="flex-1 p-0">
+                <div className="h-full min-h-[500px] rounded-lg border border-t-0">
                   <FleetMap vehicles={fleetData?.vehicles || []} />
                 </div>
               </CardContent>
@@ -357,6 +361,7 @@ export default function FleetPage() {
             </div>
           </TabsContent>
         </Tabs>
+        </div>
       </div>
     </AuthGuard>
   );

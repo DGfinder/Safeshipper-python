@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>Search PDF into Google Spreadsheet api</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link href="https://fonts.googleapis.com/css?family=Open+Sans:300,400,600,700" rel="stylesheet" />
+  <link rel="stylesheet" media="all" href="{{ url_for('static', filename='fonts/font-awesome/css/font-awesome.min.css')}}">
+  <link rel="stylesheet" media="all" href="{{ url_for('static', filename='css/argon-dashboard.css')}}">
+  <link rel="stylesheet" media="all" href="{{ url_for('static', filename='dropzone.css')}}">
+  <link rel="stylesheet" media="all" href="{{ url_for('static', filename='custom.css')}}">
+
+</head>
+
+<body class="g-sidenav-show bg-gray-100 g-sidenav-hidden">
+  {% include 'partials/upper.html' %}
+
+  {% include 'partials/sidebar.html' %}
+
+  <main class="main-content position-relative border-radius-lg">
+    {% include 'partials/navbar.html' %}
+
+    <div class="container-fluid py-4">
+      <div class="row main-container">
+        <div class="col-12">
+          <div class="card">
+            <div class="card-header p-3">
+              <h5 class="mb-2">Manifest Search</h5>
+              <p class="mb-0">Find dangerous goods in your manifest.</p>
+            </div>
+            <div class="card-body p-3">
+              <div class="home-container">
+                <div class="dropzone-container">
+                  <form action="{{ url_for('upload') }}" class="dropzone text-center"></form>
+                  <section class="loading-container hidden">
+                    <h3 class="text-center">Please wait while your manifest is being searched ...</h3>
+                    <img src="{{ url_for('static', filename='images/dgfinder_loader.svg')}}">
+                  </section>
+                </div>
+              </div>
+              <div class="search-container row" style="display: none;">
+                <div class="col-md-6 col-sm-12 pdf-viewer">
+                </div>
+                <div class="col-md-6 col-sm-12">
+                  <div class="search-info">
+                    <div class="file-info">
+                      <p class="mb-0 search-filename">
+                        <label>File name : </label> <span></span>
+                      </p>
+                      <p class="mb-0">
+                        <label>Search pages : </label> <span id="searchPage"></span>
+                      </p>
+                      <p class="mb-0 search-count">
+                        <label>Results : </label> <span id="countSearch"></span>
+                        <select name="searchWords" id="searchWords" style="width:200px;display: none;">
+                        </select>
+                      </p>
+                      <p style="display: none">
+                        <label>text : </label> <input id="searchString" type="text" disabled style="width:200px" />
+                      </p>
+                    </div>
+                    <div class="search-result p-3 row">
+                      <div class="search-title pb-3">Potential Results</div>
+                      <table class="table table-bordered mb-0">
+                        <thead>
+                          <th width="10%">No</th>
+                          <th width="10%">UN Number</th>
+                          <th class="shipping" width="50%">Proper Shipping Name</th>
+                          <th width="10%">Class</th>
+                          <th width="20%">Hazard Label</th>
+                        </thead>
+                        <tbody>
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                  <div class="result-manage mt-2">
+                    <p>
+                      <img src="{{ url_for('static', filename='images/result.png')}}" class="commonImage" />
+                      <span>These results may require further investigation</span>
+                    </p>
+                    <div>
+                      <div id="page-range" style="display: none">
+                        <input id="from" class="pageRange" type="text" value="1" />
+                        <span> ~ </span>
+                        <input id="to" class="pageRange" type="text" value="1" />
+                      </div>
+                    </div>
+                    <!-- <div class="result-btns text-center row">
+                      <div class="col-md-6">
+                        <button class="btn prev buttonCtl" alt="-1">Previous</button>
+                      </div>
+                      <div class="col-md-6">
+                        <button class="btn next buttonCtl" alt="1">Next</button>
+                      </div>
+                    </div> -->
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {% include 'partials/footer.html' %}
+    </div>
+  </main>
+
+  {% include 'partials/sidenav.html' %}
+
+  <input type="hidden" class="filename" />
+  <script src="{{ url_for('static', filename='jquery.min.js')}}"></script>
+  <script src="{{ url_for('static', filename='popper.min.js')}}"></script>
+  <script src="{{ url_for('static', filename='dropzone.js')}}"></script>
+  <script src="{{ url_for('static', filename='js/core/bootstrap.min.js')}}"></script>
+  <script src="{{ url_for('static', filename='js/argon-dashboard.js')}}"></script>
+  <script>
+    let PDFFILE = "";
+
+    $(document).ready(function() {
+      $("body").on("click", ".search-info tbody tr.content-row", function() {
+        let unNumber = $(this).data("un-number");
+        let dataLinked = $(this).data('linked');
+        let $this = $(this);
+        
+        console.log("Unnumber",unNumber)
+        if (!dataLinked) {
+          let html = '<table class="table w-100"><thead><tr>'
+                    + '<th class="text-center">Material Number</th>'
+                    + '<th class="text-center">Material Name</th>'
+                    + '<th class="text-center">View SDS</th></tr></thead>'
+                    + '<tbody>';
+
+          $.ajax({
+            url: `sds/search-by-un-number/${unNumber}`,
+            contentType: "application/json",
+            dataType: 'json',
+            success: function (response) {
+              if (response["result"]) {
+                let sds = response["result"];
+                console.log("*************",sds);
+                html += '<tr>' +
+                  `<td class="text-center">${sds.material_number}</td>` +
+                  `<td class="text-center">${sds.material_name}</td>` +
+                  `<td class="text-center"><a class='btn btn-danger btn-xs' href='${sds.link}'>View SDS</a></td>` +
+                  `</tr>`;
+              } else {
+                html += '<tr><td colspan="3" class="text-center">No SDS data exists.</td></tr>';
+              }
+              html += '</tbody></table>';
+
+              $(`#row_${unNumber}`).children("td").html(html);
+              $this.data('linked', true);
+            }
+          });
+        }
+
+        $(`#row_${unNumber}`).toggle();
+      });
+
+      $(".dropzone-container form span").html(
+        "<div class='pdf-image-wrapper'>" +
+        "<img class='commonImage'  src='{{ url_for('static', filename='images/frame.png')}}' /></div>" +
+        "<button class='btn btn-default btn-upload-document' type='button'>" +
+        "<img class='commonImage' src='{{ url_for('static', filename='images/Vector.png')}}'/>Upload the document</button><div>" +
+        "<div class='drag-drop-desc'><small>or drag and drop</small></div>" +
+        "<div class='document-type-desc'><small>(pdf, doc, docx)</small></div></div>"
+      );
+
+      Dropzone.options.Dropzone = {
+          maxFiles: 1,
+          acceptedFiles: "application/pdf",
+          addRemoveLinks: true
+      };
+
+      $("body").on("click", ".btn-search", function(e) {
+        e.preventDefault();
+
+        let filename = $(".filename").val();
+        if (filename !== "") {
+          $(".loading-container").removeClass("hidden");
+          $(".dropzone-container > form").addClass("hidden");
+          $(".btn-search .search-loading").show();
+          $(".btn-search span").text("");
+          $(".btn-search img").hide();
+          $(this).attr("disabled", "disabled");
+
+          let data = {"filename": filename};
+          $.ajax({
+            url: 'search-manifest',
+            data: JSON.stringify(data),
+            contentType: "application/json",
+            dataType: 'json',
+            type: "POST",
+            success: function(response) {
+              $(".pdf-viewer").html("<iframe src=" + response[5] + "></iframe>");
+
+              PDFFILE = filename;
+              $(".home-container").hide();
+              $(".search-container").show();
+
+              $(".search-filename span").text(PDFFILE.replace("./uploads/", ""));
+              $(".loading-container").addClass("hidden");
+              $(".dropzone-container > form").addClass("hidden");
+              $(".btn-search .search-loading").hide();
+              $(".btn-search").removeAttr("disabled");
+              $(".btn-search span").text("Search");
+              $(".btn-search img").show();
+
+             
+              if (response[0].length > 0) {
+                let indexSearch = 0;
+                let optionHtml = '';
+                // searchWords.sort();
+                for (let i = 0; i < response[1].length; i++) {
+                  optionHtml += '<option value = "'+response[1][i]+'" alt="'+response[2][i]+'">'+response[1][i]+'</option>'
+                }
+
+                $('#searchWords').html(optionHtml);
+                let tbody_html = "";
+                let index = 0;
+                let numSearch = 0;
+                let count = 0;
+                $("#totalSearch").text(response[3]);
+                if (response[3] > 0) {
+                  indexSearch = 1;
+                  numSearch++;
+                  count++;
+                }
+
+                console.log("response[0].length",response[0].length)
+                console.log(response[0])
+                console.log("#############################")
+                $("#countSearch").text(response[0].length);
+                $('#searchWords').val(response[1][indexSearch-1]);
+                $('#searchString').val(response[1][indexSearch-1]);
+                $('#searchString').attr('alt', response[2][indexSearch-1]);
+                let classNumber = [];
+                let imageName = [];
+                renderTable();
+                $(".search-result tbody").html(tbody_html);
+
+                $('#searchResultModal').modal('show');
+                function renderTable() {
+                  for (let i = 0; i < response[0].length; i++) {
+                    if (true) {
+                      index++;
+                      classNumber = [];
+                      imageName = [];
+                      let className = response[0][i][4].toString();
+                      let unNumber = response[0][i][1];
+                      console.log(className);
+                      if (className.includes('.') && className.indexOf('.') < 3) {
+                        classNumber.push(className.slice(0,4).trim());
+                      } else {
+                        classNumber.push(className.slice(0,1).trim());
+                      }
+                      if (className.includes('(') && className.includes(')')) {
+                        let secondaryNumbers = className.slice(className.indexOf('(')+1, className.indexOf(')'));
+                        secondaryNumbers.split(',').forEach(nums => {
+                          classNumber.push(nums.trim());
+                        })
+                      }
+                      classNumber.forEach(classNum => {
+                        let flag = false;
+                        response[4].some(file => {
+                          if (file.includes('Class_'+classNum)) {
+                            console.log(file);
+                            !flag && imageName.push("{{ url_for('static', filename='images/Hazard_labels/')}}" + file);
+                            flag = true;
+                          }
+                        })
+                        if (!flag) {
+                          response[4].some(file => {
+                            if (classNum.includes('.') && file.includes('Class_'+classNum.slice(0, -1))) {
+                              !flag && imageName.push("{{ url_for('static', filename='images/Hazard_labels/')}}" + file);
+                              flag = true;
+                            }
+                          })
+                        }
+                      })
+
+                      tbody_html += `<tr class="content-row" data-un-number="${unNumber}" data-linked=false><td>` + parseInt(index) + ".</td>";
+                      tbody_html += "<td>" + unNumber + "</td><td class='shipping'>" + response[0][i][2] + "</td>";
+                      tbody_html += "<td>" + className + "</td>";
+                      tbody_html += "<td class='text-center'>";
+                      imageName.forEach(image => {
+                        tbody_html += "<img id='labelImage' width='50' height='50'  src='" + image + "'>";
+                      })
+                      tbody_html += "</td>";
+                      tbody_html += "</tr>";
+                      tbody_html += `<tr id="row_${unNumber}" class="toggle-row" data-un-number="${unNumber}" data-shipping-name="${response[0][i][2]}" `;
+                      tbody_html += `data-class-name="${className}" style='display: none'>`;
+                      tbody_html += `<td colspan='5'></td></tr>`;
+                    }
+                  }
+                }
+              } else {
+                alert("No matching keywords");
+              }
+            }
+          });
+        } else {
+          alert("No file uploaded.");
+        }
+      });
+    });
+  </script>
+</body>
+
+</html>

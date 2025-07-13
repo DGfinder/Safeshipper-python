@@ -54,7 +54,8 @@
       "Bash(timeout 45 docker-compose logs -f backend)",
       "Bash(python:*)",
       "Bash(pip3 list:*)",
-      "Bash(cp:*)"
+      "Bash(cp:*)",
+      "Bash(unzip:*)"
     ],
     "deny": []
   }

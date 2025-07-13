@@ -339,8 +339,9 @@ export default function ManifestUploadPage() {
     setAnalysisRecommendations([]);
 
     try {
-      // Import the manifest service dynamically to avoid SSR issues
+      // Import the manifest service and text extractor dynamically to avoid SSR issues
       const { manifestService } = await import("@/services/manifestService");
+      const { PDFTextExtractor } = await import("@/services/pdfTextExtractor");
 
       // Validate the PDF file first
       const validation = manifestService.validatePDFFile(file);
@@ -363,26 +364,55 @@ export default function ManifestUploadPage() {
       });
 
       if (response.success && response.results) {
+        // Extract keywords from dangerous goods
+        const keywords = response.results.dangerousGoods.flatMap(item => {
+          const words = [];
+          // Add UN number
+          words.push(item.un);
+          // Add first word of proper shipping name
+          const firstWord = item.properShippingName.split(" ")[0];
+          if (firstWord.length > 3) {
+            words.push(firstWord);
+          }
+          // Add full proper shipping name if it's short
+          if (item.properShippingName.length < 20) {
+            words.push(item.properShippingName);
+          }
+          return words;
+        });
+
+        // Extract actual text positions from PDF
+        const highlightAreas = await PDFTextExtractor.searchDangerousGoods(file, keywords);
+
         // Transform API response to keyword results format
         const transformedResults = response.results.dangerousGoods.map(
           (item, index) => {
             const keyword = item.properShippingName.split(" ")[0].toLowerCase();
             const resultId = `api-result-${index}`;
-            const page = Math.floor(index / 3) + 1; // Simulate distribution across pages
+            
+            // Find corresponding highlight area
+            const matchingHighlight = highlightAreas.find(h => 
+              h.keyword?.toLowerCase() === keyword || 
+              h.keyword === item.un
+            ) || {
+              // Fallback to simulated position if no match found
+              page: Math.floor(index / 3) + 1,
+              x: 85 + (index % 3) * 5,
+              y: 470 + (index * 25),
+              width: keyword.length * 8 + 40,
+              height: 15,
+              color: 'yellow' as const,
+              keyword,
+              id: resultId
+            };
             
             return {
               id: resultId,
               keyword,
-              page,
+              page: matchingHighlight.page,
               context: `Detected ${item.properShippingName} - ${item.quantity || "Unknown quantity"}`,
               highlightArea: {
-                page,
-                x: 85 + (index % 3) * 5, // Slightly offset each result
-                y: 470 + (index * 25), // Stack results vertically
-                width: keyword.length * 8 + 40, // Approximate width based on keyword length
-                height: 15,
-                color: 'yellow' as const,
-                keyword,
+                ...matchingHighlight,
                 id: resultId
               },
               dangerousGoods: [
@@ -453,8 +483,24 @@ export default function ManifestUploadPage() {
         setNotifications(newNotifications);
       } else {
         setProcessingError(response.error || "Manifest analysis failed");
-        // Fallback to mock results for demonstration
-        setKeywordResults(mockKeywordResults);
+        // Fallback to mock results for demonstration with real text positions
+        try {
+          const { PDFTextExtractor } = await import("@/services/pdfTextExtractor");
+          const mockKeywords = ["paint", "adhesive", "acid", "flammable"];
+          const highlightAreas = await PDFTextExtractor.searchDangerousGoods(file, mockKeywords);
+          
+          // Update mock results with real positions
+          const updatedMockResults = mockKeywordResults.map((result, index) => ({
+            ...result,
+            highlightArea: highlightAreas[index] || result.highlightArea
+          }));
+          
+          setKeywordResults(updatedMockResults);
+        } catch (error) {
+          console.error("Error extracting text for fallback:", error);
+          setKeywordResults(mockKeywordResults);
+        }
+        
         setManifestTableData(mockManifestTableData);
         setCurrentKeywordIndex(0);
         
@@ -488,8 +534,24 @@ export default function ManifestUploadPage() {
       setProcessingError(
         "Manifest processing failed. Using demonstration data.",
       );
-      // Fallback to mock results
-      setKeywordResults(mockKeywordResults);
+      // Fallback to mock results with real text positions if possible
+      try {
+        const { PDFTextExtractor } = await import("@/services/pdfTextExtractor");
+        const mockKeywords = ["paint", "adhesive", "acid", "flammable"];
+        const highlightAreas = await PDFTextExtractor.searchDangerousGoods(file, mockKeywords);
+        
+        // Update mock results with real positions
+        const updatedMockResults = mockKeywordResults.map((result, index) => ({
+          ...result,
+          highlightArea: highlightAreas[index] || result.highlightArea
+        }));
+        
+        setKeywordResults(updatedMockResults);
+      } catch (extractError) {
+        console.error("Error extracting text for fallback:", extractError);
+        setKeywordResults(mockKeywordResults);
+      }
+      
       setManifestTableData(mockManifestTableData);
       setCurrentKeywordIndex(0);
       

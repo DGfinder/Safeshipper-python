@@ -145,6 +145,20 @@ const PDFViewer = forwardRef<PDFViewerRef, PDFViewerProps>(function PDFViewer({
     }
   };
 
+  // Convert PDF coordinates to screen coordinates
+  const convertCoordinates = (highlight: HighlightArea) => {
+    // Our text extractor provides coordinates in PDF points
+    // We need to scale them based on the current zoom level
+    // react-pdf handles the coordinate system conversion for us
+    
+    return {
+      x: highlight.x * scale,
+      y: highlight.y * scale,
+      width: highlight.width * scale,
+      height: highlight.height * scale,
+    };
+  };
+
   // Expose functions to parent component
   useImperativeHandle(ref, () => ({
     navigateToHighlight,
@@ -258,30 +272,35 @@ const PDFViewer = forwardRef<PDFViewerRef, PDFViewerProps>(function PDFViewer({
                 
                 {/* Highlight Overlays */}
                 {currentPageHighlights.length > 0 && (
-                  <div className="absolute top-0 left-0 pointer-events-none">
-                    {currentPageHighlights.map((highlight, index) => (
-                      <div
-                        key={highlight.id || index}
-                        className="absolute pointer-events-auto cursor-pointer"
-                        style={{
-                          left: `${highlight.x * scale}px`,
-                          top: `${highlight.y * scale}px`,
-                          width: `${highlight.width * scale}px`,
-                          height: `${highlight.height * scale}px`,
-                          backgroundColor: getHighlightColor(
-                            highlight.color,
-                            highlight.id === currentHighlight
-                          ),
-                          border: highlight.id === currentHighlight 
-                            ? '2px solid rgba(59, 130, 246, 0.8)' 
-                            : '1px solid rgba(0, 0, 0, 0.1)',
-                          borderRadius: '2px',
-                          transition: 'all 0.2s ease-in-out',
-                        }}
-                        onClick={() => onHighlightClick?.(highlight)}
-                        title={`${highlight.keyword || 'Highlight'} - Click to view details`}
-                      />
-                    ))}
+                  <div className="absolute top-0 left-0 pointer-events-none w-full h-full">
+                    {currentPageHighlights.map((highlight, index) => {
+                      const coords = convertCoordinates(highlight);
+                      
+                      return (
+                        <div
+                          key={highlight.id || index}
+                          className="absolute pointer-events-auto cursor-pointer"
+                          style={{
+                            left: `${coords.x}px`,
+                            top: `${coords.y}px`,
+                            width: `${coords.width}px`,
+                            height: `${coords.height}px`,
+                            backgroundColor: getHighlightColor(
+                              highlight.color,
+                              highlight.id === currentHighlight
+                            ),
+                            border: highlight.id === currentHighlight 
+                              ? '2px solid rgba(59, 130, 246, 0.8)' 
+                              : '1px solid rgba(0, 0, 0, 0.1)',
+                            borderRadius: '2px',
+                            transition: 'all 0.2s ease-in-out',
+                            zIndex: 10,
+                          }}
+                          onClick={() => onHighlightClick?.(highlight)}
+                          title={`${highlight.keyword || 'Highlight'} - Click to view details`}
+                        />
+                      );
+                    })}
                   </div>
                 )}
               </div>

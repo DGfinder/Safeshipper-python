@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>Search PDF into Google Spreadsheet api</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link href="https://fonts.googleapis.com/css?family=Open+Sans:300,400,600,700" rel="stylesheet" />
+  <link rel="stylesheet" media="all" href="{{ url_for('static', filename='fonts/font-awesome/css/font-awesome.min.css')}}">
+  <link rel="stylesheet" media="all" href="{{ url_for('static', filename='css/argon-dashboard.css')}}">
+  <link rel="stylesheet" media="all" href="{{ url_for('static', filename='custom.css')}}">
+</head>
+
+<body class="g-sidenav-show bg-gray-100 g-sidenav-hidden">
+  {% include 'partials/upper.html' %}
+
+  {% include 'partials/sidebar.html' %}
+
+  <main class="main-content position-relative border-radius-lg">
+    {% include 'partials/navbar.html' %}
+
+    <div class="container-fluid py-4">
+      <div class="row main-container">
+        <div class="col-12">
+          <div class="card">
+            <div class="card-body p-3">
+              <div class="text-center pt-6">
+                <h1>
+                  Welcome To our Services!
+                </h1>
+              </div>
+              <div class="text-center p-4 mt-4">
+                <h2>{{ hello }}</h2>
+                <h4>Select which feature you would like to use?</h4>
+              </div>
+
+              <div class="row mt-4 mt-lg-6">
+                <div class="col-lg-4 col-md-6 mt-4">
+                  <div class="card card-frame px-4 py-4 text-center">
+                    <h4>Manifest Search</h4>
+                    <p>Search your manifest for Dangerous Goods</p>
+                    <a class="btn btn-danger" href="/manifest">Try</a>
+                  </div>
+                </div>
+                <div class="col-lg-4 col-md-6 mt-4">
+                  <div class="card card-frame px-4 py-4 text-center">
+                    <h4>Complete Report</h4>
+                    <p>Gather Complete Report</p>
+                    <a class="btn btn-danger" href="/complete-report">Try</a>
+                  </div>
+                </div>
+                <div class="col-lg-4 col-md-6 mt-4">
+                  <div class="card card-frame px-4 py-4 text-center">
+                    <h4>Compatibility</h4>
+                    <p>Check the compatibility of your manifest</p>
+                    <a class="btn btn-danger" href="/compatibility">Try</a>
+                  </div>
+                </div>
+                <div class="col-lg-4 col-md-6 mt-4 offset-lg-2">
+                  <div class="card card-frame px-4 py-4 text-center">
+                    <h4>SDS</h4>
+                    <p>Gather Safety Data Sheets</p>
+                    <a class="btn btn-danger" href="/sds">Try</a>
+                  </div>
+                </div>
+                <div class="col-lg-4 col-md-6 mt-4 offset-md-3 offset-lg-0">
+                  <div class="card card-frame px-4 py-4 text-center">
+                    <h4>EPG</h4>
+                    <p>Gather Emergency Procedure Guides</p>
+                    <a class="btn btn-danger" href="/epgs">Try</a>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {% include 'partials/footer.html' %}
+
+    </div>
+  </main>
+
+  {% include 'partials/sidenav.html' %}
+
+  <input type="hidden" class="filename" />
+  <script src="{{ url_for('static', filename='jquery.min.js')}}"></script>
+  <script src="{{ url_for('static', filename='popper.min.js')}}"></script>
+  <script src="{{ url_for('static', filename='js/core/bootstrap.min.js')}}"></script>
+  <script src="{{ url_for('static', filename='js/argon-dashboard.js')}}"></script>
+
+</body>
+
+</html>
