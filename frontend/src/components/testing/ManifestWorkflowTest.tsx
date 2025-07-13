@@ -91,6 +91,7 @@ export default function ManifestWorkflowTest() {
 
       const analysisResponse = await manifestService.uploadAndAnalyzeManifest({
         file: selectedFile,
+        shipmentId: "test-shipment-id", // Test shipment ID for workflow testing
         analysisOptions: {
           detectDangerousGoods: true,
           extractMetadata: true,

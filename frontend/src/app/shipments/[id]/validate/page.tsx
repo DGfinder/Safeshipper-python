@@ -383,17 +383,13 @@ export default function ShipmentValidationPage() {
                     <div>
                       <span className="text-gray-600">Total Pages:</span>
                       <div className="font-medium">
-                        {validationResults.processing_metadata.total_pages}
+                        {validationResults.processing_metadata?.total_pages || 'N/A'}
                       </div>
                     </div>
                     <div>
                       <span className="text-gray-600">Processing Time:</span>
                       <div className="font-medium">
-                        {
-                          validationResults.processing_metadata
-                            .processing_time_seconds
-                        }
-                        s
+                        {validationResults.processing_metadata?.processing_time_seconds || 'N/A'}s
                       </div>
                     </div>
                     <div>
@@ -401,7 +397,7 @@ export default function ShipmentValidationPage() {
                         Potential DGs Found:
                       </span>
                       <div className="font-medium">
-                        {validationResults.potential_dangerous_goods.length}
+                        {validationResults.dg_matches?.length || 0}
                       </div>
                     </div>
                     <div>
@@ -410,22 +406,22 @@ export default function ShipmentValidationPage() {
                     </div>
                   </div>
 
-                  {validationResults.unmatched_text.length > 0 && (
+                  {validationResults.analysis_results?.unmatched_text?.length > 0 && (
                     <div>
                       <h4 className="font-medium text-gray-900 mb-2">
                         Unmatched Text
                       </h4>
                       <div className="text-sm text-gray-600 space-y-1 max-h-32 overflow-y-auto">
-                        {validationResults.unmatched_text
+                        {(validationResults.analysis_results?.unmatched_text || [])
                           .slice(0, 5)
-                          .map((text, index) => (
+                          .map((text: string, index: number) => (
                             <div key={index} className="truncate">
                               &ldquo;{text}&rdquo;
                             </div>
                           ))}
-                        {validationResults.unmatched_text.length > 5 && (
+                        {(validationResults.analysis_results?.unmatched_text?.length || 0) > 5 && (
                           <div className="text-xs text-gray-500">
-                            +{validationResults.unmatched_text.length - 5} more
+                            +{(validationResults.analysis_results?.unmatched_text?.length || 0) - 5} more
                             items
                           </div>
                         )}

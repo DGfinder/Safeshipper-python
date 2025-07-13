@@ -376,9 +376,10 @@ export default function ManifestUploadPage() {
         return;
       }
 
-      // Upload and analyze the manifest
+      // Upload and analyze the manifest (using demo shipment ID for this test page)
       const response = await manifestService.uploadAndAnalyzeManifest({
         file,
+        shipmentId: "demo-shipment-id", // Demo/test shipment ID
         analysisOptions: {
           detectDangerousGoods: true,
           extractMetadata: true,

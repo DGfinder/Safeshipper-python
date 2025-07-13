@@ -52,8 +52,8 @@ export function DangerousGoodsConfirmation({
     if (confirmedDGs.length > 0) {
       setLocalConfirmed(confirmedDGs);
     } else {
-      // Convert potential DGs to confirmation format
-      const initialConfirmed = validationResults.potential_dangerous_goods.map(
+      // Convert DG matches to confirmation format
+      const initialConfirmed = (validationResults.dg_matches || []).map(
         (dg) => ({
           un_number: dg.un_number,
           description: dg.proper_shipping_name,
@@ -127,12 +127,12 @@ export function DangerousGoodsConfirmation({
   const findOriginalMatch = (
     unNumber: string,
   ): DangerousGoodMatch | undefined => {
-    return validationResults.potential_dangerous_goods.find(
+    return (validationResults.dg_matches || []).find(
       (dg) => dg.un_number === unNumber,
     );
   };
 
-  if (validationResults.potential_dangerous_goods.length === 0) {
+  if ((validationResults.dg_matches || []).length === 0) {
     return (
       <Card>
         <CardHeader>

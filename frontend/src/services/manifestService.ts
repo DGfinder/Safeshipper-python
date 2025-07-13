@@ -1,5 +1,6 @@
 interface ManifestAnalysisRequest {
   file: File;
+  shipmentId: string;
   analysisOptions?: {
     detectDangerousGoods: boolean;
     extractMetadata: boolean;
@@ -47,78 +48,146 @@ interface ProcessingStatus {
 
 class ManifestService {
   private baseUrl = "/api/v1";
-  private isDevelopmentMode = process.env.NODE_ENV === "development";
+  
+  private getAuthToken(): string | null {
+    // Access the auth store from localStorage (Zustand persist storage)
+    try {
+      const authStore = JSON.parse(localStorage.getItem('auth-store') || '{}');
+      return authStore.state?.token || null;
+    } catch {
+      return null;
+    }
+  }
 
   async uploadAndAnalyzeManifest(
     request: ManifestAnalysisRequest,
   ): Promise<ManifestAnalysisResponse> {
-    if (this.isDevelopmentMode) {
-      return this.simulateManifestAnalysis(request);
+    const token = this.getAuthToken();
+    if (!token) {
+      throw new Error("Authentication required");
     }
 
-    try {
-      const formData = new FormData();
-      formData.append("file", request.file);
-      formData.append(
-        "options",
-        JSON.stringify(
-          request.analysisOptions || {
-            detectDangerousGoods: true,
-            extractMetadata: true,
-            validateFormat: true,
-          },
-        ),
-      );
+    const formData = new FormData();
+    formData.append("file", request.file);
+    formData.append("shipment_id", request.shipmentId);
 
-      const response = await fetch(
-        `${this.baseUrl}/manifests/upload-and-analyze/`,
-        {
-          method: "POST",
-          body: formData,
+    const response = await fetch(
+      `${this.baseUrl}/manifests/upload-and-analyze/`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
         },
-      );
+        body: formData,
+      },
+    );
 
-      if (!response.ok) {
-        throw new Error(`Upload failed: ${response.statusText}`);
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || `Upload failed: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    return this.transformBackendResponse(data);
+  }
+
+  async checkProcessingStatus(manifestId: string): Promise<ProcessingStatus> {
+    const token = this.getAuthToken();
+    if (!token) {
+      throw new Error("Authentication required");
+    }
+
+    const response = await fetch(
+      `${this.baseUrl}/manifests/${manifestId}/analysis_results/`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
       }
+    );
 
-      const data = await response.json();
-      return this.transformBackendResponse(data);
-    } catch (error) {
-      console.error("Manifest upload failed:", error);
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || "Status check failed");
+    }
 
-      // Fallback to simulation if backend is unavailable
-      console.log("Falling back to simulation mode...");
-      return this.simulateManifestAnalysis(request);
+    const data = await response.json();
+    return {
+      documentId: manifestId,
+      status: this.mapBackendStatus(data.status),
+      progress: this.calculateProgress(data.status),
+      currentStep: this.getProcessingStep(data.status),
+      results: data.analysis_results ? this.transformResults(data.analysis_results) : undefined,
+      error: data.error,
+    };
+  }
+
+  private mapBackendStatus(backendStatus: string): "analyzing" | "completed" | "failed" {
+    switch (backendStatus) {
+      case "UPLOADED":
+      case "QUEUED":
+      case "PROCESSING":
+      case "ANALYZING":
+        return "analyzing";
+      case "AWAITING_CONFIRMATION":
+      case "CONFIRMED":
+      case "VALIDATED_OK":
+      case "FINALIZED":
+        return "completed";
+      case "PROCESSING_FAILED":
+      case "VALIDATED_WITH_ERRORS":
+        return "failed";
+      default:
+        return "analyzing";
     }
   }
 
-  async checkProcessingStatus(documentId: string): Promise<ProcessingStatus> {
-    if (this.isDevelopmentMode) {
-      return this.simulateProcessingStatus(documentId);
+  private calculateProgress(backendStatus: string): number {
+    switch (backendStatus) {
+      case "UPLOADED":
+        return 20;
+      case "QUEUED":
+        return 25;
+      case "PROCESSING":
+      case "ANALYZING":
+        return 50;
+      case "AWAITING_CONFIRMATION":
+      case "VALIDATED_OK":
+        return 75;
+      case "CONFIRMED":
+      case "FINALIZED":
+        return 100;
+      case "PROCESSING_FAILED":
+      case "VALIDATED_WITH_ERRORS":
+        return 0;
+      default:
+        return 0;
     }
+  }
 
-    try {
-      const response = await fetch(
-        `${this.baseUrl}/manifests/${documentId}/status/`,
-      );
-
-      if (!response.ok) {
-        throw new Error("Status check failed");
-      }
-
-      const data = await response.json();
-      return {
-        documentId,
-        status: data.status,
-        progress: data.progress || 0,
-        currentStep: data.current_step || "Processing...",
-        results: data.results ? this.transformResults(data.results) : undefined,
-        error: data.error,
-      };
-    } catch (error) {
-      console.error("Status check failed:", error);
-      return this.simulateProcessingStatus(documentId);
+  private getProcessingStep(backendStatus: string): string {
+    switch (backendStatus) {
+      case "UPLOADED":
+        return "Document uploaded successfully";
+      case "QUEUED":
+        return "Queued for processing...";
+      case "PROCESSING":
+      case "ANALYZING":
+        return "Analyzing manifest for dangerous goods...";
+      case "AWAITING_CONFIRMATION":
+        return "Analysis complete, awaiting confirmation...";
+      case "VALIDATED_OK":
+        return "Validation completed successfully";
+      case "CONFIRMED":
+        return "Dangerous goods confirmed";
+      case "FINALIZED":
+        return "Manifest finalized successfully";
+      case "PROCESSING_FAILED":
+      case "VALIDATED_WITH_ERRORS":
+        return "Processing failed";
+      default:
+        return "Processing...";
     }
   }
 
@@ -348,32 +417,38 @@ class ManifestService {
 
   private transformBackendResponse(data: any): ManifestAnalysisResponse {
     return {
-      success: data.success || false,
-      documentId: data.document_id,
-      status: data.status,
-      results: data.results ? this.transformResults(data.results) : undefined,
+      success: true,
+      documentId: data.id, // Backend returns document/manifest id as 'id'
+      status: this.mapBackendStatus(data.status),
+      results: data.analysis_results ? this.transformResults(data.analysis_results) : undefined,
       error: data.error,
     };
   }
 
-  private transformResults(results: any) {
+  private transformResults(analysisResults: any) {
+    // Handle both direct analysis_results and response with dg_matches
+    const dgMatches = analysisResults.dg_matches || analysisResults || [];
+    
     return {
-      dangerousGoods:
-        results.dangerous_goods?.map((dg: any) => ({
-          id: dg.id || Math.random().toString(36).substr(2, 9),
-          un: dg.un_number,
-          properShippingName: dg.proper_shipping_name,
-          class: dg.hazard_class,
-          subHazard: dg.sub_hazard,
-          packingGroup: dg.packing_group,
-          quantity: dg.quantity,
-          weight: dg.weight,
-          confidence: dg.confidence || 0.8,
-          source: dg.source || "automatic",
-        })) || [],
-      metadata: results.metadata || {},
-      warnings: results.warnings || [],
-      recommendations: results.recommendations || [],
+      dangerousGoods: dgMatches.map((match: any) => ({
+        id: match.id || Math.random().toString(36).substr(2, 9),
+        un: match.dangerous_good?.un_number || match.un_number,
+        properShippingName: match.dangerous_good?.proper_shipping_name || match.proper_shipping_name,
+        class: match.dangerous_good?.hazard_class || match.hazard_class,
+        subHazard: match.dangerous_good?.sub_hazard,
+        packingGroup: match.dangerous_good?.packing_group || match.packing_group,
+        quantity: match.quantity,
+        weight: match.weight_kg,
+        confidence: match.confidence_score || 0.8,
+        source: "automatic",
+        foundText: match.found_text,
+        matchedTerm: match.matched_term,
+        pageNumber: match.page_number,
+        matchType: match.match_type,
+      })),
+      metadata: analysisResults.processing_metadata || {},
+      warnings: analysisResults.validation_warnings || [],
+      recommendations: analysisResults.recommendations || [],
     };
   }
 

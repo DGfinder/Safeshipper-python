@@ -8,7 +8,7 @@ export interface Document {
   document_type: string;
   status:
     | "UPLOADED"
-    | "QUEUED"
+    | "QUEUED" 
     | "PROCESSING"
     | "VALIDATED_OK"
     | "VALIDATED_WITH_ERRORS"
@@ -38,12 +38,20 @@ export interface DocumentStatus {
   updated_at: string;
 }
 
+export type ManifestStatus = 
+  | "UPLOADED"
+  | "ANALYZING" 
+  | "AWAITING_CONFIRMATION"
+  | "CONFIRMED"
+  | "PROCESSING_FAILED"
+  | "FINALIZED";
+
 export interface ManifestValidationResult {
-  document_id: string;
-  status: string;
-  potential_dangerous_goods: DangerousGoodMatch[];
-  unmatched_text: string[];
-  processing_metadata: {
+  manifest_id: string;
+  status: ManifestStatus;
+  analysis_results?: any;
+  dg_matches: DangerousGoodMatch[];
+  processing_metadata?: {
     total_pages: number;
     total_text_blocks: number;
     processing_time_seconds: number;
@@ -54,17 +62,22 @@ export interface ManifestValidationResult {
 }
 
 export interface DangerousGoodMatch {
+  id?: string;
   un_number: string;
   proper_shipping_name: string;
   hazard_class: string;
   packing_group?: string;
   found_text: string;
-  matched_term: string; // The specific synonym or term that triggered the match
+  matched_term?: string; // The specific synonym or term that triggered the match
   page_number: number;
   confidence_score: number;
   match_type: "un_number" | "proper_name" | "simplified_name" | "synonym";
   quantity?: number;
   weight_kg?: number;
+  is_confirmed?: boolean;
+  confirmed_by?: string;
+  confirmed_at?: string;
+  position_data?: any;
 }
 
 export interface DangerousGoodConfirmation {
@@ -94,7 +107,7 @@ async function uploadManifest(
   formData.append("file", file);
   formData.append("shipment_id", shipmentId);
 
-  const response = await fetch(`${API_BASE_URL}/manifest-upload/`, {
+  const response = await fetch(`${API_BASE_URL}/manifests/upload-and-analyze/`, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${token}`,
@@ -138,7 +151,7 @@ async function getValidationResults(
   token: string,
 ): Promise<ManifestValidationResult> {
   const response = await fetch(
-    `${API_BASE_URL}/documents/${documentId}/validation-results/`,
+    `${API_BASE_URL}/manifests/${documentId}/analysis_results/`,
     {
       method: "GET",
       headers: {
@@ -166,7 +179,7 @@ async function confirmDangerousGoods(
   document_status: string;
 }> {
   const response = await fetch(
-    `${API_BASE_URL}/documents/${documentId}/confirm-dangerous-goods/`,
+    `${API_BASE_URL}/manifests/${documentId}/confirm_dangerous_goods/`,
     {
       method: "POST",
       headers: {
@@ -174,7 +187,7 @@ async function confirmDangerousGoods(
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        confirmed_dangerous_goods: confirmedDGs,
+        confirmed_un_numbers: confirmedDGs.map(dg => dg.un_number),
       }),
     },
   );
@@ -188,7 +201,7 @@ async function confirmDangerousGoods(
 }
 
 // Enhanced types for manifest-based workflow
-export interface ManifestStatus {
+export interface ManifestStatusResponse {
   shipment: {
     id: string;
     tracking_number: string;
@@ -231,7 +244,7 @@ export interface CompatibilityError {
 async function pollManifestStatus(
   shipmentId: string,
   token: string,
-): Promise<ManifestStatus> {
+): Promise<ManifestStatusResponse> {
   const response = await fetch(
     `${API_BASE_URL}/manifests/poll-status/${shipmentId}/`,
     {
@@ -488,7 +501,7 @@ export function useManifestStatus(
     enabled: !!shipmentId && !!getToken(),
     refetchInterval: (query) => {
       // Keep polling if any manifest is still processing
-      const data = query.state.data as ManifestStatus | undefined;
+      const data = query.state.data as ManifestStatusResponse | undefined;
       if (
         data?.overall_status === "analyzing" ||
         data?.overall_status === "processing"
