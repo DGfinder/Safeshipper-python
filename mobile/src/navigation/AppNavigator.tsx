@@ -15,6 +15,8 @@ import HomeScreen from '../screens/HomeScreen';
 import TripsScreen from '../screens/TripsScreen';
 import SDSScreen from '../screens/SDS/SDSScreen';
 import EPGScreen from '../screens/EPGScreen';
+import EPGDetailScreen from '../screens/EPGDetailScreen';
+import EmergencyPlanDetailScreen from '../screens/EmergencyPlanDetailScreen';
 import CompatibilityScreen from '../screens/Compatibility/CompatibilityScreen';
 import CheckCompatibilityScreen from '../screens/Compatibility/CheckCompatibilityScreen';
 import CompareCompatibilityScreen from '../screens/Compatibility/CompareCompatibilityScreen';
@@ -36,6 +38,12 @@ export type SDSStackParamList = {
   MaterialDetail: { materialId: string; materialName: string };
 };
 
+export type EPGStackParamList = {
+  EPGMain: undefined;
+  EPGDetail: { epgId: string };
+  EmergencyPlanDetail: { planId: string };
+};
+
 export type CompatibilityStackParamList = {
   CompatibilityMain: undefined;
   CheckCompatibility: undefined;
@@ -52,7 +60,7 @@ export type CompatibilityStackParamList = {
 const HomeStack = createNativeStackNavigator();
 const TripsStack = createNativeStackNavigator();
 const SDSStack = createNativeStackNavigator<SDSStackParamList>();
-const EPGStack = createNativeStackNavigator();
+const EPGStack = createNativeStackNavigator<EPGStackParamList>();
 const CompatibilityStack = createNativeStackNavigator<CompatibilityStackParamList>();
 
 // Tab Navigator
@@ -112,7 +120,27 @@ function EPGStackNavigator() {
       <EPGStack.Screen 
         name="EPGMain" 
         component={EPGScreen} 
-        options={{ headerShown: false }}
+        options={{ 
+          title: 'Emergency Procedures',
+          headerStyle: { backgroundColor: '#f8f9fa' },
+          headerTitleStyle: { fontWeight: 'bold' }
+        }}
+      />
+      <EPGStack.Screen 
+        name="EPGDetail" 
+        component={EPGDetailScreen} 
+        options={{ 
+          title: 'EPG Details',
+          headerBackTitle: 'Back'
+        }}
+      />
+      <EPGStack.Screen 
+        name="EmergencyPlanDetail" 
+        component={EmergencyPlanDetailScreen} 
+        options={{ 
+          title: 'Emergency Plan',
+          headerBackTitle: 'Back'
+        }}
       />
     </EPGStack.Navigator>
   );

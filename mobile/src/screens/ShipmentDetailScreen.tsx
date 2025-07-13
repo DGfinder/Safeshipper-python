@@ -3,7 +3,7 @@
  * Displays detailed information about a specific shipment
  */
 
-import React, {useState} from 'react';
+import React, {useState, useEffect} from 'react';
 import {
   View,
   Text,
@@ -12,6 +12,7 @@ import {
   StyleSheet,
   ActivityIndicator,
   Alert,
+  Linking,
 } from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import {useQuery, useMutation, useQueryClient} from '@tanstack/react-query';
@@ -19,6 +20,7 @@ import {useRoute, useNavigation} from '@react-navigation/native';
 import Toast from 'react-native-toast-message';
 
 import {apiService, Shipment, ConsignmentItem} from '../services/api';
+import { ShipmentEmergencyPlan } from '../types/EPG';
 
 type RouteParams = {
   shipmentId: string;
@@ -147,6 +149,175 @@ const StatusUpdateButton: React.FC<{
           )}
         </TouchableOpacity>
       ))}
+    </View>
+  );
+};
+
+const EmergencyPlanSection: React.FC<{
+  shipmentId: string;
+  hasDangerousGoods: boolean;
+  navigation: NavigationProp;
+}> = ({ shipmentId, hasDangerousGoods, navigation }) => {
+  const [emergencyPlan, setEmergencyPlan] = useState<ShipmentEmergencyPlan | null>(null);
+  const [loadingPlan, setLoadingPlan] = useState(false);
+  const [generatingPlan, setGeneratingPlan] = useState(false);
+
+  useEffect(() => {
+    if (hasDangerousGoods) {
+      loadEmergencyPlan();
+    }
+  }, [shipmentId, hasDangerousGoods]);
+
+  const loadEmergencyPlan = async () => {
+    try {
+      setLoadingPlan(true);
+      const response = await apiService.getShipmentEmergencyPlan(shipmentId);
+      
+      if (response.success && response.data) {
+        // The API returns a list, get the first result if exists
+        const planData = Array.isArray(response.data) ? response.data[0] : response.data;
+        if (planData) {
+          setEmergencyPlan(planData);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to load emergency plan:', error);
+    } finally {
+      setLoadingPlan(false);
+    }
+  };
+
+  const generateEmergencyPlan = async () => {
+    try {
+      setGeneratingPlan(true);
+      const response = await apiService.generateEmergencyPlan({
+        shipment_id: shipmentId,
+        force_regenerate: true
+      });
+      
+      if (response.success && response.data) {
+        setEmergencyPlan(response.data.plan);
+        Toast.show({
+          type: 'success',
+          text1: 'Emergency Plan Generated',
+          text2: 'Emergency plan has been created successfully',
+        });
+      } else {
+        throw new Error(response.error || 'Failed to generate emergency plan');
+      }
+    } catch (error) {
+      Toast.show({
+        type: 'error',
+        text1: 'Generation Failed',
+        text2: error instanceof Error ? error.message : 'Failed to generate emergency plan',
+      });
+    } finally {
+      setGeneratingPlan(false);
+    }
+  };
+
+  const handleViewEPGs = () => {
+    navigation.navigate('EPG' as never);
+  };
+
+  const handleViewEmergencyPlan = () => {
+    if (emergencyPlan) {
+      navigation.navigate('EmergencyPlanDetail' as never, { planId: emergencyPlan.id } as never);
+    }
+  };
+
+  if (!hasDangerousGoods) return null;
+
+  return (
+    <View style={styles.section}>
+      <Text style={styles.sectionTitle}>🚨 Emergency Procedures</Text>
+      
+      {loadingPlan ? (
+        <View style={styles.emergencyLoadingContainer}>
+          <ActivityIndicator color="#EF4444" />
+          <Text style={styles.emergencyLoadingText}>Loading emergency plan...</Text>
+        </View>
+      ) : emergencyPlan ? (
+        <View style={styles.emergencyPlanContainer}>
+          <View style={styles.emergencyPlanHeader}>
+            <Text style={styles.emergencyPlanTitle}>Emergency Plan Available</Text>
+            <Text style={styles.emergencyPlanNumber}>{emergencyPlan.plan_number}</Text>
+          </View>
+          
+          <Text style={styles.emergencyPlanSummary} numberOfLines={3}>
+            {emergencyPlan.executive_summary}
+          </Text>
+          
+          <View style={styles.emergencyActions}>
+            <TouchableOpacity
+              style={styles.emergencyPrimaryButton}
+              onPress={handleViewEmergencyPlan}
+            >
+              <Text style={styles.emergencyPrimaryButtonText}>📋 View Emergency Plan</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity
+              style={styles.emergencySecondaryButton}
+              onPress={handleViewEPGs}
+            >
+              <Text style={styles.emergencySecondaryButtonText}>📚 Browse EPG Library</Text>
+            </TouchableOpacity>
+          </View>
+          
+          {emergencyPlan.route_emergency_contacts?.en_route?.chemtrec && (
+            <TouchableOpacity
+              style={styles.emergencyContactButton}
+              onPress={() => {
+                const number = emergencyPlan.route_emergency_contacts?.en_route?.chemtrec;
+                if (number) {
+                  Alert.alert(
+                    'Call CHEMTREC',
+                    `Emergency chemical response hotline\n${number}`,
+                    [
+                      { text: 'Cancel', style: 'cancel' },
+                      { text: 'Call Now', onPress: () => Linking.openURL(`tel:${number}`) }
+                    ]
+                  );
+                }
+              }}
+            >
+              <Text style={styles.emergencyContactButtonText}>
+                📞 CHEMTREC: {emergencyPlan.route_emergency_contacts.en_route.chemtrec}
+              </Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      ) : (
+        <View style={styles.emergencyPlanContainer}>
+          <Text style={styles.noEmergencyPlanText}>
+            No emergency plan generated for this shipment
+          </Text>
+          <Text style={styles.noEmergencyPlanSubtext}>
+            Generate a comprehensive emergency response plan based on the dangerous goods in this shipment.
+          </Text>
+          
+          <View style={styles.emergencyActions}>
+            <TouchableOpacity
+              style={[styles.emergencyPrimaryButton, generatingPlan && styles.emergencyButtonDisabled]}
+              onPress={generateEmergencyPlan}
+              disabled={generatingPlan}
+            >
+              {generatingPlan ? (
+                <ActivityIndicator color="#FFFFFF" size="small" />
+              ) : (
+                <Text style={styles.emergencyPrimaryButtonText}>⚡ Generate Emergency Plan</Text>
+              )}
+            </TouchableOpacity>
+            
+            <TouchableOpacity
+              style={styles.emergencySecondaryButton}
+              onPress={handleViewEPGs}
+            >
+              <Text style={styles.emergencySecondaryButtonText}>📚 Browse EPG Library</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
     </View>
   );
 };
@@ -359,6 +530,15 @@ export const ShipmentDetailScreen: React.FC = () => {
             ))}
           </View>
         )}
+
+        {/* Emergency Plan Section */}
+        <EmergencyPlanSection
+          shipmentId={shipmentId}
+          hasDangerousGoods={
+            shipment.consignment_items?.some(item => item.is_dangerous_good) || false
+          }
+          navigation={navigation}
+        />
 
         {/* Status Update Buttons */}
         <StatusUpdateButton
@@ -643,5 +823,107 @@ const styles = StyleSheet.create({
   },
   bottomSpacer: {
     height: 32,
+  },
+  // Emergency Plan Styles
+  emergencyLoadingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 20,
+    backgroundColor: '#FEF7F7',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#FECACA',
+  },
+  emergencyLoadingText: {
+    marginLeft: 8,
+    fontSize: 14,
+    color: '#6B7280',
+  },
+  emergencyPlanContainer: {
+    backgroundColor: '#FEF2F2',
+    padding: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#FECACA',
+  },
+  emergencyPlanHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  emergencyPlanTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#DC2626',
+  },
+  emergencyPlanNumber: {
+    fontSize: 12,
+    color: '#B91C1C',
+    fontFamily: 'monospace',
+  },
+  emergencyPlanSummary: {
+    fontSize: 13,
+    color: '#7F1D1D',
+    lineHeight: 18,
+    marginBottom: 12,
+  },
+  emergencyActions: {
+    gap: 8,
+    marginBottom: 8,
+  },
+  emergencyPrimaryButton: {
+    backgroundColor: '#DC2626',
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 6,
+    alignItems: 'center',
+  },
+  emergencyPrimaryButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  emergencySecondaryButton: {
+    backgroundColor: '#FFFFFF',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 6,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#DC2626',
+  },
+  emergencySecondaryButtonText: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: '#DC2626',
+  },
+  emergencyButtonDisabled: {
+    backgroundColor: '#9CA3AF',
+  },
+  emergencyContactButton: {
+    backgroundColor: '#7F1D1D',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 6,
+    alignItems: 'center',
+  },
+  emergencyContactButtonText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  noEmergencyPlanText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#DC2626',
+    marginBottom: 6,
+  },
+  noEmergencyPlanSubtext: {
+    fontSize: 12,
+    color: '#7F1D1D',
+    lineHeight: 16,
+    marginBottom: 12,
   },
 });

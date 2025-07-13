@@ -7,6 +7,16 @@ import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import NetInfo from '@react-native-community/netinfo';
 import { DangerousGood, SearchResult, SearchFilters, CompatibilityResult, PhAnalysisResult } from '../types/DangerousGoods';
+import { 
+  EmergencyProcedureGuide, 
+  ShipmentEmergencyPlan, 
+  EmergencyIncident,
+  EPGSearchFilters,
+  EPGSearchResult,
+  EPGStatistics,
+  EmergencyPlanGenerationRequest,
+  EmergencyPlanGenerationResponse
+} from '../types/EPG';
 
 interface ApiResponse<T> {
   success: boolean;
@@ -350,6 +360,93 @@ class ApiService {
     return this.makeRequest(`/sds/${materialId}/`);
   }
 
+  // EPG API - Emergency Procedure Guides
+  async getEmergencyProcedureGuides(
+    filters?: EPGSearchFilters,
+    page: number = 1,
+    limit: number = 20
+  ): Promise<ApiResponse<EPGSearchResult>> {
+    const params = {
+      page,
+      limit,
+      ...filters,
+    };
+    return this.makeRequest('/epg/emergency-procedure-guides/', 'GET', params);
+  }
+
+  async getEmergencyProcedureGuide(id: string): Promise<ApiResponse<EmergencyProcedureGuide>> {
+    return this.makeRequest(`/epg/emergency-procedure-guides/${id}/`);
+  }
+
+  async searchEmergencyProcedureGuides(
+    query: string,
+    filters?: EPGSearchFilters
+  ): Promise<ApiResponse<EPGSearchResult>> {
+    const params = {
+      q: query,
+      ...filters,
+    };
+    return this.makeRequest('/epg/emergency-procedure-guides/search/', 'POST', params);
+  }
+
+  async getEPGStatistics(): Promise<ApiResponse<EPGStatistics>> {
+    return this.makeRequest('/epg/emergency-procedure-guides/statistics/');
+  }
+
+  async getEPGsDueForReview(): Promise<ApiResponse<EmergencyProcedureGuide[]>> {
+    return this.makeRequest('/epg/emergency-procedure-guides/due_for_review/');
+  }
+
+  // Emergency Plans API
+  async getShipmentEmergencyPlan(shipmentId: string): Promise<ApiResponse<ShipmentEmergencyPlan>> {
+    return this.makeRequest(`/epg/emergency-plans/?shipment=${shipmentId}`);
+  }
+
+  async getEmergencyPlan(planId: string): Promise<ApiResponse<ShipmentEmergencyPlan>> {
+    return this.makeRequest(`/epg/emergency-plans/${planId}/`);
+  }
+
+  async generateEmergencyPlan(
+    request: EmergencyPlanGenerationRequest
+  ): Promise<ApiResponse<EmergencyPlanGenerationResponse>> {
+    return this.makeRequest('/epg/emergency-plans/generate_plan/', 'POST', request);
+  }
+
+  async reviewEmergencyPlan(planId: string): Promise<ApiResponse<ShipmentEmergencyPlan>> {
+    return this.makeRequest(`/epg/emergency-plans/${planId}/review/`, 'POST');
+  }
+
+  async approveEmergencyPlan(planId: string): Promise<ApiResponse<ShipmentEmergencyPlan>> {
+    return this.makeRequest(`/epg/emergency-plans/${planId}/approve/`, 'POST');
+  }
+
+  async activateEmergencyPlan(planId: string): Promise<ApiResponse<ShipmentEmergencyPlan>> {
+    return this.makeRequest(`/epg/emergency-plans/${planId}/activate/`, 'POST');
+  }
+
+  // Emergency Incidents API
+  async getEmergencyIncidents(
+    page: number = 1,
+    limit: number = 20
+  ): Promise<ApiResponse<{ count: number; results: EmergencyIncident[] }>> {
+    const params = { page, limit };
+    return this.makeRequest('/epg/incidents/', 'GET', params);
+  }
+
+  async getEmergencyIncident(id: string): Promise<ApiResponse<EmergencyIncident>> {
+    return this.makeRequest(`/epg/incidents/${id}/`);
+  }
+
+  async createEmergencyIncident(
+    incident: Partial<EmergencyIncident>
+  ): Promise<ApiResponse<EmergencyIncident>> {
+    return this.makeRequest('/epg/incidents/', 'POST', incident);
+  }
+
+  async getRecentEmergencyIncidents(): Promise<ApiResponse<EmergencyIncident[]>> {
+    return this.makeRequest('/epg/incidents/recent/');
+  }
+
   // Offline data sync
   async syncOfflineData(): Promise<ApiResponse<any>> {
     if (!this.isOnline) {
@@ -358,16 +455,18 @@ class ApiService {
 
     try {
       // Sync essential data for offline use
-      const [dangerousGoods, hazardClasses, segregationRules] = await Promise.all([
+      const [dangerousGoods, hazardClasses, segregationRules, emergencyProcedureGuides] = await Promise.all([
         this.makeRequest('/dangerous-goods/essential/', 'GET', {}, false),
         this.makeRequest('/hazard-classes/', 'GET', {}, false),
         this.makeRequest('/segregation-rules/', 'GET', {}, false),
+        this.makeRequest('/epg/emergency-procedure-guides/?status=ACTIVE', 'GET', {}, false),
       ]);
 
       const offlineData = {
         dangerousGoods: dangerousGoods.data || [],
         hazardClasses: hazardClasses.data || [],
         segregationRules: segregationRules.data || [],
+        emergencyProcedureGuides: emergencyProcedureGuides.data?.results || [],
         lastSync: new Date(),
         version: '1.0.0',
       };
