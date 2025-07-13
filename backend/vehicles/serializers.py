@@ -3,12 +3,12 @@ from .models import (
     Vehicle, SafetyEquipmentType, VehicleSafetyEquipment,
     SafetyEquipmentInspection, SafetyEquipmentCertification
 )
-from locations.serializers import GeoLocationSerializer
-from companies.serializers import CompanySerializer
+# from locations.serializers import GeoLocationSerializer
+# from companies.serializers import CompanySerializer
 
 class VehicleSerializer(serializers.ModelSerializer):
-    assigned_depot_details = GeoLocationSerializer(source='assigned_depot', read_only=True)
-    owning_company_details = CompanySerializer(source='owning_company', read_only=True)
+    # assigned_depot_details = GeoLocationSerializer(source='assigned_depot', read_only=True)
+    # owning_company_details = CompanySerializer(source='owning_company', read_only=True)
     
     class Meta:
         model = Vehicle

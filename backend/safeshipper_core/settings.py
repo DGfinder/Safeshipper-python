@@ -53,26 +53,28 @@ INSTALLED_APPS = [
     # Local apps (minimal set for frontend)
     'users',
     'companies',
+    'locations',
     'shipments',
     'dangerous_goods',
+    'sds',
     'vehicles',
     'freight_types',
     'enterprise_auth',
     'incidents',
     'training',
     'iot_devices',
-    'documents',  # Enabled for manifest functionality
+    # 'documents',  # Enabled for manifest functionality (temporarily disabled due to celery import issues)
     'manifests',  # Enabled for DG manifest processing
     'audits',     # Enabled for audit functionality
     'inspections', # Enabled for inspection management
     'communications', # Enabled for activity logs
     'dashboards', # Enabled for dashboard statistics
-    # 'locations',  # Temporarily disabled due to GIS dependencies
+    # 'locations',  # Temporarily disabled due to GIS dependencies (already added above)
     # 'tracking',  # Temporarily disabled due to GIS dependencies
     # 'hazard_assessments',
     'load_plans',
     # 'handling_unit_types',
-    'sds',        # Enabled for Safety Data Sheets
+    # 'sds',        # Enabled for Safety Data Sheets (already added above)
     'epg',        # Enabled for Emergency Procedure Guides
     # 'emergency_procedures',
     'capacity_marketplace',

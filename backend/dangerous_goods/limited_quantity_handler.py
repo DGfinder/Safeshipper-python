@@ -1,12 +1,14 @@
 # dangerous_goods/limited_quantity_handler.py
 
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, TYPE_CHECKING
 from decimal import Decimal
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
 from .models import DangerousGood
-from shipments.models import ConsignmentItem, Shipment
+
+if TYPE_CHECKING:
+    from shipments.models import ConsignmentItem, Shipment
 
 
 class LimitedQuantityLimit(models.Model):
@@ -92,7 +94,7 @@ class LimitedQuantityHandler:
     DEFAULT_MAX_GROSS_MASS_PER_PACKAGE = Decimal('30.0')  # 30kg per package
     DEFAULT_MAX_VOLUME_AEROSOLS = Decimal('1.0')  # 1L for aerosols
     
-    def validate_lq_consignment_item(self, item: ConsignmentItem) -> Dict:
+    def validate_lq_consignment_item(self, item: 'ConsignmentItem') -> Dict:
         """
         Validate if a consignment item qualifies for Limited Quantity transport.
         
@@ -117,7 +119,7 @@ class LimitedQuantityHandler:
             return result
         
         # Check if item is already marked as LQ
-        if item.dg_quantity_type != ConsignmentItem.DGQuantityType.LIMITED_QUANTITY:
+        if hasattr(item, 'dg_quantity_type') and item.dg_quantity_type != 'LIMITED_QUANTITY':
             result['reasons'].append("Item is not marked as Limited Quantity")
             # But continue to check if it COULD be LQ
         
@@ -205,7 +207,7 @@ class LimitedQuantityHandler:
         
         return result
     
-    def calculate_lq_placard_requirements(self, shipment: Shipment) -> Dict:
+    def calculate_lq_placard_requirements(self, shipment: 'Shipment') -> Dict:
         """
         Calculate Limited Quantity specific placard requirements.
         
@@ -217,7 +219,7 @@ class LimitedQuantityHandler:
         """
         lq_items = shipment.items.filter(
             is_dangerous_good=True,
-            dg_quantity_type=ConsignmentItem.DGQuantityType.LIMITED_QUANTITY
+            dg_quantity_type='LIMITED_QUANTITY'
         )
         
         result = {
@@ -307,7 +309,7 @@ class LimitedQuantityHandler:
         # Default for classes not listed
         return Decimal('1.0')
     
-    def generate_lq_marking_requirements(self, shipment: Shipment) -> Dict:
+    def generate_lq_marking_requirements(self, shipment: 'Shipment') -> Dict:
         """
         Generate marking requirements for Limited Quantity packages.
         """

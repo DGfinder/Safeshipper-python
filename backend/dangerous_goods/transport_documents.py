@@ -1,8 +1,11 @@
 # dangerous_goods/transport_documents.py
 
 import json
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, TYPE_CHECKING
 from datetime import datetime
+
+if TYPE_CHECKING:
+    from shipments.models import Shipment
 from django.utils import timezone
 from django.db import models
 from django.utils.translation import gettext_lazy as _
@@ -10,7 +13,6 @@ from django.core.files.base import ContentFile
 from django.core.files.storage import default_storage
 
 from .models import DangerousGood
-from shipments.models import Shipment, ConsignmentItem
 from users.models import User
 from companies.models import Company
 
@@ -38,7 +40,7 @@ class TransportDocument(models.Model):
     
     # Link to shipment
     shipment = models.ForeignKey(
-        Shipment,
+        'shipments.Shipment',
         on_delete=models.CASCADE,
         related_name='transport_documents'
     )
@@ -243,12 +245,12 @@ class ADGTransportDocumentGenerator:
     def __init__(self):
         pass
     
-    def generate_dangerous_goods_declaration(self, shipment: Shipment, user: User = None) -> TransportDocument:
+    def generate_dangerous_goods_declaration(self, shipment: 'Shipment', user: User = None) -> TransportDocument:
         """
         Generate a Dangerous Goods Declaration for a shipment.
         
         Args:
-            shipment: Shipment to generate declaration for
+            shipment: Shipment object to generate declaration for
             user: User generating the document
             
         Returns:
@@ -289,7 +291,7 @@ class ADGTransportDocumentGenerator:
         
         return transport_doc
     
-    def generate_transport_document(self, shipment: Shipment, user: User = None) -> TransportDocument:
+    def generate_transport_document(self, shipment: 'Shipment', user: User = None) -> TransportDocument:
         """
         Generate general transport document for dangerous goods shipment.
         """
@@ -319,7 +321,7 @@ class ADGTransportDocumentGenerator:
         
         return transport_doc
     
-    def _populate_consignor_info(self, transport_doc: TransportDocument, shipment: Shipment):
+    def _populate_consignor_info(self, transport_doc: TransportDocument, shipment: 'Shipment'):
         """Populate consignor information from shipment data."""
         consignor = shipment.carrier  # Assuming carrier is consignor
         
@@ -328,7 +330,7 @@ class ADGTransportDocumentGenerator:
             transport_doc.consignor_address = f"{consignor.address}\n{consignor.city}, {consignor.state} {consignor.postal_code}"
             transport_doc.consignor_phone = consignor.phone or ""
     
-    def _populate_consignee_info(self, transport_doc: TransportDocument, shipment: Shipment):
+    def _populate_consignee_info(self, transport_doc: TransportDocument, shipment: 'Shipment'):
         """Populate consignee information from shipment data."""
         consignee = shipment.customer
         
@@ -336,7 +338,7 @@ class ADGTransportDocumentGenerator:
             transport_doc.consignee_name = consignee.name
             transport_doc.consignee_address = f"{consignee.address}\n{consignee.city}, {consignee.state} {consignee.postal_code}"
     
-    def _populate_transport_details(self, transport_doc: TransportDocument, shipment: Shipment):
+    def _populate_transport_details(self, transport_doc: TransportDocument, shipment: 'Shipment'):
         """Populate transport details from shipment data."""
         transport_doc.transport_mode = "Road"  # Default to road transport
         
@@ -346,7 +348,7 @@ class ADGTransportDocumentGenerator:
         if shipment.assigned_driver:
             transport_doc.driver_name = f"{shipment.assigned_driver.first_name} {shipment.assigned_driver.last_name}"
     
-    def _populate_emergency_contact(self, transport_doc: TransportDocument, shipment: Shipment):
+    def _populate_emergency_contact(self, transport_doc: TransportDocument, shipment: 'Shipment'):
         """Populate emergency contact information."""
         # Default to general emergency services
         transport_doc.emergency_contact_name = "Emergency Services Australia"
@@ -354,7 +356,7 @@ class ADGTransportDocumentGenerator:
         
         # TODO: Enhance to select appropriate emergency contact based on dangerous goods
     
-    def _generate_dg_declaration_content(self, shipment: Shipment) -> Dict:
+    def _generate_dg_declaration_content(self, shipment: 'Shipment') -> Dict:
         """Generate dangerous goods declaration content."""
         dg_items = shipment.items.filter(is_dangerous_good=True)
         
@@ -394,7 +396,7 @@ class ADGTransportDocumentGenerator:
             }
         }
     
-    def _generate_transport_doc_content(self, shipment: Shipment) -> Dict:
+    def _generate_transport_doc_content(self, shipment: 'Shipment') -> Dict:
         """Generate general transport document content."""
         all_items = list(shipment.items.all())
         dg_items = [item for item in all_items if item.is_dangerous_good]
@@ -511,7 +513,7 @@ class ADGTransportDocumentGenerator:
         return True
 
 
-def get_emergency_contact_for_shipment(shipment: Shipment) -> Tuple[str, str]:
+def get_emergency_contact_for_shipment(shipment: 'Shipment') -> Tuple[str, str]:
     """
     Get appropriate emergency contact for a shipment based on its dangerous goods.
     
