@@ -18,7 +18,7 @@ from .serializers import (
     SDSLookupSerializer
 )
 from dangerous_goods.models import DangerousGood
-from documents.models import Document
+# from documents.models import Document  # Temporarily disabled
 
 logger = logging.getLogger(__name__)
 
@@ -59,10 +59,11 @@ class SafetyDataSheetViewSet(viewsets.ModelViewSet):
         
         # Filter by user permissions if needed
         user = self.request.user
-        if user.role not in ['ADMIN', 'COMPLIANCE_OFFICER']:
+        if hasattr(user, 'role') and user.role not in ['ADMIN', 'COMPLIANCE_OFFICER']:
             # Regular users see only active, non-expired SDS
             queryset = queryset.filter(
-                status=SDSStatus.ACTIVE,
+                status=SDSStatus.ACTIVE
+            ).filter(
                 Q(expiration_date__isnull=True) | Q(expiration_date__gt=timezone.now().date())
             )
         
@@ -161,19 +162,18 @@ class SafetyDataSheetViewSet(viewsets.ModelViewSet):
         """
         sds = self.get_object()
         
-        if not sds.document or not sds.document.file:
-            return Response({
-                'error': _('No document file available')
-            }, status=status.HTTP_404_NOT_FOUND)
+        # TODO: Uncomment when documents model is enabled
+        # if not sds.document or not sds.document.file:
+        #     return Response({
+        #         'error': _('No document file available')
+        #     }, status=status.HTTP_404_NOT_FOUND)
         
         # Log download access
         self._log_access(sds, 'DOWNLOAD', request.data.get('context', 'GENERAL'))
         
         return Response({
-            'download_url': sds.document.file.url,
-            'filename': sds.document.original_filename,
-            'file_size': sds.document.file_size,
-            'mime_type': sds.document.mime_type
+            'message': _('Document download functionality will be enabled when document service is restored'),
+            'sds_id': sds.id
         })
     
     @action(detail=False, methods=['get'])
@@ -352,21 +352,22 @@ class SDSUploadViewSet(viewsets.ViewSet):
             # Get dangerous good
             dangerous_good = get_object_or_404(DangerousGood, id=request.data['dangerous_good_id'])
             
-            # Create document record
-            document = Document.objects.create(
-                document_type='SDS',
-                status='VALIDATED_OK',
-                file=request.data['file'],
-                original_filename=request.data['file'].name,
-                mime_type=request.data['file'].content_type,
-                file_size=request.data['file'].size,
-                uploaded_by=request.user
-            )
+            # TODO: Uncomment when documents model is enabled
+            # # Create document record
+            # document = Document.objects.create(
+            #     document_type='SDS',
+            #     status='VALIDATED_OK',
+            #     file=request.data['file'],
+            #     original_filename=request.data['file'].name,
+            #     mime_type=request.data['file'].content_type,
+            #     file_size=request.data['file'].size,
+            #     uploaded_by=request.user
+            # )
             
-            # Create SDS record
+            # Create SDS record without document for now
             sds = SafetyDataSheet.objects.create(
                 dangerous_good=dangerous_good,
-                document=document,
+                # document=document,  # Temporarily disabled
                 product_name=request.data['product_name'],
                 manufacturer=request.data['manufacturer'],
                 version=request.data['version'],
@@ -379,7 +380,7 @@ class SDSUploadViewSet(viewsets.ViewSet):
             return Response({
                 'message': _('SDS uploaded successfully'),
                 'sds_id': sds.id,
-                'document_id': document.id,
+                # 'document_id': document.id,  # Temporarily disabled
                 'sds': SafetyDataSheetSerializer(sds).data
             }, status=status.HTTP_201_CREATED)
             

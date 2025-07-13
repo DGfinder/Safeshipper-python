@@ -2,7 +2,7 @@ import uuid
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 from django.contrib.auth import get_user_model
-from documents.models import Document
+# from documents.models import Document  # Temporarily disabled
 from shipments.models import Shipment
 from dangerous_goods.models import DangerousGood
 
@@ -32,12 +32,17 @@ class Manifest(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     
     # Relationships
-    document = models.OneToOneField(
-        Document,
-        on_delete=models.CASCADE,
-        related_name='manifest',
-        verbose_name=_("Associated Document")
-    )
+    # document = models.OneToOneField(
+    #     Document,
+    #     on_delete=models.CASCADE,
+    #     related_name='manifest',
+    #     verbose_name=_("Associated Document")
+    # )  # Temporarily disabled
+    
+    # Temporary fields to bypass Document model
+    file_name = models.CharField(_("File Name"), max_length=255, blank=True)
+    file_size = models.PositiveIntegerField(_("File Size"), null=True, blank=True)
+    mime_type = models.CharField(_("MIME Type"), max_length=100, blank=True)
     shipment = models.ForeignKey(
         Shipment,
         on_delete=models.CASCADE,

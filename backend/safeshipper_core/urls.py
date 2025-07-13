@@ -76,11 +76,11 @@ urlpatterns = [
     # Monitoring
     path('', include('django_prometheus.urls')),
     
-    # Application URLs (minimal set for EPG functionality)
+    # Application URLs
     path('api/v1/', include([
         path('shipments/', include('shipments.urls')),
         path('users/', include('users.urls')),
-        # path('dashboard/', include('dashboards.urls')),  # Temporarily disabled
+        path('dashboard/', include('dashboards.urls')),  # Re-enabled
         path('dangerous-goods/', include('dangerous_goods.urls')),
         path('companies/', include('companies.urls')),
         path('freight-types/', include('freight_types.urls')),
@@ -92,7 +92,7 @@ urlpatterns = [
         # path('iot/', include('iot_devices.urls')),  # Temporarily disabled
         # path('inspections/', include('inspections.urls')),  # Temporarily disabled
         # path('communications/', include('communications.urls')),  # Temporarily disabled
-        # path('manifests/', include('manifests.urls')),  # Temporarily disabled
+        path('manifests/', include('manifests.urls')),  # Re-enabled
         # Basic search endpoints
         path('search/popular/', PopularSearchesView.as_view(), name='popular-searches'),
         # Temporarily disabled apps:
@@ -101,7 +101,7 @@ urlpatterns = [
         # path('load-plans/', include('load_plans.urls')),
         # path('emergency-procedures/', include('emergency_procedures.urls')),
         # path('handling-unit-types/', include('handling_unit_types.urls')),
-        # path('sds/', include('sds.urls')),  # Temporarily disabled due to syntax error
+        path('sds/', include('sds.urls')),  # Re-enabled after fixing syntax errors
         path('epg/', include('epg.urls')),  # Enabled for Emergency Procedure Guides
         # Compatibility endpoint redirects for mobile app
         path('compatibility/', include('dangerous_goods.urls')),  # Mobile app compatibility endpoint

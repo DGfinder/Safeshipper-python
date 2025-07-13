@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -25,6 +25,8 @@ const SDSViewer = dynamic(() => import("@/components/sds/SDSViewer"), {
   ssr: false,
 });
 
+import { sdsService, type SDSDocument as BackendSDSDocument } from "@/services/sdsService";
+
 interface SDSDocument {
   id: string;
   chemicalName: string;
@@ -41,37 +43,28 @@ export default function EnhancedSDSLibraryPage() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [sdsData, setSDSData] = useState<any>(null);
   const [searchTerm, setSearchTerm] = useState("");
+  const [sdsDocuments, setSDSDocuments] = useState<BackendSDSDocument[]>([]);
+  const [isLoadingDocuments, setIsLoadingDocuments] = useState(false);
 
-  // Mock SDS documents for demonstration
-  const [sdsDocuments] = useState<SDSDocument[]>([
-    {
-      id: "1",
-      chemicalName: "Ammonium Nitrate",
-      casNumber: "6484-52-2",
-      manufacturer: "Orica Australia Pty Ltd",
-      uploadDate: "2024-01-15",
-      status: "processed",
-      confidence: 0.92,
-    },
-    {
-      id: "2",
-      chemicalName: "Sulfuric Acid",
-      casNumber: "7664-93-9",
-      manufacturer: "Chemical Solutions Ltd",
-      uploadDate: "2024-01-14",
-      status: "processed",
-      confidence: 0.88,
-    },
-    {
-      id: "3",
-      chemicalName: "Hydrochloric Acid",
-      casNumber: "7647-01-0",
-      manufacturer: "Industrial Chemicals Inc",
-      uploadDate: "2024-01-13",
-      status: "processing",
-      confidence: 0.0,
-    },
-  ]);
+  // Load SDS documents from backend
+  useEffect(() => {
+    loadSDSDocuments();
+  }, [searchTerm]);
+
+  const loadSDSDocuments = async () => {
+    setIsLoadingDocuments(true);
+    try {
+      const result = await sdsService.searchSDS({ 
+        search: searchTerm || undefined,
+        include_expired: true 
+      });
+      setSDSDocuments(result.sds);
+    } catch (error) {
+      console.error("Failed to load SDS documents:", error);
+    } finally {
+      setIsLoadingDocuments(false);
+    }
+  };
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -132,25 +125,54 @@ export default function EnhancedSDSLibraryPage() {
     }
   };
 
-  const getStatusBadge = (status: SDSDocument["status"]) => {
-    switch (status) {
-      case "processed":
-        return <Badge className="bg-green-600">Processed</Badge>;
-      case "processing":
-        return <Badge className="bg-yellow-600">Processing</Badge>;
-      case "failed":
-        return <Badge className="bg-red-600">Failed</Badge>;
+  const getStatusBadge = (status: string) => {
+    switch (status.toUpperCase()) {
+      case "ACTIVE":
+        return <Badge className="bg-green-600">Active</Badge>;
+      case "EXPIRED":
+        return <Badge className="bg-red-600">Expired</Badge>;
+      case "SUPERSEDED":
+        return <Badge className="bg-yellow-600">Superseded</Badge>;
+      case "UNDER_REVIEW":
+        return <Badge className="bg-blue-600">Under Review</Badge>;
+      case "DRAFT":
+        return <Badge className="bg-gray-600">Draft</Badge>;
       default:
-        return <Badge variant="outline">Unknown</Badge>;
+        return <Badge variant="outline">{status}</Badge>;
     }
   };
 
-  const filteredDocuments = sdsDocuments.filter(
-    (doc) =>
-      doc.chemicalName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      doc.casNumber?.includes(searchTerm) ||
-      doc.manufacturer?.toLowerCase().includes(searchTerm.toLowerCase()),
-  );
+  const handleDownload = async (id: string) => {
+    try {
+      const result = await sdsService.downloadSDS(id);
+      if (result.success && result.url) {
+        window.open(result.url, '_blank');
+      } else {
+        alert(`Download failed: ${result.error || 'Unknown error'}`);
+      }
+    } catch (error) {
+      console.error("Download failed:", error);
+      alert("Download failed. Please try again.");
+    }
+  };
+
+  const handleView = async (id: string) => {
+    try {
+      const sds = await sdsService.getSDSById(id);
+      if (sds) {
+        setSDSData(sds);
+        setActiveTab("viewer");
+      } else {
+        alert("Failed to load SDS details");
+      }
+    } catch (error) {
+      console.error("Failed to view SDS:", error);
+      alert("Failed to load SDS details");
+    }
+  };
+
+  // No client-side filtering since backend handles search
+  const filteredDocuments = sdsDocuments;
 
   return (
     <AuthGuard>
@@ -331,22 +353,22 @@ export default function EnhancedSDSLibraryPage() {
                       <thead>
                         <tr className="border-b border-gray-200">
                           <th className="text-left py-3 text-sm font-medium text-gray-500">
-                            CHEMICAL NAME
+                            PRODUCT NAME
                           </th>
                           <th className="text-left py-3 text-sm font-medium text-gray-500">
-                            CAS NUMBER
+                            PRODUCT CODE
                           </th>
                           <th className="text-left py-3 text-sm font-medium text-gray-500">
                             MANUFACTURER
                           </th>
                           <th className="text-left py-3 text-sm font-medium text-gray-500">
-                            UPLOAD DATE
+                            REVISION DATE
                           </th>
                           <th className="text-left py-3 text-sm font-medium text-gray-500">
                             STATUS
                           </th>
                           <th className="text-left py-3 text-sm font-medium text-gray-500">
-                            CONFIDENCE
+                            VERSION
                           </th>
                           <th className="text-left py-3 text-sm font-medium text-gray-500">
                             ACTIONS
@@ -354,7 +376,16 @@ export default function EnhancedSDSLibraryPage() {
                         </tr>
                       </thead>
                       <tbody>
-                        {filteredDocuments.map((doc) => (
+                        {isLoadingDocuments ? (
+                          <tr>
+                            <td colSpan={7} className="py-8 text-center">
+                              <div className="flex items-center justify-center">
+                                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                                <span className="ml-2">Loading SDS documents...</span>
+                              </div>
+                            </td>
+                          </tr>
+                        ) : filteredDocuments.map((doc) => (
                           <tr
                             key={doc.id}
                             className="border-b border-gray-100 hover:bg-gray-50"
@@ -362,25 +393,37 @@ export default function EnhancedSDSLibraryPage() {
                             <td className="py-4">
                               <div className="flex items-center gap-2">
                                 <Beaker className="h-4 w-4 text-gray-400" />
-                                <span className="font-medium">
-                                  {doc.chemicalName}
-                                </span>
+                                <div>
+                                  <span className="font-medium block">
+                                    {doc.product_name}
+                                  </span>
+                                  <span className="text-xs text-gray-500">
+                                    UN {doc.dangerous_good.un_number}
+                                  </span>
+                                </div>
                               </div>
                             </td>
                             <td className="py-4 text-sm">
-                              {doc.casNumber || "N/A"}
+                              {doc.manufacturer_code || "N/A"}
                             </td>
                             <td className="py-4 text-sm">
                               {doc.manufacturer || "Unknown"}
                             </td>
-                            <td className="py-4 text-sm">{doc.uploadDate}</td>
+                            <td className="py-4 text-sm">
+                              {new Date(doc.revision_date).toLocaleDateString()}
+                            </td>
                             <td className="py-4">
                               {getStatusBadge(doc.status)}
                             </td>
                             <td className="py-4 text-sm">
-                              {doc.status === "processed"
-                                ? `${Math.round(doc.confidence * 100)}%`
-                                : "N/A"}
+                              <div>
+                                <span className="block">v{doc.version}</span>
+                                {doc.is_expired && (
+                                  <Badge variant="destructive" className="text-xs">
+                                    Expired
+                                  </Badge>
+                                )}
+                              </div>
                             </td>
                             <td className="py-4">
                               <div className="flex items-center gap-2">
@@ -388,6 +431,7 @@ export default function EnhancedSDSLibraryPage() {
                                   variant="ghost"
                                   size="sm"
                                   title="View Details"
+                                  onClick={() => handleView(doc.id)}
                                 >
                                   <Eye className="h-4 w-4" />
                                 </Button>
@@ -395,6 +439,7 @@ export default function EnhancedSDSLibraryPage() {
                                   variant="ghost"
                                   size="sm"
                                   title="Download"
+                                  onClick={() => handleDownload(doc.id)}
                                 >
                                   <Download className="h-4 w-4" />
                                 </Button>
@@ -402,6 +447,7 @@ export default function EnhancedSDSLibraryPage() {
                                   variant="ghost"
                                   size="sm"
                                   title="Delete"
+                                  disabled
                                 >
                                   <Trash2 className="h-4 w-4" />
                                 </Button>

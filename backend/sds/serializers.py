@@ -2,8 +2,8 @@ from rest_framework import serializers
 from django.utils.translation import gettext_lazy as _
 from .models import SafetyDataSheet, SDSRequest, SDSAccessLog, SDSStatus, SDSLanguage
 from dangerous_goods.models import DangerousGood
-from documents.models import Document
-from users.serializers import UserBasicSerializer
+# from documents.models import Document  # Temporarily disabled
+# from users.serializers import UserBasicSerializer  # Temporarily disabled
 
 class DangerousGoodBasicSerializer(serializers.ModelSerializer):
     """Basic serializer for dangerous goods reference"""
@@ -12,25 +12,25 @@ class DangerousGoodBasicSerializer(serializers.ModelSerializer):
         fields = ['id', 'un_number', 'proper_shipping_name', 'hazard_class', 'packing_group']
         read_only_fields = fields
 
-class DocumentBasicSerializer(serializers.ModelSerializer):
-    """Basic serializer for document reference"""
-    file_url = serializers.SerializerMethodField()
-    
-    class Meta:
-        model = Document
-        fields = ['id', 'original_filename', 'file_size', 'mime_type', 'file_url', 'created_at']
-        read_only_fields = fields
-    
-    def get_file_url(self, obj):
-        if obj.file:
-            return obj.file.url
-        return None
+# class DocumentBasicSerializer(serializers.ModelSerializer):
+#     """Basic serializer for document reference"""
+#     file_url = serializers.SerializerMethodField()
+#     
+#     class Meta:
+#         model = Document
+#         fields = ['id', 'original_filename', 'file_size', 'mime_type', 'file_url', 'created_at']
+#         read_only_fields = fields
+#     
+#     def get_file_url(self, obj):
+#         if obj.file:
+#             return obj.file.url
+#         return None
 
 class SafetyDataSheetSerializer(serializers.ModelSerializer):
     """Comprehensive SDS serializer for API responses"""
     dangerous_good = DangerousGoodBasicSerializer(read_only=True)
-    document = DocumentBasicSerializer(read_only=True)
-    created_by = UserBasicSerializer(read_only=True)
+    # document = DocumentBasicSerializer(read_only=True)  # Temporarily disabled
+    # created_by = UserBasicSerializer(read_only=True)  # Temporarily disabled
     status_display = serializers.CharField(source='get_status_display', read_only=True)
     language_display = serializers.CharField(source='get_language_display', read_only=True)
     is_expired = serializers.BooleanField(read_only=True)
@@ -48,7 +48,8 @@ class SafetyDataSheetSerializer(serializers.ModelSerializer):
         model = SafetyDataSheet
         fields = [
             'id', 'dangerous_good', 'product_name', 'manufacturer', 'manufacturer_code',
-            'document', 'version', 'revision_date', 'supersedes_version', 'status', 'status_display',
+            # 'document',  # Temporarily disabled
+            'version', 'revision_date', 'supersedes_version', 'status', 'status_display',
             'expiration_date', 'language', 'language_display', 'country_code', 'regulatory_standard',
             'emergency_contacts', 'flash_point_celsius', 'auto_ignition_temp_celsius',
             'physical_state', 'color', 'odor',
@@ -61,10 +62,11 @@ class SafetyDataSheetSerializer(serializers.ModelSerializer):
             'hazard_statements', 'precautionary_statements',
             'first_aid_measures', 'fire_fighting_measures', 'spill_cleanup_procedures',
             'storage_requirements', 'handling_precautions', 'disposal_methods',
-            'created_by', 'created_at', 'updated_at', 'is_expired', 'is_current', 'days_until_expiration'
+            # 'created_by',  # Temporarily disabled
+            'created_at', 'updated_at', 'is_expired', 'is_current', 'days_until_expiration'
         ]
         read_only_fields = [
-            'id', 'created_at', 'updated_at', 'created_by', 
+            'id', 'created_at', 'updated_at', # 'created_by',  # Temporarily disabled
             'has_ph_data', 'ph_value', 'is_corrosive_class_8', 'ph_classification', 'ph_source_display'
         ]
 
@@ -93,28 +95,28 @@ class SafetyDataSheetCreateSerializer(serializers.ModelSerializer):
         except DangerousGood.DoesNotExist:
             raise serializers.ValidationError(_("Dangerous good not found"))
     
-    def validate_document_id(self, value):
-        """Validate document exists and is appropriate type"""
-        try:
-            document = Document.objects.get(id=value)
-            # Check if document is appropriate for SDS
-            if document.document_type not in ['SDS', 'SAFETY_DOCUMENT']:
-                raise serializers.ValidationError(_("Document must be an SDS or safety document"))
-            return value
-        except Document.DoesNotExist:
-            raise serializers.ValidationError(_("Document not found"))
+    # def validate_document_id(self, value):
+    #     """Validate document exists and is appropriate type"""
+    #     try:
+    #         document = Document.objects.get(id=value)
+    #         # Check if document is appropriate for SDS
+    #         if document.document_type not in ['SDS', 'SAFETY_DOCUMENT']:
+    #             raise serializers.ValidationError(_("Document must be an SDS or safety document"))
+    #         return value
+    #     except Document.DoesNotExist:
+    #         raise serializers.ValidationError(_("Document not found"))
     
     def create(self, validated_data):
         dangerous_good_id = validated_data.pop('dangerous_good_id')
-        document_id = validated_data.pop('document_id')
+        document_id = validated_data.pop('document_id', None)  # Temporarily optional
         
         dangerous_good = DangerousGood.objects.get(id=dangerous_good_id)
-        document = Document.objects.get(id=document_id)
+        # document = Document.objects.get(id=document_id)  # Temporarily disabled
         
         sds = SafetyDataSheet.objects.create(
             dangerous_good=dangerous_good,
-            document=document,
-            created_by=self.context['request'].user,
+            # document=document,  # Temporarily disabled
+            # created_by=self.context['request'].user,  # Temporarily disabled
             **validated_data
         )
         return sds
