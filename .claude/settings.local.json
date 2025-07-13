@@ -56,7 +56,8 @@
       "Bash(pip3 list:*)",
       "Bash(cp:*)",
       "Bash(unzip:*)",
-      "Bash(FILTER_BRANCH_SQUELCH_WARNING=1 git filter-branch --force --index-filter 'git rm --cached --ignore-unmatch reference-code/Safeshipper-aboneda/credentials.json' --prune-empty --tag-name-filter cat -- --all)"
+      "Bash(FILTER_BRANCH_SQUELCH_WARNING=1 git filter-branch --force --index-filter 'git rm --cached --ignore-unmatch reference-code/Safeshipper-aboneda/credentials.json' --prune-empty --tag-name-filter cat -- --all)",
+      "Bash(git gc:*)"
     ],
     "deny": []
   }
