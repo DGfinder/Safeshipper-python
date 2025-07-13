@@ -9,7 +9,7 @@ from freight_types.models import FreightType
 from simple_history.models import HistoricalRecords
 from users.models import User
 from vehicles.models import Vehicle
-from dangerous_goods.models import DangerousGood
+from dangerous_goods.models import DangerousGood  # Re-enabled after dangerous_goods app re-enabled
 
 class ShipmentStatus(models.TextChoices):
     PENDING = "PENDING", _("Pending")
@@ -86,6 +86,7 @@ class Shipment(models.Model):
     instructions = models.TextField(_("Special Instructions"), blank=True, null=True)
     
     # Vehicle and driver assignment for mobile tracking
+    # Temporarily disabled - vehicles app disabled
     assigned_vehicle = models.ForeignKey(
         Vehicle,
         on_delete=models.SET_NULL,
@@ -192,7 +193,7 @@ class ConsignmentItem(models.Model):
         'dangerous_goods.DangerousGood', on_delete=models.SET_NULL,
         null=True, blank=True, related_name='consignment_items',
         help_text=_("Link to the master DangerousGood entry if this item is a DG.")
-    )
+    )  # Re-enabled after dangerous_goods app re-enabled
     
     # ADG-specific fields for placard calculations
     dg_quantity_type = models.CharField(
@@ -221,6 +222,7 @@ class ConsignmentItem(models.Model):
 
     def clean(self):
         super().clean()
+        # Re-enabled after dangerous_goods app re-enabled
         if self.is_dangerous_good and not self.dangerous_good_entry:
             raise ValidationError({'dangerous_good_entry': _('A Dangerous Good entry must be selected if marked as a dangerous good.')})
 

@@ -11,8 +11,8 @@ from django.utils import timezone
 from .models import Document, DocumentType, DocumentStatus
 from .serializers import DocumentSerializer, DocumentUploadSerializer, DocumentStatusSerializer
 from .tasks import process_manifest_validation
-from manifests.services import create_manifest_from_document
-from manifests.models import ManifestType
+# from manifests.services import create_manifest_from_document  # Temporarily disabled - manifests app not enabled
+# from manifests.models import ManifestType  # Temporarily disabled - manifests app not enabled
 from shipments.models import Shipment
 
 logger = logging.getLogger(__name__)
@@ -85,12 +85,13 @@ class DocumentViewSet(viewsets.ModelViewSet):
             )
             
             # Create manifest record for DG manifests
-            if document.document_type == DocumentType.DG_MANIFEST:
-                try:
-                    manifest = create_manifest_from_document(document, ManifestType.DG_MANIFEST)
-                    logger.info(f"Created manifest {manifest.id} for document {document.id}")
-                except Exception as e:
-                    logger.error(f"Failed to create manifest for document {document.id}: {str(e)}")
+            # Temporarily disabled - manifests app not enabled
+            # if document.document_type == DocumentType.DG_MANIFEST:
+            #     try:
+            #         manifest = create_manifest_from_document(document, ManifestType.DG_MANIFEST)
+            #         logger.info(f"Created manifest {manifest.id} for document {document.id}")
+            #     except Exception as e:
+            #         logger.error(f"Failed to create manifest for document {document.id}: {str(e)}")
             
             # Update shipment status if it's still pending
             if shipment.status == shipment.ShipmentStatus.PENDING:

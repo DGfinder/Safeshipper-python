@@ -13,7 +13,7 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ("companies", "0001_initial"),
-        ("dangerous_goods", "0003_alter_dangerousgood_options_historicaldangerousgood"),
+        ("dangerous_goods", "0003_alter_dangerousgood_options_historicaldangerousgood"),  # Re-enabled after dangerous_goods app re-enabled
         ("freight_types", "0001_initial"),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
@@ -492,6 +492,7 @@ class Migration(migrations.Migration):
                 ),
                 ("created_at", models.DateTimeField(auto_now_add=True)),
                 ("updated_at", models.DateTimeField(auto_now=True)),
+                # Re-enabled after dangerous_goods app re-enabled
                 (
                     "dangerous_good_entry",
                     models.ForeignKey(

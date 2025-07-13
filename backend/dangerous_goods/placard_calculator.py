@@ -11,7 +11,7 @@ from .models import (
     PlacardCalculationLog,
     DangerousGood
 )
-from shipments.models import Shipment, ConsignmentItem
+# Using string type annotations to avoid circular imports
 from .limited_quantity_handler import LimitedQuantityHandler
 
 
@@ -28,7 +28,7 @@ class ADGPlacardCalculator:
     def __init__(self):
         self.calculation_logs = []
     
-    def calculate_placard_requirement(self, shipment: Shipment, user=None) -> PlacardRequirement:
+    def calculate_placard_requirement(self, shipment: 'Shipment', user=None) -> PlacardRequirement:
         """
         Calculate placard requirements for a shipment based on ADG Code 7.9.
         
@@ -39,6 +39,9 @@ class ADGPlacardCalculator:
         Returns:
             PlacardRequirement object with calculated results
         """
+        # Import here to avoid circular imports
+        from shipments.models import Shipment, ConsignmentItem
+        
         self.calculation_logs = []
         
         with transaction.atomic():
@@ -91,7 +94,7 @@ class ADGPlacardCalculator:
             
             return placard_req
     
-    def _analyze_shipment_contents(self, shipment: Shipment) -> Dict:
+    def _analyze_shipment_contents(self, shipment: 'Shipment') -> Dict:
         """
         Analyze shipment contents and calculate relevant quantities.
         Enhanced with proper Limited Quantity handling.

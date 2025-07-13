@@ -9,7 +9,7 @@ from django.utils import timezone
 from .models import Shipment, ConsignmentItem
 from vehicles.models import Vehicle
 from vehicles.safety_services import ADRComplianceValidator
-from dangerous_goods.services import check_list_compatibility
+from dangerous_goods.services import check_list_compatibility  # Re-enabled after dangerous_goods app re-enabled
 
 
 class ShipmentSafetyValidator:
@@ -115,7 +115,7 @@ class ShipmentSafetyValidator:
             vehicle, adr_classes
         )
         
-        # Check dangerous goods compatibility
+        # Check dangerous goods compatibility - re-enabled
         dg_compatibility = check_list_compatibility(un_numbers)
         
         can_assign = compliance_result['compliant'] and dg_compatibility.get('is_compatible', True)
@@ -180,7 +180,7 @@ class ShipmentSafetyValidator:
                 'un_numbers_checked': []
             }
         
-        compatibility_result = check_list_compatibility(un_numbers)
+        compatibility_result = check_list_compatibility(un_numbers)  # Re-enabled
         
         return {
             'compatible': compatibility_result.get('is_compatible', True),

@@ -2,7 +2,7 @@
 from rest_framework import serializers
 from django.db import transaction
 from .models import Shipment, ConsignmentItem, ShipmentStatus  # ProofOfDelivery, ProofOfDeliveryPhoto
-from dangerous_goods.models import DangerousGood
+from dangerous_goods.models import DangerousGood  # Re-enabled after dangerous_goods app re-enabled
 
 class ConsignmentItemSerializer(serializers.ModelSerializer):
     dangerous_good_details = serializers.SerializerMethodField()
@@ -18,7 +18,7 @@ class ConsignmentItemSerializer(serializers.ModelSerializer):
             'width_cm',
             'height_cm',
             'is_dangerous_good',
-            'dangerous_good_entry',
+            'dangerous_good_entry',  # Re-enabled after dangerous_goods app re-enabled
             'dangerous_good_details',
             'created_at',
             'updated_at',
@@ -47,6 +47,7 @@ class ConsignmentItemSerializer(serializers.ModelSerializer):
         """Object-level validation for dangerous goods fields."""
         is_dg = data.get('is_dangerous_good', getattr(self.instance, 'is_dangerous_good', False))
         
+        # Re-enabled after dangerous_goods app re-enabled
         if is_dg and not data.get('dangerous_good_entry', getattr(self.instance, 'dangerous_good_entry', None)):
             raise serializers.ValidationError({
                 "dangerous_good_entry": "A Dangerous Good entry must be selected for dangerous goods."

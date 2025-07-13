@@ -4,7 +4,7 @@ from django.utils.translation import gettext_lazy as _
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 from dangerous_goods.models import DangerousGood
-from shipments.models import Shipment
+from shipments.models import Shipment  # Re-enabled after shipments app re-enabled
 
 User = get_user_model()
 

@@ -5,6 +5,7 @@
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE EXTENSION IF NOT EXISTS "pg_trgm";
 CREATE EXTENSION IF NOT EXISTS "unaccent";
+CREATE EXTENSION IF NOT EXISTS "postgis";
 
 -- Create read-only user for monitoring
 CREATE USER safeshipper_readonly WITH PASSWORD 'readonly_password';

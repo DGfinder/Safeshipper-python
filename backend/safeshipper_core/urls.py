@@ -80,19 +80,19 @@ urlpatterns = [
     path('api/v1/', include([
         path('shipments/', include('shipments.urls')),
         path('users/', include('users.urls')),
-        path('dashboard/', include('dashboards.urls')),  # Re-enabled
-        path('dangerous-goods/', include('dangerous_goods.urls')),
+        # path('dashboard/', include('dashboards.urls')),  # Temporarily disabled - app not in INSTALLED_APPS
+        path('dangerous-goods/', include('dangerous_goods.urls')),  # Re-enabled after fixing shipments dependencies
         path('companies/', include('companies.urls')),
         path('freight-types/', include('freight_types.urls')),
         path('vehicles/', include('vehicles.urls')),
         # path('tracking/', include('tracking.urls')),  # Temporarily disabled due to GIS dependencies
-        # path('documents/', include('documents.urls')),  # Temporarily disabled due to Celery circular import
+        path('documents/', include('documents.urls')),  # Re-enabled after fixing shipments dependencies
         # path('audits/', include('audits.urls')),  # Temporarily disabled
         # path('auth/', include('enterprise_auth.urls')),  # Temporarily disabled due to import issues
         # path('iot/', include('iot_devices.urls')),  # Temporarily disabled
         # path('inspections/', include('inspections.urls')),  # Temporarily disabled
         # path('communications/', include('communications.urls')),  # Temporarily disabled
-        path('manifests/', include('manifests.urls')),  # Re-enabled
+        path('manifests/', include('manifests.urls')),  # Re-enabled after fixing documents dependencies
         # Basic search endpoints
         path('search/popular/', PopularSearchesView.as_view(), name='popular-searches'),
         # Temporarily disabled apps:
@@ -101,10 +101,10 @@ urlpatterns = [
         # path('load-plans/', include('load_plans.urls')),
         # path('emergency-procedures/', include('emergency_procedures.urls')),
         # path('handling-unit-types/', include('handling_unit_types.urls')),
-        path('sds/', include('sds.urls')),  # Re-enabled after fixing syntax errors
-        path('epg/', include('epg.urls')),  # Enabled for Emergency Procedure Guides
+        path('sds/', include('sds.urls')),  # Re-enabled after fixing dangerous_goods dependencies
+        path('epg/', include('epg.urls')),  # Re-enabled after fixing shipments dependencies
         # Compatibility endpoint redirects for mobile app
-        path('compatibility/', include('dangerous_goods.urls')),  # Mobile app compatibility endpoint
+        # path('compatibility/', include('dangerous_goods.urls')),  # Temporarily disabled due to dangerous_goods app being disabled
     ])),
 ]
 

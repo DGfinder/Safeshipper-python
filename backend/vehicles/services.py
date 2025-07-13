@@ -65,7 +65,7 @@ def list_available_vehicles_for_depot(depot: GeoLocation) -> QuerySet[Vehicle]:
     return Vehicle.objects.filter(
         assigned_depot=depot,
         status=Vehicle.Status.AVAILABLE
-    ).select_related('assigned_depot', 'owning_company')
+    ).select_related('owning_company')
 
 def get_vehicle_by_registration(registration: str) -> Optional[Vehicle]:
     """

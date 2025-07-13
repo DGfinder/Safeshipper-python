@@ -16,8 +16,8 @@ class ConsignmentItemInline(admin.TabularInline):
     extra = 1 
     fields = ('description', 'quantity', 'weight_kg', 
               'length_cm', 'width_cm', 'height_cm', 
-              'is_dangerous_good', 'dangerous_good_entry') # Changed from specific DG fields to the FK
-    autocomplete_fields = ['dangerous_good_entry'] # Good for selecting from many DGs
+              'is_dangerous_good', 'dangerous_good_entry') # Re-enabled after dangerous_goods app re-enabled
+    autocomplete_fields = ['dangerous_good_entry'] # Re-enabled after dangerous_goods app re-enabled
 
 @admin.register(Shipment)
 class ShipmentAdmin(SimpleHistoryAdmin):
@@ -62,19 +62,19 @@ class ConsignmentItemAdmin(admin.ModelAdmin):
     list_display = ('id', 'shipment_info', 'description_summary', 'quantity', 
                     'weight_kg', 'is_dangerous_good', 
                     'get_un_number', 'get_hazard_class') # Changed to methods
-    list_filter = ('is_dangerous_good', 'shipment__status', 'dangerous_good_entry__hazard_class') # Filter by linked DG's class
-    search_fields = ('description', 'dangerous_good_entry__un_number', 'dangerous_good_entry__proper_shipping_name', 'shipment__tracking_number')
+    list_filter = ('is_dangerous_good', 'shipment__status', 'dangerous_good_entry__hazard_class') # Re-enabled after dangerous_goods app re-enabled
+    search_fields = ('description', 'dangerous_good_entry__un_number', 'dangerous_good_entry__proper_shipping_name', 'shipment__tracking_number') # Re-enabled after dangerous_goods app re-enabled
     ordering = ('-shipment__created_at', 'shipment__id', 'id')
-    list_select_related = ['shipment', 'dangerous_good_entry'] 
+    list_select_related = ['shipment', 'dangerous_good_entry'] # Re-enabled after dangerous_goods app re-enabled
     readonly_fields = ('created_at', 'updated_at')
-    autocomplete_fields = ['shipment', 'dangerous_good_entry']
+    autocomplete_fields = ['shipment', 'dangerous_good_entry'] # Re-enabled after dangerous_goods app re-enabled
 
 
     fieldsets = (
         ('Association', {'fields': ('shipment',)}),
         ('Item Details', {'fields': ('description', 'quantity', 'weight_kg', ('length_cm', 'width_cm', 'height_cm'))}),
         ('Dangerous Goods Information', {
-            'fields': ('is_dangerous_good', 'dangerous_good_entry'), # Link to master DG entry
+            'fields': ('is_dangerous_good', 'dangerous_good_entry'), # Re-enabled after dangerous_goods app re-enabled
             'classes': ('collapse',),
         }),
         ('System Information', {
@@ -92,11 +92,11 @@ class ConsignmentItemAdmin(admin.ModelAdmin):
         return obj.description[:75] + '...' if len(obj.description) > 75 else obj.description
     description_summary.short_description = "Description"
 
-    @admin.display(description='UN Number', ordering='dangerous_good_entry__un_number')
+    @admin.display(description='UN Number', ordering='dangerous_good_entry__un_number')  # Re-enabled after dangerous_goods app re-enabled
     def get_un_number(self, obj):
-        return obj.dangerous_good_entry.un_number if obj.dangerous_good_entry else None
+        return obj.dangerous_good_entry.un_number if obj.dangerous_good_entry else 'N/A'
     
-    @admin.display(description='Hazard Class', ordering='dangerous_good_entry__hazard_class')
+    @admin.display(description='Hazard Class', ordering='dangerous_good_entry__hazard_class')  # Re-enabled after dangerous_goods app re-enabled
     def get_hazard_class(self, obj):
-        return obj.dangerous_good_entry.hazard_class if obj.dangerous_good_entry else None
+        return obj.dangerous_good_entry.hazard_class if obj.dangerous_good_entry else 'N/A'
 

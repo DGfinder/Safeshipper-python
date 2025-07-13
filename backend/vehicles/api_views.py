@@ -51,7 +51,7 @@ class VehicleViewSet(viewsets.ModelViewSet):
     destroy:
     Delete a vehicle (staff only).
     """
-    queryset = Vehicle.objects.all().select_related('assigned_depot', 'owning_company')
+    queryset = Vehicle.objects.all().select_related('owning_company')
     serializer_class = VehicleSerializer
     permission_classes = [IsStaffOrReadOnly]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]

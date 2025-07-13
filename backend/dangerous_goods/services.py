@@ -1,7 +1,7 @@
 # dangerous_goods/services.py
 from typing import List, Optional, Dict, Union, Set
 from .models import DangerousGood, DGProductSynonym, SegregationGroup, SegregationRule, PackingGroup, PHSegregationRule, ChemicalReactivityProfile
-from shipments.models import ConsignmentItem # Import ConsignmentItem
+# Import at function level to avoid circular imports
 from django.db.models import Q
 from .safety_rules import ( # Import from our new safety_rules module
     get_all_hazard_classes_for_dg,

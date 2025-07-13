@@ -32,6 +32,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'django.contrib.sites',
+    'django.contrib.gis',
     
     # Third-party apps
     'rest_framework',
@@ -55,22 +56,22 @@ INSTALLED_APPS = [
     'companies',
     'locations',
     'shipments',
-    'dangerous_goods',
-    # 'sds',  # Temporarily disabled due to missing migration
+    'dangerous_goods',  # Re-enabled after fixing shipments dependencies
+    'sds',  # Re-enabled after fixing dangerous_goods dependencies
     'vehicles',
     'freight_types',
     # 'enterprise_auth',  # Temporarily disabled due to import issues
     # 'incidents',
     # 'training',
     # 'iot_devices',
-    'documents',  # Re-enabled for EPG dependencies
-    # 'manifests',  # Temporarily disabled - depends on documents
+    'documents',  # Re-enabled after fixing shipments dependencies
+    'manifests',  # Re-enabled after fixing documents dependencies
     # 'audits',     # Temporarily disabled
     # 'inspections', # Temporarily disabled
     # 'communications', # Temporarily disabled
     # 'dashboards', # Temporarily disabled
     # 'load_plans', # Temporarily disabled
-    'epg',        # Enabled for Emergency Procedure Guides
+    'epg',        # Re-enabled after fixing shipments dependencies
     # 'capacity_marketplace', # Temporarily disabled
     # 'routes', # Temporarily disabled
 ]
@@ -116,12 +117,12 @@ WSGI_APPLICATION = 'safeshipper_core.wsgi.application'
 # Database
 DATABASES = {
     'default': {
-        'ENGINE': config('DB_ENGINE', default='django.db.backends.sqlite3'),
-        'NAME': config('DB_NAME', default=BASE_DIR / 'db.sqlite3'),
-        'USER': config('DB_USER', default=''),
-        'PASSWORD': config('DB_PASSWORD', default=''),
-        'HOST': config('DB_HOST', default=''),
-        'PORT': config('DB_PORT', default=''),
+        'ENGINE': config('DB_ENGINE', default='django.contrib.gis.db.backends.postgis'),
+        'NAME': config('DB_NAME', default='safeshipper'),
+        'USER': config('DB_USER', default='safeshipper'),
+        'PASSWORD': config('DB_PASSWORD', default='safeshipper_dev_password'),
+        'HOST': config('DB_HOST', default='postgres'),
+        'PORT': config('DB_PORT', default='5432'),
     }
 }
 

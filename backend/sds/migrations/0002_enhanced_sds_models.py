@@ -11,7 +11,7 @@ class Migration(migrations.Migration):
     dependencies = [
         ('sds', '0001_initial'),
         ('dangerous_goods', '0003_alter_dangerousgood_options_historicaldangerousgood'),
-        ('documents', '0001_initial'),
+        # ('documents', '0001_initial'),  # Temporarily disabled - app disabled due to circular import
         ('users', '0001_initial'),
     ]
 

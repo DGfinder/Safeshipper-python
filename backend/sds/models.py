@@ -4,8 +4,8 @@ from django.utils.translation import gettext_lazy as _
 from django.contrib.auth import get_user_model
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.utils import timezone
-from dangerous_goods.models import DangerousGood
-# from documents.models import Document  # Temporarily disabled
+from dangerous_goods.models import DangerousGood  # Re-enabled after dangerous_goods app re-enabled
+from documents.models import Document  # Re-enabled after documents app re-enabled
 
 User = get_user_model()
 
@@ -65,13 +65,15 @@ class SafetyDataSheet(models.Model):
     )
     
     # Document management
-    # document = models.ForeignKey(
-    #     Document,
-    #     on_delete=models.CASCADE,
-    #     related_name='sds_record',
-    #     verbose_name=_("SDS Document"),
-    #     help_text=_("The actual SDS PDF document")
-    # )  # Temporarily disabled
+    document = models.ForeignKey(
+        Document,
+        on_delete=models.CASCADE,
+        related_name='sds_record',
+        verbose_name=_("SDS Document"),
+        help_text=_("The actual SDS PDF document"),
+        null=True,  # Temporarily nullable for migration
+        blank=True
+    )  # Re-enabled after documents app re-enabled
     
     # Version and status
     version = models.CharField(
