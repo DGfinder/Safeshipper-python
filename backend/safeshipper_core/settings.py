@@ -66,8 +66,10 @@ INSTALLED_APPS = [
     # 'iot_devices',
     'documents',  # Re-enabled after fixing shipments dependencies
     'manifests',  # Re-enabled after fixing documents dependencies
-    # 'audits',     # Temporarily disabled
-    # 'inspections', # Temporarily disabled
+    'audits',     # Re-enabled for Phase 5A comprehensive audit system
+    'inspections', # Re-enabled for Phase 5B quality management
+    'training',   # Re-enabled for Phase 5C training & certification management
+    'api_gateway', # Re-enabled for Phase 7A API gateway & developer platform
     # 'communications', # Temporarily disabled
     'dashboards', # Re-enabled for Phase 3A analytics
     'load_plans', # Re-enabled for Phase 3B load planning
@@ -81,6 +83,8 @@ MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'corsheaders.middleware.CorsMiddleware',
     'safeshipper_core.middleware.SecurityHeadersMiddleware',
+    'api_gateway.middleware.APIGatewayMiddleware',
+    'api_gateway.middleware.APIVersioningMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',

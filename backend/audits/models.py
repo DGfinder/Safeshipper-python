@@ -147,14 +147,14 @@ class AuditLog(models.Model):
             action_type=action_type,
             action_description=description,
             user=user,
-            user_role=user.role if user else None,
+            user_role=user.role if user else '',
             content_object=content_object,
             old_values=old_values,
             new_values=new_values,
             ip_address=ip_address,
-            user_agent=user_agent,
-            session_key=session_key,
-            metadata=metadata
+            user_agent=user_agent or '',
+            session_key=session_key or '',
+            metadata=metadata or {}
         )
         audit_log.save()
         return audit_log

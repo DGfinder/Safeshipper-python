@@ -12,6 +12,9 @@ from load_plans.models import LoadPlan
 from routes.models import Route
 from capacity_marketplace.models import CapacityListing, CapacityBooking, MarketplaceMetrics
 from enterprise_auth.models import AuthenticationLog, MFADevice, SSOProvider, SecurityPolicy
+from audits.models import AuditLog, ComplianceAuditLog, ShipmentAuditLog
+from inspections.models import Inspection, InspectionItem
+from training.models import TrainingRecord, ComplianceStatus, TrainingEnrollment
 
 def get_compliance_dashboard_data(user: User) -> Dict:
     """
@@ -34,10 +37,18 @@ def get_compliance_dashboard_data(user: User) -> Dict:
         ]
     )
     
-    # Base queryset for audits (audits app is disabled)
-    # audits_qs = Audit.objects.filter(
-    #     scheduled_date__gte=timezone.now()
-    # )
+    # Base queryset for audits (audits app now enabled)
+    audits_qs = AuditLog.objects.all()
+    compliance_audits_qs = ComplianceAuditLog.objects.all()
+    
+    # Base queryset for inspections (inspections app now enabled)
+    inspections_qs = Inspection.objects.all()
+    inspection_items_qs = InspectionItem.objects.all()
+    
+    # Base queryset for training (training app now enabled)
+    training_records_qs = TrainingRecord.objects.all()
+    compliance_status_qs = ComplianceStatus.objects.all()
+    training_enrollments_qs = TrainingEnrollment.objects.all()
     
     # Apply user-specific filtering
     if user.role == User.Role.ADMIN:
@@ -48,12 +59,34 @@ def get_compliance_dashboard_data(user: User) -> Dict:
         if hasattr(user, 'depot') and user.depot:
             shipments_qs = shipments_qs.filter(assigned_depot=user.depot)
             documents_qs = documents_qs.filter(shipment__assigned_depot=user.depot)
-            # audits_qs = audits_qs.filter(depot=user.depot)  # audits disabled
+            # Filter audits to those related to user's depot shipments
+            depot_shipments = shipments_qs.values_list('id', flat=True)
+            audits_qs = audits_qs.filter(
+                Q(content_type__model='shipment', object_id__in=depot_shipments) |
+                Q(user=user)
+            )
+            compliance_audits_qs = compliance_audits_qs.filter(
+                audit_log__in=audits_qs
+            )
+            # Filter inspections to depot shipments
+            inspections_qs = inspections_qs.filter(shipment__in=depot_shipments)
+            inspection_items_qs = inspection_items_qs.filter(inspection__in=inspections_qs)
+            # Filter training to depot users
+            depot_users = User.objects.filter(depot=user.depot)
+            training_records_qs = training_records_qs.filter(employee__in=depot_users)
+            compliance_status_qs = compliance_status_qs.filter(employee__in=depot_users)
+            training_enrollments_qs = training_enrollments_qs.filter(employee__in=depot_users)
     elif user.role == User.Role.DRIVER:
         # Drivers can only see their own shipments
         shipments_qs = shipments_qs.filter(assigned_driver=user)
         documents_qs = documents_qs.filter(shipment__assigned_driver=user)
-        # audits_qs = audits_qs.filter(assigned_driver=user)  # audits disabled
+        # Filter inspections to driver's shipments
+        inspections_qs = inspections_qs.filter(shipment__assigned_driver=user)
+        inspection_items_qs = inspection_items_qs.filter(inspection__shipment__assigned_driver=user)
+        # Filter training to driver only
+        training_records_qs = training_records_qs.filter(employee=user)
+        compliance_status_qs = compliance_status_qs.filter(employee=user)
+        training_enrollments_qs = training_enrollments_qs.filter(employee=user)
     
     # Get shipment exceptions
     shipment_exceptions = shipments_qs.filter(
@@ -65,8 +98,31 @@ def get_compliance_dashboard_data(user: User) -> Dict:
         status='VALIDATED_WITH_ERRORS'
     ).count()
     
-    # Get upcoming audits (audits app disabled)
-    upcoming_audits = 0  # audits_qs.count()
+    # Count recent audit activities
+    recent_audits = audits_qs.filter(
+        timestamp__gte=timezone.now() - timedelta(days=30)
+    ).count()
+    
+    # Count compliance violations
+    compliance_violations = compliance_audits_qs.filter(
+        compliance_status='NON_COMPLIANT'
+    ).count()
+    
+    # Count inspection failures
+    failed_inspections = inspections_qs.filter(overall_result='FAIL').count()
+    
+    # Count pending inspections
+    pending_inspections = inspections_qs.filter(status='SCHEDULED').count()
+    
+    # Count inspection items with failures
+    failed_inspection_items = inspection_items_qs.filter(result='FAIL').count()
+    
+    # Count training compliance issues
+    expired_certifications = training_records_qs.filter(status='expired').count()
+    expiring_certifications = training_records_qs.filter(status='expiring_soon').count()
+    non_compliant_employees = compliance_status_qs.filter(status='non_compliant').count()
+    overdue_training = compliance_status_qs.filter(status='overdue').count()
+    failed_training = training_enrollments_qs.filter(status='failed').count()
     
     # Get recent compliance issues
     recent_issues = []
@@ -103,6 +159,74 @@ def get_compliance_dashboard_data(user: User) -> Dict:
             'description': _('Document validation failed')
         })
     
+    # Add recent compliance audit issues
+    recent_compliance_issues = compliance_audits_qs.filter(
+        compliance_status='NON_COMPLIANT',
+        audit_log__timestamp__gte=timezone.now() - timezone.timedelta(days=7)
+    ).select_related('audit_log').values(
+        'id', 'regulation_type', 'audit_log__timestamp', 'audit_log__action_description'
+    )[:5]
+    
+    for compliance_issue in recent_compliance_issues:
+        recent_issues.append({
+            'type': 'compliance',
+            'id': compliance_issue['id'],
+            'reference': compliance_issue['regulation_type'],
+            'updated_at': compliance_issue['audit_log__timestamp'],
+            'description': compliance_issue['audit_log__action_description'] or _('Compliance violation detected')
+        })
+    
+    # Add recent failed inspections
+    recent_failed_inspections = inspections_qs.filter(
+        overall_result='FAIL',
+        completed_at__gte=timezone.now() - timezone.timedelta(days=7)
+    ).values(
+        'id', 'inspection_type', 'completed_at', 'notes'
+    )[:5]
+    
+    for failed_inspection in recent_failed_inspections:
+        recent_issues.append({
+            'type': 'inspection',
+            'id': failed_inspection['id'],
+            'reference': failed_inspection['inspection_type'],
+            'updated_at': failed_inspection['completed_at'],
+            'description': failed_inspection['notes'] or _('Inspection failed')
+        })
+    
+    # Add recent training compliance issues
+    recent_expired_certs = training_records_qs.filter(
+        status='expired',
+        updated_at__gte=timezone.now() - timezone.timedelta(days=7)
+    ).select_related('employee', 'program').values(
+        'id', 'employee__first_name', 'employee__last_name', 'program__name', 'updated_at'
+    )[:5]
+    
+    for cert in recent_expired_certs:
+        recent_issues.append({
+            'type': 'training',
+            'id': cert['id'],
+            'reference': f"{cert['employee__first_name']} {cert['employee__last_name']}",
+            'updated_at': cert['updated_at'],
+            'description': f"Expired certification: {cert['program__name']}"
+        })
+    
+    # Add recent non-compliance issues
+    recent_non_compliance = compliance_status_qs.filter(
+        status__in=['non_compliant', 'overdue'],
+        updated_at__gte=timezone.now() - timezone.timedelta(days=7)
+    ).select_related('employee', 'requirement').values(
+        'id', 'employee__first_name', 'employee__last_name', 'requirement__name', 'status', 'updated_at'
+    )[:5]
+    
+    for comp in recent_non_compliance:
+        recent_issues.append({
+            'type': 'compliance',
+            'id': comp['id'],
+            'reference': f"{comp['employee__first_name']} {comp['employee__last_name']}",
+            'updated_at': comp['updated_at'],
+            'description': f"Training compliance: {comp['requirement__name']} ({comp['status']})"
+        })
+    
     # Sort recent issues by updated_at
     recent_issues.sort(key=lambda x: x['updated_at'], reverse=True)
     
@@ -127,8 +251,18 @@ def get_compliance_dashboard_data(user: User) -> Dict:
         'summary': {
             'shipment_exceptions': shipment_exceptions,
             'document_validation_errors': document_errors,
-            'upcoming_audits': upcoming_audits,
-            'total_issues': shipment_exceptions + document_errors
+            'recent_audits': recent_audits,
+            'compliance_violations': compliance_violations,
+            'failed_inspections': failed_inspections,
+            'pending_inspections': pending_inspections,
+            'failed_inspection_items': failed_inspection_items,
+            'expired_certifications': expired_certifications,
+            'expiring_certifications': expiring_certifications,
+            'non_compliant_employees': non_compliant_employees,
+            'overdue_training': overdue_training,
+            'failed_training': failed_training,
+            'total_issues': (shipment_exceptions + document_errors + compliance_violations + 
+                           failed_inspections + expired_certifications + non_compliant_employees + overdue_training)
         },
         'recent_issues': recent_issues[:5],  # Limit to 5 most recent
         'trends': {
