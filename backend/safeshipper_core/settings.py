@@ -70,6 +70,9 @@ INSTALLED_APPS = [
     'inspections', # Re-enabled for Phase 5B quality management
     'training',   # Re-enabled for Phase 5C training & certification management
     'api_gateway', # Re-enabled for Phase 7A API gateway & developer platform
+    'erp_integration', # Re-enabled for Phase 7B ERP integration framework
+    'customer_portal', # Re-enabled for Phase 8A customer portal & self-service
+    'mobile_api', # Re-enabled for Phase 8B mobile API foundation
     # 'communications', # Temporarily disabled
     'dashboards', # Re-enabled for Phase 3A analytics
     'load_plans', # Re-enabled for Phase 3B load planning

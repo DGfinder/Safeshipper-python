@@ -62,7 +62,8 @@
       "Bash(sudo apt install:*)",
       "Bash(timeout 30 docker-compose run --rm backend python manage.py runserver 0.0.0.0:8000)",
       "Bash(curl:*)",
-      "Bash(source:*)"
+      "Bash(source:*)",
+      "Bash(pip install:*)"
     ],
     "deny": []
   }

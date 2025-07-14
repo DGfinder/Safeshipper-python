@@ -5,6 +5,7 @@ from typing import Dict, Any, Optional, List
 from datetime import datetime, timedelta
 from django.utils import timezone
 from django.conf import settings
+from django.db.models import Q
 from celery import shared_task
 
 from .models import (
@@ -13,6 +14,7 @@ from .models import (
 )
 from shipments.models import Shipment
 from companies.models import Company
+from freight_types.models import FreightType
 
 logger = logging.getLogger(__name__)
 
@@ -335,6 +337,454 @@ class ShipmentSyncService:
         except Exception as e:
             logger.error(f"Failed to send data to ERP: {str(e)}")
             return False
+
+
+class ERPManifestImportService:
+    """Service for importing manifests from ERP systems"""
+    
+    def __init__(self, erp_system: ERPSystem):
+        self.erp_system = erp_system
+        self.integration_service = ERPIntegrationService(erp_system)
+    
+    def import_manifest_from_erp(self, external_reference: str, manifest_type: str = 'shipment',
+                                import_dangerous_goods: bool = True, create_shipment: bool = True,
+                                preserve_external_ids: bool = True) -> Dict[str, Any]:
+        """Import manifest from ERP system and create SafeShipper shipment"""
+        
+        try:
+            # Find appropriate endpoint for manifest import
+            endpoint = self._find_manifest_endpoint(manifest_type)
+            if not endpoint:
+                return {
+                    'success': False,
+                    'error': f'No active endpoint found for manifest type: {manifest_type}'
+                }
+            
+            # Fetch manifest data from ERP
+            manifest_data = self._fetch_manifest_data(endpoint, external_reference)
+            if not manifest_data:
+                return {
+                    'success': False,
+                    'error': f'Failed to fetch manifest data for reference: {external_reference}'
+                }
+            
+            # Transform manifest data
+            transformed_data = self.integration_service.transform_data(
+                manifest_data, endpoint, 'pull'
+            )
+            
+            # Create shipment if requested
+            shipment = None
+            if create_shipment:
+                shipment = self._create_shipment_from_manifest(
+                    transformed_data, external_reference, preserve_external_ids
+                )
+            
+            # Create manifest record
+            manifest = self._create_manifest_record(
+                transformed_data, external_reference, manifest_type, shipment
+            )
+            
+            # Import dangerous goods if requested
+            dangerous_goods_count = 0
+            if import_dangerous_goods:
+                dangerous_goods_count = self._import_dangerous_goods(
+                    manifest, transformed_data
+                )
+            
+            # Log successful import
+            self.integration_service.log_event(
+                'manifest_imported',
+                f'Successfully imported manifest: {external_reference}',
+                'info',
+                {
+                    'external_reference': external_reference,
+                    'manifest_type': manifest_type,
+                    'shipment_id': str(shipment.id) if shipment else None,
+                    'manifest_id': str(manifest.id) if manifest else None,
+                    'dangerous_goods_count': dangerous_goods_count
+                }
+            )
+            
+            return {
+                'success': True,
+                'message': f'Manifest imported successfully: {external_reference}',
+                'shipment_id': str(shipment.id) if shipment else None,
+                'manifest_id': str(manifest.id) if manifest else None,
+                'external_reference': external_reference,
+                'dangerous_goods_found': dangerous_goods_count
+            }
+            
+        except Exception as e:
+            logger.error(f"Failed to import manifest {external_reference}: {str(e)}")
+            self.integration_service.log_event(
+                'manifest_import_failed',
+                f'Failed to import manifest: {external_reference}',
+                'error',
+                {
+                    'external_reference': external_reference,
+                    'error': str(e)
+                }
+            )
+            return {
+                'success': False,
+                'error': f'Failed to import manifest: {str(e)}'
+            }
+    
+    def _find_manifest_endpoint(self, manifest_type: str) -> Optional[IntegrationEndpoint]:
+        """Find appropriate endpoint for manifest import"""
+        endpoint_type_mapping = {
+            'shipment': 'shipments',
+            'invoice': 'invoicing',
+            'packing_list': 'shipments',
+            'customs': 'documents'
+        }
+        
+        endpoint_type = endpoint_type_mapping.get(manifest_type, 'shipments')
+        
+        return self.erp_system.endpoints.filter(
+            endpoint_type=endpoint_type,
+            sync_direction__in=['pull', 'bidirectional'],
+            is_active=True
+        ).first()
+    
+    def _fetch_manifest_data(self, endpoint: IntegrationEndpoint, external_reference: str) -> Optional[Dict[str, Any]]:
+        """Fetch manifest data from ERP system"""
+        try:
+            auth_config = self.erp_system.authentication_config
+            headers = self.integration_service._build_headers(auth_config)
+            
+            # Build URL with external reference
+            url = f"{self.erp_system.base_url.rstrip('/')}/{endpoint.path.lstrip('/')}/{external_reference}"
+            
+            response = requests.get(
+                url,
+                headers=headers,
+                timeout=30,
+                verify=auth_config.get('verify_ssl', True)
+            )
+            
+            if response.status_code == 200:
+                return response.json()
+            else:
+                logger.error(f"Failed to fetch manifest data: {response.status_code} - {response.text}")
+                return None
+                
+        except Exception as e:
+            logger.error(f"Error fetching manifest data: {str(e)}")
+            return None
+    
+    def _create_shipment_from_manifest(self, manifest_data: Dict[str, Any], 
+                                     external_reference: str, 
+                                     preserve_external_ids: bool = True) -> Optional['Shipment']:
+        """Create SafeShipper shipment from manifest data"""
+        try:
+            from companies.models import Company
+            from freight_types.models import FreightType
+            
+            # Get customer company (this would need to be mapped from ERP data)
+            customer_company = self._get_or_create_customer_company(manifest_data)
+            
+            # Get carrier company (this would need to be mapped from ERP data)
+            carrier_company = self._get_or_create_carrier_company(manifest_data)
+            
+            # Get freight type
+            freight_type = self._get_or_create_freight_type(manifest_data)
+            
+            # Create shipment
+            shipment_data = {
+                'reference_number': external_reference if preserve_external_ids else None,
+                'customer': customer_company,
+                'carrier': carrier_company,
+                'freight_type': freight_type,
+                'origin_location': manifest_data.get('origin_location', ''),
+                'destination_location': manifest_data.get('destination_location', ''),
+                'status': 'PENDING',
+                'instructions': manifest_data.get('special_instructions', ''),
+                'dead_weight_kg': manifest_data.get('weight_kg'),
+                'volumetric_weight_m3': manifest_data.get('volume_m3'),
+                'estimated_pickup_date': self._parse_date(manifest_data.get('pickup_date')),
+                'estimated_delivery_date': self._parse_date(manifest_data.get('delivery_date')),
+            }
+            
+            # Remove None values
+            shipment_data = {k: v for k, v in shipment_data.items() if v is not None}
+            
+            shipment = Shipment.objects.create(**shipment_data)
+            
+            # Generate tracking number if not preserving external IDs
+            if not preserve_external_ids:
+                from shipments.models import generate_tracking_number
+                shipment.tracking_number = generate_tracking_number()
+                shipment.save()
+            
+            return shipment
+            
+        except Exception as e:
+            logger.error(f"Failed to create shipment from manifest: {str(e)}")
+            return None
+    
+    def _create_manifest_record(self, manifest_data: Dict[str, Any], 
+                               external_reference: str, 
+                               manifest_type: str, 
+                               shipment: Optional[Shipment] = None) -> Optional['Manifest']:
+        """Create SafeShipper manifest record"""
+        try:
+            from manifests.models import Manifest, ManifestType
+            from documents.models import Document
+            
+            # Map manifest type
+            manifest_type_mapping = {
+                'shipment': ManifestType.PACKING_LIST,
+                'invoice': ManifestType.COMMERCIAL_INVOICE,
+                'packing_list': ManifestType.PACKING_LIST,
+                'customs': ManifestType.CUSTOMS_DECLARATION
+            }
+            
+            mapped_type = manifest_type_mapping.get(manifest_type, ManifestType.PACKING_LIST)
+            
+            # Create document record first
+            document = Document.objects.create(
+                name=f"ERP Manifest - {external_reference}",
+                document_type='manifest',
+                file_size=0,  # ERP imported, no file
+                description=f"Manifest imported from ERP system: {self.erp_system.name}"
+            )
+            
+            # Create manifest
+            manifest = Manifest.objects.create(
+                document=document,
+                shipment=shipment,
+                manifest_type=mapped_type,
+                status='CONFIRMED',  # ERP data is pre-confirmed
+                file_name=f"erp_manifest_{external_reference}",
+                analysis_results={'source': 'erp_import', 'external_reference': external_reference}
+            )
+            
+            return manifest
+            
+        except Exception as e:
+            logger.error(f"Failed to create manifest record: {str(e)}")
+            return None
+    
+    def _import_dangerous_goods(self, manifest: 'Manifest', manifest_data: Dict[str, Any]) -> int:
+        """Import dangerous goods from manifest data"""
+        try:
+            from dangerous_goods.models import DangerousGood
+            from manifests.models import ManifestDangerousGoodMatch
+            
+            dangerous_goods_items = manifest_data.get('dangerous_goods', [])
+            imported_count = 0
+            
+            for dg_item in dangerous_goods_items:
+                # Try to find matching dangerous good
+                un_number = dg_item.get('un_number')
+                proper_name = dg_item.get('proper_shipping_name')
+                
+                dangerous_good = None
+                
+                if un_number:
+                    dangerous_good = DangerousGood.objects.filter(
+                        un_number=un_number
+                    ).first()
+                
+                if not dangerous_good and proper_name:
+                    dangerous_good = DangerousGood.objects.filter(
+                        proper_shipping_name__icontains=proper_name
+                    ).first()
+                
+                if dangerous_good:
+                    # Create manifest match
+                    ManifestDangerousGoodMatch.objects.create(
+                        manifest=manifest,
+                        dangerous_good=dangerous_good,
+                        found_text=dg_item.get('description', proper_name or un_number),
+                        match_type='EXACT_SYNONYM',
+                        confidence_score=1.0,
+                        is_confirmed=True  # ERP data is pre-confirmed
+                    )
+                    imported_count += 1
+            
+            return imported_count
+            
+        except Exception as e:
+            logger.error(f"Failed to import dangerous goods: {str(e)}")
+            return 0
+    
+    def _get_or_create_customer_company(self, manifest_data: Dict[str, Any]) -> 'Company':
+        """Get or create customer company from manifest data"""
+        try:
+            from companies.models import Company
+            
+            customer_name = manifest_data.get('customer_name', 'Unknown Customer')
+            customer_code = manifest_data.get('customer_code', '')
+            
+            # Try to find existing company
+            company = Company.objects.filter(name=customer_name).first()
+            
+            if not company:
+                # Create new company
+                company = Company.objects.create(
+                    name=customer_name,
+                    company_type='CUSTOMER',
+                    contact_info={
+                        'primary_contact': {
+                            'name': 'ERP Import Contact',
+                            'email': 'erp@example.com',
+                            'phone': '+1-555-0000'
+                        },
+                        'billing_contact': {
+                            'name': 'ERP Import Contact',
+                            'email': 'erp@example.com',
+                            'phone': '+1-555-0000'
+                        },
+                        'imported_from_erp': True,
+                        'erp_system': self.erp_system.name,
+                        'external_reference': manifest_data.get('customer_reference', ''),
+                        'customer_code': customer_code
+                    }
+                )
+            
+            return company
+            
+        except Exception as e:
+            logger.error(f"Failed to get/create customer company: {str(e)}")
+            # Return a default company
+            return Company.objects.filter(company_type='CUSTOMER').first()
+    
+    def _get_or_create_carrier_company(self, manifest_data: Dict[str, Any]) -> 'Company':
+        """Get or create carrier company from manifest data"""
+        try:
+            from companies.models import Company
+            
+            carrier_name = manifest_data.get('carrier_name', 'Unknown Carrier')
+            carrier_code = manifest_data.get('carrier_code', '')
+            
+            # Try to find existing company
+            company = Company.objects.filter(name=carrier_name).first()
+            
+            if not company:
+                # Create new company
+                company = Company.objects.create(
+                    name=carrier_name,
+                    company_type='CARRIER',
+                    contact_info={
+                        'primary_contact': {
+                            'name': 'ERP Import Contact',
+                            'email': 'erp@example.com',
+                            'phone': '+1-555-0000'
+                        },
+                        'billing_contact': {
+                            'name': 'ERP Import Contact',
+                            'email': 'erp@example.com',
+                            'phone': '+1-555-0000'
+                        },
+                        'imported_from_erp': True,
+                        'erp_system': self.erp_system.name,
+                        'external_reference': manifest_data.get('carrier_reference', ''),
+                        'carrier_code': carrier_code
+                    }
+                )
+            
+            return company
+            
+        except Exception as e:
+            logger.error(f"Failed to get/create carrier company: {str(e)}")
+            # Return a default company
+            return Company.objects.filter(company_type='CARRIER').first()
+    
+    def _get_or_create_freight_type(self, manifest_data: Dict[str, Any]) -> 'FreightType':
+        """Get or create freight type from manifest data"""
+        try:
+            from freight_types.models import FreightType
+            
+            freight_type_code = manifest_data.get('freight_type', 'GENERAL')
+            
+            # Try to find existing freight type
+            freight_type = FreightType.objects.filter(code=freight_type_code).first()
+            
+            if not freight_type:
+                # Create or get default freight type
+                freight_type, _ = FreightType.objects.get_or_create(
+                    code='GENERAL',
+                    defaults={'description': 'General Freight'}
+                )
+            
+            return freight_type
+            
+        except Exception as e:
+            logger.error(f"Failed to get/create freight type: {str(e)}")
+            # Return default freight type
+            return FreightType.objects.first()
+    
+    def _parse_date(self, date_string: str) -> Optional[datetime]:
+        """Parse date string from ERP data"""
+        if not date_string:
+            return None
+        
+        try:
+            # Try common date formats
+            formats = [
+                '%Y-%m-%d',
+                '%Y-%m-%dT%H:%M:%S',
+                '%Y-%m-%dT%H:%M:%SZ',
+                '%d/%m/%Y',
+                '%m/%d/%Y'
+            ]
+            
+            for fmt in formats:
+                try:
+                    return datetime.strptime(date_string, fmt)
+                except ValueError:
+                    continue
+            
+            logger.warning(f"Could not parse date: {date_string}")
+            return None
+            
+        except Exception as e:
+            logger.error(f"Error parsing date {date_string}: {str(e)}")
+            return None
+    
+    def batch_import_manifests(self, external_references: List[str], 
+                              manifest_type: str = 'shipment',
+                              **kwargs) -> Dict[str, Any]:
+        """Import multiple manifests in batch"""
+        results = {
+            'successful': [],
+            'failed': [],
+            'total': len(external_references),
+            'success_count': 0,
+            'error_count': 0
+        }
+        
+        for external_reference in external_references:
+            try:
+                result = self.import_manifest_from_erp(
+                    external_reference, manifest_type, **kwargs
+                )
+                
+                if result['success']:
+                    results['successful'].append({
+                        'external_reference': external_reference,
+                        'shipment_id': result.get('shipment_id'),
+                        'manifest_id': result.get('manifest_id')
+                    })
+                    results['success_count'] += 1
+                else:
+                    results['failed'].append({
+                        'external_reference': external_reference,
+                        'error': result.get('error')
+                    })
+                    results['error_count'] += 1
+                    
+            except Exception as e:
+                results['failed'].append({
+                    'external_reference': external_reference,
+                    'error': str(e)
+                })
+                results['error_count'] += 1
+        
+        return results
 
 
 class ERPDataMappingService:

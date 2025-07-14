@@ -109,6 +109,8 @@ urlpatterns = [
         path('inspections/', include('inspections.urls')),  # Re-enabled for Phase 5B quality management
         path('training/', include('training.urls')),  # Re-enabled for Phase 5C training & certification management
         path('gateway/', include('api_gateway.urls')),  # Re-enabled for Phase 7A API gateway & developer platform
+        path('erp-integration/', include('erp_integration.urls')),  # Re-enabled for Phase 7B ERP integration framework
+        path('mobile/', include('mobile_api.urls')),  # Re-enabled for Phase 8B mobile API foundation
         # path('communications/', include('communications.urls')),  # Temporarily disabled
         path('manifests/', include('manifests.urls')),  # Re-enabled after fixing documents dependencies
         # Basic search endpoints

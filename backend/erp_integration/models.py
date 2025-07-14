@@ -56,7 +56,7 @@ class ERPSystem(models.Model):
     # Integration settings
     sync_frequency_minutes = models.IntegerField(default=60, help_text="Sync frequency in minutes")
     enabled_modules = models.JSONField(default=list, help_text="List of enabled integration modules")
-    field_mappings = models.JSONField(default=dict, help_text="Field mapping configurations")
+    legacy_field_mappings = models.JSONField(default=dict, help_text="Legacy field mapping configurations")
     
     # Status and monitoring
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='inactive')
