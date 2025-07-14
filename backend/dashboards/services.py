@@ -1,5 +1,5 @@
 from typing import Dict, Optional, List
-from django.db.models import Count, Q, Sum, Avg, F, Value
+from django.db.models import Count, Q, Sum, Avg, F, Value, FloatField
 from django.db.models.functions import TruncDay, TruncWeek, TruncMonth, Coalesce
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
@@ -9,12 +9,9 @@ from shipments.models import Shipment
 from documents.models import Document
 from vehicles.models import Vehicle
 from load_plans.models import LoadPlan
-try:
-    from capacity_marketplace.models import CapacityListing, CapacityBooking, MarketplaceMetrics
-    from routes.models import Route
-    MARKETPLACE_AVAILABLE = True
-except ImportError:
-    MARKETPLACE_AVAILABLE = False
+from routes.models import Route
+from capacity_marketplace.models import CapacityListing, CapacityBooking, MarketplaceMetrics
+from enterprise_auth.models import AuthenticationLog, MFADevice, SSOProvider, SecurityPolicy
 
 def get_compliance_dashboard_data(user: User) -> Dict:
     """
@@ -32,15 +29,15 @@ def get_compliance_dashboard_data(user: User) -> Dict:
     # Base queryset for documents
     documents_qs = Document.objects.filter(
         document_type__in=[
-            Document.DocumentType.DG_MANIFEST,
-            Document.DocumentType.DG_DECLARATION
+            'DG_MANIFEST',
+            'DG_DECLARATION'
         ]
     )
     
-    # Base queryset for audits
-    audits_qs = Audit.objects.filter(
-        scheduled_date__gte=timezone.now()
-    )
+    # Base queryset for audits (audits app is disabled)
+    # audits_qs = Audit.objects.filter(
+    #     scheduled_date__gte=timezone.now()
+    # )
     
     # Apply user-specific filtering
     if user.role == User.Role.ADMIN:
@@ -48,35 +45,35 @@ def get_compliance_dashboard_data(user: User) -> Dict:
         pass
     elif user.role == User.Role.DISPATCHER:
         # Dispatchers can only see data for their depot
-        if user.depot:
+        if hasattr(user, 'depot') and user.depot:
             shipments_qs = shipments_qs.filter(assigned_depot=user.depot)
             documents_qs = documents_qs.filter(shipment__assigned_depot=user.depot)
-            audits_qs = audits_qs.filter(depot=user.depot)
+            # audits_qs = audits_qs.filter(depot=user.depot)  # audits disabled
     elif user.role == User.Role.DRIVER:
         # Drivers can only see their own shipments
         shipments_qs = shipments_qs.filter(assigned_driver=user)
         documents_qs = documents_qs.filter(shipment__assigned_driver=user)
-        audits_qs = audits_qs.filter(assigned_driver=user)
+        # audits_qs = audits_qs.filter(assigned_driver=user)  # audits disabled
     
     # Get shipment exceptions
     shipment_exceptions = shipments_qs.filter(
-        status=Shipment.Status.EXCEPTION
+        status='EXCEPTION'
     ).count()
     
     # Get document validation errors
     document_errors = documents_qs.filter(
-        status=Document.DocumentStatus.VALIDATED_WITH_ERRORS
+        status='VALIDATED_WITH_ERRORS'
     ).count()
     
-    # Get upcoming audits
-    upcoming_audits = audits_qs.count()
+    # Get upcoming audits (audits app disabled)
+    upcoming_audits = 0  # audits_qs.count()
     
     # Get recent compliance issues
     recent_issues = []
     
     # Add recent shipment exceptions
     recent_shipment_exceptions = shipments_qs.filter(
-        status=Shipment.Status.EXCEPTION,
+        status='EXCEPTION',
         updated_at__gte=timezone.now() - timezone.timedelta(days=7)
     ).values('id', 'reference_number', 'status', 'updated_at')[:5]
     
@@ -92,7 +89,7 @@ def get_compliance_dashboard_data(user: User) -> Dict:
     
     # Add recent document validation errors
     recent_document_errors = documents_qs.filter(
-        status=Document.DocumentStatus.VALIDATED_WITH_ERRORS,
+        status='VALIDATED_WITH_ERRORS',
         updated_at__gte=timezone.now() - timezone.timedelta(days=7)
     ).values('id', 'original_filename', 'shipment__reference_number', 'updated_at')[:5]
     
@@ -149,13 +146,13 @@ def get_capacity_optimization_dashboard(user: User) -> Dict:
     load_plans_qs = LoadPlan.objects.all()
     vehicles_qs = Vehicle.objects.all()
     
-    if user.role == User.Role.DISPATCHER and user.depot:
+    if hasattr(user, 'role') and user.role == User.Role.DISPATCHER and hasattr(user, 'depot') and user.depot:
         load_plans_qs = load_plans_qs.filter(vehicle__assigned_depot=user.depot)
         vehicles_qs = vehicles_qs.filter(assigned_depot=user.depot)
-    elif user.role == User.Role.DRIVER:
+    elif hasattr(user, 'role') and user.role == User.Role.DRIVER:
         # Drivers see plans for vehicles they're assigned to
         load_plans_qs = load_plans_qs.filter(vehicle__in=vehicles_qs.filter(
-            Q(routes__driver=user) | Q(capacity_listings__driver=user)
+            Q(routes__driver=user)
         ).distinct())
     
     # Calculate optimization metrics
@@ -189,7 +186,7 @@ def get_capacity_optimization_dashboard(user: User) -> Dict:
     optimization_results = []
     for plan in recent_optimizations:
         optimization_results.append({
-            'id': plan.id,
+            'id': str(plan.id),
             'name': plan.name,
             'vehicle': plan.vehicle.registration_number,
             'optimization_score': plan.optimization_score,
@@ -227,15 +224,12 @@ def get_marketplace_analytics(user: User) -> Dict:
     """
     Get marketplace performance analytics.
     """
-    if not MARKETPLACE_AVAILABLE:
-        return {'available': False, 'message': 'Marketplace module not available'}
-    
     # Base querysets
     listings_qs = CapacityListing.objects.all()
     bookings_qs = CapacityBooking.objects.all()
     
     # Apply user filtering
-    if user.role == User.Role.DISPATCHER and user.depot:
+    if user.role == User.Role.DISPATCHER and hasattr(user, 'depot') and user.depot:
         listings_qs = listings_qs.filter(vehicle__assigned_depot=user.depot)
     elif user.role == User.Role.DRIVER:
         listings_qs = listings_qs.filter(driver=user)
@@ -297,9 +291,9 @@ def get_marketplace_analytics(user: User) -> Dict:
     for listing in recent_listings:
         marketplace_activity.append({
             'type': 'listing',
-            'id': listing.id,
+            'id': str(listing.id),
             'title': listing.title,
-            'carrier': listing.carrier.name,
+            'carrier': listing.carrier.name if listing.carrier else 'Unknown',
             'capacity_kg': listing.available_weight_kg,
             'price_per_kg': float(listing.base_price_per_kg),
             'created_at': listing.created_at
@@ -308,9 +302,9 @@ def get_marketplace_analytics(user: User) -> Dict:
     for booking in recent_bookings:
         marketplace_activity.append({
             'type': 'booking',
-            'id': booking.id,
+            'id': str(booking.id),
             'reference': booking.booking_reference,
-            'shipper': booking.shipper.name,
+            'shipper': booking.shipper.name if booking.shipper else 'Unknown',
             'booked_weight': booking.booked_weight_kg,
             'quoted_price': float(booking.quoted_price),
             'created_at': booking.created_at
@@ -358,14 +352,11 @@ def get_route_optimization_analytics(user: User) -> Dict:
     """
     Get route optimization analytics.
     """
-    if not MARKETPLACE_AVAILABLE:
-        return {'available': False, 'message': 'Routes module not available'}
-    
     # Base querysets
     routes_qs = Route.objects.all()
     
     # Apply user filtering
-    if user.role == User.Role.DISPATCHER and user.depot:
+    if user.role == User.Role.DISPATCHER and hasattr(user, 'depot') and user.depot:
         routes_qs = routes_qs.filter(vehicle__assigned_depot=user.depot)
     elif user.role == User.Role.DRIVER:
         routes_qs = routes_qs.filter(driver=user)
@@ -373,8 +364,11 @@ def get_route_optimization_analytics(user: User) -> Dict:
     # Route efficiency metrics
     completed_routes = routes_qs.filter(status=Route.Status.COMPLETED)
     
-    avg_efficiency = completed_routes.aggregate(
-        avg_efficiency=Avg('efficiency_score')
+    # Calculate efficiency as revenue per km
+    avg_efficiency = completed_routes.exclude(
+        total_distance_km=0
+    ).aggregate(
+        avg_efficiency=Avg(F('estimated_revenue') / F('total_distance_km'), output_field=FloatField())
     )['avg_efficiency'] or 0
     
     total_distance = completed_routes.aggregate(
@@ -395,6 +389,40 @@ def get_route_optimization_analytics(user: User) -> Dict:
     total_completed = completed_routes.count()
     on_time_percentage = (on_time_routes / total_completed * 100) if total_completed > 0 else 0
     
+    # Recent route performance
+    recent_routes = completed_routes.filter(
+        actual_end_time__gte=timezone.now() - timedelta(days=7)
+    ).order_by('-actual_end_time')[:5]
+    
+    route_results = []
+    for route in recent_routes:
+        efficiency_score = float(route.estimated_revenue) / route.total_distance_km if route.total_distance_km > 0 else 0
+        route_results.append({
+            'id': str(route.id),
+            'name': route.name,
+            'vehicle': route.vehicle.registration_number,
+            'driver': route.driver.username if route.driver else None,
+            'total_distance_km': route.total_distance_km,
+            'efficiency_score': round(efficiency_score, 2),
+            'optimization_score': route.optimization_score,
+            'on_time': route.actual_end_time <= route.planned_end_time if route.actual_end_time and route.planned_end_time else None,
+            'completed_at': route.actual_end_time
+        })
+    
+    # Route trends over time
+    route_trends = completed_routes.filter(
+        actual_end_time__gte=timezone.now() - timedelta(days=30)
+    ).exclude(
+        total_distance_km=0
+    ).annotate(
+        date=TruncDay('actual_end_time')
+    ).values('date').annotate(
+        avg_efficiency=Avg(F('estimated_revenue') / F('total_distance_km'), output_field=FloatField()),
+        avg_distance=Avg('total_distance_km'),
+        avg_optimization=Avg('optimization_score'),
+        route_count=Count('id')
+    ).order_by('date')
+    
     return {
         'available': True,
         'summary': {
@@ -405,6 +433,107 @@ def get_route_optimization_analytics(user: User) -> Dict:
             'avg_optimization_score': round(avg_optimization_score, 1),
             'on_time_percentage': round(on_time_percentage, 1)
         },
+        'recent_routes': route_results,
+        'route_trends': list(route_trends),
+        'last_updated': timezone.now()
+    }
+
+def get_security_dashboard_data(user: User) -> Dict:
+    """
+    Get enterprise security analytics.
+    """
+    # Authentication log metrics
+    auth_logs_qs = AuthenticationLog.objects.all()
+    
+    # Apply user filtering (only admins can see full security data)
+    if user.role != User.Role.ADMIN:
+        # Non-admins can only see their own authentication logs
+        auth_logs_qs = auth_logs_qs.filter(user=user)
+    
+    # Recent authentication activity (last 24 hours)
+    recent_cutoff = timezone.now() - timedelta(hours=24)
+    recent_auth = auth_logs_qs.filter(timestamp__gte=recent_cutoff)
+    
+    # Success/failure rates
+    total_attempts = recent_auth.count()
+    successful_attempts = recent_auth.filter(success=True).count()
+    failed_attempts = recent_auth.filter(success=False).count()
+    success_rate = (successful_attempts / total_attempts * 100) if total_attempts > 0 else 0
+    
+    # MFA adoption metrics
+    total_users = User.objects.count()
+    users_with_mfa = User.objects.filter(
+        mfa_devices__is_confirmed=True
+    ).distinct().count()
+    mfa_adoption_rate = (users_with_mfa / total_users * 100) if total_users > 0 else 0
+    
+    # SSO usage
+    sso_providers = SSOProvider.objects.filter(is_active=True)
+    sso_logins = recent_auth.filter(event_type='sso_login').count()
+    sso_usage_rate = (sso_logins / total_attempts * 100) if total_attempts > 0 else 0
+    
+    # Security alerts (failed attempts, suspicious activity)
+    failed_login_attempts = recent_auth.filter(
+        event_type='login_failed'
+    ).count()
+    
+    failed_mfa_attempts = recent_auth.filter(
+        event_type='mfa_failed'
+    ).count()
+    
+    # Top IP addresses by activity
+    top_ips = recent_auth.values('ip_address').annotate(
+        attempt_count=Count('id'),
+        success_count=Count('id', filter=Q(success=True)),
+        failure_count=Count('id', filter=Q(success=False))
+    ).order_by('-attempt_count')[:10]
+    
+    # Recent security events
+    recent_events = auth_logs_qs.order_by('-timestamp')[:20]
+    
+    event_list = []
+    for event in recent_events:
+        event_list.append({
+            'id': str(event.id),
+            'event_type': event.get_event_type_display(),
+            'user': event.user.username if event.user else event.username_attempted,
+            'ip_address': event.ip_address,
+            'success': event.success,
+            'timestamp': event.timestamp,
+            'failure_reason': event.failure_reason if not event.success else None
+        })
+    
+    # Authentication trends over last 7 days
+    auth_trends = auth_logs_qs.filter(
+        timestamp__gte=timezone.now() - timedelta(days=7)
+    ).annotate(
+        date=TruncDay('timestamp')
+    ).values('date').annotate(
+        total_attempts=Count('id'),
+        successful_attempts=Count('id', filter=Q(success=True)),
+        failed_attempts=Count('id', filter=Q(success=False)),
+        sso_attempts=Count('id', filter=Q(event_type='sso_login')),
+        mfa_attempts=Count('id', filter=Q(event_type__in=['mfa_success', 'mfa_failed']))
+    ).order_by('date')
+    
+    return {
+        'available': True,
+        'summary': {
+            'total_auth_attempts_24h': total_attempts,
+            'successful_attempts_24h': successful_attempts,
+            'failed_attempts_24h': failed_attempts,
+            'auth_success_rate': round(success_rate, 1),
+            'total_users': total_users,
+            'users_with_mfa': users_with_mfa,
+            'mfa_adoption_rate': round(mfa_adoption_rate, 1),
+            'active_sso_providers': sso_providers.count(),
+            'sso_usage_rate': round(sso_usage_rate, 1),
+            'failed_login_attempts': failed_login_attempts,
+            'failed_mfa_attempts': failed_mfa_attempts
+        },
+        'recent_events': event_list,
+        'top_ip_addresses': list(top_ips),
+        'auth_trends': list(auth_trends),
         'last_updated': timezone.now()
     }
 
@@ -417,5 +546,6 @@ def get_comprehensive_dashboard_data(user: User) -> Dict:
         'capacity_optimization': get_capacity_optimization_dashboard(user),
         'marketplace': get_marketplace_analytics(user),
         'route_optimization': get_route_optimization_analytics(user),
+        'security': get_security_dashboard_data(user),
         'generated_at': timezone.now()
     } 

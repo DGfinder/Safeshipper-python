@@ -10,12 +10,13 @@ from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
+from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
 from allauth.socialaccount.models import SocialAccount, SocialApp
 from allauth.socialaccount.providers.google.views import GoogleOAuth2Adapter
-from allauth.socialaccount.providers.microsoft.views import MicrosoftOAuth2Adapter
+# from allauth.socialaccount.providers.microsoft.views import MicrosoftOAuth2Adapter  # Temporarily disabled
 from allauth.socialaccount.providers.oauth2.client import OAuth2Client
-from dj_rest_auth.registration.views import SocialLoginView
+# from dj_rest_auth.registration.views import SocialLoginView  # Temporarily disabled
 import logging
 import json
 from datetime import timedelta
@@ -29,56 +30,18 @@ User = get_user_model()
 logger = logging.getLogger(__name__)
 
 
-class GoogleLogin(SocialLoginView):
+class GoogleLogin(APIView):
     """Google OAuth2 login endpoint for API clients"""
-    adapter_class = GoogleOAuth2Adapter
-    callback_url = settings.CORS_ALLOWED_ORIGINS[0] + "/auth/google/callback/"
-    client_class = OAuth2Client
+    permission_classes = [AllowAny]
     
     def post(self, request, *args, **kwargs):
         """Custom Google login with JWT response"""
         try:
-            response = super().post(request, *args, **kwargs)
-            
-            if response.status_code == 200:
-                # Get user from response
-                user = request.user if request.user.is_authenticated else None
-                
-                if user:
-                    # Create JWT tokens
-                    refresh = RefreshToken.for_user(user)
-                    access_token = refresh.access_token
-                    
-                    # Add custom claims
-                    access_token['user_id'] = user.id
-                    access_token['username'] = user.username
-                    access_token['email'] = user.email
-                    access_token['role'] = user.role
-                    
-                    # Log SSO authentication
-                    AuthenticationLog.objects.create(
-                        user=user,
-                        event_type='sso_login',
-                        ip_address=request.META.get('REMOTE_ADDR', ''),
-                        user_agent=request.META.get('HTTP_USER_AGENT', ''),
-                        username_attempted=user.email,
-                        success=True,
-                        metadata={'provider': 'google'}
-                    )
-                    
-                    return Response({
-                        'access_token': str(access_token),
-                        'refresh_token': str(refresh),
-                        'user': {
-                            'id': user.id,
-                            'username': user.username,
-                            'email': user.email,
-                            'role': user.role,
-                        },
-                        'message': 'SSO login successful'
-                    })
-            
-            return response
+            # For now, return a placeholder response
+            return Response({
+                'message': 'Google SSO login endpoint - Implementation pending',
+                'status': 'disabled'
+            }, status=status.HTTP_501_NOT_IMPLEMENTED)
             
         except Exception as e:
             logger.error(f"Google SSO login error: {str(e)}")
@@ -87,55 +50,18 @@ class GoogleLogin(SocialLoginView):
             }, status=status.HTTP_400_BAD_REQUEST)
 
 
-class MicrosoftLogin(SocialLoginView):
+class MicrosoftLogin(APIView):
     """Microsoft OAuth2 login endpoint for API clients"""
-    adapter_class = MicrosoftOAuth2Adapter
-    callback_url = settings.CORS_ALLOWED_ORIGINS[0] + "/auth/microsoft/callback/"
-    client_class = OAuth2Client
+    permission_classes = [AllowAny]
     
     def post(self, request, *args, **kwargs):
         """Custom Microsoft login with JWT response"""
         try:
-            response = super().post(request, *args, **kwargs)
-            
-            if response.status_code == 200:
-                user = request.user if request.user.is_authenticated else None
-                
-                if user:
-                    # Create JWT tokens
-                    refresh = RefreshToken.for_user(user)
-                    access_token = refresh.access_token
-                    
-                    # Add custom claims
-                    access_token['user_id'] = user.id
-                    access_token['username'] = user.username
-                    access_token['email'] = user.email
-                    access_token['role'] = user.role
-                    
-                    # Log SSO authentication
-                    AuthenticationLog.objects.create(
-                        user=user,
-                        event_type='sso_login',
-                        ip_address=request.META.get('REMOTE_ADDR', ''),
-                        user_agent=request.META.get('HTTP_USER_AGENT', ''),
-                        username_attempted=user.email,
-                        success=True,
-                        metadata={'provider': 'microsoft'}
-                    )
-                    
-                    return Response({
-                        'access_token': str(access_token),
-                        'refresh_token': str(refresh),
-                        'user': {
-                            'id': user.id,
-                            'username': user.username,
-                            'email': user.email,
-                            'role': user.role,
-                        },
-                        'message': 'SSO login successful'
-                    })
-            
-            return response
+            # For now, return a placeholder response
+            return Response({
+                'message': 'Microsoft SSO login endpoint - Implementation pending',
+                'status': 'disabled'
+            }, status=status.HTTP_501_NOT_IMPLEMENTED)
             
         except Exception as e:
             logger.error(f"Microsoft SSO login error: {str(e)}")

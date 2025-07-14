@@ -156,7 +156,7 @@ class ComprehensiveDashboardView(APIView):
             # Add user context
             data['user_context'] = {
                 'role': request.user.role,
-                'depot': request.user.depot.name if request.user.depot else None,
+                'depot': request.user.depot.name if hasattr(request.user, 'depot') and request.user.depot else None,
                 'permissions': {
                     'can_view_all_data': request.user.role == 'ADMIN',
                     'can_manage_capacity': request.user.role in ['ADMIN', 'DISPATCHER'],
@@ -173,17 +173,17 @@ class ComprehensiveDashboardView(APIView):
             health_score = 100
             
             # Reduce score for compliance issues
-            if compliance_data['summary']['total_issues'] > 0:
+            if compliance_data.get('summary', {}).get('total_issues', 0) > 0:
                 health_score -= min(compliance_data['summary']['total_issues'] * 5, 30)
             
             # Add score for high utilization
-            if capacity_data['summary']['avg_weight_utilization'] > 80:
+            if capacity_data.get('summary', {}).get('avg_weight_utilization', 0) > 80:
                 health_score += 5
-            if capacity_data['summary']['optimization_rate'] > 90:
+            if capacity_data.get('summary', {}).get('optimization_rate', 0) > 90:
                 health_score += 10
             
             # Add score for marketplace activity
-            if marketplace_data.get('available') and marketplace_data['summary']['utilization_rate'] > 70:
+            if marketplace_data.get('available') and marketplace_data.get('summary', {}).get('utilization_rate', 0) > 70:
                 health_score += 5
             
             data['platform_health'] = {
@@ -192,9 +192,9 @@ class ComprehensiveDashboardView(APIView):
                          'good' if health_score >= 75 else
                          'fair' if health_score >= 60 else 'needs_attention',
                 'key_metrics': {
-                    'compliance_issues': compliance_data['summary']['total_issues'],
-                    'avg_capacity_utilization': capacity_data['summary']['avg_weight_utilization'],
-                    'optimization_rate': capacity_data['summary']['optimization_rate']
+                    'compliance_issues': compliance_data.get('summary', {}).get('total_issues', 0),
+                    'avg_capacity_utilization': capacity_data.get('summary', {}).get('avg_weight_utilization', 0),
+                    'optimization_rate': capacity_data.get('summary', {}).get('optimization_rate', 0)
                 }
             }
             

@@ -185,7 +185,7 @@ def cleanup_auth_data(sender, instance, **kwargs):
             username_attempted=instance.email,
             success=True,
             metadata={'action': 'user_deletion'},
-            ip_address='system',
+            ip_address='127.0.0.1',  # Use localhost for system operations
             user_agent='system'
         )
         

@@ -80,7 +80,7 @@ urlpatterns = [
     path('api/v1/', include([
         path('shipments/', include('shipments.urls')),
         path('users/', include('users.urls')),
-        # path('dashboard/', include('dashboards.urls')),  # Temporarily disabled - app not in INSTALLED_APPS
+        path('dashboard/', include('dashboards.urls')),  # Re-enabled for Phase 3A analytics
         path('dangerous-goods/', include('dangerous_goods.urls')),  # Re-enabled after fixing shipments dependencies
         path('companies/', include('companies.urls')),
         path('freight-types/', include('freight_types.urls')),
@@ -88,7 +88,7 @@ urlpatterns = [
         # path('tracking/', include('tracking.urls')),  # Temporarily disabled due to GIS dependencies
         path('documents/', include('documents.urls')),  # Re-enabled after fixing shipments dependencies
         # path('audits/', include('audits.urls')),  # Temporarily disabled
-        # path('auth/', include('enterprise_auth.urls')),  # Temporarily disabled due to import issues
+        path('auth/', include('enterprise_auth.urls')),  # Re-enabled for Phase 3D security
         # path('iot/', include('iot_devices.urls')),  # Temporarily disabled
         # path('inspections/', include('inspections.urls')),  # Temporarily disabled
         # path('communications/', include('communications.urls')),  # Temporarily disabled
@@ -98,11 +98,13 @@ urlpatterns = [
         # Temporarily disabled apps:
         # path('locations/', include('locations.urls')),
         # path('hazard-assessments/', include('hazard_assessments.urls')),
-        # path('load-plans/', include('load_plans.urls')),
+        path('load-plans/', include('load_plans.urls')),  # Re-enabled for Phase 3B load planning
         # path('emergency-procedures/', include('emergency_procedures.urls')),
         # path('handling-unit-types/', include('handling_unit_types.urls')),
         path('sds/', include('sds.urls')),  # Re-enabled after fixing dangerous_goods dependencies
         path('epg/', include('epg.urls')),  # Re-enabled after fixing shipments dependencies
+        path('routes/', include('routes.urls')),  # Re-enabled for Phase 3B route optimization
+        path('capacity-marketplace/', include('capacity_marketplace.urls')),  # Re-enabled for Phase 3C marketplace
         # Compatibility endpoint redirects for mobile app
         # path('compatibility/', include('dangerous_goods.urls')),  # Temporarily disabled due to dangerous_goods app being disabled
     ])),

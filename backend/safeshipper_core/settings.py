@@ -43,7 +43,7 @@ INSTALLED_APPS = [
     'allauth.socialaccount',
     'allauth.socialaccount.providers.google',
     'allauth.socialaccount.providers.microsoft',
-    'allauth.socialaccount.providers.saml',
+    # 'allauth.socialaccount.providers.saml',  # Temporarily disabled due to missing onelogin dependency
     'django_otp',
     'django_otp.plugins.otp_totp',
     'django_otp.plugins.otp_static',
@@ -60,7 +60,7 @@ INSTALLED_APPS = [
     'sds',  # Re-enabled after fixing dangerous_goods dependencies
     'vehicles',
     'freight_types',
-    # 'enterprise_auth',  # Temporarily disabled due to import issues
+    'enterprise_auth',  # Re-enabled for Phase 3D security
     # 'incidents',
     # 'training',
     # 'iot_devices',
@@ -69,11 +69,11 @@ INSTALLED_APPS = [
     # 'audits',     # Temporarily disabled
     # 'inspections', # Temporarily disabled
     # 'communications', # Temporarily disabled
-    # 'dashboards', # Temporarily disabled
-    # 'load_plans', # Temporarily disabled
+    'dashboards', # Re-enabled for Phase 3A analytics
+    'load_plans', # Re-enabled for Phase 3B load planning
     'epg',        # Re-enabled after fixing shipments dependencies
-    # 'capacity_marketplace', # Temporarily disabled
-    # 'routes', # Temporarily disabled
+    'capacity_marketplace', # Re-enabled for Phase 3C marketplace
+    'routes', # Re-enabled for Phase 3B route optimization
 ]
 
 # Middleware
@@ -484,14 +484,14 @@ SOCIALACCOUNT_PROVIDERS = {
             'response_type': 'code',
         }
     },
-    'saml': {
-        'attribute_mapping': {
-            'uid': 'username',
-            'email_address': 'email',
-            'first_name': 'first_name',
-            'last_name': 'last_name',
-        }
-    }
+    # 'saml': {  # Temporarily disabled due to missing onelogin dependency
+    #     'attribute_mapping': {
+    #         'uid': 'username',
+    #         'email_address': 'email',
+    #         'first_name': 'first_name',
+    #         'last_name': 'last_name',
+    #     }
+    # }
 }
 
 # MFA Configuration (django-otp)

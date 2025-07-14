@@ -17,6 +17,6 @@ urlpatterns = [
     path('mfa/challenge/', views.mfa_challenge, name='mfa-challenge'),
     path('mfa/verify-login/', views.mfa_verify, name='mfa-verify-login'),
     
-    # Include allauth URLs for SSO callbacks
-    path('accounts/', include('allauth.urls')),
+    # Include allauth URLs for SSO callbacks - Temporarily disabled
+    # path('accounts/', include('allauth.urls')),
 ]
