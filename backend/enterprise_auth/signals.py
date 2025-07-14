@@ -158,7 +158,13 @@ def handle_social_account_added(sender, request, sociallogin, **kwargs):
 def check_mfa_requirements(sender, instance, created, **kwargs):
     """Check MFA requirements for new or updated users"""
     try:
-        if created or 'role' in getattr(instance, '_state', {}).get('fields_cache', {}):
+        # Check if this is a new user or if the role field was updated
+        role_changed = False
+        if not created and hasattr(instance, '_state') and hasattr(instance._state, 'fields_cache'):
+            # Check if role was in the fields that were updated
+            role_changed = 'role' in (kwargs.get('update_fields') or [])
+        
+        if created or role_changed:
             from .services import MFAService
             
             mfa_service = MFAService()
