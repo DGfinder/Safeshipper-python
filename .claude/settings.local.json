@@ -63,7 +63,9 @@
       "Bash(timeout 30 docker-compose run --rm backend python manage.py runserver 0.0.0.0:8000)",
       "Bash(curl:*)",
       "Bash(source:*)",
-      "Bash(pip install:*)"
+      "Bash(pip install:*)",
+      "Bash(for route in \"/api-gateway\" \"/audits\" \"/inspections\" \"/customer-portal/notifications\" \"/customer-portal/requests\" \"/analytics/insights\")",
+      "Bash(do echo \"Checking $route\")"
     ],
     "deny": []
   }

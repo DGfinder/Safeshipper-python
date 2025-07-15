@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SafeShipper - Offline</title>
+    <link rel="icon" href="/favicon.ico" />
+    <link rel="manifest" href="/manifest.json" />
+    <meta name="theme-color" content="#2563eb" />
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            text-align: center;
+        }
+        
+        .container {
+            max-width: 500px;
+            padding: 2rem;
+        }
+        
+        .logo {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 2rem;
+            background: white;
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            font-weight: bold;
+            color: #2563eb;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+            font-weight: 700;
+        }
+        
+        .subtitle {
+            font-size: 1.2rem;
+            margin-bottom: 2rem;
+            opacity: 0.9;
+        }
+        
+        .offline-message {
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            backdrop-filter: blur(10px);
+        }
+        
+        .offline-message h2 {
+            margin-bottom: 1rem;
+            font-size: 1.5rem;
+        }
+        
+        .offline-message p {
+            margin-bottom: 1rem;
+            line-height: 1.6;
+            opacity: 0.9;
+        }
+        
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+        
+        .feature {
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 8px;
+            padding: 1rem;
+            backdrop-filter: blur(10px);
+        }
+        
+        .feature-icon {
+            font-size: 1.5rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .feature h3 {
+            font-size: 1rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .feature p {
+            font-size: 0.9rem;
+            opacity: 0.8;
+        }
+        
+        .action-buttons {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        
+        .btn {
+            background: white;
+            color: #2563eb;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .btn:hover {
+            background: #f1f5f9;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        }
+        
+        .btn-outline {
+            background: transparent;
+            color: white;
+            border: 2px solid white;
+        }
+        
+        .btn-outline:hover {
+            background: white;
+            color: #2563eb;
+        }
+        
+        .status {
+            margin-top: 2rem;
+            padding: 1rem;
+            background: rgba(255,255,255,0.1);
+            border-radius: 8px;
+            font-size: 0.9rem;
+            opacity: 0.8;
+        }
+        
+        .connection-status {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #ef4444;
+            animation: pulse 2s infinite;
+        }
+        
+        .status-dot.online {
+            background: #10b981;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        .retry-animation {
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        
+        @media (max-width: 640px) {
+            .container {
+                padding: 1rem;
+            }
+            
+            h1 {
+                font-size: 2rem;
+            }
+            
+            .features {
+                grid-template-columns: 1fr;
+            }
+            
+            .action-buttons {
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            .btn {
+                width: 100%;
+                justify-content: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="logo">SS</div>
+        
+        <h1>SafeShipper</h1>
+        <p class="subtitle">Dangerous Goods Logistics Platform</p>
+        
+        <div class="offline-message">
+            <h2>📱 You're Offline</h2>
+            <p>No internet connection detected. Don't worry - SafeShipper works offline too!</p>
+            <p>You can still access cached data and create new entries that will sync when you're back online.</p>
+        </div>
+        
+        <div class="features">
+            <div class="feature">
+                <div class="feature-icon">📦</div>
+                <h3>View Shipments</h3>
+                <p>Access recently viewed shipment data</p>
+            </div>
+            <div class="feature">
+                <div class="feature-icon">🚛</div>
+                <h3>Fleet Status</h3>
+                <p>Check last known fleet positions</p>
+            </div>
+            <div class="feature">
+                <div class="feature-icon">📊</div>
+                <h3>Analytics</h3>
+                <p>View cached analytics data</p>
+            </div>
+            <div class="feature">
+                <div class="feature-icon">🔄</div>
+                <h3>Auto Sync</h3>
+                <p>Changes sync automatically when online</p>
+            </div>
+        </div>
+        
+        <div class="action-buttons">
+            <button class="btn" onclick="goToDashboard()">
+                🏠 Go to Dashboard
+            </button>
+            <button class="btn btn-outline" onclick="retryConnection()">
+                <span id="retry-icon">🔄</span> Try Again
+            </button>
+        </div>
+        
+        <div class="status">
+            <div class="connection-status">
+                <div class="status-dot" id="status-dot"></div>
+                <span id="connection-text">Offline</span>
+            </div>
+            <div style="margin-top: 0.5rem;">
+                <small>Last updated: <span id="last-updated">Never</span></small>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Connection status monitoring
+        function updateConnectionStatus() {
+            const statusDot = document.getElementById('status-dot');
+            const connectionText = document.getElementById('connection-text');
+            const lastUpdated = document.getElementById('last-updated');
+            
+            if (navigator.onLine) {
+                statusDot.classList.add('online');
+                connectionText.textContent = 'Online';
+                lastUpdated.textContent = new Date().toLocaleTimeString();
+                
+                // Redirect to dashboard when back online
+                setTimeout(() => {
+                    window.location.href = '/dashboard';
+                }, 2000);
+            } else {
+                statusDot.classList.remove('online');
+                connectionText.textContent = 'Offline';
+            }
+        }
+        
+        // Retry connection
+        function retryConnection() {
+            const retryIcon = document.getElementById('retry-icon');
+            retryIcon.classList.add('retry-animation');
+            
+            setTimeout(() => {
+                retryIcon.classList.remove('retry-animation');
+                if (navigator.onLine) {
+                    window.location.href = '/dashboard';
+                }
+            }, 1000);
+        }
+        
+        // Go to dashboard (cached version)
+        function goToDashboard() {
+            window.location.href = '/dashboard';
+        }
+        
+        // Listen for connection changes
+        window.addEventListener('online', updateConnectionStatus);
+        window.addEventListener('offline', updateConnectionStatus);
+        
+        // Initial status check
+        updateConnectionStatus();
+        
+        // Periodic connection check
+        setInterval(updateConnectionStatus, 5000);
+        
+        // Service worker registration
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/sw.js')
+                .then(registration => {
+                    console.log('SW registered:', registration);
+                })
+                .catch(error => {
+                    console.log('SW registration failed:', error);
+                });
+        }
+        
+        // Auto-redirect when online
+        if (navigator.onLine) {
+            setTimeout(() => {
+                window.location.href = '/dashboard';
+            }, 3000);
+        }
+    </script>
+</body>
+</html>

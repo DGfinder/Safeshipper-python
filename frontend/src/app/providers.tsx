@@ -3,6 +3,9 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "react-hot-toast";
 import { useState } from "react";
+import { WebSocketProvider } from "@/contexts/WebSocketContext";
+import { AccessibilityProvider } from "@/contexts/AccessibilityContext";
+import { ThemeProvider } from "@/contexts/ThemeContext";
 
 export default function Providers({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(
@@ -19,29 +22,38 @@ export default function Providers({ children }: { children: React.ReactNode }) {
 
   return (
     <QueryClientProvider client={queryClient}>
-      {children}
-      <Toaster
-        position="top-right"
-        toastOptions={{
-          duration: 4000,
-          style: {
-            background: "#363636",
-            color: "#fff",
-          },
-          success: {
-            duration: 3000,
-            style: {
-              background: "#10b981",
-            },
-          },
-          error: {
-            duration: 5000,
-            style: {
-              background: "#ef4444",
-            },
-          },
-        }}
-      />
+      <ThemeProvider>
+        <AccessibilityProvider>
+          <WebSocketProvider>
+            {children}
+            <Toaster
+              position="top-right"
+              toastOptions={{
+                duration: 4000,
+                style: {
+                  background: "var(--surface-card)",
+                  color: "var(--surface-foreground)",
+                  border: "1px solid var(--surface-border)",
+                },
+                success: {
+                  duration: 3000,
+                  style: {
+                    background: "var(--success-600)",
+                    color: "var(--neutral-50)",
+                  },
+                },
+                error: {
+                  duration: 5000,
+                  style: {
+                    background: "var(--error-600)",
+                    color: "var(--neutral-50)",
+                  },
+                },
+              }}
+            />
+          </WebSocketProvider>
+        </AccessibilityProvider>
+      </ThemeProvider>
     </QueryClientProvider>
   );
 }

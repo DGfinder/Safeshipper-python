@@ -20,7 +20,9 @@ import {
 } from "lucide-react";
 import { useFleetStatus, type FleetVehicle } from "@/hooks/useFleetTracking";
 import { useMockFleetStatus } from "@/hooks/useMockAPI";
+import { useRealTimeFleetTracking } from "@/hooks/useRealTimeData";
 import { MapDashboardLayout } from "@/components/layout/map-dashboard-layout";
+import { DataFreshnessIndicator } from "@/components/ui/connection-status";
 
 // Dynamically import FleetMap to avoid SSR issues
 const FleetMap = dynamic(
@@ -49,7 +51,7 @@ export default function LiveMapPage() {
   );
   const [refreshInterval, setRefreshInterval] = useState(10000); // 10 seconds
 
-  // Use mock API for demo
+  // Use mock API for demo with real-time updates
   const {
     data: fleetData,
     isLoading,
@@ -57,6 +59,9 @@ export default function LiveMapPage() {
     refetch,
     isRefetching,
   } = useMockFleetStatus(refreshInterval);
+  
+  // Enable real-time updates
+  const { lastUpdate } = useRealTimeFleetTracking();
 
   const handleRefresh = () => {
     refetch();
@@ -241,12 +246,10 @@ export default function LiveMapPage() {
                     : "Never"}
                 </p>
                 <div className="flex items-center gap-1 mt-1">
-                  <div
-                    className={`w-2 h-2 rounded-full ${isRefetching ? "bg-orange-500 animate-pulse" : "bg-green-500"}`}
-                  ></div>
-                  <span className="text-xs text-gray-500">
-                    {isRefetching ? "Updating..." : "Live"}
-                  </span>
+                  <DataFreshnessIndicator 
+                    lastUpdate={lastUpdate} 
+                    maxAge={30000} // 30 seconds
+                  />
                 </div>
               </CardContent>
             </Card>

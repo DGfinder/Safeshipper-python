@@ -4,6 +4,8 @@ import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
+import { ResponsiveTable, type TableColumn, type TableAction } from "@/components/ui/responsive-table";
+import { ManifestMobileCard } from "@/components/ui/mobile-cards";
 import {
   AlertTriangle,
   Download,
@@ -11,6 +13,8 @@ import {
   CheckCircle,
   Shield,
   AlertCircle,
+  Eye,
+  Edit,
 } from "lucide-react";
 import {
   compatibilityService,
@@ -60,40 +64,20 @@ export default function ManifestTable({
   onGenerateFile,
   onItemSelect,
 }: ManifestTableProps) {
-  const [selectedItems, setSelectedItems] = useState<string[]>([]);
-  const [selectAll, setSelectAll] = useState(false);
+  const [selectedItems, setSelectedItems] = useState<ManifestItem[]>([]);
   const [compatibilityResult, setCompatibilityResult] =
     useState<CompatibilityResult | null>(null);
   const [isCheckingCompatibility, setIsCheckingCompatibility] = useState(false);
   const [isGeneratingDocs, setIsGeneratingDocs] = useState(false);
   const [showDocumentOptions, setShowDocumentOptions] = useState(false);
 
-  const handleSelectAll = (checked: boolean) => {
-    setSelectAll(checked);
-    if (checked) {
-      const allIds = items.map((item) => item.id);
-      setSelectedItems(allIds);
-      onItemSelect?.(allIds);
-    } else {
-      setSelectedItems([]);
-      onItemSelect?.([]);
-    }
-  };
-
-  const handleSelectItem = (itemId: string, checked: boolean) => {
-    let newSelection;
-    if (checked) {
-      newSelection = [...selectedItems, itemId];
-    } else {
-      newSelection = selectedItems.filter((id) => id !== itemId);
-      setSelectAll(false);
-    }
-    setSelectedItems(newSelection);
-    onItemSelect?.(newSelection);
+  const handleSelectionChange = (selectedItems: ManifestItem[]) => {
+    setSelectedItems(selectedItems);
+    onItemSelect?.(selectedItems.map(item => item.id));
 
     // Check compatibility when selection changes
-    if (newSelection.length > 1) {
-      checkCompatibility(newSelection);
+    if (selectedItems.length > 1) {
+      checkCompatibility(selectedItems.map(item => item.id));
     } else {
       setCompatibilityResult(null);
     }
@@ -127,7 +111,7 @@ export default function ManifestTable({
 
   const handleCompare = () => {
     if (selectedItems.length > 1) {
-      checkCompatibility(selectedItems);
+      checkCompatibility(selectedItems.map(item => item.id));
     }
     onCompare?.();
   };
@@ -210,6 +194,99 @@ export default function ManifestTable({
       setShowDocumentOptions(false);
     }
   };
+
+  // Define table columns
+  const columns: TableColumn<ManifestItem>[] = [
+    {
+      key: 'index',
+      label: '#',
+      width: 'w-12',
+      priority: 'high',
+      render: (item) => items.indexOf(item) + 1,
+      mobileRender: () => null, // Hide index on mobile
+    },
+    {
+      key: 'un',
+      label: 'UN',
+      priority: 'high',
+      render: (item) => (
+        <Badge variant="outline" className="font-semibold">
+          {item.un}
+        </Badge>
+      ),
+    },
+    {
+      key: 'properShippingName',
+      label: 'PROPER SHIPPING NAME',
+      priority: 'high',
+      render: (item) => (
+        <span className="text-sm font-medium">{item.properShippingName}</span>
+      ),
+    },
+    {
+      key: 'class',
+      label: 'CLASS',
+      priority: 'high',
+      render: (item) => (
+        <div className="flex items-center gap-2">
+          <span
+            className={`inline-flex items-center justify-center w-10 h-10 rounded-lg ${getDGClassColor(item.class)}`}
+          >
+            <AlertTriangle className="h-5 w-5 text-white" />
+          </span>
+          <span className="text-sm font-semibold">{item.class}</span>
+        </div>
+      ),
+    },
+    {
+      key: 'subHazard',
+      label: 'SUB HAZARD',
+      priority: 'low',
+      render: (item) => <span className="text-sm">{item.subHazard || '-'}</span>,
+    },
+    {
+      key: 'packingGroup',
+      label: 'PACKING GROUP',
+      priority: 'medium',
+      render: (item) => <span className="text-sm">{item.packingGroup}</span>,
+    },
+    {
+      key: 'typeOfContainer',
+      label: 'TYPE OF CONTAINER',
+      priority: 'low',
+      render: (item) => <span className="text-sm">{item.typeOfContainer}</span>,
+    },
+    {
+      key: 'quantity',
+      label: 'QUANTITY',
+      priority: 'medium',
+      render: (item) => <span className="text-sm">{item.quantity}</span>,
+    },
+    {
+      key: 'weight',
+      label: 'WEIGHT',
+      priority: 'medium',
+      render: (item) => <span className="text-sm">{item.weight}</span>,
+    },
+  ];
+
+  // Define table actions
+  const actions: TableAction<ManifestItem>[] = [
+    {
+      label: 'View Details',
+      icon: Eye,
+      onClick: (item) => {
+        console.log('View details for:', item);
+      },
+    },
+    {
+      label: 'Edit',
+      icon: Edit,
+      onClick: (item) => {
+        console.log('Edit:', item);
+      },
+    },
+  ];
 
   return (
     <div className="space-y-4">
@@ -331,94 +408,17 @@ export default function ManifestTable({
         </div>
       </div>
 
-      {/* Table */}
-      <div className="border rounded-lg overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-gray-50 border-b">
-              <tr>
-                <th className="w-12 px-4 py-3">
-                  <Checkbox
-                    checked={selectAll}
-                    onCheckedChange={handleSelectAll}
-                  />
-                </th>
-                <th className="text-left px-4 py-3 text-sm font-medium text-gray-700">
-                  #
-                </th>
-                <th className="text-left px-4 py-3 text-sm font-medium text-gray-700">
-                  UN
-                </th>
-                <th className="text-left px-4 py-3 text-sm font-medium text-gray-700">
-                  PROPER SHIPPING NAME
-                </th>
-                <th className="text-left px-4 py-3 text-sm font-medium text-gray-700">
-                  CLASS
-                </th>
-                <th className="text-left px-4 py-3 text-sm font-medium text-gray-700">
-                  SUB HAZARD
-                </th>
-                <th className="text-left px-4 py-3 text-sm font-medium text-gray-700">
-                  PACKING GROUP
-                </th>
-                <th className="text-left px-4 py-3 text-sm font-medium text-gray-700">
-                  TYPE OF CONTAINER
-                </th>
-                <th className="text-left px-4 py-3 text-sm font-medium text-gray-700">
-                  QUANTITY
-                </th>
-                <th className="text-left px-4 py-3 text-sm font-medium text-gray-700">
-                  WEIGHT
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200">
-              {items.map((item, index) => (
-                <tr
-                  key={item.id}
-                  className={`hover:bg-gray-50 ${item.skipped ? "opacity-60" : ""}`}
-                >
-                  <td className="px-4 py-3">
-                    <Checkbox
-                      checked={selectedItems.includes(item.id)}
-                      onCheckedChange={(checked) =>
-                        handleSelectItem(item.id, checked as boolean)
-                      }
-                      disabled={item.skipped}
-                    />
-                  </td>
-                  <td className="px-4 py-3 text-sm">{index + 1}</td>
-                  <td className="px-4 py-3">
-                    <Badge variant="outline" className="font-semibold">
-                      {item.un}
-                    </Badge>
-                  </td>
-                  <td className="px-4 py-3 text-sm font-medium">
-                    {item.properShippingName}
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-2">
-                      <span
-                        className={`inline-flex items-center justify-center w-10 h-10 rounded-lg ${getDGClassColor(item.class)}`}
-                      >
-                        <AlertTriangle className="h-5 w-5 text-white" />
-                      </span>
-                      <span className="text-sm font-semibold">
-                        {item.class}
-                      </span>
-                    </div>
-                  </td>
-                  <td className="px-4 py-3 text-sm">{item.subHazard || "-"}</td>
-                  <td className="px-4 py-3 text-sm">{item.packingGroup}</td>
-                  <td className="px-4 py-3 text-sm">{item.typeOfContainer}</td>
-                  <td className="px-4 py-3 text-sm">{item.quantity}</td>
-                  <td className="px-4 py-3 text-sm">{item.weight}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
+      {/* Responsive Table */}
+      <ResponsiveTable
+        data={items}
+        columns={columns}
+        actions={actions}
+        selectable={true}
+        onSelectionChange={handleSelectionChange}
+        keyField="id"
+        mobileCardComponent={ManifestMobileCard}
+        emptyMessage="No dangerous goods items found"
+      />
 
       {/* Compatibility Results */}
       {compatibilityResult && (

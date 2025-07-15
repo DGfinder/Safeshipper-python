@@ -7,6 +7,9 @@ import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/stores/auth-store";
 import UnifiedSearchBar from "@/components/search/UnifiedSearchBar";
+import { ConnectionStatus } from "@/components/ui/connection-status";
+import { ThemeToggle } from "@/components/ui/theme-toggle";
+import { useTheme } from "@/contexts/ThemeContext";
 import {
   Home,
   Users,
@@ -35,6 +38,14 @@ import {
   TestTube,
   Menu,
   X,
+  Zap,
+  Globe,
+  UserCheck,
+  Code2,
+  Layers,
+  Workflow,
+  LineChart,
+  MonitorSpeaker,
 } from "lucide-react";
 
 interface NavigationItem {
@@ -51,6 +62,7 @@ const navigation: NavigationItem[] = [
     icon: Home,
     children: [
       { name: "Overview", href: "/dashboard", icon: Home },
+      { name: "Operations Center", href: "/operations", icon: MonitorSpeaker, badge: "New" },
       { name: "Live Map", href: "/dashboard/live-map", icon: MapPin },
       { name: "Search", href: "/search", icon: Search },
     ],
@@ -65,6 +77,15 @@ const navigation: NavigationItem[] = [
         href: "/shipments/manifest-upload",
         icon: Upload,
       },
+    ],
+  },
+  {
+    name: "Enterprise Integration",
+    icon: Layers,
+    children: [
+      { name: "ERP Integration", href: "/erp-integration", icon: Workflow, badge: "New" },
+      { name: "API Gateway", href: "/api-gateway", icon: Globe, badge: "New" },
+      { name: "Developer Portal", href: "/developer", icon: Code2, badge: "New" },
     ],
   },
   {
@@ -87,6 +108,8 @@ const navigation: NavigationItem[] = [
       },
       { name: "Incident Management", href: "/incidents", icon: ClipboardCheck },
       { name: "Training", href: "/training", icon: GraduationCap },
+      { name: "Inspections", href: "/inspections", icon: ClipboardCheck, badge: "New" },
+      { name: "Audits", href: "/audits", icon: FileText, badge: "New" },
     ],
   },
   {
@@ -113,10 +136,21 @@ const navigation: NavigationItem[] = [
     ],
   },
   {
+    name: "Customer Portal",
+    icon: UserCheck,
+    children: [
+      { name: "Portal Dashboard", href: "/customer-portal", icon: UserCheck, badge: "New" },
+      { name: "Self-Service", href: "/customer-portal/requests", icon: Users, badge: "New" },
+      { name: "Notifications", href: "/customer-portal/notifications", icon: AlertTriangle, badge: "New" },
+    ],
+  },
+  {
     name: "Reports & Analytics",
     icon: BarChart3,
     children: [
       { name: "Reports Dashboard", href: "/reports", icon: BarChart },
+      { name: "Advanced Analytics", href: "/analytics", icon: LineChart, badge: "New" },
+      { name: "Business Intelligence", href: "/analytics/insights", icon: Brain, badge: "New" },
     ],
   },
   {
@@ -145,9 +179,11 @@ export function Sidebar({
 }: SidebarProps) {
   const pathname = usePathname();
   const { user } = useAuthStore();
+  const { isDark } = useTheme();
   const [expandedSections, setExpandedSections] = useState<string[]>([
     "Dashboard",
     "Shipments",
+    "Enterprise Integration",
   ]);
 
   const toggleSection = (sectionName: string) => {
@@ -164,7 +200,7 @@ export function Sidebar({
     if (isCollapsed) {
       setExpandedSections([]);
     } else {
-      setExpandedSections(["Dashboard", "Shipments"]);
+      setExpandedSections(["Dashboard", "Shipments", "Enterprise Integration"]);
     }
   }, [isCollapsed]);
 
@@ -287,13 +323,13 @@ export function Sidebar({
       )}
       
       <div className={cn(
-        "flex h-full flex-col bg-white border-r border-gray-200 transition-all duration-300 ease-in-out",
+        "flex h-full flex-col bg-surface-card border-r border-surface-border transition-all duration-300 ease-in-out",
         isCollapsed ? "w-16" : "w-64",
         isMobile && "fixed left-0 top-0 z-50 lg:relative"
       )}>
         {/* Header with logo and collapse toggle */}
         <div className={cn(
-          "flex h-16 items-center border-b border-gray-200",
+          "flex h-16 items-center border-b border-surface-border",
           isCollapsed ? "justify-center px-4" : "justify-between px-6"
         )}>
           <Link href="/dashboard" className={cn(
@@ -322,33 +358,40 @@ export function Sidebar({
             )}
           </Link>
           
-          {/* Mobile close button */}
-          {isMobile && (
-            <button
-              onClick={onClose}
-              className="p-2 hover:bg-gray-100 rounded-lg lg:hidden"
-            >
-              <X className="h-5 w-5" />
-            </button>
-          )}
-          
-          {/* Desktop collapse toggle */}
-          {!isMobile && onToggleCollapse && (
-            <button
-              onClick={onToggleCollapse}
-              className="p-2 hover:bg-gray-100 rounded-lg hidden lg:block"
-              title={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-              aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-              aria-expanded={!isCollapsed}
-            >
-              <Menu className="h-4 w-4" />
-            </button>
-          )}
+          <div className="flex items-center gap-2">
+            {/* Theme toggle */}
+            {!isCollapsed && (
+              <ThemeToggle />
+            )}
+            
+            {/* Mobile close button */}
+            {isMobile && (
+              <button
+                onClick={onClose}
+                className="p-2 hover:bg-surface-accent rounded-lg lg:hidden"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            )}
+            
+            {/* Desktop collapse toggle */}
+            {!isMobile && onToggleCollapse && (
+              <button
+                onClick={onToggleCollapse}
+                className="p-2 hover:bg-surface-accent rounded-lg hidden lg:block"
+                title={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+                aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+                aria-expanded={!isCollapsed}
+              >
+                <Menu className="h-4 w-4" />
+              </button>
+            )}
+          </div>
         </div>
 
       {/* Global Search */}
       {!isCollapsed && (
-        <div className="px-4 py-3 border-b border-gray-200">
+        <div className="px-4 py-3 border-b border-surface-border">
           <UnifiedSearchBar
             placeholder="Search SafeShipper..."
             compact={true}
@@ -374,9 +417,18 @@ export function Sidebar({
 
       {/* Footer */}
       <div className={cn(
-        "border-t border-gray-200",
+        "border-t border-surface-border",
         isCollapsed ? "p-2" : "p-4"
       )}>
+        {/* Connection Status */}
+        <div className={cn(
+          "mb-3",
+          isCollapsed ? "flex justify-center" : ""
+        )}>
+          <ConnectionStatus />
+        </div>
+        
+        {/* User Info */}
         <div className={cn(
           "flex items-center",
           isCollapsed ? "justify-center" : "space-x-3"
