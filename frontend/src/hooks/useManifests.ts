@@ -1,6 +1,6 @@
 // hooks/useManifests.ts
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useAuthStore } from "@/stores/auth-store";
+import { useAuthStore } from "@/shared/stores/auth-store";
 
 // Types
 export interface Document {

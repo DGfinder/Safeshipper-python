@@ -1,7 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { responsiveA11y, screenReader, a11yUtils } from '@/utils/accessibility';
+import { responsiveA11y, screenReader, a11yUtils } from '@/shared/utils/accessibility';
 
 // Accessibility preferences interface
 interface AccessibilityPreferences {

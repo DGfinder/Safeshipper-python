@@ -2,12 +2,12 @@
 "use client";
 
 import React, { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Switch } from "@/components/ui/switch";
+import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
+import { Button } from "@/shared/components/ui/button";
+import { Input } from "@/shared/components/ui/input";
+import { Label } from "@/shared/components/ui/label";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/components/ui/tabs";
+import { Switch } from "@/shared/components/ui/switch";
 import {
   Settings,
   User,
@@ -26,7 +26,7 @@ import {
   Eye,
   EyeOff,
 } from "lucide-react";
-import { AuthGuard } from "@/components/auth/auth-guard";
+import { AuthGuard } from "@/shared/components/common/auth-guard";
 
 export default function SettingsPage() {
   const [showPassword, setShowPassword] = useState(false);

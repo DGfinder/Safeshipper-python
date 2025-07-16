@@ -3,10 +3,10 @@
 
 import React, { useState } from "react";
 import dynamic from "next/dynamic";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
+import { Button } from "@/shared/components/ui/button";
+import { Badge } from "@/shared/components/ui/badge";
+import { Alert, AlertDescription } from "@/shared/components/ui/alert";
 import {
   RefreshCw,
   Truck,
@@ -18,16 +18,16 @@ import {
   Package,
   AlertTriangle,
 } from "lucide-react";
-import { useFleetStatus, type FleetVehicle } from "@/hooks/useFleetTracking";
-import { useMockFleetStatus } from "@/hooks/useMockAPI";
-import { useRealTimeFleetTracking } from "@/hooks/useRealTimeData";
-import { MapDashboardLayout } from "@/components/layout/map-dashboard-layout";
-import { DataFreshnessIndicator } from "@/components/ui/connection-status";
+import { useFleetStatus, type FleetVehicle } from "@/shared/hooks/useFleetTracking";
+import { useMockFleetStatus } from "@/shared/hooks/useMockAPI";
+import { useRealTimeFleetTracking } from "@/shared/hooks/useRealTimeData";
+import { MapDashboardLayout } from "@/shared/components/layout/map-dashboard-layout";
+import { DataFreshnessIndicator } from "@/shared/components/ui/connection-status";
 
 // Dynamically import FleetMap to avoid SSR issues
 const FleetMap = dynamic(
   () =>
-    import("@/components/maps/FleetMap").then((mod) => ({
+    import("@/shared/components/maps/FleetMap").then((mod) => ({
       default: mod.FleetMap,
     })),
   {

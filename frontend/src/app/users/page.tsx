@@ -1,19 +1,19 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { DashboardLayout } from "@/components/layout/dashboard-layout";
+import { DashboardLayout } from "@/shared/components/layout/dashboard-layout";
 import {
   Card,
   CardContent,
   CardHeader,
   CardTitle,
   CardDescription,
-} from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+} from "@/shared/components/ui/card";
+import { Badge } from "@/shared/components/ui/badge";
+import { Button } from "@/shared/components/ui/button";
+import { Input } from "@/shared/components/ui/input";
+import { Skeleton } from "@/shared/components/ui/skeleton";
+import { Alert, AlertDescription } from "@/shared/components/ui/alert";
 import {
   Plus,
   Search,
@@ -22,10 +22,10 @@ import {
   AlertCircle,
   Loader2,
 } from "lucide-react";
-import { useUsers, User } from "@/hooks/useUsers";
-import { UserCreateForm } from "@/components/users/UserCreateForm";
-import { UserEditForm } from "@/components/users/UserEditForm";
-import { UserDeleteDialog } from "@/components/users/UserDeleteDialog";
+import { useUsers, User } from "@/shared/hooks/useUsers";
+import { UserCreateForm } from "@/shared/components/users/UserCreateForm";
+import { UserEditForm } from "@/shared/components/users/UserEditForm";
+import { UserDeleteDialog } from "@/shared/components/users/UserDeleteDialog";
 
 export default function UsersPage() {
   const [showCreateForm, setShowCreateForm] = useState(false);

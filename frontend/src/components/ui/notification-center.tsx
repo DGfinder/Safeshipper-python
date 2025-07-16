@@ -1,13 +1,13 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { useTheme } from '@/contexts/ThemeContext';
-import { useAccessibility } from '@/contexts/AccessibilityContext';
-import { useWebSocket } from '@/contexts/WebSocketContext';
+import { Button } from '@/shared/components/ui/button';
+import { Badge } from '@/shared/components/ui/badge';
+import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui/card';
+import { ScrollArea } from '@/shared/components/ui/scroll-area';
+import { useTheme } from '@/shared/services/ThemeContext';
+import { useAccessibility } from '@/shared/services/AccessibilityContext';
+import { useWebSocket } from '@/shared/services/WebSocketContext';
 import { cn } from '@/lib/utils';
 import { formatDistance } from 'date-fns';
 import {

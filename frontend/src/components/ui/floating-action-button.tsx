@@ -1,10 +1,10 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { useTheme } from '@/contexts/ThemeContext';
-import { useAccessibility } from '@/contexts/AccessibilityContext';
+import { Button } from '@/shared/components/ui/button';
+import { Badge } from '@/shared/components/ui/badge';
+import { useTheme } from '@/shared/services/ThemeContext';
+import { useAccessibility } from '@/shared/services/AccessibilityContext';
 import { useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import {

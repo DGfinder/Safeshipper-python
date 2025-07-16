@@ -2,11 +2,11 @@
 
 import React, { useState, useEffect, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
+import { Button } from "@/shared/components/ui/button";
+import { Badge } from "@/shared/components/ui/badge";
+import { Input } from "@/shared/components/ui/input";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/components/ui/tabs";
 import {
   Search,
   Brain,
@@ -25,8 +25,8 @@ import {
   MapPin,
   AlertTriangle,
 } from "lucide-react";
-import { AuthGuard } from "@/components/auth/auth-guard";
-import UnifiedSearchBar from "@/components/search/UnifiedSearchBar";
+import { AuthGuard } from "@/shared/components/common/auth-guard";
+import UnifiedSearchBar from "@/shared/components/search/UnifiedSearchBar";
 import {
   semanticSearchService,
   type SearchQuery,

@@ -2,8 +2,8 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { useAuthStore } from "@/stores/auth-store";
-import { Skeleton } from "@/components/ui/skeleton";
+import { useAuthStore } from "@/shared/stores/auth-store";
+import { Skeleton } from "@/shared/components/ui/skeleton";
 
 interface AuthGuardProps {
   children: React.ReactNode;

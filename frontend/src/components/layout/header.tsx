@@ -1,10 +1,10 @@
 "use client";
 
 import { Search, Bell, LogOut, Menu } from "lucide-react";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { useAuthStore } from "@/stores/auth-store";
+import { Input } from "@/shared/components/ui/input";
+import { Button } from "@/shared/components/ui/button";
+import { Badge } from "@/shared/components/ui/badge";
+import { useAuthStore } from "@/shared/stores/auth-store";
 import { useRouter } from "next/navigation";
 
 interface HeaderProps {

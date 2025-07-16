@@ -1,18 +1,18 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { DashboardLayout } from "@/components/layout/dashboard-layout";
+import { DashboardLayout } from "@/shared/components/layout/dashboard-layout";
 import {
   Card,
   CardContent,
   CardHeader,
   CardTitle,
   CardDescription,
-} from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+} from "@/shared/components/ui/card";
+import { Button } from "@/shared/components/ui/button";
+import { Input } from "@/shared/components/ui/input";
+import { Badge } from "@/shared/components/ui/badge";
+import { Alert, AlertDescription } from "@/shared/components/ui/alert";
 import {
   Search,
   Plus,
@@ -29,8 +29,8 @@ import {
   DangerousGood,
   useSearchDangerousGoods,
   useCheckCompatibility,
-} from "@/hooks/useDangerousGoods";
-import { useDebounce } from "@/hooks/useDebounce";
+} from "@/shared/hooks/useDangerousGoods";
+import { useDebounce } from "@/shared/hooks/useDebounce";
 import { toast } from "react-hot-toast";
 
 interface SelectedDG {

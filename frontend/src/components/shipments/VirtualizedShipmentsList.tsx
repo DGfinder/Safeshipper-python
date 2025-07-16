@@ -1,14 +1,14 @@
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
-import { VirtualScrollContainer, InfiniteVirtualScroll } from '@/components/ui/virtual-scroll';
-import { ResponsiveTable, type TableColumn, type TableAction } from '@/components/ui/responsive-table';
-import { ShipmentMobileCard } from '@/components/ui/mobile-cards';
-import { usePerformanceMonitoring } from '@/utils/performance';
+import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui/card';
+import { Button } from '@/shared/components/ui/button';
+import { Badge } from '@/shared/components/ui/badge';
+import { Input } from '@/shared/components/ui/input';
+import { VirtualScrollContainer, InfiniteVirtualScroll } from '@/shared/components/ui/virtual-scroll';
+import { ResponsiveTable, type TableColumn, type TableAction } from '@/shared/components/ui/responsive-table';
+import { ShipmentMobileCard } from '@/shared/components/ui/mobile-cards';
+import { usePerformanceMonitoring } from '@/shared/utils/performance';
 import {
   Package,
   Plus,

@@ -1,6 +1,6 @@
 // hooks/useShipments.ts
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useAuthStore } from "@/stores/auth-store";
+import { useAuthStore } from "@/shared/stores/auth-store";
 
 // Types
 export interface Shipment {

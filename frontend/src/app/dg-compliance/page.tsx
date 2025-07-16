@@ -2,11 +2,11 @@
 "use client";
 
 import React, { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
+import { Button } from "@/shared/components/ui/button";
+import { Badge } from "@/shared/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/components/ui/tabs";
+import { Alert, AlertDescription } from "@/shared/components/ui/alert";
 import {
   Shield,
   AlertTriangle,
@@ -22,9 +22,9 @@ import {
   Eye,
   Edit,
 } from "lucide-react";
-import { useDangerousGoods } from "@/hooks/useDangerousGoods";
-import { useShipments } from "@/hooks/useShipments";
-import { AuthGuard } from "@/components/auth/auth-guard";
+import { useDangerousGoods } from "@/shared/hooks/useDangerousGoods";
+import { useShipments } from "@/shared/hooks/useShipments";
+import { AuthGuard } from "@/shared/components/common/auth-guard";
 
 interface ComplianceMetrics {
   totalShipments: number;

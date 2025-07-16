@@ -1,16 +1,16 @@
 "use client";
 
 import React, { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { MobileNavWrapper } from "@/components/layout/mobile-bottom-nav";
-import { AuthGuard } from "@/components/auth/auth-guard";
-import { useAccessibility } from "@/contexts/AccessibilityContext";
-import { useTheme } from "@/contexts/ThemeContext";
-import { usePerformanceMonitoring } from "@/utils/performance";
+import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
+import { Badge } from "@/shared/components/ui/badge";
+import { Button } from "@/shared/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/components/ui/select";
+import { MobileNavWrapper } from "@/shared/components/layout/mobile-bottom-nav";
+import { AuthGuard } from "@/shared/components/common/auth-guard";
+import { useAccessibility } from "@/shared/services/AccessibilityContext";
+import { useTheme } from "@/shared/services/ThemeContext";
+import { usePerformanceMonitoring } from "@/shared/utils/performance";
 import {
   ShipmentTrendsChart,
   FleetUtilizationChart,
@@ -59,7 +59,7 @@ import {
   Bookmark,
   Bell,
 } from "lucide-react";
-import { ExportDialog } from "@/components/ui/export-dialog";
+import { ExportDialog } from "@/shared/components/ui/export-dialog";
 import { toast } from "react-hot-toast";
 
 export default function AnalyticsPage() {

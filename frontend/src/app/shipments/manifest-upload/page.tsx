@@ -1,10 +1,10 @@
 "use client";
 
 import React, { useState, useCallback, useEffect } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
+import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
+import { Button } from "@/shared/components/ui/button";
+import { Badge } from "@/shared/components/ui/badge";
+import { Input } from "@/shared/components/ui/input";
 import {
   Upload,
   FileText,
@@ -20,16 +20,16 @@ import {
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
-import { DashboardLayout } from "@/components/layout/dashboard-layout";
-import { HazardSymbol, HazardClassBadge } from "@/components/ui/hazard-symbol";
-import { CollapsibleNotification } from "@/components/ui/collapsible-notification";
+import { DashboardLayout } from "@/shared/components/layout/dashboard-layout";
+import { HazardSymbol, HazardClassBadge } from "@/shared/components/ui/hazard-symbol";
+import { CollapsibleNotification } from "@/shared/components/ui/collapsible-notification";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import { useRef } from "react";
-import type { PDFViewerRef, HighlightArea } from "@/components/pdf/PDFViewer";
+import type { PDFViewerRef, HighlightArea } from "@/shared/components/pdf/PDFViewer";
 
 // Dynamically import PDF viewer to avoid SSR issues
-const PDFViewer = dynamic(() => import("@/components/pdf/PDFViewer"), {
+const PDFViewer = dynamic(() => import("@/shared/components/pdf/PDFViewer"), {
   ssr: false,
   loading: () => (
     <div className="flex items-center justify-center h-96">
@@ -39,14 +39,14 @@ const PDFViewer = dynamic(() => import("@/components/pdf/PDFViewer"), {
 });
 
 const ManifestTable = dynamic(
-  () => import("@/components/manifests/ManifestTable"),
+  () => import("@/shared/components/manifests/ManifestTable"),
   {
     ssr: false,
   },
 );
 
 const URLUploadModal = dynamic(
-  () => import("@/components/manifests/URLUploadModal"),
+  () => import("@/shared/components/manifests/URLUploadModal"),
   {
     ssr: false,
   },

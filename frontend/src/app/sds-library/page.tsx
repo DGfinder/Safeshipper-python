@@ -2,12 +2,12 @@
 "use client";
 
 import React, { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
+import { Button } from "@/shared/components/ui/button";
+import { Badge } from "@/shared/components/ui/badge";
+import { Input } from "@/shared/components/ui/input";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/components/ui/tabs";
+import { Alert, AlertDescription } from "@/shared/components/ui/alert";
 import {
   BookOpen,
   Search,
@@ -25,11 +25,11 @@ import {
   Clock,
   XCircle,
 } from "lucide-react";
-import { AuthGuard } from "@/components/auth/auth-guard";
-import SDSUploadModal from "@/components/sds/SDSUploadModal";
-import SDSAdvancedSearch from "@/components/sds/SDSAdvancedSearch";
-import SDSBulkOperations from "@/components/sds/SDSBulkOperations";
-import SDSViewerModal from "@/components/sds/SDSViewerModal";
+import { AuthGuard } from "@/shared/components/common/auth-guard";
+import SDSUploadModal from "@/shared/components/sds/SDSUploadModal";
+import SDSAdvancedSearch from "@/shared/components/sds/SDSAdvancedSearch";
+import SDSBulkOperations from "@/shared/components/sds/SDSBulkOperations";
+import SDSViewerModal from "@/shared/components/sds/SDSViewerModal";
 import {
   useSafetyDataSheets,
   useSDSStatistics,
@@ -40,7 +40,7 @@ import {
   useSDSBulkDownload,
   type SafetyDataSheet,
   type SDSSearchParams,
-} from "@/hooks/useSDS";
+} from "@/shared/hooks/useSDS";
 
 export default function SDSLibraryPage() {
   const [searchParams, setSearchParams] = useState<SDSSearchParams>({});

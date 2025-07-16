@@ -3,10 +3,10 @@
 
 import React, { useState, useEffect } from "react";
 import dynamic from "next/dynamic";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
+import { Button } from "@/shared/components/ui/button";
+import { Badge } from "@/shared/components/ui/badge";
+import { Alert, AlertDescription } from "@/shared/components/ui/alert";
 import {
   Package,
   Truck,
@@ -24,9 +24,9 @@ import {
   useSaveLoadPlan,
   type LoadPlan,
   type PlacedItem,
-} from "@/hooks/useLoadPlan";
-import { LoadPlanStats } from "@/components/load-planner/LoadPlanStats";
-import { AuthGuard } from "@/components/auth/auth-guard";
+} from "@/shared/hooks/useLoadPlan";
+import { LoadPlanStats } from "@/shared/components/load-planner/LoadPlanStats";
+import { AuthGuard } from "@/shared/components/common/auth-guard";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
@@ -34,7 +34,7 @@ import toast from "react-hot-toast";
 // Dynamically import 3D component to avoid SSR issues
 const LoadPlanner3D = dynamic(
   () =>
-    import("@/components/load-planner/LoadPlanner3D").then((mod) => ({
+    import("@/shared/components/load-planner/LoadPlanner3D").then((mod) => ({
       default: mod.LoadPlanner3D,
     })),
   {

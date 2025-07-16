@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { AuthGuard } from "@/components/auth/auth-guard";
+import { AuthGuard } from "@/shared/components/common/auth-guard";
 import { Sidebar } from "./sidebar";
 import { Header } from "./header";
 import { cn } from "@/lib/utils";

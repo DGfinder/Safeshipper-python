@@ -1,17 +1,17 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { useTheme, type ThemeMode } from '@/contexts/ThemeContext';
-import { useAccessibility } from '@/contexts/AccessibilityContext';
+import { Button } from '@/shared/components/ui/button';
+import { Badge } from '@/shared/components/ui/badge';
+import { useTheme, type ThemeMode } from '@/shared/services/ThemeContext';
+import { useAccessibility } from '@/shared/services/AccessibilityContext';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+} from '@/shared/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
 import {
   Sun,

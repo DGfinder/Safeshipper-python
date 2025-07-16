@@ -5,11 +5,11 @@ import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
-import { useAuthStore } from "@/stores/auth-store";
-import UnifiedSearchBar from "@/components/search/UnifiedSearchBar";
-import { ConnectionStatus } from "@/components/ui/connection-status";
-import { ThemeToggle } from "@/components/ui/theme-toggle";
-import { useTheme } from "@/contexts/ThemeContext";
+import { useAuthStore } from "@/shared/stores/auth-store";
+import UnifiedSearchBar from "@/shared/components/search/UnifiedSearchBar";
+import { ConnectionStatus } from "@/shared/components/ui/connection-status";
+import { ThemeToggle } from "@/shared/components/ui/theme-toggle";
+import { useTheme } from "@/shared/services/ThemeContext";
 import {
   Home,
   Users,

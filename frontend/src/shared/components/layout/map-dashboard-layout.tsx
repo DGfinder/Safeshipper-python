@@ -1,7 +1,7 @@
 "use client";
 
 import { DashboardLayout } from "./dashboard-layout";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/shared/components/ui/button";
 import { Maximize2, Minimize2 } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";

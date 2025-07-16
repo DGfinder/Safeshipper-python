@@ -2,9 +2,9 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
+import { Button } from "@/shared/components/ui/button";
+import { Badge } from "@/shared/components/ui/badge";
 import {
   Package,
   Truck,
@@ -31,13 +31,13 @@ import {
   ChevronLeft,
   Plus,
 } from "lucide-react";
-import { AuthGuard } from "@/components/auth/auth-guard";
-import { ActivityLog } from "@/components/communications/ActivityLog";
-import { HazardInspection } from "@/components/inspections/HazardInspection";
-import { ProofOfDelivery } from "@/components/delivery/ProofOfDelivery";
-import DocumentGenerator from "@/components/documents/DocumentGenerator";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ShipmentEmergencyPlanViewer } from "@/components/epg/ShipmentEmergencyPlanViewer";
+import { AuthGuard } from "@/shared/components/common/auth-guard";
+import { ActivityLog } from "@/shared/components/communications/ActivityLog";
+import { HazardInspection } from "@/shared/components/inspections/HazardInspection";
+import { ProofOfDelivery } from "@/shared/components/delivery/ProofOfDelivery";
+import DocumentGenerator from "@/shared/components/documents/DocumentGenerator";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/components/ui/tabs";
+import { ShipmentEmergencyPlanViewer } from "@/shared/components/epg/ShipmentEmergencyPlanViewer";
 import Link from "next/link";
 
 interface ShipmentDetailPageProps {

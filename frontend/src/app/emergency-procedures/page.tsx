@@ -2,14 +2,14 @@
 "use client";
 
 import React, { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
+import { Button } from "@/shared/components/ui/button";
+import { Badge } from "@/shared/components/ui/badge";
+import { Input } from "@/shared/components/ui/input";
+import { Checkbox } from "@/shared/components/ui/checkbox";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/components/ui/tabs";
+import { Alert, AlertDescription } from "@/shared/components/ui/alert";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/shared/components/ui/dialog";
 import {
   Shield,
   Search,
@@ -27,12 +27,12 @@ import {
   Globe,
   BookOpen,
 } from "lucide-react";
-import { AuthGuard } from "@/components/auth/auth-guard";
-import { EPGCreateForm } from "@/components/epg/EPGCreateForm";
-import { EPGEditForm } from "@/components/epg/EPGEditForm";
-import { EPGTemplateSelectionDialog } from "@/components/epg/EPGTemplateSelectionDialog";
-import { EPGBulkOperations } from "@/components/epg/EPGBulkOperations";
-import { EPGLiveStatistics } from "@/components/epg/EPGLiveStatistics";
+import { AuthGuard } from "@/shared/components/common/auth-guard";
+import { EPGCreateForm } from "@/shared/components/epg/EPGCreateForm";
+import { EPGEditForm } from "@/shared/components/epg/EPGEditForm";
+import { EPGTemplateSelectionDialog } from "@/shared/components/epg/EPGTemplateSelectionDialog";
+import { EPGBulkOperations } from "@/shared/components/epg/EPGBulkOperations";
+import { EPGLiveStatistics } from "@/shared/components/epg/EPGLiveStatistics";
 import {
   useEPGs,
   useEPGStatistics,
@@ -42,7 +42,7 @@ import {
   useCreateEPGFromTemplate,
   type EmergencyProcedureGuide,
   type EPGSearchParams,
-} from "@/hooks/useEPG";
+} from "@/shared/hooks/useEPG";
 
 export default function EmergencyProceduresPage() {
   const [searchParams, setSearchParams] = useState<EPGSearchParams>({});

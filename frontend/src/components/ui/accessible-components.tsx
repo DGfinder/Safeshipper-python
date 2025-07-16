@@ -2,10 +2,10 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { cn } from '@/lib/utils';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
-import { focusManagement, screenReader, useA11y, a11yUtils } from '@/utils/accessibility';
+import { Button } from '@/shared/components/ui/button';
+import { Input } from '@/shared/components/ui/input';
+import { Badge } from '@/shared/components/ui/badge';
+import { focusManagement, screenReader, useA11y, a11yUtils } from '@/shared/utils/accessibility';
 import {
   ChevronDown,
   ChevronUp,

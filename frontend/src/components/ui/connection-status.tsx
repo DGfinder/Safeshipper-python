@@ -1,10 +1,10 @@
 'use client';
 
 import React from 'react';
-import { useWebSocket } from '@/contexts/WebSocketContext';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { useWebSocket } from '@/shared/services/WebSocketContext';
+import { Badge } from '@/shared/components/ui/badge';
+import { Button } from '@/shared/components/ui/button';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/shared/components/ui/tooltip';
 import { 
   Wifi, 
   WifiOff, 

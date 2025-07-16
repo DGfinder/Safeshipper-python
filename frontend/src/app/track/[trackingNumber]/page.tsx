@@ -3,10 +3,10 @@
 
 import React from "react";
 import dynamic from "next/dynamic";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
+import { Button } from "@/shared/components/ui/button";
+import { Badge } from "@/shared/components/ui/badge";
+import { Alert, AlertDescription } from "@/shared/components/ui/alert";
 import {
   Package,
   MapPin,
@@ -29,13 +29,13 @@ import {
   Weight,
   Box,
 } from "lucide-react";
-import { usePublicShipmentTracking } from "@/hooks/usePublicTracking";
-import { useMockPublicTracking } from "@/hooks/useMockAPI";
+import { usePublicShipmentTracking } from "@/shared/hooks/usePublicTracking";
+import { useMockPublicTracking } from "@/shared/hooks/useMockAPI";
 
 // Dynamically import map component to avoid SSR issues
 const ShipmentTrackingMap = dynamic(
   () =>
-    import("@/components/maps/ShipmentTrackingMap").then((mod) => ({
+    import("@/shared/components/maps/ShipmentTrackingMap").then((mod) => ({
       default: mod.ShipmentTrackingMap,
     })),
   {

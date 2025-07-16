@@ -15,16 +15,16 @@ import {
   Settings,
   Activity
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import ERPSystemsDashboard from "@/components/erp/ERPSystemsDashboard";
-import ManifestImportMonitor from "@/components/erp/ManifestImportMonitor";
-import ConnectionWizard from "@/components/erp/ConnectionWizard";
-import FieldMappingStudio from "@/components/erp/FieldMappingStudio";
-import SyncLogsViewer from "@/components/erp/SyncLogsViewer";
+import { Button } from "@/shared/components/ui/button";
+import { Input } from "@/shared/components/ui/input";
+import { Card } from "@/shared/components/ui/card";
+import { Badge } from "@/shared/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/components/ui/tabs";
+import ERPSystemsDashboard from "@/shared/components/erp/ERPSystemsDashboard";
+import ManifestImportMonitor from "@/shared/components/erp/ManifestImportMonitor";
+import ConnectionWizard from "@/shared/components/erp/ConnectionWizard";
+import FieldMappingStudio from "@/shared/components/erp/FieldMappingStudio";
+import SyncLogsViewer from "@/shared/components/erp/SyncLogsViewer";
 
 export default function ERPIntegrationPage() {
   const [searchQuery, setSearchQuery] = useState("");

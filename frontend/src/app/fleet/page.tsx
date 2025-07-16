@@ -3,10 +3,10 @@
 
 import React, { useState } from "react";
 import dynamic from "next/dynamic";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
+import { Button } from "@/shared/components/ui/button";
+import { Badge } from "@/shared/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/components/ui/tabs";
 import {
   RefreshCw,
   Truck,
@@ -21,14 +21,14 @@ import {
   Settings,
   Plus,
 } from "lucide-react";
-import { useFleetStatus, type FleetVehicle } from "@/hooks/useFleetTracking";
-import { useMockFleetStatus } from "@/hooks/useMockAPI";
-import { AuthGuard } from "@/components/auth/auth-guard";
+import { useFleetStatus, type FleetVehicle } from "@/shared/hooks/useFleetTracking";
+import { useMockFleetStatus } from "@/shared/hooks/useMockAPI";
+import { AuthGuard } from "@/shared/components/common/auth-guard";
 
 // Dynamically import FleetMap to avoid SSR issues
 const FleetMap = dynamic(
   () =>
-    import("@/components/maps/FleetMap").then((mod) => ({
+    import("@/shared/components/maps/FleetMap").then((mod) => ({
       default: mod.FleetMap,
     })),
   {

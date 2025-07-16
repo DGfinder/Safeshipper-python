@@ -25,18 +25,18 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { DashboardLayout } from "@/components/layout/dashboard-layout";
+} from "@/shared/components/ui/card";
+import { Progress } from "@/shared/components/ui/progress";
+import { Badge } from "@/shared/components/ui/badge";
+import { Button } from "@/shared/components/ui/button";
+import { DashboardLayout } from "@/shared/components/layout/dashboard-layout";
 import { 
   useDashboardStats, 
   useInspectionStats, 
   useRecentActivity, 
   usePODStats, 
   useRecentShipments 
-} from "@/hooks/useDashboard";
+} from "@/shared/hooks/useDashboard";
 
 // Types for our data (keeping for future use)
 // interface StatCard {

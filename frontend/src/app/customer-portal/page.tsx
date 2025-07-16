@@ -1,11 +1,11 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
+import { Button } from "@/shared/components/ui/button";
+import { Badge } from "@/shared/components/ui/badge";
+import { Input } from "@/shared/components/ui/input";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/components/ui/tabs";
 import {
   Package,
   Truck,
@@ -29,12 +29,12 @@ import {
   Settings,
   RefreshCw
 } from "lucide-react";
-import { AuthGuard } from "@/components/auth/auth-guard";
-import { MobileNavWrapper } from "@/components/layout/mobile-bottom-nav";
-import { useTheme } from "@/contexts/ThemeContext";
-import { useAccessibility } from "@/contexts/AccessibilityContext";
-import { AdvancedTracking } from "@/components/customer/advanced-tracking";
-import { FloatingActionButton } from "@/components/ui/floating-action-button";
+import { AuthGuard } from "@/shared/components/common/auth-guard";
+import { MobileNavWrapper } from "@/shared/components/layout/mobile-bottom-nav";
+import { useTheme } from "@/shared/services/ThemeContext";
+import { useAccessibility } from "@/shared/services/AccessibilityContext";
+import { AdvancedTracking } from "@/shared/components/customer/advanced-tracking";
+import { FloatingActionButton } from "@/shared/components/ui/floating-action-button";
 import { toast } from "react-hot-toast";
 
 interface CustomerShipment {

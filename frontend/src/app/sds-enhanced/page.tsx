@@ -1,11 +1,11 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
+import { Button } from "@/shared/components/ui/button";
+import { Badge } from "@/shared/components/ui/badge";
+import { Input } from "@/shared/components/ui/input";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/components/ui/tabs";
 import {
   Upload,
   Search,
@@ -18,10 +18,10 @@ import {
   Trash2,
   Plus,
 } from "lucide-react";
-import { AuthGuard } from "@/components/auth/auth-guard";
+import { AuthGuard } from "@/shared/components/common/auth-guard";
 import dynamic from "next/dynamic";
 
-const SDSViewer = dynamic(() => import("@/components/sds/SDSViewer"), {
+const SDSViewer = dynamic(() => import("@/shared/components/sds/SDSViewer"), {
   ssr: false,
 });
 

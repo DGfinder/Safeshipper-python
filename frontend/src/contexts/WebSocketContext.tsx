@@ -1,7 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useEffect, useRef, useState, ReactNode } from 'react';
-import { useAuthStore } from '@/stores/auth-store';
+import { useAuthStore } from '@/shared/stores/auth-store';
 import { toast } from 'react-hot-toast';
 
 // WebSocket message types

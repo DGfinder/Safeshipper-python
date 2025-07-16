@@ -3,17 +3,17 @@
 
 import React, { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { DashboardLayout } from "@/components/layout/dashboard-layout";
+import { DashboardLayout } from "@/shared/components/layout/dashboard-layout";
 import {
   Card,
   CardContent,
   CardHeader,
   CardTitle,
   CardDescription,
-} from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Badge } from "@/components/ui/badge";
+} from "@/shared/components/ui/card";
+import { Button } from "@/shared/components/ui/button";
+import { Alert, AlertDescription } from "@/shared/components/ui/alert";
+import { Badge } from "@/shared/components/ui/badge";
 import {
   ArrowLeft,
   FileText,
@@ -24,13 +24,13 @@ import {
   Download,
   Shield,
 } from "lucide-react";
-import { ManifestDropzone } from "@/components/manifests/ManifestDropzone";
-import { DangerousGoodsConfirmation } from "@/components/manifests/DangerousGoodsConfirmation";
-import { CompatibilityErrorDialog } from "@/components/manifests/CompatibilityErrorDialog";
+import { ManifestDropzone } from "@/shared/components/manifests/ManifestDropzone";
+import { DangerousGoodsConfirmation } from "@/shared/components/manifests/DangerousGoodsConfirmation";
+import { CompatibilityErrorDialog } from "@/shared/components/manifests/CompatibilityErrorDialog";
 import dynamic from "next/dynamic";
 
 // Use the better PDF viewer component with proper PDF.js integration
-const PDFViewer = dynamic(() => import("@/components/pdf/PDFViewer"), {
+const PDFViewer = dynamic(() => import("@/shared/components/pdf/PDFViewer"), {
   ssr: false,
   loading: () => (
     <div className="flex items-center justify-center h-64">
@@ -44,8 +44,8 @@ import {
   useValidationResults,
   useFinalizeShipmentFromManifest,
   type DangerousGoodConfirmation,
-} from "@/hooks/useManifests";
-import { useShipment } from "@/hooks/useShipments";
+} from "@/shared/hooks/useManifests";
+import { useShipment } from "@/shared/hooks/useShipments";
 import { toast } from "react-hot-toast";
 
 export default function ShipmentValidationPage() {
