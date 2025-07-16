@@ -3,9 +3,9 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "react-hot-toast";
 import { useState } from "react";
-import { WebSocketProvider } from "@/contexts/WebSocketContext";
-import { AccessibilityProvider } from "@/contexts/AccessibilityContext";
-import { ThemeProvider } from "@/contexts/ThemeContext";
+import { WebSocketProvider } from "@/shared/services/WebSocketContext";
+import { AccessibilityProvider } from "@/shared/services/AccessibilityContext";
+import { ThemeProvider } from "@/shared/services/ThemeContext";
 
 export default function Providers({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(
