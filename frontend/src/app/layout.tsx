@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter, JetBrains_Mono, Poppins } from "next/font/google";
 import "../styles/globals.css";
 import Providers from "./providers";
@@ -26,12 +26,16 @@ export const metadata: Metadata = {
   keywords: ["logistics", "dangerous goods", "shipping", "compliance", "fleet management"],
   authors: [{ name: "SafeShipper Team" }],
   robots: "index, follow",
-  viewport: "width=device-width, initial-scale=1",
+  manifest: "/manifest.json",
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
   themeColor: [
     { media: "(prefers-color-scheme: light)", color: "#ffffff" },
     { media: "(prefers-color-scheme: dark)", color: "#0f172a" },
   ],
-  manifest: "/manifest.json",
 };
 
 export default function RootLayout({

@@ -125,7 +125,21 @@ export function ThemeProvider({
 
   // Don't render until mounted to prevent hydration mismatches
   if (!mounted) {
-    return <div style={{ visibility: 'hidden' }}>{children}</div>;
+    // During SSR/SSG, provide context with safe defaults
+    const ssrContextValue: ThemeContextType = {
+      mode: 'light',
+      theme: lightTheme,
+      isDark: false,
+      setMode: () => {},
+      toggleTheme: () => {},
+      systemPreference: 'light',
+    };
+    
+    return (
+      <ThemeContext.Provider value={ssrContextValue}>
+        <div style={{ visibility: 'hidden' }}>{children}</div>
+      </ThemeContext.Provider>
+    );
   }
 
   const contextValue: ThemeContextType = {
@@ -148,6 +162,17 @@ export function ThemeProvider({
 export function useTheme(): ThemeContextType {
   const context = useContext(ThemeContext);
   if (context === undefined) {
+    // During SSR/SSG, provide safe fallback values
+    if (typeof window === 'undefined') {
+      return {
+        mode: 'light',
+        theme: lightTheme,
+        isDark: false,
+        setMode: () => {},
+        toggleTheme: () => {},
+        systemPreference: 'light',
+      };
+    }
     throw new Error('useTheme must be used within a ThemeProvider');
   }
   return context;
