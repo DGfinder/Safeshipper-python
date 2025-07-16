@@ -40,7 +40,7 @@ export default function SDSAdvancedSearch({
     onSearchChange(newParams);
 
     // Track active filters for display
-    if (value && value !== "" && value !== false) {
+    if (value && value !== "" && (typeof value !== 'boolean' || value === true) && value !== 0) {
       if (!activeFilters.includes(key)) {
         setActiveFilters([...activeFilters, key]);
       }

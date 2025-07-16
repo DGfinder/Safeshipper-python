@@ -76,7 +76,7 @@ export function WebSocketProvider({ children, url }: WebSocketProviderProps) {
 
   // Connect to WebSocket
   const connect = () => {
-    if (!isAuthenticated()) {
+    if (!isAuthenticated) {
       console.log('Not authenticated, skipping WebSocket connection');
       return;
     }
@@ -241,7 +241,7 @@ export function WebSocketProvider({ children, url }: WebSocketProviderProps) {
         socketRef.current.close();
       }
     };
-  }, [isAuthenticated()]);
+  }, [isAuthenticated]);
 
   const value: WebSocketContextType = {
     connectionState,

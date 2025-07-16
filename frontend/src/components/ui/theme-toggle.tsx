@@ -239,10 +239,10 @@ export function ThemeCustomizationPanel() {
               {contrastOptions.map((option) => (
                 <button
                   key={option.value}
-                  onClick={() => updatePreferences({ contrast: option.value as any })}
+                  onClick={() => updatePreferences({ highContrast: option.value === 'high' })}
                   className={cn(
                     'flex items-center justify-between p-3 rounded-lg border text-left transition-all',
-                    preferences.contrast === option.value
+                    (preferences.highContrast && option.value === 'high') || (!preferences.highContrast && option.value === 'normal')
                       ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
                       : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50 dark:border-gray-700 dark:hover:border-gray-600'
                   )}
@@ -253,7 +253,7 @@ export function ThemeCustomizationPanel() {
                       {option.description}
                     </div>
                   </div>
-                  {preferences.contrast === option.value && (
+                  {((preferences.highContrast && option.value === 'high') || (!preferences.highContrast && option.value === 'normal')) && (
                     <Check className="h-4 w-4 text-blue-500" />
                   )}
                 </button>
@@ -301,10 +301,10 @@ export function ThemeCustomizationPanel() {
             </div>
             <div className="space-y-2">
               <button
-                onClick={() => updatePreferences({ reducedMotion: !preferences.reducedMotion })}
+                onClick={() => updatePreferences({ reduceMotion: !preferences.reduceMotion })}
                 className={cn(
                   'flex items-center justify-between w-full p-3 rounded-lg border text-left transition-all',
-                  preferences.reducedMotion
+                  preferences.reduceMotion
                     ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
                     : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50 dark:border-gray-700 dark:hover:border-gray-600'
                 )}
@@ -315,7 +315,7 @@ export function ThemeCustomizationPanel() {
                     Minimize animations for better accessibility
                   </div>
                 </div>
-                {preferences.reducedMotion && (
+                {preferences.reduceMotion && (
                   <Check className="h-4 w-4 text-blue-500" />
                 )}
               </button>

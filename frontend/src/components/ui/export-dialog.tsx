@@ -276,7 +276,7 @@ export function ExportDialog({ children, timeRange, onExportComplete }: ExportDi
                 <Checkbox
                   id="metadata"
                   checked={includeMetadata}
-                  onCheckedChange={setIncludeMetadata}
+                  onCheckedChange={(checked) => setIncludeMetadata(checked === true)}
                 />
                 <Label htmlFor="metadata" className="text-sm">
                   Include metadata (generation time, filters, etc.)

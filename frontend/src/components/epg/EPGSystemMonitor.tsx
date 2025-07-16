@@ -436,3 +436,5 @@ export const EPGSystemMonitor: React.FC<EPGSystemMonitorProps> = ({
     </div>
   );
 };
+
+export default EPGSystemMonitor;

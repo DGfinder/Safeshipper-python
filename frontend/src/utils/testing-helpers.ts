@@ -248,7 +248,7 @@ export const performanceTests = {
         'TCP Connection': navigation.connectEnd - navigation.connectStart,
         'Request/Response': navigation.responseEnd - navigation.requestStart,
         'DOM Processing': navigation.domContentLoadedEventEnd - navigation.responseEnd,
-        'Total Load Time': navigation.loadEventEnd - navigation.navigationStart,
+        'Total Load Time': navigation.loadEventEnd - navigation.startTime,
       };
       
       Object.entries(metrics).forEach(([metric, time]) => {

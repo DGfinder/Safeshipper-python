@@ -188,7 +188,7 @@ export function usePWA() {
 
     // Store data in IndexedDB for background sync
     navigator.serviceWorker.ready.then(registration => {
-      registration.sync.register(tag);
+      (registration as any).sync?.register(tag);
       
       // Send data to service worker
       if (registration.active) {
@@ -348,7 +348,7 @@ export function useBackgroundSync() {
     // Register for background sync
     if ('serviceWorker' in navigator && 'sync' in window.ServiceWorkerRegistration.prototype) {
       navigator.serviceWorker.ready.then(registration => {
-        registration.sync.register(`safeshipper-${action.type}`);
+        (registration as any).sync?.register(`safeshipper-${action.type}`);
       });
     }
   }, []);

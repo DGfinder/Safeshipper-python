@@ -65,7 +65,13 @@
       "Bash(source:*)",
       "Bash(pip install:*)",
       "Bash(for route in \"/api-gateway\" \"/audits\" \"/inspections\" \"/customer-portal/notifications\" \"/customer-portal/requests\" \"/analytics/insights\")",
-      "Bash(do echo \"Checking $route\")"
+      "Bash(do echo \"Checking $route\")",
+      "Bash(for:*)",
+      "Bash(do echo \"=== $file ===\")",
+      "Bash(if [ -f \"$file\" ])",
+      "Bash(then tail -3 \"$file\")",
+      "Bash(else echo \"File not found\")",
+      "Bash(cd:*)"
     ],
     "deny": []
   }

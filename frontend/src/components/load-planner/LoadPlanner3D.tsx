@@ -385,3 +385,5 @@ export function LoadPlanner3D({
     </Card>
   );
 }
+
+export default LoadPlanner3D;

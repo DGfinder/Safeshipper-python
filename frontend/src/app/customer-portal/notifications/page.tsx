@@ -274,11 +274,11 @@ export default function CustomerNotificationsPage() {
     }
   };
 
-  const updateSetting = (category: string, setting: string, value: boolean) => {
+  const updateSetting = (category: string, setting: string, value: any) => {
     setSettings(prev => ({
       ...prev,
       [category]: {
-        ...prev[category],
+        ...(prev as any)[category],
         [setting]: value
       }
     }));

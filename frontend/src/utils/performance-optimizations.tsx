@@ -2,7 +2,7 @@
  * Performance optimization utilities for SafeShipper frontend
  */
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 
 // Debounce utility function
 export function debounce<T extends (...args: any[]) => any>(

@@ -128,7 +128,7 @@ export default function ManifestTable({
     setIsGeneratingDocs(true);
     try {
       const selectedDG = items
-        .filter((item) => selectedItems.includes(item.id) && !item.skipped)
+        .filter((item) => selectedItems.some(selected => selected.id === item.id) && !item.skipped)
         .map((item) => ({
           id: item.id,
           un: item.un,

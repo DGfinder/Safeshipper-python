@@ -458,7 +458,7 @@ function NotificationItem({
                   return (
                     <Button
                       key={action.id}
-                      variant={action.variant || 'outline'}
+                      variant={action.variant === 'primary' ? 'default' : action.variant || 'outline'}
                       size="sm"
                       onClick={() => onActionClick(notification.id, action.id)}
                       className="h-8 text-xs"
@@ -553,7 +553,7 @@ export function NotificationCenter({
 
   const { isDark } = useTheme();
   const { preferences } = useAccessibility();
-  const { subscribe, unsubscribe } = useWebSocket();
+  const { subscribe } = useWebSocket();
 
   // Load notifications on mount
   useEffect(() => {
@@ -591,9 +591,9 @@ export function NotificationCenter({
       }
     };
 
-    subscribe('notification', handleNewNotification);
-    return () => unsubscribe('notification', handleNewNotification);
-  }, [subscribe, unsubscribe, settings]);
+    const cleanup = subscribe('notification', handleNewNotification);
+    return cleanup;
+  }, [subscribe, settings]);
 
   // Notification actions
   const handleMarkAsRead = (id: string) => {
@@ -663,7 +663,7 @@ export function NotificationCenter({
           const defaultAudio = new Audio('/sounds/notification.mp3');
           defaultAudio.play().catch(() => {
             // If all fails, use system beep
-            console.beep?.();
+            // System beep not available in browser
           });
         });
       } catch (error) {

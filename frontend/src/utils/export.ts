@@ -193,14 +193,14 @@ export function exportToPDF(data: ExportData[], config: ExportConfig = { format:
 
       // Draw headers
       doc.setFontSize(10);
-      doc.setFont(undefined, 'bold');
+      doc.setFont('helvetica', 'bold');
       tableHeaders.forEach((header, i) => {
         doc.text(header, margin + i * columnWidth, currentY);
       });
       currentY += 8;
 
       // Draw data rows (limit to prevent overflow)
-      doc.setFont(undefined, 'normal');
+      doc.setFont('helvetica', 'normal');
       const maxRows = Math.min(rows.length, 20); // Limit rows per section
       
       for (let i = 0; i < maxRows; i++) {

@@ -152,7 +152,7 @@ export const focusManagement = {
     return Array.from(container.querySelectorAll(focusableSelectors.join(', ')))
       .filter(el => {
         const element = el as HTMLElement;
-        return !element.disabled && 
+        return !(element as any).disabled && 
                !element.hidden && 
                element.offsetParent !== null &&
                element.tabIndex !== -1;

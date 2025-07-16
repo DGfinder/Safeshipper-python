@@ -7,7 +7,6 @@ import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { useAccessibility } from '@/contexts/AccessibilityContext';
 import { useRealTimeDashboardStats } from '@/hooks/useRealTimeData';
-import { FloatingActionButton } from '@/components/ui/floating-action-button';
 import { NotificationCenter, NotificationBell, useNotifications } from '@/components/ui/notification-center';
 import {
   Home,
@@ -293,20 +292,27 @@ export function MobileMoreMenu() {
 
 // Floating Action Button for mobile
 interface FloatingActionButtonProps {
-  icon: React.ComponentType<{ className?: string }>;
-  label: string;
-  onClick: () => void;
+  variant?: 'single' | 'expandable' | 'contextual';
+  primaryAction?: {
+    id: string;
+    label: string;
+    icon: React.ComponentType<{ className?: string }>;
+    onClick: () => void;
+  };
   className?: string;
   disabled?: boolean;
 }
 
 export function FloatingActionButton({ 
-  icon: Icon, 
-  label, 
-  onClick, 
+  variant = 'single',
+  primaryAction,
   className,
   disabled = false 
 }: FloatingActionButtonProps) {
+  if (!primaryAction) return null;
+
+  const { icon: Icon, label, onClick } = primaryAction;
+
   return (
     <button
       onClick={onClick}

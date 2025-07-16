@@ -173,7 +173,7 @@ export const bundleAnalyzer = {
         .filter(entry => entry.name.includes('chunk'))
         .map(entry => ({
           name: entry.name,
-          size: entry.transferSize,
+          size: (entry as any).transferSize || 0,
           duration: entry.duration,
         }));
     }

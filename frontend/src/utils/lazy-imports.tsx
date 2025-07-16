@@ -1,4 +1,4 @@
-import { lazy } from 'react';
+import React, { lazy } from 'react';
 
 // Utility function for lazy loading with error handling
 export function createLazyComponent<T extends React.ComponentType<any>>(
@@ -23,7 +23,7 @@ export function createLazyComponent<T extends React.ComponentType<any>>(
           <div className="p-4 text-center text-red-600">
             <p>Error loading component. Please try refreshing the page.</p>
           </div>
-        )) as T
+        )) as unknown as T
       };
     }
   });
@@ -113,7 +113,7 @@ export const LazyComponents = {
 
   // Inspections
   HazardInspection: createLazyComponent(
-    () => import('@/components/inspections/HazardInspection'),
+    () => import('@/components/inspections/HazardInspection').then(mod => ({ default: mod.HazardInspection })),
     () => <div className="h-96 bg-gray-100 rounded-lg animate-pulse" />
   ),
 
@@ -125,29 +125,29 @@ export const LazyComponents = {
 
   // Proof of Delivery
   ProofOfDelivery: createLazyComponent(
-    () => import('@/components/delivery/ProofOfDelivery'),
+    () => import('@/components/delivery/ProofOfDelivery').then(mod => ({ default: mod.ProofOfDelivery })),
     () => <div className="h-96 bg-gray-100 rounded-lg animate-pulse" />
   ),
 
   // Multi-Factor Authentication
   MFASetup: createLazyComponent(
-    () => import('@/components/mfa/MFASetup'),
+    () => import('@/components/mfa/MFASetup').then(mod => ({ default: mod.MFASetup })),
     () => <div className="h-64 bg-gray-100 rounded-lg animate-pulse" />
   ),
 
   MFAVerification: createLazyComponent(
-    () => import('@/components/mfa/MFAVerification'),
+    () => import('@/components/mfa/MFAVerification').then(mod => ({ default: mod.MFAVerification })),
     () => <div className="h-64 bg-gray-100 rounded-lg animate-pulse" />
   ),
 
   // User Management
   UserCreateForm: createLazyComponent(
-    () => import('@/components/users/UserCreateForm'),
+    () => import('@/components/users/UserCreateForm').then(mod => ({ default: mod.UserCreateForm })),
     () => <div className="h-96 bg-gray-100 rounded-lg animate-pulse" />
   ),
 
   UserEditForm: createLazyComponent(
-    () => import('@/components/users/UserEditForm'),
+    () => import('@/components/users/UserEditForm').then(mod => ({ default: mod.UserEditForm })),
     () => <div className="h-96 bg-gray-100 rounded-lg animate-pulse" />
   ),
 

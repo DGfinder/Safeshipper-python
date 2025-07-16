@@ -13,4 +13,672 @@ import { useTheme } from '@/contexts/ThemeContext';
 import { useAccessibility } from '@/contexts/AccessibilityContext';
 import { cn } from '@/lib/utils';
 import { toast } from 'react-hot-toast';
-import {\n  DragDropContext,\n  Draggable,\n  Droppable,\n  DropResult,\n  DragStart,\n  DragUpdate,\n} from 'react-beautiful-dnd';\nimport {\n  BarChart3,\n  PieChart,\n  TrendingUp,\n  Activity,\n  Package,\n  Truck,\n  Users,\n  AlertTriangle,\n  CheckCircle,\n  Clock,\n  MapPin,\n  Shield,\n  Bell,\n  FileText,\n  Calendar,\n  Target,\n  Zap,\n  Eye,\n  EyeOff,\n  Settings,\n  Plus,\n  Minus,\n  Copy,\n  Trash2,\n  Move,\n  Grid,\n  Layout,\n  Maximize2,\n  Minimize2,\n  MoreHorizontal,\n  Save,\n  Undo,\n  Redo,\n  Download,\n  Upload,\n  Share2,\n  Lock,\n  Unlock,\n  Palette,\n  Type,\n  Layers,\n  Filter,\n  Search,\n  Refresh,\n  ExternalLink,\n  Info,\n  HelpCircle,\n  ChevronDown,\n  ChevronUp,\n  ChevronLeft,\n  ChevronRight,\n  X,\n} from 'lucide-react';\n\n// Widget types and interfaces\nexport type WidgetType = \n  | 'kpi'\n  | 'chart'\n  | 'table'\n  | 'map'\n  | 'calendar'\n  | 'notifications'\n  | 'activity'\n  | 'weather'\n  | 'clock'\n  | 'iframe'\n  | 'text'\n  | 'image'\n  | 'separator';\n\nexport type ChartType = \n  | 'line'\n  | 'bar'\n  | 'pie'\n  | 'doughnut'\n  | 'area'\n  | 'scatter'\n  | 'radar'\n  | 'gauge'\n  | 'heatmap';\n\nexport interface WidgetConfig {\n  id: string;\n  type: WidgetType;\n  title: string;\n  description?: string;\n  position: {\n    x: number;\n    y: number;\n    w: number;\n    h: number;\n  };\n  config: {\n    // Chart specific\n    chartType?: ChartType;\n    dataSource?: string;\n    metrics?: string[];\n    filters?: Record<string, any>;\n    refreshInterval?: number;\n    \n    // KPI specific\n    value?: number | string;\n    unit?: string;\n    trend?: 'up' | 'down' | 'stable';\n    target?: number;\n    format?: 'number' | 'currency' | 'percentage';\n    \n    // Table specific\n    columns?: {\n      key: string;\n      label: string;\n      type: 'text' | 'number' | 'date' | 'status' | 'actions';\n      width?: number;\n    }[];\n    pagination?: boolean;\n    sorting?: boolean;\n    \n    // Map specific\n    center?: [number, number];\n    zoom?: number;\n    markers?: {\n      id: string;\n      position: [number, number];\n      title: string;\n      type: 'vehicle' | 'facility' | 'incident' | 'checkpoint';\n    }[];\n    \n    // Style config\n    backgroundColor?: string;\n    textColor?: string;\n    borderColor?: string;\n    borderWidth?: number;\n    borderRadius?: number;\n    padding?: number;\n    fontSize?: number;\n    fontWeight?: 'normal' | 'bold';\n    \n    // Behavior config\n    clickable?: boolean;\n    resizable?: boolean;\n    draggable?: boolean;\n    visible?: boolean;\n    \n    // Custom config\n    customProps?: Record<string, any>;\n  };\n  permissions?: {\n    view: string[];\n    edit: string[];\n    delete: string[];\n  };\n  createdAt: Date;\n  updatedAt: Date;\n  createdBy: string;\n}\n\nexport interface DashboardLayout {\n  id: string;\n  name: string;\n  description?: string;\n  widgets: WidgetConfig[];\n  settings: {\n    theme: 'light' | 'dark' | 'auto';\n    layout: 'grid' | 'freeform';\n    gridSize: number;\n    snapToGrid: boolean;\n    showGrid: boolean;\n    backgroundColor?: string;\n    backgroundImage?: string;\n    padding: number;\n    responsive: boolean;\n    breakpoints: {\n      mobile: number;\n      tablet: number;\n      desktop: number;\n    };\n  };\n  permissions: {\n    view: string[];\n    edit: string[];\n    share: string[];\n    delete: string[];\n  };\n  isPublic: boolean;\n  tags: string[];\n  createdAt: Date;\n  updatedAt: Date;\n  createdBy: string;\n}\n\n// Widget templates\nconst widgetTemplates: Record<WidgetType, Partial<WidgetConfig>> = {\n  kpi: {\n    type: 'kpi',\n    title: 'Key Performance Indicator',\n    position: { x: 0, y: 0, w: 3, h: 2 },\n    config: {\n      value: 0,\n      unit: '',\n      trend: 'stable',\n      format: 'number',\n      backgroundColor: '#f8fafc',\n      textColor: '#1f2937',\n      fontSize: 24,\n      fontWeight: 'bold',\n    },\n  },\n  chart: {\n    type: 'chart',\n    title: 'Chart Widget',\n    position: { x: 0, y: 0, w: 6, h: 4 },\n    config: {\n      chartType: 'line',\n      dataSource: 'shipments',\n      metrics: ['count'],\n      refreshInterval: 30000,\n      backgroundColor: '#ffffff',\n      borderColor: '#e5e7eb',\n      borderWidth: 1,\n      borderRadius: 8,\n      padding: 16,\n    },\n  },\n  table: {\n    type: 'table',\n    title: 'Data Table',\n    position: { x: 0, y: 0, w: 8, h: 6 },\n    config: {\n      columns: [\n        { key: 'id', label: 'ID', type: 'text' },\n        { key: 'name', label: 'Name', type: 'text' },\n        { key: 'status', label: 'Status', type: 'status' },\n      ],\n      pagination: true,\n      sorting: true,\n      backgroundColor: '#ffffff',\n      borderColor: '#e5e7eb',\n      borderWidth: 1,\n      borderRadius: 8,\n    },\n  },\n  map: {\n    type: 'map',\n    title: 'Map View',\n    position: { x: 0, y: 0, w: 8, h: 6 },\n    config: {\n      center: [43.6532, -79.3832], // Toronto\n      zoom: 10,\n      markers: [],\n      backgroundColor: '#ffffff',\n      borderColor: '#e5e7eb',\n      borderWidth: 1,\n      borderRadius: 8,\n    },\n  },\n  calendar: {\n    type: 'calendar',\n    title: 'Calendar',\n    position: { x: 0, y: 0, w: 6, h: 4 },\n    config: {\n      backgroundColor: '#ffffff',\n      borderColor: '#e5e7eb',\n      borderWidth: 1,\n      borderRadius: 8,\n      padding: 16,\n    },\n  },\n  notifications: {\n    type: 'notifications',\n    title: 'Notifications',\n    position: { x: 0, y: 0, w: 4, h: 6 },\n    config: {\n      refreshInterval: 10000,\n      backgroundColor: '#ffffff',\n      borderColor: '#e5e7eb',\n      borderWidth: 1,\n      borderRadius: 8,\n      padding: 16,\n    },\n  },\n  activity: {\n    type: 'activity',\n    title: 'Activity Feed',\n    position: { x: 0, y: 0, w: 4, h: 6 },\n    config: {\n      refreshInterval: 15000,\n      backgroundColor: '#ffffff',\n      borderColor: '#e5e7eb',\n      borderWidth: 1,\n      borderRadius: 8,\n      padding: 16,\n    },\n  },\n  weather: {\n    type: 'weather',\n    title: 'Weather',\n    position: { x: 0, y: 0, w: 3, h: 2 },\n    config: {\n      refreshInterval: 300000, // 5 minutes\n      backgroundColor: '#ffffff',\n      borderColor: '#e5e7eb',\n      borderWidth: 1,\n      borderRadius: 8,\n      padding: 16,\n    },\n  },\n  clock: {\n    type: 'clock',\n    title: 'Clock',\n    position: { x: 0, y: 0, w: 2, h: 2 },\n    config: {\n      backgroundColor: '#ffffff',\n      textColor: '#1f2937',\n      borderColor: '#e5e7eb',\n      borderWidth: 1,\n      borderRadius: 8,\n      padding: 16,\n      fontSize: 20,\n    },\n  },\n  iframe: {\n    type: 'iframe',\n    title: 'Embedded Content',\n    position: { x: 0, y: 0, w: 6, h: 4 },\n    config: {\n      backgroundColor: '#ffffff',\n      borderColor: '#e5e7eb',\n      borderWidth: 1,\n      borderRadius: 8,\n      customProps: {\n        src: '',\n        allowfullscreen: true,\n      },\n    },\n  },\n  text: {\n    type: 'text',\n    title: 'Text Widget',\n    position: { x: 0, y: 0, w: 4, h: 2 },\n    config: {\n      backgroundColor: '#ffffff',\n      textColor: '#1f2937',\n      borderColor: '#e5e7eb',\n      borderWidth: 1,\n      borderRadius: 8,\n      padding: 16,\n      fontSize: 14,\n      fontWeight: 'normal',\n      customProps: {\n        content: 'Enter your text here...',\n        markdown: false,\n      },\n    },\n  },\n  image: {\n    type: 'image',\n    title: 'Image Widget',\n    position: { x: 0, y: 0, w: 4, h: 3 },\n    config: {\n      backgroundColor: '#ffffff',\n      borderColor: '#e5e7eb',\n      borderWidth: 1,\n      borderRadius: 8,\n      padding: 8,\n      customProps: {\n        src: '',\n        alt: '',\n        fit: 'cover',\n      },\n    },\n  },\n  separator: {\n    type: 'separator',\n    title: 'Separator',\n    position: { x: 0, y: 0, w: 12, h: 1 },\n    config: {\n      backgroundColor: 'transparent',\n      borderColor: '#e5e7eb',\n      borderWidth: 1,\n      customProps: {\n        orientation: 'horizontal',\n        style: 'solid',\n      },\n    },\n  },\n};\n\n// Widget icons\nconst widgetIcons: Record<WidgetType, React.ComponentType<any>> = {\n  kpi: Target,\n  chart: BarChart3,\n  table: Grid,\n  map: MapPin,\n  calendar: Calendar,\n  notifications: Bell,\n  activity: Activity,\n  weather: Zap,\n  clock: Clock,\n  iframe: ExternalLink,\n  text: Type,\n  image: FileText,\n  separator: Minus,\n};\n\n// Main dashboard builder component\ninterface DashboardBuilderProps {\n  layout?: DashboardLayout;\n  onSave?: (layout: DashboardLayout) => void;\n  onCancel?: () => void;\n  readOnly?: boolean;\n  className?: string;\n}\n\nexport function DashboardBuilder({\n  layout,\n  onSave,\n  onCancel,\n  readOnly = false,\n  className,\n}: DashboardBuilderProps) {\n  const [currentLayout, setCurrentLayout] = useState<DashboardLayout>(\n    layout || {\n      id: 'new-dashboard',\n      name: 'New Dashboard',\n      description: '',\n      widgets: [],\n      settings: {\n        theme: 'light',\n        layout: 'grid',\n        gridSize: 20,\n        snapToGrid: true,\n        showGrid: true,\n        padding: 16,\n        responsive: true,\n        breakpoints: {\n          mobile: 480,\n          tablet: 768,\n          desktop: 1024,\n        },\n      },\n      permissions: {\n        view: ['all'],\n        edit: ['admin'],\n        share: ['admin'],\n        delete: ['admin'],\n      },\n      isPublic: false,\n      tags: [],\n      createdAt: new Date(),\n      updatedAt: new Date(),\n      createdBy: 'current-user',\n    }\n  );\n  \n  const [selectedWidget, setSelectedWidget] = useState<string | null>(null);\n  const [draggedWidget, setDraggedWidget] = useState<WidgetType | null>(null);\n  const [showWidgetPanel, setShowWidgetPanel] = useState(true);\n  const [showPropertiesPanel, setShowPropertiesPanel] = useState(true);\n  const [previewMode, setPreviewMode] = useState(false);\n  const [history, setHistory] = useState<DashboardLayout[]>([currentLayout]);\n  const [historyIndex, setHistoryIndex] = useState(0);\n  \n  const { isDark } = useTheme();\n  const { preferences } = useAccessibility();\n\n  // History management\n  const addToHistory = useCallback((newLayout: DashboardLayout) => {\n    const newHistory = history.slice(0, historyIndex + 1);\n    newHistory.push({ ...newLayout, updatedAt: new Date() });\n    setHistory(newHistory);\n    setHistoryIndex(newHistory.length - 1);\n  }, [history, historyIndex]);\n\n  const undo = useCallback(() => {\n    if (historyIndex > 0) {\n      setHistoryIndex(historyIndex - 1);\n      setCurrentLayout(history[historyIndex - 1]);\n    }\n  }, [history, historyIndex]);\n\n  const redo = useCallback(() => {\n    if (historyIndex < history.length - 1) {\n      setHistoryIndex(historyIndex + 1);\n      setCurrentLayout(history[historyIndex + 1]);\n    }\n  }, [history, historyIndex]);\n\n  // Widget management\n  const addWidget = useCallback((type: WidgetType) => {\n    const template = widgetTemplates[type];\n    if (!template) return;\n\n    const newWidget: WidgetConfig = {\n      id: `widget-${Date.now()}`,\n      ...template,\n      createdAt: new Date(),\n      updatedAt: new Date(),\n      createdBy: 'current-user',\n    } as WidgetConfig;\n\n    const newLayout = {\n      ...currentLayout,\n      widgets: [...currentLayout.widgets, newWidget],\n    };\n\n    setCurrentLayout(newLayout);\n    addToHistory(newLayout);\n    setSelectedWidget(newWidget.id);\n    toast.success(`${template.title} added`);\n  }, [currentLayout, addToHistory]);\n\n  const updateWidget = useCallback((id: string, updates: Partial<WidgetConfig>) => {\n    const newLayout = {\n      ...currentLayout,\n      widgets: currentLayout.widgets.map(widget => \n        widget.id === id \n          ? { ...widget, ...updates, updatedAt: new Date() }\n          : widget\n      ),\n    };\n\n    setCurrentLayout(newLayout);\n    addToHistory(newLayout);\n  }, [currentLayout, addToHistory]);\n\n  const deleteWidget = useCallback((id: string) => {\n    const newLayout = {\n      ...currentLayout,\n      widgets: currentLayout.widgets.filter(widget => widget.id !== id),\n    };\n\n    setCurrentLayout(newLayout);\n    addToHistory(newLayout);\n    setSelectedWidget(null);\n    toast.success('Widget deleted');\n  }, [currentLayout, addToHistory]);\n\n  const duplicateWidget = useCallback((id: string) => {\n    const widget = currentLayout.widgets.find(w => w.id === id);\n    if (!widget) return;\n\n    const newWidget: WidgetConfig = {\n      ...widget,\n      id: `widget-${Date.now()}`,\n      position: {\n        ...widget.position,\n        x: widget.position.x + 1,\n        y: widget.position.y + 1,\n      },\n      title: `${widget.title} (Copy)`,\n      createdAt: new Date(),\n      updatedAt: new Date(),\n    };\n\n    const newLayout = {\n      ...currentLayout,\n      widgets: [...currentLayout.widgets, newWidget],\n    };\n\n    setCurrentLayout(newLayout);\n    addToHistory(newLayout);\n    setSelectedWidget(newWidget.id);\n    toast.success('Widget duplicated');\n  }, [currentLayout, addToHistory]);\n\n  // Drag and drop handlers\n  const handleDragStart = useCallback((start: DragStart) => {\n    // Handle drag start\n  }, []);\n\n  const handleDragUpdate = useCallback((update: DragUpdate) => {\n    // Handle drag update\n  }, []);\n\n  const handleDragEnd = useCallback((result: DropResult) => {\n    const { destination, source, draggableId } = result;\n    \n    if (!destination) return;\n    \n    if (destination.droppableId === 'dashboard' && source.droppableId === 'widget-palette') {\n      // Adding new widget from palette\n      const widgetType = draggableId as WidgetType;\n      addWidget(widgetType);\n    } else if (destination.droppableId === 'dashboard' && source.droppableId === 'dashboard') {\n      // Reordering widgets\n      const newWidgets = Array.from(currentLayout.widgets);\n      const [reorderedWidget] = newWidgets.splice(source.index, 1);\n      newWidgets.splice(destination.index, 0, reorderedWidget);\n      \n      const newLayout = {\n        ...currentLayout,\n        widgets: newWidgets,\n      };\n      \n      setCurrentLayout(newLayout);\n      addToHistory(newLayout);\n    }\n  }, [currentLayout, addWidget, addToHistory]);\n\n  // Save dashboard\n  const handleSave = useCallback(() => {\n    if (onSave) {\n      onSave(currentLayout);\n      toast.success('Dashboard saved successfully');\n    }\n  }, [currentLayout, onSave]);\n\n  // Widget palette component\n  const WidgetPalette = () => (\n    <Card className=\"h-full\">\n      <CardHeader className=\"pb-3\">\n        <CardTitle className=\"text-lg flex items-center gap-2\">\n          <Layers className=\"h-5 w-5\" />\n          Widget Palette\n        </CardTitle>\n      </CardHeader>\n      <CardContent className=\"p-0\">\n        <Droppable droppableId=\"widget-palette\" isDropDisabled={true}>\n          {(provided, snapshot) => (\n            <div\n              ref={provided.innerRef}\n              {...provided.droppableProps}\n              className=\"space-y-2 p-4\"\n            >\n              {Object.entries(widgetTemplates).map(([type, template], index) => {\n                const Icon = widgetIcons[type as WidgetType];\n                return (\n                  <Draggable\n                    key={type}\n                    draggableId={type}\n                    index={index}\n                    isDragDisabled={readOnly}\n                  >\n                    {(provided, snapshot) => (\n                      <div\n                        ref={provided.innerRef}\n                        {...provided.draggableProps}\n                        {...provided.dragHandleProps}\n                        className={cn(\n                          'flex items-center gap-3 p-3 rounded-lg border-2 border-dashed border-neutral-200 hover:border-primary-300 hover:bg-primary-50 transition-colors cursor-move',\n                          snapshot.isDragging && 'border-primary-500 bg-primary-100',\n                          readOnly && 'cursor-not-allowed opacity-50'\n                        )}\n                        onClick={() => !readOnly && addWidget(type as WidgetType)}\n                      >\n                        <Icon className=\"h-5 w-5 text-neutral-600\" />\n                        <div className=\"flex-1 min-w-0\">\n                          <p className=\"text-sm font-medium text-neutral-900\">\n                            {template.title}\n                          </p>\n                          <p className=\"text-xs text-neutral-600\">\n                            {type.charAt(0).toUpperCase() + type.slice(1)}\n                          </p>\n                        </div>\n                        <Plus className=\"h-4 w-4 text-neutral-400\" />\n                      </div>\n                    )}\n                  </Draggable>\n                );\n              })}\n              {provided.placeholder}\n            </div>\n          )}\n        </Droppable>\n      </CardContent>\n    </Card>\n  );\n\n  // Properties panel component\n  const PropertiesPanel = () => {\n    const selectedWidgetData = selectedWidget \n      ? currentLayout.widgets.find(w => w.id === selectedWidget)\n      : null;\n\n    return (\n      <Card className=\"h-full\">\n        <CardHeader className=\"pb-3\">\n          <CardTitle className=\"text-lg flex items-center gap-2\">\n            <Settings className=\"h-5 w-5\" />\n            Properties\n          </CardTitle>\n        </CardHeader>\n        <CardContent className=\"p-4\">\n          {selectedWidgetData ? (\n            <div className=\"space-y-4\">\n              <div>\n                <Label htmlFor=\"widget-title\">Title</Label>\n                <Input\n                  id=\"widget-title\"\n                  value={selectedWidgetData.title}\n                  onChange={(e) => updateWidget(selectedWidget!, { title: e.target.value })}\n                  disabled={readOnly}\n                />\n              </div>\n              \n              <div>\n                <Label htmlFor=\"widget-description\">Description</Label>\n                <Input\n                  id=\"widget-description\"\n                  value={selectedWidgetData.description || ''}\n                  onChange={(e) => updateWidget(selectedWidget!, { description: e.target.value })}\n                  disabled={readOnly}\n                />\n              </div>\n              \n              <div className=\"grid grid-cols-2 gap-2\">\n                <div>\n                  <Label htmlFor=\"widget-width\">Width</Label>\n                  <Input\n                    id=\"widget-width\"\n                    type=\"number\"\n                    value={selectedWidgetData.position.w}\n                    onChange={(e) => updateWidget(selectedWidget!, {\n                      position: { ...selectedWidgetData.position, w: parseInt(e.target.value) }\n                    })}\n                    disabled={readOnly}\n                  />\n                </div>\n                <div>\n                  <Label htmlFor=\"widget-height\">Height</Label>\n                  <Input\n                    id=\"widget-height\"\n                    type=\"number\"\n                    value={selectedWidgetData.position.h}\n                    onChange={(e) => updateWidget(selectedWidget!, {\n                      position: { ...selectedWidgetData.position, h: parseInt(e.target.value) }\n                    })}\n                    disabled={readOnly}\n                  />\n                </div>\n              </div>\n              \n              <div className=\"flex items-center gap-2\">\n                <Button\n                  variant=\"outline\"\n                  size=\"sm\"\n                  onClick={() => duplicateWidget(selectedWidget!)}\n                  disabled={readOnly}\n                >\n                  <Copy className=\"h-4 w-4 mr-2\" />\n                  Duplicate\n                </Button>\n                <Button\n                  variant=\"outline\"\n                  size=\"sm\"\n                  onClick={() => deleteWidget(selectedWidget!)}\n                  disabled={readOnly}\n                >\n                  <Trash2 className=\"h-4 w-4 mr-2\" />\n                  Delete\n                </Button>\n              </div>\n            </div>\n          ) : (\n            <div className=\"text-center text-neutral-500 py-8\">\n              <Settings className=\"h-8 w-8 mx-auto mb-2 opacity-50\" />\n              <p>Select a widget to edit its properties</p>\n            </div>\n          )}\n        </CardContent>\n      </Card>\n    );\n  };\n\n  // Dashboard canvas component\n  const DashboardCanvas = () => (\n    <Card className=\"h-full\">\n      <CardHeader className=\"pb-3\">\n        <div className=\"flex items-center justify-between\">\n          <CardTitle className=\"text-lg flex items-center gap-2\">\n            <Layout className=\"h-5 w-5\" />\n            {currentLayout.name}\n          </CardTitle>\n          <div className=\"flex items-center gap-2\">\n            <Button\n              variant=\"outline\"\n              size=\"sm\"\n              onClick={() => setPreviewMode(!previewMode)}\n            >\n              {previewMode ? <EyeOff className=\"h-4 w-4\" /> : <Eye className=\"h-4 w-4\" />}\n              {previewMode ? 'Exit Preview' : 'Preview'}\n            </Button>\n          </div>\n        </div>\n      </CardHeader>\n      <CardContent className=\"p-4\">\n        <Droppable droppableId=\"dashboard\">\n          {(provided, snapshot) => (\n            <div\n              ref={provided.innerRef}\n              {...provided.droppableProps}\n              className={cn(\n                'min-h-[600px] rounded-lg border-2 border-dashed border-neutral-200 relative',\n                snapshot.isDraggingOver && 'border-primary-500 bg-primary-50',\n                currentLayout.settings.showGrid && 'bg-grid-pattern'\n              )}\n              style={{\n                backgroundSize: `${currentLayout.settings.gridSize}px ${currentLayout.settings.gridSize}px`,\n                padding: currentLayout.settings.padding,\n              }}\n            >\n              {currentLayout.widgets.map((widget, index) => (\n                <Draggable\n                  key={widget.id}\n                  draggableId={widget.id}\n                  index={index}\n                  isDragDisabled={readOnly || previewMode}\n                >\n                  {(provided, snapshot) => (\n                    <div\n                      ref={provided.innerRef}\n                      {...provided.draggableProps}\n                      className={cn(\n                        'absolute border-2 border-transparent rounded-lg cursor-pointer transition-all',\n                        selectedWidget === widget.id && 'border-primary-500 ring-2 ring-primary-200',\n                        snapshot.isDragging && 'z-50 rotate-3 scale-105',\n                        !previewMode && 'hover:border-primary-300'\n                      )}\n                      style={{\n                        left: widget.position.x * currentLayout.settings.gridSize,\n                        top: widget.position.y * currentLayout.settings.gridSize,\n                        width: widget.position.w * currentLayout.settings.gridSize,\n                        height: widget.position.h * currentLayout.settings.gridSize,\n                        backgroundColor: widget.config.backgroundColor,\n                        borderColor: widget.config.borderColor,\n                        borderWidth: widget.config.borderWidth,\n                        borderRadius: widget.config.borderRadius,\n                        padding: widget.config.padding,\n                        ...provided.draggableProps.style,\n                      }}\n                      onClick={() => !previewMode && setSelectedWidget(widget.id)}\n                    >\n                      {!previewMode && (\n                        <div\n                          {...provided.dragHandleProps}\n                          className=\"absolute -top-6 left-0 right-0 h-6 bg-primary-600 text-white text-xs px-2 rounded-t flex items-center justify-between opacity-0 hover:opacity-100 transition-opacity\"\n                        >\n                          <span className=\"truncate\">{widget.title}</span>\n                          <div className=\"flex items-center gap-1\">\n                            <Move className=\"h-3 w-3\" />\n                            <button\n                              onClick={(e) => {\n                                e.stopPropagation();\n                                deleteWidget(widget.id);\n                              }}\n                              className=\"hover:bg-red-500 p-0.5 rounded\"\n                            >\n                              <X className=\"h-3 w-3\" />\n                            </button>\n                          </div>\n                        </div>\n                      )}\n                      \n                      <WidgetRenderer widget={widget} previewMode={previewMode} />\n                    </div>\n                  )}\n                </Draggable>\n              ))}\n              {provided.placeholder}\n              \n              {currentLayout.widgets.length === 0 && (\n                <div className=\"absolute inset-0 flex items-center justify-center\">\n                  <div className=\"text-center text-neutral-500\">\n                    <Grid className=\"h-16 w-16 mx-auto mb-4 opacity-50\" />\n                    <p className=\"text-lg font-medium\">Your dashboard is empty</p>\n                    <p className=\"text-sm\">Drag widgets from the palette to get started</p>\n                  </div>\n                </div>\n              )}\n            </div>\n          )}\n        </Droppable>\n      </CardContent>\n    </Card>\n  );\n\n  return (\n    <div className={cn('h-screen bg-surface-background', className)}>\n      <DragDropContext\n        onDragStart={handleDragStart}\n        onDragUpdate={handleDragUpdate}\n        onDragEnd={handleDragEnd}\n      >\n        {/* Header */}\n        <div className=\"border-b border-surface-border bg-surface-card px-4 py-3\">\n          <div className=\"flex items-center justify-between\">\n            <div className=\"flex items-center gap-4\">\n              <h1 className=\"text-xl font-semibold text-surface-foreground\">\n                Dashboard Builder\n              </h1>\n              <div className=\"flex items-center gap-2\">\n                <Button\n                  variant=\"outline\"\n                  size=\"sm\"\n                  onClick={undo}\n                  disabled={historyIndex === 0}\n                >\n                  <Undo className=\"h-4 w-4\" />\n                </Button>\n                <Button\n                  variant=\"outline\"\n                  size=\"sm\"\n                  onClick={redo}\n                  disabled={historyIndex === history.length - 1}\n                >\n                  <Redo className=\"h-4 w-4\" />\n                </Button>\n              </div>\n            </div>\n            \n            <div className=\"flex items-center gap-2\">\n              <Button\n                variant=\"outline\"\n                size=\"sm\"\n                onClick={() => setShowWidgetPanel(!showWidgetPanel)}\n              >\n                <Layers className=\"h-4 w-4 mr-2\" />\n                {showWidgetPanel ? 'Hide' : 'Show'} Widgets\n              </Button>\n              <Button\n                variant=\"outline\"\n                size=\"sm\"\n                onClick={() => setShowPropertiesPanel(!showPropertiesPanel)}\n              >\n                <Settings className=\"h-4 w-4 mr-2\" />\n                {showPropertiesPanel ? 'Hide' : 'Show'} Properties\n              </Button>\n              <Button variant=\"outline\" size=\"sm\" onClick={onCancel}>\n                Cancel\n              </Button>\n              <Button onClick={handleSave} disabled={readOnly}>\n                <Save className=\"h-4 w-4 mr-2\" />\n                Save\n              </Button>\n            </div>\n          </div>\n        </div>\n        \n        {/* Main content */}\n        <div className=\"flex h-[calc(100vh-70px)]\">\n          {/* Widget palette */}\n          {showWidgetPanel && (\n            <div className=\"w-64 border-r border-surface-border bg-surface-card p-4\">\n              <WidgetPalette />\n            </div>\n          )}\n          \n          {/* Dashboard canvas */}\n          <div className=\"flex-1 p-4\">\n            <DashboardCanvas />\n          </div>\n          \n          {/* Properties panel */}\n          {showPropertiesPanel && (\n            <div className=\"w-64 border-l border-surface-border bg-surface-card p-4\">\n              <PropertiesPanel />\n            </div>\n          )}\n        </div>\n      </DragDropContext>\n    </div>\n  );\n}\n\n// Widget renderer component\ninterface WidgetRendererProps {\n  widget: WidgetConfig;\n  previewMode: boolean;\n}\n\nfunction WidgetRenderer({ widget, previewMode }: WidgetRendererProps) {\n  const renderWidget = () => {\n    switch (widget.type) {\n      case 'kpi':\n        return (\n          <div className=\"h-full flex flex-col items-center justify-center\">\n            <div className=\"text-2xl font-bold\" style={{ color: widget.config.textColor }}>\n              {widget.config.value}\n            </div>\n            <div className=\"text-sm text-neutral-600 mt-1\">\n              {widget.title}\n            </div>\n          </div>\n        );\n      \n      case 'chart':\n        return (\n          <div className=\"h-full flex items-center justify-center\">\n            <div className=\"text-center text-neutral-500\">\n              <BarChart3 className=\"h-8 w-8 mx-auto mb-2\" />\n              <p className=\"text-sm\">{widget.config.chartType} Chart</p>\n            </div>\n          </div>\n        );\n      \n      case 'table':\n        return (\n          <div className=\"h-full flex items-center justify-center\">\n            <div className=\"text-center text-neutral-500\">\n              <Grid className=\"h-8 w-8 mx-auto mb-2\" />\n              <p className=\"text-sm\">Data Table</p>\n            </div>\n          </div>\n        );\n      \n      case 'map':\n        return (\n          <div className=\"h-full flex items-center justify-center\">\n            <div className=\"text-center text-neutral-500\">\n              <MapPin className=\"h-8 w-8 mx-auto mb-2\" />\n              <p className=\"text-sm\">Map View</p>\n            </div>\n          </div>\n        );\n      \n      case 'text':\n        return (\n          <div className=\"h-full p-2\">\n            <div \n              className=\"text-sm\"\n              style={{ \n                color: widget.config.textColor,\n                fontSize: widget.config.fontSize,\n                fontWeight: widget.config.fontWeight \n              }}\n            >\n              {widget.config.customProps?.content || 'Enter your text here...'}\n            </div>\n          </div>\n        );\n      \n      case 'clock':\n        return (\n          <div className=\"h-full flex items-center justify-center\">\n            <div className=\"text-center\">\n              <Clock className=\"h-8 w-8 mx-auto mb-2 text-neutral-500\" />\n              <div className=\"text-lg font-mono\">\n                {new Date().toLocaleTimeString()}\n              </div>\n            </div>\n          </div>\n        );\n      \n      default:\n        const Icon = widgetIcons[widget.type] || Package;\n        return (\n          <div className=\"h-full flex items-center justify-center\">\n            <div className=\"text-center text-neutral-500\">\n              <Icon className=\"h-8 w-8 mx-auto mb-2\" />\n              <p className=\"text-sm\">{widget.title}</p>\n            </div>\n          </div>\n        );\n    }\n  };\n\n  return (\n    <div className=\"h-full w-full overflow-hidden\">\n      {renderWidget()}\n    </div>\n  );\n}\n\n// Dashboard preview component\ninterface DashboardPreviewProps {\n  layout: DashboardLayout;\n  className?: string;\n}\n\nexport function DashboardPreview({ layout, className }: DashboardPreviewProps) {\n  return (\n    <div className={cn('bg-surface-background p-4', className)}>\n      <div \n        className=\"relative rounded-lg border border-surface-border\"\n        style={{\n          backgroundColor: layout.settings.backgroundColor,\n          padding: layout.settings.padding,\n          minHeight: '600px',\n        }}\n      >\n        {layout.widgets.map((widget) => (\n          <div\n            key={widget.id}\n            className=\"absolute rounded-lg\"\n            style={{\n              left: widget.position.x * layout.settings.gridSize,\n              top: widget.position.y * layout.settings.gridSize,\n              width: widget.position.w * layout.settings.gridSize,\n              height: widget.position.h * layout.settings.gridSize,\n              backgroundColor: widget.config.backgroundColor,\n              borderColor: widget.config.borderColor,\n              borderWidth: widget.config.borderWidth,\n              borderRadius: widget.config.borderRadius,\n              padding: widget.config.padding,\n            }}\n          >\n            <WidgetRenderer widget={widget} previewMode={true} />\n          </div>\n        ))}\n        \n        {layout.widgets.length === 0 && (\n          <div className=\"absolute inset-0 flex items-center justify-center\">\n            <div className=\"text-center text-neutral-500\">\n              <Layout className=\"h-16 w-16 mx-auto mb-4 opacity-50\" />\n              <p className=\"text-lg font-medium\">Dashboard is empty</p>\n              <p className=\"text-sm\">No widgets configured</p>\n            </div>\n          </div>\n        )}\n      </div>\n    </div>\n  );\n}
+import {
+  DragDropContext,
+  Draggable,
+  Droppable,
+  DropResult,
+  DragStart,
+  DragUpdate,
+} from 'react-beautiful-dnd';
+import {
+  BarChart3,
+  PieChart,
+  TrendingUp,
+  Activity,
+  Package,
+  Truck,
+  Users,
+  AlertTriangle,
+  CheckCircle,
+  Clock,
+  MapPin,
+  Shield,
+  Bell,
+  FileText,
+  Calendar,
+  Target,
+  Zap,
+  Eye,
+  EyeOff,
+  Settings,
+  Plus,
+  Minus,
+  Copy,
+  Trash2,
+  Move,
+  Grid,
+  Layout,
+  Maximize2,
+  Minimize2,
+  MoreHorizontal,
+  Save,
+  Undo,
+  Redo,
+  Download,
+  Upload,
+  Share2,
+  Lock,
+  Unlock,
+  Palette,
+  Type,
+  Layers,
+  Filter,
+  Search,
+  RefreshCw,
+  ExternalLink,
+  Info,
+  HelpCircle,
+  ChevronDown,
+  ChevronUp,
+  ChevronLeft,
+  ChevronRight,
+  X,
+} from 'lucide-react';
+
+// Widget types and interfaces
+export type WidgetType = 
+  | 'kpi'
+  | 'chart'
+  | 'table'
+  | 'map'
+  | 'calendar'
+  | 'notifications'
+  | 'activity'
+  | 'weather'
+  | 'clock'
+  | 'iframe'
+  | 'text'
+  | 'image'
+  | 'separator';
+
+export type ChartType = 
+  | 'line'
+  | 'bar'
+  | 'pie'
+  | 'doughnut'
+  | 'area'
+  | 'scatter'
+  | 'radar'
+  | 'funnel';
+
+export interface WidgetPosition {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
+
+export interface WidgetConfig {
+  chartType?: ChartType;
+  dataSource?: string;
+  metrics?: string[];
+  timeRange?: string;
+  refreshInterval?: number;
+  filters?: Record<string, any>;
+  customProps?: Record<string, any>;
+  backgroundColor?: string;
+  textColor?: string;
+  borderColor?: string;
+  borderWidth?: number;
+  borderRadius?: number;
+  padding?: number;
+  fontSize?: number;
+  fontWeight?: string;
+  value?: number;
+  unit?: string;
+  trend?: 'up' | 'down' | 'stable';
+  format?: 'number' | 'currency' | 'percentage';
+}
+
+export interface Widget {
+  id: string;
+  type: WidgetType;
+  title: string;
+  position: WidgetPosition;
+  config: WidgetConfig;
+}
+
+export interface DashboardLayout {
+  id: string;
+  name: string;
+  description?: string;
+  widgets: Widget[];
+  settings: {
+    gridSize: number;
+    backgroundColor: string;
+    padding: number;
+    autoSave: boolean;
+  };
+  metadata: {
+    createdAt: string;
+    updatedAt: string;
+    version: string;
+    tags: string[];
+  };
+}
+
+// Widget templates
+const widgetTemplates: Record<WidgetType, Partial<WidgetConfig>> = {
+  kpi: {
+    value: 0,
+    unit: '',
+    trend: 'stable',
+    format: 'number',
+    backgroundColor: '#f8fafc',
+    textColor: '#1f2937',
+    fontSize: 24,
+    fontWeight: 'bold',
+  },
+  chart: {
+    chartType: 'line',
+    dataSource: 'shipments',
+    metrics: ['count'],
+    refreshInterval: 30000,
+    backgroundColor: '#ffffff',
+    borderColor: '#e5e7eb',
+    borderWidth: 1,
+    borderRadius: 8,
+    padding: 16,
+  },
+  table: {
+    dataSource: 'shipments',
+    backgroundColor: '#ffffff',
+    borderColor: '#e5e7eb',
+    borderWidth: 1,
+    borderRadius: 8,
+    padding: 16,
+  },
+  map: {
+    backgroundColor: '#ffffff',
+    borderColor: '#e5e7eb',
+    borderWidth: 1,
+    borderRadius: 8,
+    padding: 16,
+  },
+  calendar: {
+    backgroundColor: '#ffffff',
+    borderColor: '#e5e7eb',
+    borderWidth: 1,
+    borderRadius: 8,
+    padding: 16,
+  },
+  notifications: {
+    backgroundColor: '#ffffff',
+    borderColor: '#e5e7eb',
+    borderWidth: 1,
+    borderRadius: 8,
+    padding: 16,
+  },
+  activity: {
+    backgroundColor: '#ffffff',
+    borderColor: '#e5e7eb',
+    borderWidth: 1,
+    borderRadius: 8,
+    padding: 16,
+  },
+  weather: {
+    backgroundColor: '#ffffff',
+    borderColor: '#e5e7eb',
+    borderWidth: 1,
+    borderRadius: 8,
+    padding: 16,
+  },
+  clock: {
+    backgroundColor: '#ffffff',
+    textColor: '#1f2937',
+    borderColor: '#e5e7eb',
+    borderWidth: 1,
+    borderRadius: 8,
+    padding: 16,
+    fontSize: 18,
+    fontWeight: 'normal',
+  },
+  iframe: {
+    backgroundColor: '#ffffff',
+    borderColor: '#e5e7eb',
+    borderWidth: 1,
+    borderRadius: 8,
+    padding: 0,
+  },
+  text: {
+    backgroundColor: '#ffffff',
+    textColor: '#1f2937',
+    borderColor: '#e5e7eb',
+    borderWidth: 1,
+    borderRadius: 8,
+    padding: 16,
+    fontSize: 14,
+    fontWeight: 'normal',
+  },
+  image: {
+    backgroundColor: '#ffffff',
+    borderColor: '#e5e7eb',
+    borderWidth: 1,
+    borderRadius: 8,
+    padding: 8,
+  },
+  separator: {
+    backgroundColor: '#e5e7eb',
+    borderColor: 'transparent',
+    borderWidth: 0,
+    borderRadius: 0,
+    padding: 0,
+  },
+};
+
+// Widget icons mapping
+const widgetIcons: Record<WidgetType, any> = {
+  kpi: TrendingUp,
+  chart: BarChart3,
+  table: Grid,
+  map: MapPin,
+  calendar: Calendar,
+  notifications: Bell,
+  activity: Activity,
+  weather: Zap,
+  clock: Clock,
+  iframe: ExternalLink,
+  text: Type,
+  image: Grid,
+  separator: Minus,
+};
+
+// Default dashboard layouts
+const defaultLayouts: DashboardLayout[] = [
+  {
+    id: 'overview',
+    name: 'Overview Dashboard',
+    description: 'General overview of shipments and key metrics',
+    widgets: [
+      {
+        id: 'kpi-shipments',
+        type: 'kpi',
+        title: 'Total Shipments',
+        position: { x: 0, y: 0, w: 3, h: 2 },
+        config: { ...widgetTemplates.kpi, value: 2847, unit: '', trend: 'up' },
+      },
+      {
+        id: 'kpi-delivery',
+        type: 'kpi',
+        title: 'On-Time Delivery',
+        position: { x: 3, y: 0, w: 3, h: 2 },
+        config: { ...widgetTemplates.kpi, value: 94.2, unit: '%', trend: 'up', format: 'percentage' },
+      },
+      {
+        id: 'chart-trends',
+        type: 'chart',
+        title: 'Shipment Trends',
+        position: { x: 0, y: 2, w: 6, h: 4 },
+        config: { ...widgetTemplates.chart, chartType: 'line' },
+      },
+    ],
+    settings: {
+      gridSize: 80,
+      backgroundColor: '#f8fafc',
+      padding: 16,
+      autoSave: true,
+    },
+    metadata: {
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      version: '1.0.0',
+      tags: ['overview', 'shipments'],
+    },
+  },
+];
+
+// Dashboard builder component
+interface DashboardBuilderProps {
+  layout?: DashboardLayout;
+  onSave?: (layout: DashboardLayout) => void;
+  onPreview?: (layout: DashboardLayout) => void;
+  className?: string;
+}
+
+export function DashboardBuilder({
+  layout: initialLayout,
+  onSave,
+  onPreview,
+  className,
+}: DashboardBuilderProps) {
+  const { isDark } = useTheme();
+  const { preferences } = useAccessibility();
+  const [layout, setLayout] = useState<DashboardLayout>(
+    initialLayout || defaultLayouts[0]
+  );
+  const [selectedWidget, setSelectedWidget] = useState<Widget | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const [previewMode, setPreviewMode] = useState(false);
+
+  // Widget management
+  const addWidget = useCallback((type: WidgetType) => {
+    const newWidget: Widget = {
+      id: `widget-${Date.now()}`,
+      type,
+      title: `New ${type} Widget`,
+      position: { x: 0, y: 0, w: 4, h: 3 },
+      config: { ...widgetTemplates[type] },
+    };
+
+    setLayout(prev => ({
+      ...prev,
+      widgets: [...prev.widgets, newWidget],
+      metadata: {
+        ...prev.metadata,
+        updatedAt: new Date().toISOString(),
+      },
+    }));
+
+    toast.success('Widget added successfully');
+  }, []);
+
+  const updateWidget = useCallback((widgetId: string, updates: Partial<Widget>) => {
+    setLayout(prev => ({
+      ...prev,
+      widgets: prev.widgets.map(w => 
+        w.id === widgetId ? { ...w, ...updates } : w
+      ),
+      metadata: {
+        ...prev.metadata,
+        updatedAt: new Date().toISOString(),
+      },
+    }));
+  }, []);
+
+  const removeWidget = useCallback((widgetId: string) => {
+    setLayout(prev => ({
+      ...prev,
+      widgets: prev.widgets.filter(w => w.id !== widgetId),
+      metadata: {
+        ...prev.metadata,
+        updatedAt: new Date().toISOString(),
+      },
+    }));
+
+    if (selectedWidget?.id === widgetId) {
+      setSelectedWidget(null);
+    }
+
+    toast.success('Widget removed successfully');
+  }, [selectedWidget]);
+
+  const duplicateWidget = useCallback((widgetId: string) => {
+    const widget = layout.widgets.find(w => w.id === widgetId);
+    if (!widget) return;
+
+    const newWidget: Widget = {
+      ...widget,
+      id: `widget-${Date.now()}`,
+      title: `Copy of ${widget.title}`,
+      position: {
+        ...widget.position,
+        x: widget.position.x + 1,
+        y: widget.position.y + 1,
+      },
+    };
+
+    setLayout(prev => ({
+      ...prev,
+      widgets: [...prev.widgets, newWidget],
+      metadata: {
+        ...prev.metadata,
+        updatedAt: new Date().toISOString(),
+      },
+    }));
+
+    toast.success('Widget duplicated successfully');
+  }, [layout.widgets]);
+
+  // Handle save
+  const handleSave = useCallback(() => {
+    if (onSave) {
+      onSave(layout);
+      toast.success('Dashboard saved successfully');
+    }
+  }, [layout, onSave]);
+
+  // Handle preview
+  const handlePreview = useCallback(() => {
+    setPreviewMode(!previewMode);
+    if (onPreview && !previewMode) {
+      onPreview(layout);
+    }
+  }, [layout, onPreview, previewMode]);
+
+  return (
+    <div className={cn('h-full flex flex-col', className)}>
+      {/* Header */}
+      <div className="flex items-center justify-between p-4 border-b border-surface-border">
+        <div>
+          <h2 className="text-lg font-semibold">{layout.name}</h2>
+          <p className="text-sm text-neutral-600">{layout.description}</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={handlePreview}>
+            {previewMode ? <Eye className="h-4 w-4 mr-2" /> : <EyeOff className="h-4 w-4 mr-2" />}
+            {previewMode ? 'Edit' : 'Preview'}
+          </Button>
+          <Button variant="outline" size="sm" onClick={handleSave}>
+            <Save className="h-4 w-4 mr-2" />
+            Save
+          </Button>
+        </div>
+      </div>
+
+      <div className="flex-1 flex overflow-hidden">
+        {/* Widget Palette */}
+        {!previewMode && (
+          <div className="w-64 border-r border-surface-border p-4">
+            <h3 className="text-sm font-medium mb-4">Widget Palette</h3>
+            <ScrollArea className="h-full">
+              <div className="space-y-2">
+                {Object.entries(widgetIcons).map(([type, Icon]) => (
+                  <Button
+                    key={type}
+                    variant="outline"
+                    size="sm"
+                    className="w-full justify-start"
+                    onClick={() => addWidget(type as WidgetType)}
+                  >
+                    <Icon className="h-4 w-4 mr-2" />
+                    {type.charAt(0).toUpperCase() + type.slice(1)}
+                  </Button>
+                ))}
+              </div>
+            </ScrollArea>
+          </div>
+        )}
+
+        {/* Canvas */}
+        <div className="flex-1 p-4">
+          {previewMode ? (
+            <DashboardPreview layout={layout} />
+          ) : (
+            <div className="h-full border border-surface-border rounded-lg bg-surface-background">
+              {/* Canvas content would go here */}
+              <div className="h-full flex items-center justify-center text-neutral-500">
+                <div className="text-center">
+                  <Layout className="h-16 w-16 mx-auto mb-4 opacity-50" />
+                  <p className="text-lg font-medium">Dashboard Canvas</p>
+                  <p className="text-sm">Add widgets from the palette to get started</p>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Properties Panel */}
+        {!previewMode && selectedWidget && (
+          <div className="w-80 border-l border-surface-border p-4">
+            <h3 className="text-sm font-medium mb-4">Widget Properties</h3>
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="widget-title">Title</Label>
+                <Input
+                  id="widget-title"
+                  value={selectedWidget.title}
+                  onChange={(e) =>
+                    updateWidget(selectedWidget.id, { title: e.target.value })
+                  }
+                />
+              </div>
+              {/* Additional property controls would go here */}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// Widget renderer component
+interface WidgetRendererProps {
+  widget: Widget;
+  previewMode?: boolean;
+  className?: string;
+}
+
+export function WidgetRenderer({ widget, previewMode = false, className }: WidgetRendererProps) {
+  const renderWidget = () => {
+    switch (widget.type) {
+      case 'kpi':
+        return (
+          <div className="h-full flex flex-col justify-center p-4">
+            <div className="text-2xl font-bold" style={{ color: widget.config.textColor }}>
+              {widget.config.value}
+            </div>
+            <div className="text-sm text-neutral-600 mt-1">
+              {widget.title}
+            </div>
+          </div>
+        );
+      
+      case 'chart':
+        return (
+          <div className="h-full flex items-center justify-center">
+            <div className="text-center text-neutral-500">
+              <BarChart3 className="h-8 w-8 mx-auto mb-2" />
+              <p className="text-sm">{widget.config.chartType} Chart</p>
+            </div>
+          </div>
+        );
+      
+      case 'table':
+        return (
+          <div className="h-full flex items-center justify-center">
+            <div className="text-center text-neutral-500">
+              <Grid className="h-8 w-8 mx-auto mb-2" />
+              <p className="text-sm">Data Table</p>
+            </div>
+          </div>
+        );
+      
+      case 'map':
+        return (
+          <div className="h-full flex items-center justify-center">
+            <div className="text-center text-neutral-500">
+              <MapPin className="h-8 w-8 mx-auto mb-2" />
+              <p className="text-sm">Map View</p>
+            </div>
+          </div>
+        );
+      
+      case 'text':
+        return (
+          <div className="h-full p-2">
+            <div 
+              className="text-sm"
+              style={{ 
+                color: widget.config.textColor,
+                fontSize: widget.config.fontSize,
+                fontWeight: widget.config.fontWeight 
+              }}
+            >
+              {widget.config.customProps?.content || 'Enter your text here...'}
+            </div>
+          </div>
+        );
+      
+      case 'clock':
+        return (
+          <div className="h-full flex items-center justify-center">
+            <div className="text-center">
+              <Clock className="h-8 w-8 mx-auto mb-2 text-neutral-500" />
+              <div className="text-lg font-mono">
+                {new Date().toLocaleTimeString()}
+              </div>
+            </div>
+          </div>
+        );
+      
+      default:
+        const Icon = widgetIcons[widget.type] || Package;
+        return (
+          <div className="h-full flex items-center justify-center">
+            <div className="text-center text-neutral-500">
+              <Icon className="h-8 w-8 mx-auto mb-2" />
+              <p className="text-sm">{widget.title}</p>
+            </div>
+          </div>
+        );
+    }
+  };
+
+  return (
+    <div className="h-full w-full overflow-hidden">
+      {renderWidget()}
+    </div>
+  );
+}
+
+// Dashboard preview component
+interface DashboardPreviewProps {
+  layout: DashboardLayout;
+  className?: string;
+}
+
+export function DashboardPreview({ layout, className }: DashboardPreviewProps) {
+  return (
+    <div className={cn('bg-surface-background p-4', className)}>
+      <div 
+        className="relative rounded-lg border border-surface-border"
+        style={{
+          backgroundColor: layout.settings.backgroundColor,
+          padding: layout.settings.padding,
+          minHeight: '600px',
+        }}
+      >
+        {layout.widgets.map((widget) => (
+          <div
+            key={widget.id}
+            className="absolute rounded-lg"
+            style={{
+              left: widget.position.x * layout.settings.gridSize,
+              top: widget.position.y * layout.settings.gridSize,
+              width: widget.position.w * layout.settings.gridSize,
+              height: widget.position.h * layout.settings.gridSize,
+              backgroundColor: widget.config.backgroundColor,
+              borderColor: widget.config.borderColor,
+              borderWidth: widget.config.borderWidth,
+              borderRadius: widget.config.borderRadius,
+              padding: widget.config.padding,
+            }}
+          >
+            <WidgetRenderer widget={widget} previewMode={true} />
+          </div>
+        ))}
+        
+        {layout.widgets.length === 0 && (
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="text-center text-neutral-500">
+              <Layout className="h-16 w-16 mx-auto mb-4 opacity-50" />
+              <p className="text-lg font-medium">Dashboard is empty</p>
+              <p className="text-sm">No widgets configured</p>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
