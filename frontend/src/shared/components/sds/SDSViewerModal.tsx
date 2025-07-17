@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import dynamic from "next/dynamic";
 import {
   Dialog,
   DialogContent,
@@ -18,9 +19,19 @@ import {
   Globe,
   Calendar,
   Shield,
+  Loader2,
 } from "lucide-react";
 import { type SafetyDataSheet } from "@/shared/hooks/useSDS";
-import SDSDocumentPreview from "./SDSDocumentPreview";
+
+// Dynamic import to prevent SSR issues with react-pdf
+const SDSDocumentPreview = dynamic(() => import("./SDSDocumentPreview"), {
+  ssr: false,
+  loading: () => (
+    <div className="flex items-center justify-center h-64">
+      <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+    </div>
+  ),
+});
 
 interface SDSViewerModalProps {
   sds: SafetyDataSheet | null;
