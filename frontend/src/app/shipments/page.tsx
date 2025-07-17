@@ -33,8 +33,12 @@ import {
   History,
   TrendingUp,
   X,
+  Shield,
+  Weight,
+  Route,
 } from "lucide-react";
-import { AuthGuard } from "@/shared/components/common/auth-guard";
+import { DashboardLayout } from "@/shared/components/layout/dashboard-layout";
+import { HazardSymbol } from "@/shared/components/ui/hazard-symbol";
 import Link from "next/link";
 import {
   semanticSearchService,
@@ -367,49 +371,74 @@ export default function ShipmentsPage() {
         }));
 
   return (
-    <AuthGuard>
-      <div className="p-6 space-y-6">
+    <DashboardLayout>
+      <div className="space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">Shipments</h1>
-            <p className="text-gray-600">
-              Manage and track all your dangerous goods shipments
-            </p>
-          </div>
-          <div className="flex gap-3">
-            <Link href="/shipments/manifest-upload">
-              <Button variant="outline" className="flex items-center gap-2">
-                <Package className="h-4 w-4" />
-                Upload Manifest
-              </Button>
-            </Link>
-            <Link href="/shipments/create">
-              <Button className="flex items-center gap-2 bg-[#153F9F] hover:bg-[#153F9F]/90">
-                <Plus className="h-4 w-4" />
-                Create Shipment
-              </Button>
-            </Link>
+        <div className="bg-gradient-to-r from-blue-600 to-blue-700 rounded-xl p-6 text-white shadow-lg">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="p-3 bg-white/20 backdrop-blur-sm rounded-lg">
+                <Package className="h-8 w-8 text-white" />
+              </div>
+              <div>
+                <h1 className="text-3xl font-bold">Shipments</h1>
+                <p className="text-blue-100 mt-1">
+                  Manage and track all your dangerous goods shipments
+                </p>
+              </div>
+            </div>
+            <div className="flex gap-3">
+              <Link href="/shipments/manifest-upload">
+                <Button 
+                  variant="outline" 
+                  className="flex items-center gap-2 bg-white/10 border-white/20 text-white hover:bg-white/20 backdrop-blur-sm"
+                >
+                  <Package className="h-4 w-4" />
+                  Upload Manifest
+                </Button>
+              </Link>
+              <Link href="/shipments/create">
+                <Button className="flex items-center gap-2 bg-white text-blue-600 hover:bg-blue-50 shadow-md">
+                  <Plus className="h-4 w-4" />
+                  Create Shipment
+                </Button>
+              </Link>
+            </div>
           </div>
         </div>
 
         {/* Enhanced Search */}
-        <Card>
-          <CardHeader>
+        <Card className="shadow-md border-0">
+          <CardHeader className="bg-gradient-to-r from-gray-50 to-gray-100 border-b">
             <CardTitle className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-3">
                 {isSemanticSearch ? (
-                  <Brain className="h-5 w-5 text-blue-600" />
+                  <div className="p-2 bg-blue-100 rounded-lg">
+                    <Brain className="h-5 w-5 text-blue-600" />
+                  </div>
                 ) : (
-                  <Filter className="h-5 w-5" />
+                  <div className="p-2 bg-gray-100 rounded-lg">
+                    <Filter className="h-5 w-5 text-gray-600" />
+                  </div>
                 )}
-                {isSemanticSearch ? "AI-Powered Search" : "Search & Filter"}
+                <div>
+                  <h3 className="font-semibold text-gray-900">
+                    {isSemanticSearch ? "AI-Powered Search" : "Search & Filter"}
+                  </h3>
+                  <p className="text-sm text-gray-600">
+                    {isSemanticSearch ? "Find shipments using natural language" : "Filter shipments by criteria"}
+                  </p>
+                </div>
               </div>
               <Button
                 variant="outline"
                 size="sm"
                 onClick={toggleSearchMode}
-                className={`flex items-center gap-2 ${isSemanticSearch ? "bg-blue-50 border-blue-200" : ""}`}
+                className={`flex items-center gap-2 ${
+                  isSemanticSearch 
+                    ? "bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100" 
+                    : "hover:bg-gray-50"
+                }`}
               >
                 {isSemanticSearch ? (
                   <>
@@ -622,34 +651,45 @@ export default function ShipmentsPage() {
         </Card>
 
         {/* Results Summary */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <p className="text-sm text-gray-600">
-              {isSemanticSearch && searchResults.length > 0 ? (
-                <>
-                  Showing {searchResults.length} AI search results
-                  {semanticAnalysis && (
-                    <span className="ml-2 text-blue-600">
-                      •{" "}
-                      {semanticAnalysis.intent === "compliance_check"
-                        ? "Compliance focused"
-                        : "General search"}
-                    </span>
+        <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2">
+                <Package className="h-5 w-5 text-gray-500" />
+                <p className="text-sm font-medium text-gray-900">
+                  {isSemanticSearch && searchResults.length > 0 ? (
+                    <>
+                      Showing {searchResults.length} AI search results
+                      {semanticAnalysis && (
+                        <span className="ml-2 text-blue-600 font-normal">
+                          •{" "}
+                          {semanticAnalysis.intent === "compliance_check"
+                            ? "Compliance focused"
+                            : "General search"}
+                        </span>
+                      )}
+                    </>
+                  ) : (
+                    `Showing ${filteredShipments.length} of ${shipments.length} shipments`
                   )}
-                </>
-              ) : (
-                `Showing ${filteredShipments.length} of ${shipments.length} shipments`
+                </p>
+              </div>
+              {isSemanticSearch && searchResults.length > 0 && (
+                <Badge
+                  variant="outline"
+                  className="bg-blue-50 text-blue-700 border-blue-200"
+                >
+                  <TrendingUp className="h-3 w-3 mr-1" />
+                  AI Enhanced
+                </Badge>
               )}
-            </p>
-            {isSemanticSearch && searchResults.length > 0 && (
-              <Badge
-                variant="outline"
-                className="bg-blue-50 text-blue-700 border-blue-200"
-              >
-                <TrendingUp className="h-3 w-3 mr-1" />
-                AI Enhanced
-              </Badge>
-            )}
+            </div>
+            <div className="flex items-center gap-2 text-sm text-gray-600">
+              <span className="flex items-center gap-1">
+                <Shield className="h-4 w-4" />
+                {filteredShipments.filter(s => s.dangerousGoods.length > 0).length} with DG
+              </span>
+            </div>
           </div>
         </div>
 
@@ -664,167 +704,212 @@ export default function ShipmentsPage() {
             return (
               <Card
                 key={result.id}
-                className={`hover:shadow-md transition-shadow ${
+                className={`hover:shadow-lg transition-all duration-200 overflow-hidden ${
                   isSearchResult && isSemanticSearch
-                    ? "border-l-4 border-l-blue-400"
+                    ? "ring-2 ring-blue-400"
                     : ""
                 }`}
               >
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    {/* Left Section - Main Info */}
-                    <div className="flex items-center gap-6">
-                      <div className="p-3 bg-blue-100 rounded-lg">
-                        <Package className="h-6 w-6 text-blue-600" />
+                {/* Hazard Header - Most Prominent */}
+                {(shipmentData as any).dangerousGoods.length > 0 && (
+                  <div className="bg-red-50 border-b-2 border-red-200 px-6 py-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <Shield className="h-5 w-5 text-red-600" />
+                        <h4 className="font-semibold text-red-900">
+                          Dangerous Goods Shipment
+                        </h4>
                       </div>
-
-                      <div className="flex-1">
-                        <div className="flex items-center gap-3 mb-1">
-                          <h3 className="font-semibold text-lg">
-                            {isSearchResult
-                              ? result.title.split(" - ")[0]
-                              : (shipmentData as any).trackingNumber}
-                          </h3>
-                          <Badge
-                            className={`${getStatusColor((shipmentData as any).status)} flex items-center gap-1`}
-                          >
-                            {getStatusIcon((shipmentData as any).status)}
-                            {(shipmentData as any).status.replace("_", " ")}
-                          </Badge>
-                          {isSearchResult && isSemanticSearch && (
-                            <Badge
-                              variant="outline"
-                              className="bg-blue-50 text-blue-600 border-blue-200"
-                            >
-                              {Math.round(result.relevanceScore * 100)}% match
-                            </Badge>
-                          )}
-                        </div>
-                        <p className="text-gray-600 font-medium">
-                          {(shipmentData as any).client}
-                        </p>
-                        <div className="flex items-center gap-4 text-sm text-gray-500 mt-1">
-                          <span className="flex items-center gap-1">
-                            <MapPin className="h-3 w-3" />
-                            {(shipmentData as any).route}
-                          </span>
-                          <span>{(shipmentData as any).weight}</span>
-                          <span>{(shipmentData as any).distance}</span>
-                        </div>
-
-                        {/* Search Highlights */}
-                        {isSearchResult && result.highlights.length > 0 && (
-                          <div className="flex flex-wrap gap-1 mt-2">
-                            {result.highlights.map((highlight, idx) => (
-                              <span
-                                key={idx}
-                                className="bg-yellow-100 text-yellow-800 px-2 py-1 rounded text-xs"
-                              >
-                                {highlight}
-                              </span>
-                            ))}
-                          </div>
+                      <div className="flex items-center gap-3">
+                        {(shipmentData as any).dangerousGoods.map(
+                          (dg: any, index: number) => (
+                            <div key={index} className="flex items-center gap-2 bg-white rounded-lg px-3 py-2 shadow-sm">
+                              <HazardSymbol 
+                                hazardClass={dg.class} 
+                                size="lg"
+                              />
+                              <div className="text-sm">
+                                <p className="font-semibold text-gray-900">
+                                  Class {dg.class}
+                                </p>
+                                <p className="text-gray-600">
+                                  {dg.count} items
+                                </p>
+                              </div>
+                            </div>
+                          ),
                         )}
                       </div>
                     </div>
+                  </div>
+                )}
 
-                    {/* Center Section - Dangerous Goods & Progress */}
-                    <div className="flex items-center gap-6">
-                      {/* Dangerous Goods */}
-                      <div className="text-center">
-                        <p className="text-xs text-gray-500 mb-2">
-                          Dangerous Goods
-                        </p>
-                        <div className="flex gap-1">
-                          {(shipmentData as any).dangerousGoods.length > 0 ? (
-                            (shipmentData as any).dangerousGoods.map(
-                              (dg: any, index: number) => (
-                                <div key={index} className="relative">
-                                  <div
-                                    className={`w-8 h-8 ${getDGClassColor(dg.class)} rounded flex items-center justify-center text-white text-xs font-bold`}
-                                  >
-                                    {dg.class}
-                                  </div>
-                                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center">
-                                    {dg.count}
-                                  </span>
-                                </div>
-                              ),
-                            )
-                          ) : (
-                            <span className="text-gray-400 text-sm">None</span>
+                <CardContent className="p-6">
+                  {/* Main Content Grid */}
+                  <div className="grid grid-cols-12 gap-6">
+                    {/* Left Section - Shipment Info */}
+                    <div className="col-span-5">
+                      <div className="flex items-start gap-4">
+                        <div className="p-3 bg-blue-100 rounded-xl">
+                          <Package className="h-8 w-8 text-blue-600" />
+                        </div>
+                        <div className="flex-1">
+                          <div className="flex items-center gap-3 mb-2">
+                            <h3 className="font-bold text-xl text-gray-900">
+                              {isSearchResult
+                                ? result.title.split(" - ")[0]
+                                : (shipmentData as any).trackingNumber}
+                            </h3>
+                            <Badge
+                              className={`${getStatusColor((shipmentData as any).status)} flex items-center gap-1`}
+                            >
+                              {getStatusIcon((shipmentData as any).status)}
+                              {(shipmentData as any).status.replace(/_/g, " ")}
+                            </Badge>
+                          </div>
+                          
+                          <p className="text-lg font-medium text-gray-700 mb-3">
+                            {(shipmentData as any).client}
+                          </p>
+
+                          {/* Route Info */}
+                          <div className="bg-gray-50 rounded-lg p-3 space-y-2">
+                            <div className="flex items-center gap-2">
+                              <Route className="h-4 w-4 text-gray-500" />
+                              <span className="text-sm font-medium text-gray-700">
+                                {(shipmentData as any).route}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-4 text-sm text-gray-600">
+                              <span className="flex items-center gap-1">
+                                <Weight className="h-3 w-3" />
+                                {(shipmentData as any).weight}
+                              </span>
+                              <span className="flex items-center gap-1">
+                                <MapPin className="h-3 w-3" />
+                                {(shipmentData as any).distance}
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Search Highlights */}
+                          {isSearchResult && result.highlights.length > 0 && (
+                            <div className="flex flex-wrap gap-1 mt-3">
+                              {result.highlights.map((highlight, idx) => (
+                                <span
+                                  key={idx}
+                                  className="bg-yellow-100 text-yellow-800 px-2 py-1 rounded text-xs font-medium"
+                                >
+                                  {highlight}
+                                </span>
+                              ))}
+                            </div>
                           )}
                         </div>
                       </div>
+                    </div>
 
-                      {/* Progress */}
-                      <div className="text-center min-w-[120px]">
-                        <p className="text-xs text-gray-500 mb-2">Progress</p>
-                        <div className="w-full bg-gray-200 rounded-full h-2 mb-1">
-                          <div
-                            className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                            style={{
-                              width: `${(shipmentData as any).progress}%`,
-                            }}
-                          ></div>
+                    {/* Center Section - Progress & Delivery */}
+                    <div className="col-span-4 border-l border-r border-gray-200 px-6">
+                      <div className="space-y-4">
+                        {/* Progress */}
+                        <div>
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="text-sm font-medium text-gray-700">
+                              Shipment Progress
+                            </span>
+                            <span className="text-sm font-bold text-blue-600">
+                              {(shipmentData as any).progress}%
+                            </span>
+                          </div>
+                          <div className="w-full bg-gray-200 rounded-full h-3">
+                            <div
+                              className="bg-gradient-to-r from-blue-500 to-blue-600 h-3 rounded-full transition-all duration-500 relative"
+                              style={{
+                                width: `${(shipmentData as any).progress}%`,
+                              }}
+                            >
+                              <div className="absolute right-0 top-1/2 -translate-y-1/2 w-2 h-2 bg-white rounded-full shadow-sm"></div>
+                            </div>
+                          </div>
                         </div>
-                        <span className="text-xs text-gray-600">
-                          {(shipmentData as any).progress}%
-                        </span>
+
+                        {/* Delivery Info */}
+                        <div className="bg-blue-50 rounded-lg p-3">
+                          <div className="flex items-center gap-2 mb-1">
+                            <Calendar className="h-4 w-4 text-blue-600" />
+                            <span className="text-sm font-medium text-blue-900">
+                              Estimated Delivery
+                            </span>
+                          </div>
+                          <p className="text-lg font-semibold text-blue-700">
+                            {new Date(
+                              (shipmentData as any).estimatedDelivery,
+                            ).toLocaleDateString('en-US', { 
+                              weekday: 'short', 
+                              month: 'short', 
+                              day: 'numeric' 
+                            })}
+                          </p>
+                        </div>
+
+                        {/* Driver & Vehicle */}
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="bg-gray-50 rounded-lg p-3">
+                            <div className="flex items-center gap-1 mb-1">
+                              <User className="h-3 w-3 text-gray-500" />
+                              <span className="text-xs text-gray-600">Driver</span>
+                            </div>
+                            <p className="text-sm font-medium text-gray-900 truncate">
+                              {(shipmentData as any).driver || "Unassigned"}
+                            </p>
+                          </div>
+                          <div className="bg-gray-50 rounded-lg p-3">
+                            <div className="flex items-center gap-1 mb-1">
+                              <Truck className="h-3 w-3 text-gray-500" />
+                              <span className="text-xs text-gray-600">Vehicle</span>
+                            </div>
+                            <p className="text-sm font-medium text-gray-900 truncate">
+                              {(shipmentData as any).vehicle || "TBD"}
+                            </p>
+                          </div>
+                        </div>
                       </div>
                     </div>
 
-                    {/* Right Section - Driver & Actions */}
-                    <div className="flex items-center gap-6">
-                      <div className="text-right">
-                        <div className="text-sm">
-                          <p className="text-gray-500">Driver:</p>
-                          <p className="font-medium">
-                            {(shipmentData as any).driver || "Unassigned"}
-                          </p>
-                        </div>
-                        <div className="text-sm mt-2">
-                          <p className="text-gray-500">Vehicle:</p>
-                          <p className="font-medium">
-                            {(shipmentData as any).vehicle || "TBD"}
-                          </p>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center gap-2">
+                    {/* Right Section - Actions */}
+                    <div className="col-span-3 flex flex-col justify-between">
+                      <div className="space-y-2">
                         <Link href={`/shipments/${shipmentData.id}`}>
                           <Button
-                            variant="outline"
-                            size="sm"
-                            className="flex items-center gap-1"
+                            className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+                            size="default"
                           >
-                            <Eye className="h-4 w-4" />
-                            View
+                            <Eye className="h-4 w-4 mr-2" />
+                            View Details
                           </Button>
                         </Link>
-                        <Button variant="outline" size="sm">
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
+                        <Link href={`/shipments/${shipmentData.id}/validate`}>
+                          <Button
+                            variant="outline"
+                            className="w-full"
+                            size="default"
+                          >
+                            <Shield className="h-4 w-4 mr-2" />
+                            Validate DG
+                          </Button>
+                        </Link>
                       </div>
-                    </div>
-                  </div>
 
-                  {/* Estimated Delivery */}
-                  <div className="mt-4 pt-4 border-t border-gray-100">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2 text-sm text-gray-600">
-                        <Calendar className="h-4 w-4" />
-                        <span>
-                          Estimated Delivery:{" "}
-                          {new Date(
-                            (shipmentData as any).estimatedDelivery,
-                          ).toLocaleDateString()}
-                        </span>
-                      </div>
                       {isSearchResult && isSemanticSearch && (
-                        <div className="text-xs text-blue-600">
-                          Search relevance:{" "}
-                          {Math.round(result.relevanceScore * 100)}%
+                        <div className="mt-4 text-center">
+                          <Badge
+                            variant="outline"
+                            className="bg-blue-50 text-blue-700 border-blue-300"
+                          >
+                            <TrendingUp className="h-3 w-3 mr-1" />
+                            {Math.round(result.relevanceScore * 100)}% match
+                          </Badge>
                         </div>
                       )}
                     </div>
@@ -836,25 +921,35 @@ export default function ShipmentsPage() {
         </div>
 
         {displayResults.length === 0 && (
-          <Card>
-            <CardContent className="text-center py-12">
-              <Package className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">
+          <Card className="border-dashed border-2 border-gray-300 hover:border-gray-400 transition-colors">
+            <CardContent className="text-center py-16">
+              <div className="p-4 bg-gray-50 rounded-full w-fit mx-auto mb-4">
+                <Package className="h-12 w-12 text-gray-400" />
+              </div>
+              <h3 className="text-xl font-semibold text-gray-900 mb-2">
                 No shipments found
               </h3>
-              <p className="text-gray-600 mb-4">
-                Try adjusting your search criteria or create a new shipment.
+              <p className="text-gray-600 mb-6 max-w-md mx-auto">
+                Try adjusting your search criteria or create a new shipment to get started.
               </p>
-              <Link href="/shipments/create">
-                <Button className="bg-[#153F9F] hover:bg-[#153F9F]/90">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Create First Shipment
-                </Button>
-              </Link>
+              <div className="flex gap-3 justify-center">
+                <Link href="/shipments/create">
+                  <Button className="bg-blue-600 hover:bg-blue-700 text-white">
+                    <Plus className="h-4 w-4 mr-2" />
+                    Create Shipment
+                  </Button>
+                </Link>
+                <Link href="/shipments/manifest-upload">
+                  <Button variant="outline">
+                    <Package className="h-4 w-4 mr-2" />
+                    Upload Manifest
+                  </Button>
+                </Link>
+              </div>
             </CardContent>
           </Card>
         )}
       </div>
-    </AuthGuard>
+    </DashboardLayout>
   );
 }
