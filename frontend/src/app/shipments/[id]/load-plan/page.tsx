@@ -27,6 +27,7 @@ import {
 } from "@/shared/hooks/useLoadPlan";
 import { LoadPlanStats } from "@/shared/components/load-planner/LoadPlanStats";
 import { AuthGuard } from "@/shared/components/common/auth-guard";
+import { DashboardLayout } from "@/shared/components/layout/dashboard-layout";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
@@ -111,19 +112,19 @@ export default function LoadPlanPage({ params }: LoadPlanPageProps) {
 
   if (!shipmentId) {
     return (
-      <AuthGuard>
+      <DashboardLayout>
         <div className="p-6">
           <div className="text-center">
             <Loader2 className="h-8 w-8 mx-auto mb-4 text-gray-400 animate-spin" />
             <p className="text-gray-500">Loading shipment...</p>
           </div>
         </div>
-      </AuthGuard>
+      </DashboardLayout>
     );
   }
 
   return (
-    <AuthGuard>
+    <DashboardLayout>
       <div className="p-6 space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
@@ -302,6 +303,6 @@ export default function LoadPlanPage({ params }: LoadPlanPageProps) {
           </div>
         )}
       </div>
-    </AuthGuard>
+    </DashboardLayout>
   );
 }

@@ -32,12 +32,14 @@ import {
   Plus,
 } from "lucide-react";
 import { AuthGuard } from "@/shared/components/common/auth-guard";
+import { DashboardLayout } from "@/shared/components/layout/dashboard-layout";
 import { ActivityLog } from "@/shared/components/communications/ActivityLog";
 import { HazardInspection } from "@/shared/components/inspections/HazardInspection";
 import { ProofOfDelivery } from "@/shared/components/delivery/ProofOfDelivery";
 import DocumentGenerator from "@/shared/components/documents/DocumentGenerator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/components/ui/tabs";
 import { ShipmentEmergencyPlanViewer } from "@/shared/components/epg/ShipmentEmergencyPlanViewer";
+import { simulatedDataService } from "@/shared/services/simulatedDataService";
 import Link from "next/link";
 
 interface ShipmentDetailPageProps {
@@ -46,66 +48,53 @@ interface ShipmentDetailPageProps {
   }>;
 }
 
-// Mock shipment data for demo
-const createMockShipment = (id: string) => ({
-  id,
-  tracking_number: `SS-${id.toUpperCase()}-2024`,
-  status: "READY_FOR_DISPATCH",
-  customer: {
-    name: "Global Manufacturing Inc.",
-    email: "logistics@globalmanufacturing.com",
-    phone: "+1 (555) 123-4567",
-  },
-  origin_location: "Sydney, NSW, Australia",
-  destination_location: "Melbourne, VIC, Australia",
-  estimated_delivery_date: new Date(
-    Date.now() + 2 * 24 * 60 * 60 * 1000,
-  ).toISOString(),
-  created_at: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
-  assigned_vehicle: {
-    registration_number: "TRK-001",
-    driver_name: "John Smith",
-    vehicle_type: "Heavy Duty Truck",
-  },
-  consignment_items: [
-    {
-      id: "1",
-      description: "Lithium Battery Packs",
-      un_number: "UN3480",
-      dangerous_goods_class: "9",
-      quantity: 5,
-      weight_kg: 125,
-      dimensions: "1.2×0.8×0.4m",
+// Function to convert simulated data to shipment detail format
+const convertToShipmentDetail = (shipmentData: any) => {
+  if (!shipmentData) return null;
+  
+  const [origin, destination] = shipmentData.route.split(" → ");
+  
+  return {
+    id: shipmentData.id,
+    tracking_number: shipmentData.trackingNumber,
+    status: shipmentData.status,
+    customer: {
+      name: shipmentData.client,
+      email: `contact@${shipmentData.client.toLowerCase().replace(/[^a-z0-9]/g, '')}.com.au`,
+      phone: "+61 8 9234 5678",
     },
-    {
-      id: "2",
-      description: "Diesel Fuel Containers",
-      un_number: "UN1202",
-      dangerous_goods_class: "3",
-      quantity: 2,
-      weight_kg: 1600,
-      dimensions: "1.0×1.0×1.0m",
+    origin_location: origin,
+    destination_location: destination,
+    estimated_delivery_date: shipmentData.estimatedDelivery,
+    created_at: shipmentData.createdAt,
+    assigned_vehicle: {
+      registration_number: shipmentData.vehicle || "TBD",
+      driver_name: shipmentData.driver || "TBD",
+      vehicle_type: "Road Train",
     },
-    {
-      id: "3",
-      description: "Compressed Gas Cylinders",
-      un_number: "UN1950",
-      dangerous_goods_class: "2",
-      quantity: 4,
-      weight_kg: 200,
-      dimensions: "0.3×0.3×1.5m",
-    },
-    {
-      id: "4",
-      description: "Medical Equipment",
-      dangerous_goods_class: "GENERAL",
-      quantity: 3,
-      weight_kg: 600,
-      dimensions: "1.5×1.0×0.8m",
-    },
-  ],
-  load_plan: null, // Will be set when generated
-});
+    consignment_items: shipmentData.dangerousGoods.length > 0 
+      ? shipmentData.dangerousGoods.map((dg: any, index: number) => ({
+          id: (index + 1).toString(),
+          description: dg.properShippingName,
+          un_number: dg.unNumber,
+          dangerous_goods_class: dg.class,
+          quantity: dg.count,
+          weight_kg: parseInt(dg.quantity) || 100,
+          dimensions: "1.2×0.8×0.4m",
+        }))
+      : [
+          {
+            id: "1",
+            description: "General Freight",
+            dangerous_goods_class: "GENERAL",
+            quantity: 1,
+            weight_kg: 1000,
+            dimensions: "2.0×1.5×1.0m",
+          },
+        ],
+    load_plan: null,
+  };
+};
 
 const getStatusColor = (status: string) => {
   switch (status) {
@@ -142,24 +131,74 @@ export default function ShipmentDetailPage({
   const [shipmentId, setShipmentId] = useState<string | null>(null);
   const [shipment, setShipment] = useState<any>(null);
   const [activeTab, setActiveTab] = useState("info");
+  const [notFound, setNotFound] = useState(false);
 
   useEffect(() => {
     params.then((p) => {
       setShipmentId(p.id);
-      setShipment(createMockShipment(p.id));
+      
+      // Find the shipment in the simulated data
+      const allShipments = simulatedDataService.getShipments();
+      const foundShipment = allShipments.find(s => s.id === p.id);
+      
+      if (foundShipment) {
+        setShipment(convertToShipmentDetail(foundShipment));
+        setNotFound(false);
+      } else {
+        setShipment(null);
+        setNotFound(true);
+      }
     });
   }, [params]);
 
-  if (!shipmentId || !shipment) {
+  if (!shipmentId) {
     return (
-      <AuthGuard>
+      <DashboardLayout>
         <div className="p-6">
           <div className="text-center">
             <Package className="h-8 w-8 mx-auto mb-4 text-gray-400 animate-pulse" />
             <p className="text-gray-500">Loading shipment details...</p>
           </div>
         </div>
-      </AuthGuard>
+      </DashboardLayout>
+    );
+  }
+
+  if (notFound) {
+    return (
+      <DashboardLayout>
+        <div className="p-6">
+          <div className="text-center">
+            <Package className="h-12 w-12 mx-auto mb-4 text-gray-400" />
+            <h1 className="text-2xl font-bold text-gray-900 mb-2">Shipment Not Found</h1>
+            <p className="text-gray-600 mb-4">
+              The shipment with ID "{shipmentId}" could not be found.
+            </p>
+            <p className="text-sm text-gray-500 mb-6">
+              Available shipment IDs: OH-1-2024 through OH-150-2024
+            </p>
+            <Link href="/shipments">
+              <Button className="bg-[#153F9F] hover:bg-[#153F9F]/90">
+                <ChevronLeft className="h-4 w-4 mr-2" />
+                Back to Shipments
+              </Button>
+            </Link>
+          </div>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  if (!shipment) {
+    return (
+      <DashboardLayout>
+        <div className="p-6">
+          <div className="text-center">
+            <Package className="h-8 w-8 mx-auto mb-4 text-gray-400 animate-pulse" />
+            <p className="text-gray-500">Loading shipment details...</p>
+          </div>
+        </div>
+      </DashboardLayout>
     );
   }
 
@@ -173,7 +212,7 @@ export default function ShipmentDetailPage({
   );
 
   return (
-    <AuthGuard>
+    <DashboardLayout>
       <div className="p-6 space-y-6">
         {/* Breadcrumb */}
         <div className="flex items-center gap-2 text-sm text-gray-600">
@@ -627,6 +666,6 @@ export default function ShipmentDetailPage({
           </TabsContent>
         </Tabs>
       </div>
-    </AuthGuard>
+    </DashboardLayout>
   );
 }
