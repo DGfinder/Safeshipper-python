@@ -47,76 +47,7 @@ import {
   type SearchSuggestion,
   type SemanticAnalysis,
 } from "@/services/semanticSearchService";
-
-// Mock shipment data
-const generateMockShipments = () => [
-  {
-    id: "SS-001-2024",
-    trackingNumber: "SS-001-2024",
-    client: "Global Manufacturing Inc.",
-    route: "Sydney → Melbourne",
-    weight: "12,360 KG",
-    distance: "1172 km",
-    status: "IN_TRANSIT",
-    dangerousGoods: [
-      { class: "5.1", count: 12 },
-      { class: "3", count: 8 },
-    ],
-    progress: 65,
-    estimatedDelivery: "2024-01-15",
-    driver: "John Smith",
-    vehicle: "VIC-123-ABC",
-  },
-  {
-    id: "SS-002-2024",
-    trackingNumber: "SS-002-2024",
-    client: "Chemical Solutions Ltd.",
-    route: "Brisbane → Perth",
-    weight: "8,450 KG",
-    distance: "3,290 km",
-    status: "READY_FOR_DISPATCH",
-    dangerousGoods: [
-      { class: "8", count: 15 },
-      { class: "6.1", count: 5 },
-    ],
-    progress: 0,
-    estimatedDelivery: "2024-01-18",
-    driver: "Sarah Johnson",
-    vehicle: "QLD-456-DEF",
-  },
-  {
-    id: "SS-003-2024",
-    trackingNumber: "SS-003-2024",
-    client: "Pharma Corp Australia",
-    route: "Adelaide → Darwin",
-    weight: "5,780 KG",
-    distance: "1,534 km",
-    status: "DELIVERED",
-    dangerousGoods: [{ class: "2.1", count: 20 }],
-    progress: 100,
-    estimatedDelivery: "2024-01-12",
-    driver: "Mike Wilson",
-    vehicle: "SA-789-GHI",
-  },
-  {
-    id: "SS-004-2024",
-    trackingNumber: "SS-004-2024",
-    client: "Industrial Chemicals Inc.",
-    route: "Melbourne → Sydney",
-    weight: "15,200 KG",
-    distance: "878 km",
-    status: "PLANNING",
-    dangerousGoods: [
-      { class: "4.1", count: 25 },
-      { class: "5.1", count: 10 },
-      { class: "8", count: 7 },
-    ],
-    progress: 15,
-    estimatedDelivery: "2024-01-20",
-    driver: null,
-    vehicle: null,
-  },
-];
+import { simulatedDataService } from "@/shared/services/simulatedDataService";
 
 const getStatusColor = (status: string) => {
   switch (status) {
@@ -188,7 +119,7 @@ export default function ShipmentsPage() {
   const [appliedFilters, setAppliedFilters] = useState<string[]>([]);
   const [recentSearches, setRecentSearches] = useState<string[]>([]);
 
-  const shipments = generateMockShipments();
+  const shipments = simulatedDataService.getShipments();
 
   // Traditional filter logic
   const filteredShipments = shipments.filter((shipment) => {
