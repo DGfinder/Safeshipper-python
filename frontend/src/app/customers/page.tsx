@@ -24,9 +24,13 @@ import {
   DollarSign,
   Star,
   Filter,
+  AlertTriangle,
 } from "lucide-react";
 import { useShipments } from "@/shared/hooks/useShipments";
 import { AuthGuard } from "@/shared/components/common/auth-guard";
+import { DashboardLayout } from "@/shared/components/layout/dashboard-layout";
+import { simulatedDataService } from "@/shared/services/simulatedDataService";
+import Link from "next/link";
 
 interface Customer {
   id: string;
@@ -35,20 +39,308 @@ interface Customer {
   phone: string;
   address: string;
   city: string;
+  state: string;
   country: string;
   status: "ACTIVE" | "INACTIVE" | "PENDING";
   tier: "BRONZE" | "SILVER" | "GOLD" | "PLATINUM";
+  category: "MINING" | "INDUSTRIAL" | "AGRICULTURAL" | "MEDICAL" | "RETAIL";
   joinDate: string;
   totalShipments: number;
   totalValue: number;
   lastShipment: string;
   rating: number;
+  dangerousGoods: boolean;
+  primaryRoutes: string[];
+  locationLat: number;
+  locationLng: number;
 }
+
+// Function to generate WA transport customer data
+const generateWACustomers = (): Customer[] => {
+  const companyInfo = simulatedDataService.getCompanyInfo();
+  const locations = simulatedDataService.getLocations();
+  const routes = simulatedDataService.getRoutes();
+  
+  const waCustomers: Customer[] = [
+    // Mining Companies
+    {
+      id: "mining-1",
+      name: "BHP Billiton",
+      email: "logistics@bhp.com.au",
+      phone: "+61 8 9338 4444",
+      address: "Level 18, 125 St Georges Terrace",
+      city: "Perth",
+      state: "WA",
+      country: "Australia",
+      status: "ACTIVE",
+      tier: "PLATINUM",
+      category: "MINING",
+      joinDate: "2018-03-15",
+      totalShipments: 1250,
+      totalValue: 45000000,
+      lastShipment: "2024-01-16",
+      rating: 4.9,
+      dangerousGoods: true,
+      primaryRoutes: ["Perth to Port Hedland", "Perth to Newman"],
+      locationLat: locations.portHedland.lat,
+      locationLng: locations.portHedland.lng,
+    },
+    {
+      id: "mining-2",
+      name: "Rio Tinto",
+      email: "transport@riotinto.com.au",
+      phone: "+61 8 6211 6000",
+      address: "Level 43, 108 St Georges Terrace",
+      city: "Perth",
+      state: "WA",
+      country: "Australia",
+      status: "ACTIVE",
+      tier: "PLATINUM",
+      category: "MINING",
+      joinDate: "2017-11-20",
+      totalShipments: 980,
+      totalValue: 38500000,
+      lastShipment: "2024-01-15",
+      rating: 4.8,
+      dangerousGoods: true,
+      primaryRoutes: ["Perth to Karratha", "Perth to Tom Price"],
+      locationLat: locations.karratha.lat,
+      locationLng: locations.karratha.lng,
+    },
+    {
+      id: "mining-3",
+      name: "Fortescue Metals Group",
+      email: "logistics@fmgl.com.au",
+      phone: "+61 8 6218 8888",
+      address: "Level 2, 87 Adelaide Terrace",
+      city: "Perth",
+      state: "WA",
+      country: "Australia",
+      status: "ACTIVE",
+      tier: "GOLD",
+      category: "MINING",
+      joinDate: "2019-07-10",
+      totalShipments: 750,
+      totalValue: 28000000,
+      lastShipment: "2024-01-14",
+      rating: 4.7,
+      dangerousGoods: true,
+      primaryRoutes: ["Perth to Port Hedland", "Perth to Newman"],
+      locationLat: locations.newman.lat,
+      locationLng: locations.newman.lng,
+    },
+    {
+      id: "mining-4",
+      name: "Newcrest Mining",
+      email: "supply@newcrest.com.au",
+      phone: "+61 8 9270 5200",
+      address: "Level 8, 600 Murray Street",
+      city: "Perth",
+      state: "WA",
+      country: "Australia",
+      status: "ACTIVE",
+      tier: "GOLD",
+      category: "MINING",
+      joinDate: "2020-02-28",
+      totalShipments: 420,
+      totalValue: 15600000,
+      lastShipment: "2024-01-13",
+      rating: 4.6,
+      dangerousGoods: true,
+      primaryRoutes: ["Perth to Kalgoorlie"],
+      locationLat: locations.kalgoorlie.lat,
+      locationLng: locations.kalgoorlie.lng,
+    },
+    // Industrial Companies
+    {
+      id: "industrial-1",
+      name: "Woodside Energy",
+      email: "logistics@woodside.com.au",
+      phone: "+61 8 9348 4000",
+      address: "Mia Yellagonga Tower, 11 Mount Street",
+      city: "Perth",
+      state: "WA",
+      country: "Australia",
+      status: "ACTIVE",
+      tier: "PLATINUM",
+      category: "INDUSTRIAL",
+      joinDate: "2019-05-15",
+      totalShipments: 680,
+      totalValue: 32000000,
+      lastShipment: "2024-01-16",
+      rating: 4.8,
+      dangerousGoods: true,
+      primaryRoutes: ["Perth to Karratha", "Perth to Broome"],
+      locationLat: locations.karratha.lat,
+      locationLng: locations.karratha.lng,
+    },
+    {
+      id: "industrial-2",
+      name: "Chevron Australia",
+      email: "transport@chevron.com.au",
+      phone: "+61 8 9216 4000",
+      address: "QV1 Building, 250 St Georges Terrace",
+      city: "Perth",
+      state: "WA",
+      country: "Australia",
+      status: "ACTIVE",
+      tier: "GOLD",
+      category: "INDUSTRIAL",
+      joinDate: "2020-01-12",
+      totalShipments: 340,
+      totalValue: 18500000,
+      lastShipment: "2024-01-15",
+      rating: 4.5,
+      dangerousGoods: true,
+      primaryRoutes: ["Perth to Broome"],
+      locationLat: locations.broome.lat,
+      locationLng: locations.broome.lng,
+    },
+    // Agricultural Companies
+    {
+      id: "agricultural-1",
+      name: "Elders Limited",
+      email: "logistics@elders.com.au",
+      phone: "+61 8 9213 1200",
+      address: "Level 1, 570 Wellington Street",
+      city: "Perth",
+      state: "WA",
+      country: "Australia",
+      status: "ACTIVE",
+      tier: "SILVER",
+      category: "AGRICULTURAL",
+      joinDate: "2021-03-20",
+      totalShipments: 280,
+      totalValue: 8900000,
+      lastShipment: "2024-01-14",
+      rating: 4.4,
+      dangerousGoods: true,
+      primaryRoutes: ["Perth to Geraldton", "Perth to Albany"],
+      locationLat: locations.geraldton.lat,
+      locationLng: locations.geraldton.lng,
+    },
+    {
+      id: "agricultural-2",
+      name: "Nutrien Ag Solutions",
+      email: "transport@nutrien.com.au",
+      phone: "+61 8 9327 0200",
+      address: "Level 3, 256 Adelaide Terrace",
+      city: "Perth",
+      state: "WA",
+      country: "Australia",
+      status: "ACTIVE",
+      tier: "SILVER",
+      category: "AGRICULTURAL",
+      joinDate: "2021-08-05",
+      totalShipments: 195,
+      totalValue: 6200000,
+      lastShipment: "2024-01-13",
+      rating: 4.3,
+      dangerousGoods: true,
+      primaryRoutes: ["Perth to Albany"],
+      locationLat: locations.albany.lat,
+      locationLng: locations.albany.lng,
+    },
+    // Medical Companies
+    {
+      id: "medical-1",
+      name: "Pathwest",
+      email: "logistics@pathwest.health.wa.gov.au",
+      phone: "+61 8 6396 4000",
+      address: "Locked Bag 2009, Nedlands",
+      city: "Perth",
+      state: "WA",
+      country: "Australia",
+      status: "ACTIVE",
+      tier: "GOLD",
+      category: "MEDICAL",
+      joinDate: "2020-06-15",
+      totalShipments: 520,
+      totalValue: 12300000,
+      lastShipment: "2024-01-16",
+      rating: 4.7,
+      dangerousGoods: true,
+      primaryRoutes: ["Perth to Geraldton", "Perth to Albany"],
+      locationLat: locations.perth.lat,
+      locationLng: locations.perth.lng,
+    },
+    {
+      id: "medical-2",
+      name: "Australian Clinical Labs",
+      email: "supply@clinicallabs.com.au",
+      phone: "+61 8 9212 4444",
+      address: "Level 7, 145 St Georges Terrace",
+      city: "Perth",
+      state: "WA",
+      country: "Australia",
+      status: "ACTIVE",
+      tier: "BRONZE",
+      category: "MEDICAL",
+      joinDate: "2022-01-10",
+      totalShipments: 150,
+      totalValue: 4800000,
+      lastShipment: "2024-01-15",
+      rating: 4.2,
+      dangerousGoods: true,
+      primaryRoutes: ["Perth to Fremantle"],
+      locationLat: locations.fremantle.lat,
+      locationLng: locations.fremantle.lng,
+    },
+    // Retail Companies
+    {
+      id: "retail-1",
+      name: "Bunnings Warehouse",
+      email: "logistics@bunnings.com.au",
+      phone: "+61 8 9327 4444",
+      address: "16-18 Cato Street",
+      city: "Perth",
+      state: "WA",
+      country: "Australia",
+      status: "ACTIVE",
+      tier: "GOLD",
+      category: "RETAIL",
+      joinDate: "2019-11-25",
+      totalShipments: 890,
+      totalValue: 22000000,
+      lastShipment: "2024-01-16",
+      rating: 4.6,
+      dangerousGoods: false,
+      primaryRoutes: ["Perth to Geraldton", "Perth to Albany", "Perth to Kalgoorlie"],
+      locationLat: locations.perth.lat,
+      locationLng: locations.perth.lng,
+    },
+    {
+      id: "retail-2",
+      name: "Supercheap Auto",
+      email: "supply@supercheapauto.com.au",
+      phone: "+61 8 9422 0200",
+      address: "Level 2, 727 Collins Street",
+      city: "Perth",
+      state: "WA",
+      country: "Australia",
+      status: "PENDING",
+      tier: "BRONZE",
+      category: "RETAIL",
+      joinDate: "2024-01-05",
+      totalShipments: 25,
+      totalValue: 780000,
+      lastShipment: "2024-01-14",
+      rating: 4.0,
+      dangerousGoods: false,
+      primaryRoutes: ["Perth to Fremantle"],
+      locationLat: locations.fremantle.lat,
+      locationLng: locations.fremantle.lng,
+    },
+  ];
+  
+  return waCustomers;
+};
 
 export default function CustomersPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [refreshing, setRefreshing] = useState(false);
   const [selectedTier, setSelectedTier] = useState<string>("ALL");
+  const [selectedCategory, setSelectedCategory] = useState<string>("ALL");
   const { data: shipments, isLoading: shipmentsLoading } = useShipments();
 
   const handleRefresh = async () => {
@@ -57,89 +349,8 @@ export default function CustomersPage() {
     setTimeout(() => setRefreshing(false), 1000);
   };
 
-  // Mock customer data - in production this would come from the backend
-  const customers: Customer[] = [
-    {
-      id: "1",
-      name: "Global Manufacturing Corp",
-      email: "logistics@globalmanufacturing.com",
-      phone: "+1-555-0123",
-      address: "123 Industrial Way",
-      city: "Toronto",
-      country: "Canada",
-      status: "ACTIVE",
-      tier: "PLATINUM",
-      joinDate: "2023-01-15",
-      totalShipments: 245,
-      totalValue: 1850000,
-      lastShipment: "2024-01-15",
-      rating: 4.8,
-    },
-    {
-      id: "2",
-      name: "TechFlow Solutions",
-      email: "shipping@techflow.com",
-      phone: "+1-555-0456",
-      address: "789 Tech Park Blvd",
-      city: "Vancouver",
-      country: "Canada",
-      status: "ACTIVE",
-      tier: "GOLD",
-      joinDate: "2023-03-22",
-      totalShipments: 128,
-      totalValue: 920000,
-      lastShipment: "2024-01-14",
-      rating: 4.6,
-    },
-    {
-      id: "3",
-      name: "Northern Logistics Ltd",
-      email: "orders@northernlogistics.ca",
-      phone: "+1-555-0789",
-      address: "456 Commerce Street",
-      city: "Calgary",
-      country: "Canada",
-      status: "ACTIVE",
-      tier: "SILVER",
-      joinDate: "2023-06-10",
-      totalShipments: 87,
-      totalValue: 450000,
-      lastShipment: "2024-01-13",
-      rating: 4.3,
-    },
-    {
-      id: "4",
-      name: "Atlantic Imports Inc",
-      email: "logistics@atlanticimports.com",
-      phone: "+1-555-0321",
-      address: "321 Harbor View",
-      city: "Halifax",
-      country: "Canada",
-      status: "PENDING",
-      tier: "BRONZE",
-      joinDate: "2024-01-10",
-      totalShipments: 12,
-      totalValue: 85000,
-      lastShipment: "2024-01-12",
-      rating: 4.1,
-    },
-    {
-      id: "5",
-      name: "Prairie Resources Co",
-      email: "transport@prairieresources.ca",
-      phone: "+1-555-0654",
-      address: "654 Agricultural Road",
-      city: "Winnipeg",
-      country: "Canada",
-      status: "INACTIVE",
-      tier: "SILVER",
-      joinDate: "2022-11-05",
-      totalShipments: 203,
-      totalValue: 680000,
-      lastShipment: "2023-12-18",
-      rating: 4.0,
-    },
-  ];
+  // Generate WA transport customer data
+  const customers: Customer[] = generateWACustomers();
 
   const filteredCustomers = customers.filter((customer) => {
     const matchesSearch =
@@ -148,7 +359,9 @@ export default function CustomersPage() {
       customer.city.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesTier =
       selectedTier === "ALL" || customer.tier === selectedTier;
-    return matchesSearch && matchesTier;
+    const matchesCategory =
+      selectedCategory === "ALL" || customer.category === selectedCategory;
+    return matchesSearch && matchesTier && matchesCategory;
   });
 
   const customerStats = {
@@ -191,15 +404,32 @@ export default function CustomersPage() {
     }
   };
 
+  const getCategoryColor = (category: string) => {
+    switch (category) {
+      case "MINING":
+        return "bg-amber-100 text-amber-800";
+      case "INDUSTRIAL":
+        return "bg-blue-100 text-blue-800";
+      case "AGRICULTURAL":
+        return "bg-green-100 text-green-800";
+      case "MEDICAL":
+        return "bg-red-100 text-red-800";
+      case "RETAIL":
+        return "bg-purple-100 text-purple-800";
+      default:
+        return "bg-gray-100 text-gray-800";
+    }
+  };
+
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat("en-CA", {
+    return new Intl.NumberFormat("en-AU", {
       style: "currency",
-      currency: "CAD",
+      currency: "AUD",
     }).format(amount);
   };
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("en-CA", {
+    return new Date(dateString).toLocaleDateString("en-AU", {
       year: "numeric",
       month: "short",
       day: "numeric",
@@ -207,7 +437,7 @@ export default function CustomersPage() {
   };
 
   return (
-    <AuthGuard>
+    <DashboardLayout>
       <div className="p-6 space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
@@ -308,19 +538,36 @@ export default function CustomersPage() {
               className="pl-10"
             />
           </div>
-          <div className="flex items-center gap-2">
-            <Filter className="h-4 w-4 text-gray-400" />
-            <select
-              value={selectedTier}
-              onChange={(e) => setSelectedTier(e.target.value)}
-              className="border border-gray-200 rounded-md px-3 py-2 text-sm"
-            >
-              <option value="ALL">All Tiers</option>
-              <option value="PLATINUM">Platinum</option>
-              <option value="GOLD">Gold</option>
-              <option value="SILVER">Silver</option>
-              <option value="BRONZE">Bronze</option>
-            </select>
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              <Filter className="h-4 w-4 text-gray-400" />
+              <select
+                value={selectedTier}
+                onChange={(e) => setSelectedTier(e.target.value)}
+                className="border border-gray-200 rounded-md px-3 py-2 text-sm"
+              >
+                <option value="ALL">All Tiers</option>
+                <option value="PLATINUM">Platinum</option>
+                <option value="GOLD">Gold</option>
+                <option value="SILVER">Silver</option>
+                <option value="BRONZE">Bronze</option>
+              </select>
+            </div>
+            <div className="flex items-center gap-2">
+              <Building2 className="h-4 w-4 text-gray-400" />
+              <select
+                value={selectedCategory}
+                onChange={(e) => setSelectedCategory(e.target.value)}
+                className="border border-gray-200 rounded-md px-3 py-2 text-sm"
+              >
+                <option value="ALL">All Categories</option>
+                <option value="MINING">Mining</option>
+                <option value="INDUSTRIAL">Industrial</option>
+                <option value="AGRICULTURAL">Agricultural</option>
+                <option value="MEDICAL">Medical</option>
+                <option value="RETAIL">Retail</option>
+              </select>
+            </div>
           </div>
         </div>
 
@@ -366,8 +613,14 @@ export default function CustomersPage() {
                             </span>
                             <span className="flex items-center gap-1">
                               <MapPin className="h-3 w-3" />
-                              {customer.city}, {customer.country}
+                              {customer.city}, {customer.state}
                             </span>
+                            {customer.dangerousGoods && (
+                              <span className="flex items-center gap-1 text-orange-600">
+                                <AlertTriangle className="h-3 w-3" />
+                                DG
+                              </span>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -380,6 +633,9 @@ export default function CustomersPage() {
                             </Badge>
                             <Badge className={getTierColor(customer.tier)}>
                               {customer.tier}
+                            </Badge>
+                            <Badge className={getCategoryColor(customer.category)}>
+                              {customer.category}
                             </Badge>
                           </div>
                           <div className="text-sm text-gray-600">
@@ -403,10 +659,12 @@ export default function CustomersPage() {
                         </div>
 
                         <div className="flex gap-2">
-                          <Button variant="outline" size="sm">
-                            <Eye className="h-4 w-4 mr-1" />
-                            View
-                          </Button>
+                          <Link href={`/customers/${customer.id}`}>
+                            <Button variant="outline" size="sm">
+                              <Eye className="h-4 w-4 mr-1" />
+                              View
+                            </Button>
+                          </Link>
                           <Button variant="outline" size="sm">
                             <Edit className="h-4 w-4 mr-1" />
                             Edit
@@ -515,6 +773,6 @@ export default function CustomersPage() {
           </TabsContent>
         </Tabs>
       </div>
-    </AuthGuard>
+    </DashboardLayout>
   );
 }

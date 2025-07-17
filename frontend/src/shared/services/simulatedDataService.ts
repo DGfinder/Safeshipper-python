@@ -431,18 +431,25 @@ export const CUSTOMER_COMPANIES = {
   ],
 };
 
+// Simple seeded random number generator for consistent data
+let seed = 12345;
+function seededRandom(): number {
+  seed = (seed * 9301 + 49297) % 233280;
+  return seed / 233280;
+}
+
 // Generate random date within range
 function randomDate(start: Date, end: Date): Date {
-  return new Date(start.getTime() + Math.random() * (end.getTime() - start.getTime()));
+  return new Date(start.getTime() + seededRandom() * (end.getTime() - start.getTime()));
 }
 
 // Generate WA registration number (format: 1ABC123)
 function generateWARegistration(): string {
-  const digits = Math.floor(Math.random() * 9) + 1;
-  const letters = String.fromCharCode(65 + Math.floor(Math.random() * 26)) +
-                  String.fromCharCode(65 + Math.floor(Math.random() * 26)) +
-                  String.fromCharCode(65 + Math.floor(Math.random() * 26));
-  const numbers = Math.floor(Math.random() * 900) + 100;
+  const digits = Math.floor(seededRandom() * 9) + 1;
+  const letters = String.fromCharCode(65 + Math.floor(seededRandom() * 26)) +
+                  String.fromCharCode(65 + Math.floor(seededRandom() * 26)) +
+                  String.fromCharCode(65 + Math.floor(seededRandom() * 26));
+  const numbers = Math.floor(seededRandom() * 900) + 100;
   return `${digits}${letters}${numbers}`;
 }
 
@@ -473,7 +480,7 @@ class SimulatedDataService {
     const states = ["WA", "SA", "NT", "VIC"];
     
     for (let i = 0; i < 45; i++) {
-      const name = allNames[Math.floor(Math.random() * allNames.length)];
+      const name = allNames[Math.floor(seededRandom() * allNames.length)];
       const [firstName, lastName] = name.split(" ");
       
       this.drivers.push({
@@ -482,26 +489,26 @@ class SimulatedDataService {
         firstName,
         lastName,
         email: `${firstName.toLowerCase()}.${lastName.toLowerCase()}@outbackhaul.com.au`,
-        phone: `+61 4${Math.floor(Math.random() * 90000000) + 10000000}`,
-        licenseNumber: `WA${Math.floor(Math.random() * 9000000) + 1000000}`,
-        licenseType: licenseTypes[Math.floor(Math.random() * licenseTypes.length)],
-        dangerousGoodsLicense: Math.random() > 0.3,
-        experience: Math.floor(Math.random() * 25) + 2,
-        status: Math.random() > 0.7 ? "OFF_DUTY" : (Math.random() > 0.5 ? "ON_DUTY" : "DRIVING"),
+        phone: `+61 4${Math.floor(seededRandom() * 90000000) + 10000000}`,
+        licenseNumber: `WA${Math.floor(seededRandom() * 9000000) + 1000000}`,
+        licenseType: licenseTypes[Math.floor(seededRandom() * licenseTypes.length)],
+        dangerousGoodsLicense: seededRandom() > 0.3,
+        experience: Math.floor(seededRandom() * 25) + 2,
+        status: seededRandom() > 0.7 ? "OFF_DUTY" : (seededRandom() > 0.5 ? "ON_DUTY" : "DRIVING"),
         homeBase: "Perth",
         emergencyContact: {
           name: `${firstName} Emergency Contact`,
-          phone: `+61 8 9${Math.floor(Math.random() * 9000000) + 1000000}`,
+          phone: `+61 8 9${Math.floor(seededRandom() * 9000000) + 1000000}`,
         },
         certifications: [
           "Heavy Vehicle License",
           "First Aid Certificate",
-          ...(Math.random() > 0.3 ? ["Dangerous Goods License"] : []),
-          ...(Math.random() > 0.7 ? ["Load Restraint Certificate"] : []),
+          ...(seededRandom() > 0.3 ? ["Dangerous Goods License"] : []),
+          ...(seededRandom() > 0.7 ? ["Load Restraint Certificate"] : []),
         ],
         dateOfBirth: randomDate(new Date(1960, 0, 1), new Date(1990, 0, 1)).toISOString(),
         hireDate: randomDate(new Date(2010, 0, 1), new Date(2024, 0, 1)).toISOString(),
-        address: `${Math.floor(Math.random() * 999) + 1} ${["Main", "High", "Queen", "King", "George"][Math.floor(Math.random() * 5)]} Street, ${["Perth", "Fremantle", "Mandurah", "Rockingham"][Math.floor(Math.random() * 4)]} WA ${Math.floor(Math.random() * 90) + 6000}`,
+        address: `${Math.floor(seededRandom() * 999) + 1} ${["Main", "High", "Queen", "King", "George"][Math.floor(seededRandom() * 5)]} Street, ${["Perth", "Fremantle", "Mandurah", "Rockingham"][Math.floor(seededRandom() * 4)]} WA ${Math.floor(seededRandom() * 90) + 6000}`,
       });
     }
   }
@@ -520,14 +527,14 @@ class SimulatedDataService {
       const specs = TRUCK_SPECIFICATIONS[type as keyof typeof TRUCK_SPECIFICATIONS];
       
       for (let i = 0; i < count; i++) {
-        const make = specs.makes[Math.floor(Math.random() * specs.makes.length)];
-        const year = Math.floor(Math.random() * 10) + 2014;
-        const assignedDriver = Math.random() > 0.2 ? this.drivers[Math.floor(Math.random() * this.drivers.length)] : null;
+        const make = specs.makes[Math.floor(seededRandom() * specs.makes.length)];
+        const year = Math.floor(seededRandom() * 10) + 2014;
+        const assignedDriver = seededRandom() > 0.2 ? this.drivers[Math.floor(seededRandom() * this.drivers.length)] : null;
         
         const statuses = ["ACTIVE", "IN_TRANSIT", "MAINTENANCE", "AVAILABLE"];
         const status = assignedDriver ? 
-          (Math.random() > 0.4 ? "IN_TRANSIT" : "ACTIVE") : 
-          (Math.random() > 0.8 ? "MAINTENANCE" : "AVAILABLE");
+          (seededRandom() > 0.4 ? "IN_TRANSIT" : "ACTIVE") : 
+          (seededRandom() > 0.8 ? "MAINTENANCE" : "AVAILABLE");
         
         this.vehicles.push({
           id: `vehicle-${vehicleId}`,
@@ -539,25 +546,25 @@ class SimulatedDataService {
           maxWeight: specs.maxWeight,
           maxLength: specs.maxLength,
           axles: specs.axles,
-          engineSpec: specs.engineSpecs[Math.floor(Math.random() * specs.engineSpecs.length)],
-          gearbox: specs.gearbox[Math.floor(Math.random() * specs.gearbox.length)],
-          suspension: specs.suspension[Math.floor(Math.random() * specs.suspension.length)],
-          fuel: specs.fuel[Math.floor(Math.random() * specs.fuel.length)],
+          engineSpec: specs.engineSpecs[Math.floor(seededRandom() * specs.engineSpecs.length)],
+          gearbox: specs.gearbox[Math.floor(seededRandom() * specs.gearbox.length)],
+          suspension: specs.suspension[Math.floor(seededRandom() * specs.suspension.length)],
+          fuel: specs.fuel[Math.floor(seededRandom() * specs.fuel.length)],
           capacity: specs.capacity,
           status,
           location: this.getRandomLocation(),
-          locationIsFresh: Math.random() > 0.1,
+          locationIsFresh: seededRandom() > 0.1,
           assignedDriver,
           activeShipment: status === "IN_TRANSIT" ? this.generateActiveShipment() : null,
-          nextService: new Date(Date.now() + (Math.floor(Math.random() * 90) + 30) * 24 * 60 * 60 * 1000),
-          odometer: Math.floor(Math.random() * 800000) + 200000,
-          lastInspection: new Date(Date.now() - Math.floor(Math.random() * 90) * 24 * 60 * 60 * 1000),
+          nextService: new Date(Date.now() + (Math.floor(seededRandom() * 90) + 30) * 24 * 60 * 60 * 1000),
+          odometer: Math.floor(seededRandom() * 800000) + 200000,
+          lastInspection: new Date(Date.now() - Math.floor(seededRandom() * 90) * 24 * 60 * 60 * 1000),
           insurance: {
             provider: "Suncorp Commercial",
-            policyNumber: `SC${Math.floor(Math.random() * 9000000) + 1000000}`,
-            expires: new Date(Date.now() + (Math.floor(Math.random() * 200) + 100) * 24 * 60 * 60 * 1000),
+            policyNumber: `SC${Math.floor(seededRandom() * 9000000) + 1000000}`,
+            expires: new Date(Date.now() + (Math.floor(seededRandom() * 200) + 100) * 24 * 60 * 60 * 1000),
           },
-          registration_expires: new Date(Date.now() + (Math.floor(Math.random() * 200) + 100) * 24 * 60 * 60 * 1000),
+          registration_expires: new Date(Date.now() + (Math.floor(seededRandom() * 200) + 100) * 24 * 60 * 60 * 1000),
           company: COMPANY_INFO,
         });
         
@@ -568,21 +575,21 @@ class SimulatedDataService {
 
   private getRandomLocation() {
     const locations = Object.values(WA_LOCATIONS);
-    const location = locations[Math.floor(Math.random() * locations.length)];
+    const location = locations[Math.floor(seededRandom() * locations.length)];
     return {
-      lat: location.lat + (Math.random() - 0.5) * 0.1,
-      lng: location.lng + (Math.random() - 0.5) * 0.1,
+      lat: location.lat + (seededRandom() - 0.5) * 0.1,
+      lng: location.lng + (seededRandom() - 0.5) * 0.1,
       name: location.name,
     };
   }
 
   private generateActiveShipment() {
-    const route = WA_ROUTES[Math.floor(Math.random() * WA_ROUTES.length)];
+    const route = WA_ROUTES[Math.floor(seededRandom() * WA_ROUTES.length)];
     const dangGoods = this.selectDangerousGoods();
     
     return {
-      id: `shipment-${Math.floor(Math.random() * 100000)}`,
-      trackingNumber: `OH-${new Date().getFullYear()}-${Math.floor(Math.random() * 100000).toString().padStart(5, '0')}`,
+      id: `shipment-${Math.floor(seededRandom() * 100000)}`,
+      trackingNumber: `OH-${new Date().getFullYear()}-${Math.floor(seededRandom() * 100000).toString().padStart(5, '0')}`,
       status: "IN_TRANSIT",
       origin: route.origin.name,
       destination: route.destination.name,
@@ -593,24 +600,24 @@ class SimulatedDataService {
       dangerousGoods: dangGoods,
       emergencyContact: COMPANY_INFO.emergencyContact,
       specialInstructions: this.generateSpecialInstructions(dangGoods),
-      progress: Math.floor(Math.random() * 80) + 10,
-      weight: `${Math.floor(Math.random() * 40) + 10},${Math.floor(Math.random() * 900) + 100} KG`,
+      progress: Math.floor(seededRandom() * 80) + 10,
+      weight: `${Math.floor(seededRandom() * 40) + 10},${Math.floor(seededRandom() * 900) + 100} KG`,
       distance: `${route.distance} km`,
     };
   }
 
   private selectDangerousGoods() {
     const categories = Object.keys(DANGEROUS_GOODS_CATALOG);
-    const selectedCategory = categories[Math.floor(Math.random() * categories.length)] as keyof typeof DANGEROUS_GOODS_CATALOG;
+    const selectedCategory = categories[Math.floor(seededRandom() * categories.length)] as keyof typeof DANGEROUS_GOODS_CATALOG;
     
     const goods = DANGEROUS_GOODS_CATALOG[selectedCategory];
-    const count = Math.floor(Math.random() * 3) + 1;
+    const count = Math.floor(seededRandom() * 3) + 1;
     
     return Array.from({ length: count }, () => {
-      const good = goods[Math.floor(Math.random() * goods.length)];
+      const good = goods[Math.floor(seededRandom() * goods.length)];
       return {
         class: good.hazardClass,
-        count: Math.floor(Math.random() * 20) + 5,
+        count: Math.floor(seededRandom() * 20) + 5,
         unNumber: good.unNumber,
         properShippingName: good.properShippingName,
         packingGroup: good.packingGroup,
@@ -623,9 +630,9 @@ class SimulatedDataService {
 
   private getRandomCustomer() {
     const categories = Object.keys(CUSTOMER_COMPANIES);
-    const category = categories[Math.floor(Math.random() * categories.length)] as keyof typeof CUSTOMER_COMPANIES;
+    const category = categories[Math.floor(seededRandom() * categories.length)] as keyof typeof CUSTOMER_COMPANIES;
     const companies = CUSTOMER_COMPANIES[category];
-    return companies[Math.floor(Math.random() * companies.length)];
+    return companies[Math.floor(seededRandom() * companies.length)];
   }
 
   private generateSpecialInstructions(dangerousGoods: any[]) {
@@ -647,18 +654,18 @@ class SimulatedDataService {
     const statuses = ["PLANNING", "READY_FOR_DISPATCH", "IN_TRANSIT", "DELIVERED"];
     
     for (let i = 0; i < shipmentCount; i++) {
-      const route = WA_ROUTES[Math.floor(Math.random() * WA_ROUTES.length)];
-      const status = statuses[Math.floor(Math.random() * statuses.length)];
-      const dangGoods = Math.random() > 0.3 ? this.selectDangerousGoods() : [];
-      const isCompliant = Math.random() > 0.1; // 10% non-compliant
+      const route = WA_ROUTES[Math.floor(seededRandom() * WA_ROUTES.length)];
+      const status = statuses[Math.floor(seededRandom() * statuses.length)];
+      const dangGoods = seededRandom() > 0.3 ? this.selectDangerousGoods() : [];
+      const isCompliant = seededRandom() > 0.1; // 10% non-compliant
       
       // If non-compliant, add some non-compliant goods
       if (!isCompliant && dangGoods.length > 0) {
         const nonCompliantGoods = DANGEROUS_GOODS_CATALOG.nonCompliant;
-        const nonCompliantGood = nonCompliantGoods[Math.floor(Math.random() * nonCompliantGoods.length)];
+        const nonCompliantGood = nonCompliantGoods[Math.floor(seededRandom() * nonCompliantGoods.length)];
         dangGoods.push({
           class: nonCompliantGood.hazardClass,
-          count: Math.floor(Math.random() * 10) + 1,
+          count: Math.floor(seededRandom() * 10) + 1,
           unNumber: nonCompliantGood.unNumber,
           properShippingName: nonCompliantGood.properShippingName,
           packingGroup: nonCompliantGood.packingGroup,
@@ -669,26 +676,26 @@ class SimulatedDataService {
       }
       
       const createdDate = randomDate(new Date(Date.now() - 30 * 24 * 60 * 60 * 1000), new Date());
-      const estimatedDelivery = new Date(createdDate.getTime() + (route.estimatedHours + Math.floor(Math.random() * 48)) * 60 * 60 * 1000);
+      const estimatedDelivery = new Date(createdDate.getTime() + (route.estimatedHours + Math.floor(seededRandom() * 48)) * 60 * 60 * 1000);
       
       this.shipments.push({
         id: `OH-${i + 1}-2024`,
         trackingNumber: `OH-${new Date().getFullYear()}-${(i + 1).toString().padStart(5, '0')}`,
         client: this.getRandomCustomer(),
         route: `${route.origin.name} → ${route.destination.name}`,
-        weight: `${Math.floor(Math.random() * 40) + 10},${Math.floor(Math.random() * 900) + 100} KG`,
+        weight: `${Math.floor(seededRandom() * 40) + 10},${Math.floor(seededRandom() * 900) + 100} KG`,
         distance: `${route.distance} km`,
         status,
         dangerousGoods: dangGoods,
         progress: this.calculateProgress(status, createdDate, estimatedDelivery),
         estimatedDelivery: estimatedDelivery.toISOString(),
         driver: status === "IN_TRANSIT" || status === "DELIVERED" ? 
-          this.drivers[Math.floor(Math.random() * this.drivers.length)].name : null,
+          this.drivers[Math.floor(seededRandom() * this.drivers.length)].name : null,
         vehicle: status === "IN_TRANSIT" || status === "DELIVERED" ? 
-          this.vehicles[Math.floor(Math.random() * this.vehicles.length)].registration : null,
+          this.vehicles[Math.floor(seededRandom() * this.vehicles.length)].registration : null,
         createdAt: createdDate.toISOString(),
         updatedAt: new Date().toISOString(),
-        customerReference: `REF-${Math.floor(Math.random() * 100000)}`,
+        customerReference: `REF-${Math.floor(seededRandom() * 100000)}`,
         specialInstructions: this.generateSpecialInstructions(dangGoods),
         emergencyContact: COMPANY_INFO.emergencyContact,
         isCompliant,
@@ -704,9 +711,9 @@ class SimulatedDataService {
     
     switch (status) {
       case "PLANNING":
-        return Math.floor(Math.random() * 20);
+        return Math.floor(seededRandom() * 20);
       case "READY_FOR_DISPATCH":
-        return Math.floor(Math.random() * 10);
+        return Math.floor(seededRandom() * 10);
       case "IN_TRANSIT":
         return Math.min(95, Math.max(20, Math.floor((elapsed / total) * 100)));
       case "DELIVERED":
@@ -728,9 +735,9 @@ class SimulatedDataService {
       "Missing segregation requirements",
     ];
     
-    const issueCount = Math.floor(Math.random() * 3) + 1;
+    const issueCount = Math.floor(seededRandom() * 3) + 1;
     return Array.from({ length: issueCount }, () => 
-      issues[Math.floor(Math.random() * issues.length)]
+      issues[Math.floor(seededRandom() * issues.length)]
     ).filter((issue, index, arr) => arr.indexOf(issue) === index);
   }
 
