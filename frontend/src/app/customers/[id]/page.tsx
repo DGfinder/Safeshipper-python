@@ -58,41 +58,21 @@ interface Customer {
   locationLng: number;
 }
 
-// Mock function to get customer by ID (would normally come from API)
+// Function to get customer by ID using real data from simulatedDataService
 const getCustomerById = (id: string): Customer | null => {
-  // This is a simplified version - in real app this would come from the same data source
-  const mockCustomers: Customer[] = [
-    {
-      id: "mining-1",
-      name: "BHP Billiton",
-      email: "logistics@bhp.com.au",
-      phone: "+61 8 9338 4444",
-      address: "Level 18, 125 St Georges Terrace",
-      city: "Perth",
-      state: "WA",
-      country: "Australia",
-      status: "ACTIVE",
-      tier: "PLATINUM",
-      category: "MINING",
-      joinDate: "2018-03-15",
-      totalShipments: 1250,
-      totalValue: 45000000,
-      lastShipment: "2024-01-16",
-      rating: 4.9,
-      dangerousGoods: true,
-      primaryRoutes: ["Perth to Port Hedland", "Perth to Newman"],
-      locationLat: -20.3099,
-      locationLng: 118.6011,
-    },
-    // Add more customers as needed
-  ];
-  
-  return mockCustomers.find(c => c.id === id) || null;
+  const customers = simulatedDataService.getCustomerProfiles();
+  return customers.find(c => c.id === id) || null;
+};
+
+// Function to get customer shipments by customer name
+const getCustomerShipments = (customerName: string) => {
+  return simulatedDataService.getCustomerShipments(customerName);
 };
 
 export default function CustomerDetailPage({ params }: CustomerDetailPageProps) {
   const [customerId, setCustomerId] = useState<string | null>(null);
   const [customer, setCustomer] = useState<Customer | null>(null);
+  const [customerShipments, setCustomerShipments] = useState<any[]>([]);
   const [notFound, setNotFound] = useState(false);
 
   useEffect(() => {
@@ -105,8 +85,12 @@ export default function CustomerDetailPage({ params }: CustomerDetailPageProps) 
       if (foundCustomer) {
         setCustomer(foundCustomer);
         setNotFound(false);
+        // Load customer shipments
+        const shipments = getCustomerShipments(foundCustomer.name);
+        setCustomerShipments(shipments);
       } else {
         setCustomer(null);
+        setCustomerShipments([]);
         setNotFound(true);
       }
     });
@@ -397,16 +381,78 @@ export default function CustomerDetailPage({ params }: CustomerDetailPageProps) 
           <TabsContent value="shipments">
             <Card>
               <CardHeader>
-                <CardTitle>Shipment History</CardTitle>
+                <CardTitle>Shipment History ({customerShipments.length} shipments)</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-center py-8">
-                  <Package className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                  <p className="text-gray-600">Shipment history will be displayed here</p>
-                  <p className="text-sm text-gray-500 mt-2">
-                    Connect to shipment data to show customer's shipping history
-                  </p>
-                </div>
+                {customerShipments.length > 0 ? (
+                  <div className="space-y-4">
+                    {customerShipments.slice(0, 10).map((shipment, index) => (
+                      <div key={shipment.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50">
+                        <div className="flex items-center gap-4">
+                          <div className="p-2 bg-blue-100 rounded-lg">
+                            <Package className="h-5 w-5 text-blue-600" />
+                          </div>
+                          <div>
+                            <h4 className="font-medium text-lg">{shipment.trackingNumber}</h4>
+                            <div className="flex items-center gap-4 text-sm text-gray-600 mt-1">
+                              <span className="flex items-center gap-1">
+                                <MapPin className="h-3 w-3" />
+                                {shipment.route}
+                              </span>
+                              <span className="flex items-center gap-1">
+                                <Calendar className="h-3 w-3" />
+                                {formatDate(shipment.createdAt)}
+                              </span>
+                              {shipment.dangerousGoods && shipment.dangerousGoods.length > 0 && (
+                                <span className="flex items-center gap-1 text-orange-600">
+                                  <AlertTriangle className="h-3 w-3" />
+                                  DG
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <div className="flex items-center gap-2 mb-1">
+                            <Badge className={shipment.status === 'DELIVERED' ? 'bg-green-100 text-green-800' : shipment.status === 'IN_TRANSIT' ? 'bg-blue-100 text-blue-800' : 'bg-yellow-100 text-yellow-800'}>
+                              {shipment.status.replace('_', ' ')}
+                            </Badge>
+                          </div>
+                          <div className="text-sm text-gray-600">
+                            <p>Weight: {shipment.weight}</p>
+                            <p className="font-medium">{shipment.priority} Priority</p>
+                          </div>
+                        </div>
+                        <div className="flex gap-2">
+                          <Link href={`/shipments/${shipment.id}`}>
+                            <Button variant="outline" size="sm">
+                              <Package className="h-4 w-4 mr-1" />
+                              View
+                            </Button>
+                          </Link>
+                        </div>
+                      </div>
+                    ))}
+                    {customerShipments.length > 10 && (
+                      <div className="text-center pt-4">
+                        <p className="text-sm text-gray-500">
+                          Showing 10 of {customerShipments.length} shipments
+                        </p>
+                        <Button variant="outline" className="mt-2">
+                          View All Shipments
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="text-center py-8">
+                    <Package className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                    <p className="text-gray-600">No shipments found for this customer</p>
+                    <p className="text-sm text-gray-500 mt-2">
+                      This customer hasn't made any shipments yet
+                    </p>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>

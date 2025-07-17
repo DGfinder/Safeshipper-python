@@ -836,6 +836,135 @@ class SimulatedDataService {
   public getLocations() {
     return WA_LOCATIONS;
   }
+
+  // New method to generate customer profiles from actual shipment data
+  public getCustomerProfiles() {
+    const shipments = this.getShipments();
+    const customerMap = new Map();
+
+    // First, collect all unique customers and their shipments
+    shipments.forEach(shipment => {
+      const customerName = shipment.client;
+      if (!customerMap.has(customerName)) {
+        customerMap.set(customerName, {
+          name: customerName,
+          shipments: [],
+          totalValue: 0,
+          totalShipments: 0,
+          hasDangerousGoods: false,
+          routes: new Set(),
+          lastShipment: null,
+          firstShipment: null,
+        });
+      }
+
+      const customer = customerMap.get(customerName);
+      customer.shipments.push(shipment);
+      customer.totalShipments += 1;
+      
+      // Calculate total value (extract number from weight string as proxy)
+      const weightMatch = shipment.weight.match(/[\d,]+/);
+      const weightValue = weightMatch ? parseInt(weightMatch[0].replace(/,/g, '')) : 1000;
+      customer.totalValue += weightValue * 100; // Convert to currency value
+      
+      if (shipment.dangerousGoods && shipment.dangerousGoods.length > 0) {
+        customer.hasDangerousGoods = true;
+      }
+      
+      customer.routes.add(shipment.route);
+      
+      // Track shipment dates
+      const shipmentDate = new Date(shipment.createdAt);
+      if (!customer.lastShipment || shipmentDate > new Date(customer.lastShipment)) {
+        customer.lastShipment = shipment.createdAt;
+      }
+      if (!customer.firstShipment || shipmentDate < new Date(customer.firstShipment)) {
+        customer.firstShipment = shipment.createdAt;
+      }
+    });
+
+    // Convert to final customer format
+    const customers: any[] = [];
+    let idCounter = 1;
+
+    customerMap.forEach((customerData, customerName) => {
+      // Determine category based on company name
+      let category = "RETAIL";
+      let tier = "BRONZE";
+      
+      // Check which category this customer belongs to
+      for (const [cat, companies] of Object.entries(CUSTOMER_COMPANIES)) {
+        if (companies.includes(customerName)) {
+          category = cat.toUpperCase();
+          break;
+        }
+      }
+
+      // Determine tier based on shipment volume
+      if (customerData.totalShipments >= 50) tier = "PLATINUM";
+      else if (customerData.totalShipments >= 30) tier = "GOLD";
+      else if (customerData.totalShipments >= 15) tier = "SILVER";
+
+      // Generate contact details based on company name
+      const cleanName = customerName.toLowerCase().replace(/[^a-z0-9]/g, '');
+      const email = `logistics@${cleanName}.com.au`;
+      const phone = "+61 8 9" + Math.floor(100000000 + seededRandom() * 900000000).toString().substring(0, 7);
+
+      // Determine primary location based on category
+      const locations = this.getLocations();
+      let locationLat = locations.perth.lat;
+      let locationLng = locations.perth.lng;
+      let city = "Perth";
+
+      if (category === "MINING") {
+        const miningLocations = [locations.portHedland, locations.karratha, locations.newman, locations.kalgoorlie];
+        const location = miningLocations[Math.floor(seededRandom() * miningLocations.length)];
+        locationLat = location.lat;
+        locationLng = location.lng;
+        city = location.name;
+      }
+
+      // Calculate rating based on performance (simplified)
+      const rating = Math.max(3.5, Math.min(5.0, 4.0 + (customerData.totalShipments / 100) + seededRandom() * 0.8));
+
+      customers.push({
+        id: `customer-${idCounter++}`,
+        name: customerName,
+        email,
+        phone,
+        address: `Level ${Math.floor(seededRandom() * 20) + 1}, ${Math.floor(seededRandom() * 500) + 100} ${["St Georges Terrace", "Adelaide Terrace", "Murray Street", "Wellington Street", "Hay Street"][Math.floor(seededRandom() * 5)]}`,
+        city,
+        state: "WA",
+        country: "Australia",
+        status: customerData.totalShipments > 0 ? "ACTIVE" : "PENDING",
+        tier,
+        category,
+        joinDate: customerData.firstShipment || "2020-01-01",
+        totalShipments: customerData.totalShipments,
+        totalValue: customerData.totalValue,
+        lastShipment: customerData.lastShipment || new Date().toISOString(),
+        rating: Math.round(rating * 10) / 10,
+        dangerousGoods: customerData.hasDangerousGoods,
+        primaryRoutes: Array.from(customerData.routes).slice(0, 3),
+        locationLat,
+        locationLng,
+        shipmentHistory: customerData.shipments,
+      });
+    });
+
+    return customers.sort((a, b) => b.totalShipments - a.totalShipments);
+  }
+
+  // Method to get shipments for a specific customer
+  public getCustomerShipments(customerName: string) {
+    return this.shipments.filter(shipment => shipment.client === customerName);
+  }
+
+  // Method to get customer by name
+  public getCustomerByName(customerName: string) {
+    const customers = this.getCustomerProfiles();
+    return customers.find(customer => customer.name === customerName);
+  }
 }
 
 // Export singleton instance
