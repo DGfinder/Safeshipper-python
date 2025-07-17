@@ -556,15 +556,15 @@ class SimulatedDataService {
           locationIsFresh: seededRandom() > 0.1,
           assignedDriver,
           activeShipment: status === "IN_TRANSIT" ? this.generateActiveShipment() : null,
-          nextService: new Date(Date.now() + (Math.floor(seededRandom() * 90) + 30) * 24 * 60 * 60 * 1000),
+          nextService: new Date(new Date('2024-01-31').getTime() + (Math.floor(seededRandom() * 90) + 30) * 24 * 60 * 60 * 1000),
           odometer: Math.floor(seededRandom() * 800000) + 200000,
-          lastInspection: new Date(Date.now() - Math.floor(seededRandom() * 90) * 24 * 60 * 60 * 1000),
+          lastInspection: new Date(new Date('2024-01-31').getTime() - Math.floor(seededRandom() * 90) * 24 * 60 * 60 * 1000),
           insurance: {
             provider: "Suncorp Commercial",
             policyNumber: `SC${Math.floor(seededRandom() * 9000000) + 1000000}`,
-            expires: new Date(Date.now() + (Math.floor(seededRandom() * 200) + 100) * 24 * 60 * 60 * 1000),
+            expires: new Date(new Date('2024-01-31').getTime() + (Math.floor(seededRandom() * 200) + 100) * 24 * 60 * 60 * 1000),
           },
-          registration_expires: new Date(Date.now() + (Math.floor(seededRandom() * 200) + 100) * 24 * 60 * 60 * 1000),
+          registration_expires: new Date(new Date('2024-01-31').getTime() + (Math.floor(seededRandom() * 200) + 100) * 24 * 60 * 60 * 1000),
           company: COMPANY_INFO,
         });
         
@@ -586,16 +586,18 @@ class SimulatedDataService {
   private generateActiveShipment() {
     const route = WA_ROUTES[Math.floor(seededRandom() * WA_ROUTES.length)];
     const dangGoods = this.selectDangerousGoods();
+    // Use consistent ID pattern - this should be a sequential number for active shipment
+    const activeShipmentId = `OH-${this.shipments.length + 1}-2024`;
     
     return {
-      id: `shipment-${Math.floor(seededRandom() * 100000)}`,
-      trackingNumber: `OH-${new Date().getFullYear()}-${Math.floor(seededRandom() * 100000).toString().padStart(5, '0')}`,
+      id: activeShipmentId,
+      trackingNumber: `OH-2024-${(this.shipments.length + 1).toString().padStart(5, '0')}`,
       status: "IN_TRANSIT",
       origin: route.origin.name,
       destination: route.destination.name,
       route: `${route.origin.name} → ${route.destination.name}`,
       customerName: this.getRandomCustomer(),
-      estimatedDelivery: new Date(Date.now() + route.estimatedHours * 60 * 60 * 1000).toISOString(),
+      estimatedDelivery: new Date('2024-01-15T00:00:00Z').toISOString(), // Fixed demo date
       hasDangerousGoods: dangGoods.length > 0,
       dangerousGoods: dangGoods,
       emergencyContact: COMPANY_INFO.emergencyContact,
@@ -675,12 +677,13 @@ class SimulatedDataService {
         });
       }
       
-      const createdDate = randomDate(new Date(Date.now() - 30 * 24 * 60 * 60 * 1000), new Date());
+      // Use deterministic date range - shipments created between Jan 1, 2024 and Jan 31, 2024
+      const createdDate = randomDate(new Date('2024-01-01'), new Date('2024-01-31'));
       const estimatedDelivery = new Date(createdDate.getTime() + (route.estimatedHours + Math.floor(seededRandom() * 48)) * 60 * 60 * 1000);
       
       this.shipments.push({
         id: `OH-${i + 1}-2024`,
-        trackingNumber: `OH-${new Date().getFullYear()}-${(i + 1).toString().padStart(5, '0')}`,
+        trackingNumber: `OH-2024-${(i + 1).toString().padStart(5, '0')}`,
         client: this.getRandomCustomer(),
         route: `${route.origin.name} → ${route.destination.name}`,
         weight: `${Math.floor(seededRandom() * 40) + 10},${Math.floor(seededRandom() * 900) + 100} KG`,
@@ -694,7 +697,7 @@ class SimulatedDataService {
         vehicle: status === "IN_TRANSIT" || status === "DELIVERED" ? 
           this.vehicles[Math.floor(seededRandom() * this.vehicles.length)].registration : null,
         createdAt: createdDate.toISOString(),
-        updatedAt: new Date().toISOString(),
+        updatedAt: createdDate.toISOString(),
         customerReference: `REF-${Math.floor(seededRandom() * 100000)}`,
         specialInstructions: this.generateSpecialInstructions(dangGoods),
         emergencyContact: COMPANY_INFO.emergencyContact,
@@ -705,7 +708,8 @@ class SimulatedDataService {
   }
 
   private calculateProgress(status: string, created: Date, estimated: Date): number {
-    const now = new Date();
+    // Use fixed "current" time for consistent demo progress calculations
+    const now = new Date('2024-01-31T12:00:00Z');
     const elapsed = now.getTime() - created.getTime();
     const total = estimated.getTime() - created.getTime();
     
@@ -762,13 +766,14 @@ class SimulatedDataService {
         location_is_fresh: vehicle.locationIsFresh,
       })),
       total_vehicles: this.vehicles.length,
-      timestamp: new Date().toISOString(),
+      timestamp: new Date('2024-01-31T12:00:00Z').toISOString(),
     };
   }
 
   public getDashboardStats() {
-    const now = new Date();
-    const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+    // Use fixed dates for consistent demo data
+    const now = new Date('2024-01-31T12:00:00Z');
+    const thirtyDaysAgo = new Date('2024-01-01T12:00:00Z');
     
     const totalShipments = this.shipments.length;
     const activeShipments = this.shipments.filter(s => s.status === "IN_TRANSIT").length;
@@ -820,7 +825,7 @@ class SimulatedDataService {
       shipments: recent,
       total: recent.length,
       limit,
-      last_updated: new Date().toISOString(),
+      last_updated: new Date('2024-01-31T12:00:00Z').toISOString(),
       note: "OutbackHaul Transport - Recent shipments",
     };
   }
@@ -885,9 +890,12 @@ class SimulatedDataService {
 
     // Convert to final customer format
     const customers: any[] = [];
-    let idCounter = 1;
 
-    customerMap.forEach((customerData, customerName) => {
+    // Sort customer names for consistent processing order
+    const sortedCustomerNames = Array.from(customerMap.keys()).sort();
+
+    sortedCustomerNames.forEach((customerName) => {
+      const customerData = customerMap.get(customerName);
       // Determine category based on company name
       let category = "RETAIL";
       let tier = "BRONZE";
@@ -905,8 +913,9 @@ class SimulatedDataService {
       else if (customerData.totalShipments >= 30) tier = "GOLD";
       else if (customerData.totalShipments >= 15) tier = "SILVER";
 
-      // Generate contact details based on company name
+      // Generate deterministic customer ID based on company name
       const cleanName = customerName.toLowerCase().replace(/[^a-z0-9]/g, '');
+      const customerId = `customer-${cleanName}`;
       const email = `logistics@${cleanName}.com.au`;
       const phone = "+61 8 9" + Math.floor(100000000 + seededRandom() * 900000000).toString().substring(0, 7);
 
@@ -928,7 +937,7 @@ class SimulatedDataService {
       const rating = Math.max(3.5, Math.min(5.0, 4.0 + (customerData.totalShipments / 100) + seededRandom() * 0.8));
 
       customers.push({
-        id: `customer-${idCounter++}`,
+        id: customerId,
         name: customerName,
         email,
         phone,
@@ -942,7 +951,7 @@ class SimulatedDataService {
         joinDate: customerData.firstShipment || "2020-01-01",
         totalShipments: customerData.totalShipments,
         totalValue: customerData.totalValue,
-        lastShipment: customerData.lastShipment || new Date().toISOString(),
+        lastShipment: customerData.lastShipment || new Date('2024-01-31T12:00:00Z').toISOString(),
         rating: Math.round(rating * 10) / 10,
         dangerousGoods: customerData.hasDangerousGoods,
         primaryRoutes: Array.from(customerData.routes).slice(0, 3),

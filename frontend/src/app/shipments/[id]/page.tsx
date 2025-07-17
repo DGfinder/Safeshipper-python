@@ -135,20 +135,19 @@ export default function ShipmentDetailPage({
 
   useEffect(() => {
     params.then((p) => {
-      // Decode URL parameter to handle any encoding issues
-      const decodedId = decodeURIComponent(p.id);
-      setShipmentId(decodedId);
+      // Shipment IDs are simple strings, no need for URL decoding
+      setShipmentId(p.id);
       
       // Find the shipment in the simulated data
       const allShipments = simulatedDataService.getShipments();
       
-      const foundShipment = allShipments.find(s => s.id === decodedId);
+      const foundShipment = allShipments.find(s => s.id === p.id);
       
       if (foundShipment) {
         setShipment(convertToShipmentDetail(foundShipment));
         setNotFound(false);
       } else {
-        console.log('❌ Shipment not found:', decodedId);
+        console.log('❌ Shipment not found:', p.id);
         console.log('Available IDs:', allShipments.map(s => s.id).slice(0, 10));
         setShipment(null);
         setNotFound(true);

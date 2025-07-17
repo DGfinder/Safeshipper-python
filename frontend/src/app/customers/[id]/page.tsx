@@ -77,10 +77,10 @@ export default function CustomerDetailPage({ params }: CustomerDetailPageProps) 
 
   useEffect(() => {
     params.then((p) => {
-      const decodedId = decodeURIComponent(p.id);
-      setCustomerId(decodedId);
+      // Customer IDs are simple strings, no need for URL decoding
+      setCustomerId(p.id);
       
-      const foundCustomer = getCustomerById(decodedId);
+      const foundCustomer = getCustomerById(p.id);
       
       if (foundCustomer) {
         setCustomer(foundCustomer);
