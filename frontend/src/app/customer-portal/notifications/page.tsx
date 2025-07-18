@@ -10,9 +10,21 @@ import { Label } from "@/shared/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/components/ui/select";
 import { Switch } from "@/shared/components/ui/switch";
 import { Alert, AlertDescription } from "@/shared/components/ui/alert";
-import { DashboardLayout } from "@/shared/components/layout/dashboard-layout";
+import { CustomerAuthGuard } from "@/shared/components/auth/customer-auth-guard";
+import { MobileNavWrapper } from "@/shared/components/layout/mobile-bottom-nav";
 import { useTheme } from "@/shared/services/ThemeContext";
 import { usePerformanceMonitoring } from "@/shared/utils/performance";
+import { 
+  useCustomerNotifications, 
+  useMarkNotificationRead, 
+  useDismissNotification,
+  useNotificationPreferences,
+  useUpdateNotificationPreferences,
+  CustomerNotification
+} from "@/shared/hooks/useCustomerNotifications";
+import { DemoIndicator, ApiStatusIndicator } from "@/shared/components/ui/demo-indicator";
+import { customerApiService } from "@/shared/services/customerApiService";
+import { useCustomerAccess } from "@/shared/hooks/useCustomerProfile";
 import {
   Bell,
   BellOff,
@@ -71,148 +83,58 @@ import {
   HelpCircle
 } from "lucide-react";
 
-// Mock data for notifications
-const mockNotifications = [
-  {
-    id: "1",
-    type: "shipment_status",
-    title: "Shipment SH-2024-001 Delivered",
-    message: "Your dangerous goods shipment has been successfully delivered to the destination facility.",
-    timestamp: "2024-01-15T14:30:00Z",
-    read: false,
-    priority: "high",
-    category: "delivery",
-    shipmentId: "SH-2024-001",
-    actions: ["View Shipment", "Download POD"]
-  },
-  {
-    id: "2",
-    type: "shipment_status",
-    title: "Shipment SH-2024-002 In Transit",
-    message: "Your shipment is currently in transit and on schedule for delivery tomorrow.",
-    timestamp: "2024-01-15T10:15:00Z",
-    read: false,
-    priority: "medium",
-    category: "transit",
-    shipmentId: "SH-2024-002",
-    actions: ["Track Shipment"]
-  },
-  {
-    id: "3",
-    type: "compliance_alert",
-    title: "Document Expiration Alert",
-    message: "Your dangerous goods training certification expires in 30 days. Please renew to maintain compliance.",
-    timestamp: "2024-01-14T16:45:00Z",
-    read: true,
-    priority: "high",
-    category: "compliance",
-    actions: ["Renew Certification"]
-  },
-  {
-    id: "4",
-    type: "system_update",
-    title: "System Maintenance Scheduled",
-    message: "SafeShipper will undergo maintenance on January 20th from 2:00 AM to 4:00 AM EST.",
-    timestamp: "2024-01-14T09:00:00Z",
-    read: true,
-    priority: "low",
-    category: "system",
-    actions: ["View Details"]
-  },
-  {
-    id: "5",
-    type: "billing",
-    title: "Invoice Available",
-    message: "Your invoice for January 2024 is now available for download.",
-    timestamp: "2024-01-13T12:00:00Z",
-    read: false,
-    priority: "medium",
-    category: "billing",
-    actions: ["Download Invoice", "View Billing"]
-  },
-  {
-    id: "6",
-    type: "shipment_delayed",
-    title: "Shipment SH-2024-003 Delayed",
-    message: "Weather conditions have caused a delay in your shipment. New estimated delivery: January 18th.",
-    timestamp: "2024-01-13T08:30:00Z",
-    read: true,
-    priority: "high",
-    category: "delay",
-    shipmentId: "SH-2024-003",
-    actions: ["View Updated Schedule", "Contact Support"]
-  }
-];
 
-const mockNotificationSettings = {
-  email: {
-    enabled: true,
-    shipmentUpdates: true,
-    deliveryNotifications: true,
-    complianceAlerts: true,
-    systemUpdates: false,
-    billingUpdates: true,
-    marketingEmails: false
-  },
-  sms: {
-    enabled: true,
-    shipmentUpdates: true,
-    deliveryNotifications: true,
-    complianceAlerts: true,
-    systemUpdates: false,
-    emergencyAlerts: true
-  },
-  push: {
-    enabled: true,
-    shipmentUpdates: true,
-    deliveryNotifications: true,
-    complianceAlerts: true,
-    systemUpdates: true,
-    realTimeTracking: true
-  },
-  general: {
-    timezone: "America/New_York",
-    language: "en",
-    frequency: "immediate", // immediate, daily, weekly
-    quietHours: {
-      enabled: true,
-      start: "22:00",
-      end: "07:00"
-    }
-  }
-};
-
-export default function CustomerNotificationsPage() {
+function CustomerNotificationsContent() {
   const { loadTime } = usePerformanceMonitoring('CustomerNotificationsPage');
   const { isDark } = useTheme();
-  const [notifications, setNotifications] = useState(mockNotifications);
-  const [selectedNotification, setSelectedNotification] = useState<typeof mockNotifications[0] | null>(null);
+  const { data: customerAccess } = useCustomerAccess();
+  
+  // Use the enhanced notification system
+  const { data: notifications = [], isLoading, refetch } = useCustomerNotifications();
+  const { data: preferences } = useNotificationPreferences();
+  const markAsReadMutation = useMarkNotificationRead();
+  const dismissMutation = useDismissNotification();
+  const updatePreferencesMutation = useUpdateNotificationPreferences();
+  
+  const [selectedNotification, setSelectedNotification] = useState<CustomerNotification | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterType, setFilterType] = useState("all");
   const [filterRead, setFilterRead] = useState("all");
   const [filterPriority, setFilterPriority] = useState("all");
-  const [settings, setSettings] = useState(mockNotificationSettings);
-  const [isLoading, setIsLoading] = useState(false);
+  const [apiStatus, setApiStatus] = useState(customerApiService.getApiStatus());
+  
+  // Update API status periodically
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setApiStatus(customerApiService.getApiStatus());
+    }, 5000);
+    return () => clearInterval(interval);
+  }, []);
 
   const handleRefreshData = () => {
-    setIsLoading(true);
-    setTimeout(() => {
-      setIsLoading(false);
-    }, 1000);
+    refetch();
   };
 
   const markAsRead = (notificationId: string) => {
-    setNotifications(prev => 
-      prev.map(n => n.id === notificationId ? { ...n, read: true } : n)
-    );
+    markAsReadMutation.mutate(notificationId);
   };
 
   const markAllAsRead = () => {
-    setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+    // Mark all unread notifications as read
+    const unreadNotifications = notifications.filter(n => !n.read);
+    unreadNotifications.forEach(notification => {
+      markAsReadMutation.mutate(notification.id);
+    });
   };
 
   const deleteNotification = (notificationId: string) => {
-    setNotifications(prev => prev.filter(n => n.id !== notificationId));
+    dismissMutation.mutate(notificationId);
+  };
+
+  const handleActionClick = (actionUrl?: string, actionLabel?: string) => {
+    if (actionUrl) {
+      window.location.href = actionUrl;
+    }
   };
 
   const filteredNotifications = notifications.filter(notification => {
@@ -236,10 +158,16 @@ export default function CustomerNotificationsPage() {
         return <Clock className="h-4 w-4 text-yellow-600" />;
       case "compliance_alert":
         return <AlertTriangle className="h-4 w-4 text-red-600" />;
+      case "certificate_expiry":
+        return <Shield className="h-4 w-4 text-orange-600" />;
       case "system_update":
         return <Settings className="h-4 w-4 text-gray-600" />;
       case "billing":
         return <FileText className="h-4 w-4 text-green-600" />;
+      case "document_ready":
+        return <FileText className="h-4 w-4 text-purple-600" />;
+      case "inspection_required":
+        return <CheckCircle className="h-4 w-4 text-blue-600" />;
       default:
         return <Bell className="h-4 w-4 text-gray-600" />;
     }
@@ -247,6 +175,8 @@ export default function CustomerNotificationsPage() {
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
+      case "urgent":
+        return "bg-red-100 text-red-800 border-red-300";
       case "high":
         return "bg-red-50 text-red-700 border-red-200";
       case "medium":
@@ -255,6 +185,23 @@ export default function CustomerNotificationsPage() {
         return "bg-green-50 text-green-700 border-green-200";
       default:
         return "bg-gray-50 text-gray-700 border-gray-200";
+    }
+  };
+
+  const getCategoryColor = (category: string) => {
+    switch (category) {
+      case "compliance":
+        return "bg-red-100 text-red-800";
+      case "safety":
+        return "bg-orange-100 text-orange-800";
+      case "delivery":
+        return "bg-blue-100 text-blue-800";
+      case "financial":
+        return "bg-green-100 text-green-800";
+      case "system":
+        return "bg-gray-100 text-gray-800";
+      default:
+        return "bg-gray-100 text-gray-800";
     }
   };
 
@@ -275,30 +222,44 @@ export default function CustomerNotificationsPage() {
   };
 
   const updateSetting = (category: string, setting: string, value: any) => {
-    setSettings(prev => ({
-      ...prev,
+    if (!preferences) return;
+    
+    const updatedPreferences = {
+      ...preferences,
       [category]: {
-        ...(prev as any)[category],
+        ...(preferences as any)[category],
         [setting]: value
       }
-    }));
+    };
+    
+    updatePreferencesMutation.mutate(updatedPreferences);
   };
 
   return (
-    <DashboardLayout>
       <div className="space-y-6">
           {/* Header */}
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Notifications</h1>
+              <div className="flex items-center gap-3">
+                <h1 className="text-2xl font-bold text-gray-900">Notifications</h1>
+                <DemoIndicator 
+                  type={apiStatus.connected ? 'live' : 'demo'} 
+                  className="hidden lg:flex"
+                />
+              </div>
               <p className="text-gray-600">
-                Stay updated on your shipments and account activities
+                Stay updated on your shipments, compliance alerts, and account activities
                 {loadTime && (
                   <span className="ml-2 text-xs text-gray-400">
                     (Loaded in {loadTime.toFixed(0)}ms)
                   </span>
                 )}
               </p>
+              <ApiStatusIndicator 
+                isConnected={apiStatus.connected}
+                lastUpdate={apiStatus.lastCheck}
+                className="mt-2"
+              />
             </div>
             
             <div className="flex items-center gap-2">
@@ -388,6 +349,9 @@ export default function CustomerNotificationsPage() {
                     <SelectItem value="shipment_status">Shipment Status</SelectItem>
                     <SelectItem value="shipment_delayed">Shipment Delayed</SelectItem>
                     <SelectItem value="compliance_alert">Compliance Alert</SelectItem>
+                    <SelectItem value="certificate_expiry">Certificate Expiry</SelectItem>
+                    <SelectItem value="document_ready">Document Ready</SelectItem>
+                    <SelectItem value="inspection_required">Inspection Required</SelectItem>
                     <SelectItem value="system_update">System Update</SelectItem>
                     <SelectItem value="billing">Billing</SelectItem>
                   </SelectContent>
@@ -410,6 +374,7 @@ export default function CustomerNotificationsPage() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Priorities</SelectItem>
+                    <SelectItem value="urgent">Urgent</SelectItem>
                     <SelectItem value="high">High</SelectItem>
                     <SelectItem value="medium">Medium</SelectItem>
                     <SelectItem value="low">Low</SelectItem>
@@ -439,11 +404,19 @@ export default function CustomerNotificationsPage() {
                               )}
                             </div>
                             <p className="text-sm text-gray-600 mt-1">{notification.message}</p>
-                            <div className="flex items-center gap-4 mt-2 text-xs text-gray-500">
+                            <div className="flex items-center gap-2 mt-2 text-xs text-gray-500">
                               <span>{formatTimestamp(notification.timestamp)}</span>
-                              <Badge className={getPriorityColor(notification.priority)}>
+                              <Badge className={getPriorityColor(notification.priority)} variant="outline">
                                 {notification.priority}
                               </Badge>
+                              <Badge className={getCategoryColor(notification.category)} variant="outline">
+                                {notification.category}
+                              </Badge>
+                              {notification.metadata?.severity && (
+                                <Badge variant="outline" className="bg-gray-100 text-gray-600">
+                                  {notification.metadata.severity}
+                                </Badge>
+                              )}
                             </div>
                           </div>
                         </div>
@@ -471,13 +444,15 @@ export default function CustomerNotificationsPage() {
                         </div>
                       </div>
                       
-                      {notification.actions && notification.actions.length > 0 && (
+                      {(notification.actionUrl || notification.actionLabel) && (
                         <div className="flex flex-wrap gap-2 mt-3">
-                          {notification.actions.map((action, index) => (
-                            <Button key={index} variant="outline" size="sm">
-                              {action}
-                            </Button>
-                          ))}
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => handleActionClick(notification.actionUrl, notification.actionLabel)}
+                          >
+                            {notification.actionLabel || 'View Details'}
+                          </Button>
                         </div>
                       )}
                     </CardContent>
@@ -513,58 +488,54 @@ export default function CustomerNotificationsPage() {
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <Label htmlFor="email-enabled">Enable Email Notifications</Label>
-                      <Switch 
-                        id="email-enabled" 
-                        checked={settings.email.enabled}
-                        onCheckedChange={(checked) => updateSetting('email', 'enabled', checked)}
-                      />
-                    </div>
-                    
-                    {settings.email.enabled && (
-                      <div className="space-y-3 pl-4 border-l-2 border-gray-200">
+                    {preferences && (
+                      <>
                         <div className="flex items-center justify-between">
-                          <Label htmlFor="email-shipment">Shipment Updates</Label>
+                          <Label htmlFor="email-enabled">Enable Email Notifications</Label>
                           <Switch 
-                            id="email-shipment" 
-                            checked={settings.email.shipmentUpdates}
-                            onCheckedChange={(checked) => updateSetting('email', 'shipmentUpdates', checked)}
+                            id="email-enabled" 
+                            checked={preferences.email.enabled}
+                            onCheckedChange={(checked) => updateSetting('email', 'enabled', checked)}
                           />
                         </div>
-                        <div className="flex items-center justify-between">
-                          <Label htmlFor="email-delivery">Delivery Notifications</Label>
-                          <Switch 
-                            id="email-delivery" 
-                            checked={settings.email.deliveryNotifications}
-                            onCheckedChange={(checked) => updateSetting('email', 'deliveryNotifications', checked)}
-                          />
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <Label htmlFor="email-compliance">Compliance Alerts</Label>
-                          <Switch 
-                            id="email-compliance" 
-                            checked={settings.email.complianceAlerts}
-                            onCheckedChange={(checked) => updateSetting('email', 'complianceAlerts', checked)}
-                          />
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <Label htmlFor="email-system">System Updates</Label>
-                          <Switch 
-                            id="email-system" 
-                            checked={settings.email.systemUpdates}
-                            onCheckedChange={(checked) => updateSetting('email', 'systemUpdates', checked)}
-                          />
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <Label htmlFor="email-billing">Billing Updates</Label>
-                          <Switch 
-                            id="email-billing" 
-                            checked={settings.email.billingUpdates}
-                            onCheckedChange={(checked) => updateSetting('email', 'billingUpdates', checked)}
-                          />
-                        </div>
-                      </div>
+                        
+                        {preferences.email.enabled && (
+                          <div className="space-y-3 pl-4 border-l-2 border-gray-200">
+                            <div className="flex items-center justify-between">
+                              <Label htmlFor="email-shipment">Shipment Updates</Label>
+                              <Switch 
+                                id="email-shipment" 
+                                checked={preferences.email.shipmentUpdates}
+                                onCheckedChange={(checked) => updateSetting('email', 'shipmentUpdates', checked)}
+                              />
+                            </div>
+                            <div className="flex items-center justify-between">
+                              <Label htmlFor="email-compliance">Compliance Alerts</Label>
+                              <Switch 
+                                id="email-compliance" 
+                                checked={preferences.email.complianceAlerts}
+                                onCheckedChange={(checked) => updateSetting('email', 'complianceAlerts', checked)}
+                              />
+                            </div>
+                            <div className="flex items-center justify-between">
+                              <Label htmlFor="email-system">System Updates</Label>
+                              <Switch 
+                                id="email-system" 
+                                checked={preferences.email.systemUpdates}
+                                onCheckedChange={(checked) => updateSetting('email', 'systemUpdates', checked)}
+                              />
+                            </div>
+                            <div className="flex items-center justify-between">
+                              <Label htmlFor="email-documents">Document Ready</Label>
+                              <Switch 
+                                id="email-documents" 
+                                checked={preferences.email.documentReady}
+                                onCheckedChange={(checked) => updateSetting('email', 'documentReady', checked)}
+                              />
+                            </div>
+                          </div>
+                        )}
+                      </>
                     )}
                   </CardContent>
                 </Card>
@@ -578,50 +549,46 @@ export default function CustomerNotificationsPage() {
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <Label htmlFor="sms-enabled">Enable SMS Notifications</Label>
-                      <Switch 
-                        id="sms-enabled" 
-                        checked={settings.sms.enabled}
-                        onCheckedChange={(checked) => updateSetting('sms', 'enabled', checked)}
-                      />
-                    </div>
-                    
-                    {settings.sms.enabled && (
-                      <div className="space-y-3 pl-4 border-l-2 border-gray-200">
+                    {preferences && (
+                      <>
                         <div className="flex items-center justify-between">
-                          <Label htmlFor="sms-shipment">Shipment Updates</Label>
+                          <Label htmlFor="sms-enabled">Enable SMS Notifications</Label>
                           <Switch 
-                            id="sms-shipment" 
-                            checked={settings.sms.shipmentUpdates}
-                            onCheckedChange={(checked) => updateSetting('sms', 'shipmentUpdates', checked)}
+                            id="sms-enabled" 
+                            checked={preferences.sms.enabled}
+                            onCheckedChange={(checked) => updateSetting('sms', 'enabled', checked)}
                           />
                         </div>
-                        <div className="flex items-center justify-between">
-                          <Label htmlFor="sms-delivery">Delivery Notifications</Label>
-                          <Switch 
-                            id="sms-delivery" 
-                            checked={settings.sms.deliveryNotifications}
-                            onCheckedChange={(checked) => updateSetting('sms', 'deliveryNotifications', checked)}
-                          />
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <Label htmlFor="sms-compliance">Compliance Alerts</Label>
-                          <Switch 
-                            id="sms-compliance" 
-                            checked={settings.sms.complianceAlerts}
-                            onCheckedChange={(checked) => updateSetting('sms', 'complianceAlerts', checked)}
-                          />
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <Label htmlFor="sms-emergency">Emergency Alerts</Label>
-                          <Switch 
-                            id="sms-emergency" 
-                            checked={settings.sms.emergencyAlerts}
-                            onCheckedChange={(checked) => updateSetting('sms', 'emergencyAlerts', checked)}
-                          />
-                        </div>
-                      </div>
+                        
+                        {preferences.sms.enabled && (
+                          <div className="space-y-3 pl-4 border-l-2 border-gray-200">
+                            <div className="flex items-center justify-between">
+                              <Label htmlFor="sms-urgent">Urgent Only</Label>
+                              <Switch 
+                                id="sms-urgent" 
+                                checked={preferences.sms.urgentOnly}
+                                onCheckedChange={(checked) => updateSetting('sms', 'urgentOnly', checked)}
+                              />
+                            </div>
+                            <div className="flex items-center justify-between">
+                              <Label htmlFor="sms-compliance">Compliance Alerts</Label>
+                              <Switch 
+                                id="sms-compliance" 
+                                checked={preferences.sms.complianceAlerts}
+                                onCheckedChange={(checked) => updateSetting('sms', 'complianceAlerts', checked)}
+                              />
+                            </div>
+                            <div className="flex items-center justify-between">
+                              <Label htmlFor="sms-emergency">Emergency Alerts</Label>
+                              <Switch 
+                                id="sms-emergency" 
+                                checked={preferences.sms.emergencyAlerts}
+                                onCheckedChange={(checked) => updateSetting('sms', 'emergencyAlerts', checked)}
+                              />
+                            </div>
+                          </div>
+                        )}
+                      </>
                     )}
                   </CardContent>
                 </Card>
@@ -635,50 +602,46 @@ export default function CustomerNotificationsPage() {
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <Label htmlFor="push-enabled">Enable Push Notifications</Label>
-                      <Switch 
-                        id="push-enabled" 
-                        checked={settings.push.enabled}
-                        onCheckedChange={(checked) => updateSetting('push', 'enabled', checked)}
-                      />
-                    </div>
-                    
-                    {settings.push.enabled && (
-                      <div className="space-y-3 pl-4 border-l-2 border-gray-200">
+                    {preferences && (
+                      <>
                         <div className="flex items-center justify-between">
-                          <Label htmlFor="push-shipment">Shipment Updates</Label>
+                          <Label htmlFor="push-enabled">Enable Push Notifications</Label>
                           <Switch 
-                            id="push-shipment" 
-                            checked={settings.push.shipmentUpdates}
-                            onCheckedChange={(checked) => updateSetting('push', 'shipmentUpdates', checked)}
+                            id="push-enabled" 
+                            checked={preferences.push.enabled}
+                            onCheckedChange={(checked) => updateSetting('push', 'enabled', checked)}
                           />
                         </div>
-                        <div className="flex items-center justify-between">
-                          <Label htmlFor="push-delivery">Delivery Notifications</Label>
-                          <Switch 
-                            id="push-delivery" 
-                            checked={settings.push.deliveryNotifications}
-                            onCheckedChange={(checked) => updateSetting('push', 'deliveryNotifications', checked)}
-                          />
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <Label htmlFor="push-compliance">Compliance Alerts</Label>
-                          <Switch 
-                            id="push-compliance" 
-                            checked={settings.push.complianceAlerts}
-                            onCheckedChange={(checked) => updateSetting('push', 'complianceAlerts', checked)}
-                          />
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <Label htmlFor="push-realtime">Real-time Tracking</Label>
-                          <Switch 
-                            id="push-realtime" 
-                            checked={settings.push.realTimeTracking}
-                            onCheckedChange={(checked) => updateSetting('push', 'realTimeTracking', checked)}
-                          />
-                        </div>
-                      </div>
+                        
+                        {preferences.push.enabled && (
+                          <div className="space-y-3 pl-4 border-l-2 border-gray-200">
+                            <div className="flex items-center justify-between">
+                              <Label htmlFor="push-shipment">Shipment Updates</Label>
+                              <Switch 
+                                id="push-shipment" 
+                                checked={preferences.push.shipmentUpdates}
+                                onCheckedChange={(checked) => updateSetting('push', 'shipmentUpdates', checked)}
+                              />
+                            </div>
+                            <div className="flex items-center justify-between">
+                              <Label htmlFor="push-compliance">Compliance Alerts</Label>
+                              <Switch 
+                                id="push-compliance" 
+                                checked={preferences.push.complianceAlerts}
+                                onCheckedChange={(checked) => updateSetting('push', 'complianceAlerts', checked)}
+                              />
+                            </div>
+                            <div className="flex items-center justify-between">
+                              <Label htmlFor="push-realtime">Real-time Tracking</Label>
+                              <Switch 
+                                id="push-realtime" 
+                                checked={preferences.push.realTimeTracking}
+                                onCheckedChange={(checked) => updateSetting('push', 'realTimeTracking', checked)}
+                              />
+                            </div>
+                          </div>
+                        )}
+                      </>
                     )}
                   </CardContent>
                 </Card>
@@ -692,54 +655,56 @@ export default function CustomerNotificationsPage() {
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <Label htmlFor="timezone">Timezone</Label>
-                        <Select value={settings.general.timezone} onValueChange={(value) => updateSetting('general', 'timezone', value)}>
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="America/New_York">Eastern Time</SelectItem>
-                            <SelectItem value="America/Chicago">Central Time</SelectItem>
-                            <SelectItem value="America/Denver">Mountain Time</SelectItem>
-                            <SelectItem value="America/Los_Angeles">Pacific Time</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      
-                      <div>
-                        <Label htmlFor="frequency">Notification Frequency</Label>
-                        <Select value={settings.general.frequency} onValueChange={(value) => updateSetting('general', 'frequency', value)}>
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="immediate">Immediate</SelectItem>
-                            <SelectItem value="daily">Daily Digest</SelectItem>
-                            <SelectItem value="weekly">Weekly Summary</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-                    
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <Label htmlFor="quiet-hours">Quiet Hours</Label>
-                        <p className="text-sm text-gray-600">Pause notifications during specified hours</p>
-                      </div>
-                      <Switch 
-                        id="quiet-hours" 
-                        checked={settings.general.quietHours.enabled}
-                        onCheckedChange={(checked) => updateSetting('general', 'quietHours', { ...settings.general.quietHours, enabled: checked })}
-                      />
-                    </div>
+                    {preferences && (
+                      <>
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <Label htmlFor="quiet-hours">Quiet Hours</Label>
+                            <p className="text-sm text-gray-600">Pause notifications during specified hours</p>
+                          </div>
+                          <Switch 
+                            id="quiet-hours" 
+                            checked={preferences.inApp.quietHours.enabled}
+                            onCheckedChange={(checked) => updateSetting('inApp', 'quietHours', { ...preferences.inApp.quietHours, enabled: checked })}
+                          />
+                        </div>
+                        
+                        <div className="flex items-center justify-between">
+                          <Label htmlFor="show-popups">Show Popup Notifications</Label>
+                          <Switch 
+                            id="show-popups" 
+                            checked={preferences.inApp.showPopups}
+                            onCheckedChange={(checked) => updateSetting('inApp', 'showPopups', checked)}
+                          />
+                        </div>
+                        
+                        <div className="flex items-center justify-between">
+                          <Label htmlFor="sound-enabled">Sound Notifications</Label>
+                          <Switch 
+                            id="sound-enabled" 
+                            checked={preferences.inApp.soundEnabled}
+                            onCheckedChange={(checked) => updateSetting('inApp', 'soundEnabled', checked)}
+                          />
+                        </div>
+                      </>
+                    )}
                   </CardContent>
                 </Card>
               </div>
             </TabsContent>
           </Tabs>
       </div>
-    </DashboardLayout>
+  );
+}
+
+export default function CustomerNotificationsPage() {
+  return (
+    <CustomerAuthGuard>
+      <MobileNavWrapper>
+        <div className="min-h-screen bg-surface-background">
+          <CustomerNotificationsContent />
+        </div>
+      </MobileNavWrapper>
+    </CustomerAuthGuard>
   );
 }

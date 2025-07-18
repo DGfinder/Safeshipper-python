@@ -11,7 +11,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/shared/components/ui/textarea";
 import { Alert, AlertDescription } from "@/shared/components/ui/alert";
 import { Avatar, AvatarImage, AvatarFallback } from "@/shared/components/ui/avatar";
-import { DashboardLayout } from "@/shared/components/layout/dashboard-layout";
+import { CustomerAuthGuard } from "@/shared/components/auth/customer-auth-guard";
+import { MobileNavWrapper } from "@/shared/components/layout/mobile-bottom-nav";
 import { useTheme } from "@/shared/services/ThemeContext";
 import { usePerformanceMonitoring } from "@/shared/utils/performance";
 import {
@@ -227,7 +228,7 @@ const statuses = [
   { value: "closed", label: "Closed", color: "bg-gray-50 text-gray-700 border-gray-200" }
 ];
 
-export default function CustomerRequestsPage() {
+function CustomerRequestsContent() {
   const { loadTime } = usePerformanceMonitoring('CustomerRequestsPage');
   const { isDark } = useTheme();
   const [requests, setRequests] = useState(mockRequests);
@@ -354,7 +355,6 @@ export default function CustomerRequestsPage() {
   };
 
   return (
-    <DashboardLayout>
       <div className="space-y-6">
           {/* Header */}
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
@@ -737,6 +737,17 @@ export default function CustomerRequestsPage() {
             </div>
           </div>
       </div>
-    </DashboardLayout>
+  );
+}
+
+export default function CustomerRequestsPage() {
+  return (
+    <CustomerAuthGuard>
+      <MobileNavWrapper>
+        <div className="min-h-screen bg-surface-background">
+          <CustomerRequestsContent />
+        </div>
+      </MobileNavWrapper>
+    </CustomerAuthGuard>
   );
 }

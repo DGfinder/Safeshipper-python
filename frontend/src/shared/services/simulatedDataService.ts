@@ -374,6 +374,102 @@ export const DANGEROUS_GOODS_CATALOG = {
       compliance: "COMPLIANT",
     },
   ],
+  industrial: [
+    {
+      unNumber: "1789",
+      properShippingName: "HYDROCHLORIC ACID",
+      hazardClass: "8",
+      packingGroup: "II",
+      description: "Industrial cleaning acid",
+      quantity: "10,000L",
+      commonFor: "Steel processing, chemical manufacturing",
+      emergencyProcedures: "Corrosive - neutralize with lime",
+      compliance: "COMPLIANT",
+    },
+    {
+      unNumber: "1824",
+      properShippingName: "SODIUM HYDROXIDE SOLUTION",
+      hazardClass: "8",
+      packingGroup: "II",
+      description: "Caustic soda solution",
+      quantity: "8,000L",
+      commonFor: "Pulp and paper, petroleum refining",
+      emergencyProcedures: "Caustic - dilute with water",
+      compliance: "COMPLIANT",
+    },
+    {
+      unNumber: "1993",
+      properShippingName: "FLAMMABLE LIQUID, N.O.S.",
+      hazardClass: "3",
+      packingGroup: "III",
+      description: "Industrial solvent",
+      quantity: "12,000L",
+      commonFor: "Manufacturing, cleaning",
+      emergencyProcedures: "Flammable - eliminate ignition sources",
+      compliance: "COMPLIANT",
+    }
+  ],
+  agricultural: [
+    {
+      unNumber: "2758",
+      properShippingName: "CARBAMATE PESTICIDE, LIQUID, TOXIC",
+      hazardClass: "6.1",
+      packingGroup: "III",
+      description: "Agricultural pesticide",
+      quantity: "2,000L",
+      commonFor: "Crop protection",
+      emergencyProcedures: "Toxic - avoid inhalation",
+      compliance: "COMPLIANT",
+    },
+    {
+      unNumber: "1760",
+      properShippingName: "CORROSIVE LIQUID, N.O.S.",
+      hazardClass: "8",
+      packingGroup: "III",
+      description: "Agricultural fertilizer component",
+      quantity: "5,000L",
+      commonFor: "Fertilizer production",
+      emergencyProcedures: "Corrosive - flush with water",
+      compliance: "COMPLIANT",
+    }
+  ],
+  medical: [
+    {
+      unNumber: "1170",
+      properShippingName: "ETHANOL",
+      hazardClass: "3",
+      packingGroup: "II",
+      description: "Medical grade ethanol",
+      quantity: "500L",
+      commonFor: "Hospital disinfection",
+      emergencyProcedures: "Flammable - no ignition sources",
+      compliance: "COMPLIANT",
+    },
+    {
+      unNumber: "2811",
+      properShippingName: "TOXIC SOLID, ORGANIC, N.O.S.",
+      hazardClass: "6.1",
+      packingGroup: "III",
+      description: "Medical waste",
+      quantity: "200kg",
+      commonFor: "Hospital waste disposal",
+      emergencyProcedures: "Toxic - PPE required",
+      compliance: "COMPLIANT",
+    }
+  ],
+  retail: [
+    {
+      unNumber: "1950",
+      properShippingName: "AEROSOLS",
+      hazardClass: "2.1",
+      packingGroup: "",
+      description: "Consumer aerosol products",
+      quantity: "1,000 units",
+      commonFor: "Retail distribution",
+      emergencyProcedures: "Pressurized - avoid heat",
+      compliance: "COMPLIANT",
+    }
+  ],
   nonCompliant: [
     {
       unNumber: "1203",
@@ -973,6 +1069,105 @@ class SimulatedDataService {
   public getCustomerByName(customerName: string) {
     const customers = this.getCustomerProfiles();
     return customers.find(customer => customer.name === customerName);
+  }
+
+  // Method to get customer compliance profile
+  public getCustomerComplianceProfile(customerName: string) {
+    const customer = this.getCustomerByName(customerName);
+    const customerShipments = this.getCustomerShipments(customerName);
+    
+    if (!customer || !customerShipments.length) {
+      return null;
+    }
+
+    // Calculate compliance metrics
+    const totalShipments = customerShipments.length;
+    const compliantShipments = customerShipments.filter(s => s.isCompliant).length;
+    const dgShipments = customerShipments.filter(s => s.dangerousGoods && s.dangerousGoods.length > 0);
+    const complianceRate = (compliantShipments / totalShipments) * 100;
+
+    // Get dangerous goods authorizations based on customer type
+    const authorizedGoods = this.getCustomerDGAuthorizations(customer.category);
+    
+    // Calculate violations
+    const violations = customerShipments
+      .filter(s => !s.isCompliant)
+      .map((shipment, index) => ({
+        id: `viol-${index + 1}`,
+        shipmentId: shipment.id,
+        type: shipment.complianceIssues?.[0] || "Documentation Missing",
+        severity: seededRandom() > 0.7 ? "High" : seededRandom() > 0.4 ? "Medium" : "Low",
+        date: shipment.createdAt,
+        status: seededRandom() > 0.6 ? "Open" : "Resolved"
+      }));
+
+    return {
+      customerId: customer.id,
+      customerName: customer.name,
+      complianceRate: Math.round(complianceRate * 10) / 10,
+      totalShipments,
+      compliantShipments,
+      dgShipments: dgShipments.length,
+      authorizedGoods,
+      violations,
+      lastInspection: new Date('2024-01-20').toISOString(),
+      certificatesValid: Math.floor(authorizedGoods.length * 0.9), // 90% valid
+      dgLicenseExpiry: new Date('2024-12-31').toISOString(),
+      safetyRating: Math.max(3.5, Math.min(5.0, 4.0 + (complianceRate / 100) + seededRandom() * 0.5))
+    };
+  }
+
+  // Method to get customer dangerous goods authorizations
+  public getCustomerDGAuthorizations(category: string) {
+    const allGoods = [
+      ...DANGEROUS_GOODS_CATALOG.mining,
+      ...DANGEROUS_GOODS_CATALOG.industrial,
+      ...DANGEROUS_GOODS_CATALOG.agricultural,
+      ...DANGEROUS_GOODS_CATALOG.medical,
+      ...DANGEROUS_GOODS_CATALOG.retail
+    ];
+
+    // Filter authorizations based on customer category
+    switch (category.toLowerCase()) {
+      case 'mining':
+        return DANGEROUS_GOODS_CATALOG.mining.slice(0, 8); // Mining companies get mining DG
+      case 'industrial':
+        return [...DANGEROUS_GOODS_CATALOG.industrial.slice(0, 6), ...DANGEROUS_GOODS_CATALOG.mining.slice(0, 3)];
+      case 'agricultural':
+        return DANGEROUS_GOODS_CATALOG.agricultural.slice(0, 5);
+      case 'medical':
+        return DANGEROUS_GOODS_CATALOG.medical.slice(0, 4);
+      default:
+        return allGoods.slice(0, 3); // Basic authorizations for retail
+    }
+  }
+
+  // Method to get customer safety incidents
+  public getCustomerSafetyIncidents(customerName: string) {
+    const customer = this.getCustomerByName(customerName);
+    if (!customer) return [];
+
+    const incidentCount = Math.floor(seededRandom() * 3); // 0-2 incidents
+    const incidents = [];
+
+    for (let i = 0; i < incidentCount; i++) {
+      const severity = seededRandom() > 0.8 ? 'High' : seededRandom() > 0.5 ? 'Medium' : 'Low';
+      const types = ['Spill', 'Documentation Error', 'Transport Violation', 'Equipment Failure'];
+      
+      incidents.push({
+        id: `incident-${i + 1}`,
+        customerId: customer.id,
+        type: types[Math.floor(seededRandom() * types.length)],
+        severity,
+        description: `Safety incident involving dangerous goods transport`,
+        date: randomDate(new Date('2024-01-01'), new Date('2024-01-31')).toISOString(),
+        status: seededRandom() > 0.3 ? 'Resolved' : 'Investigating',
+        reportedBy: 'Operations Team',
+        actions: severity === 'High' ? ['Immediate containment', 'Regulatory notification', 'Investigation launched'] : ['Documented', 'Corrective action taken']
+      });
+    }
+
+    return incidents;
   }
 }
 

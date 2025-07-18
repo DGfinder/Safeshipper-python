@@ -26,6 +26,7 @@ import {
 } from "lucide-react";
 import { DashboardLayout } from "@/shared/components/layout/dashboard-layout";
 import { simulatedDataService } from "@/shared/services/simulatedDataService";
+import { DemoIndicator } from "@/shared/components/ui/demo-indicator";
 import Link from "next/link";
 
 interface CustomerDetailPageProps {
@@ -73,6 +74,7 @@ export default function CustomerDetailPage({ params }: CustomerDetailPageProps) 
   const [customerId, setCustomerId] = useState<string | null>(null);
   const [customer, setCustomer] = useState<Customer | null>(null);
   const [customerShipments, setCustomerShipments] = useState<any[]>([]);
+  const [complianceProfile, setComplianceProfile] = useState<any>(null);
   const [notFound, setNotFound] = useState(false);
 
   useEffect(() => {
@@ -88,6 +90,9 @@ export default function CustomerDetailPage({ params }: CustomerDetailPageProps) 
         // Load customer shipments
         const shipments = getCustomerShipments(foundCustomer.name);
         setCustomerShipments(shipments);
+        // Load compliance profile
+        const compliance = simulatedDataService.getCustomerComplianceProfile(foundCustomer.name);
+        setComplianceProfile(compliance);
       } else {
         setCustomer(null);
         setCustomerShipments([]);
@@ -294,9 +299,10 @@ export default function CustomerDetailPage({ params }: CustomerDetailPageProps) 
 
         {/* Customer Details Tabs */}
         <Tabs defaultValue="overview" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-5">
+          <TabsList className="grid w-full grid-cols-6">
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="shipments">Shipments</TabsTrigger>
+            <TabsTrigger value="compliance">Compliance</TabsTrigger>
             <TabsTrigger value="routes">Routes</TabsTrigger>
             <TabsTrigger value="geofence">Geofence</TabsTrigger>
             <TabsTrigger value="documents">Documents</TabsTrigger>
@@ -455,6 +461,124 @@ export default function CustomerDetailPage({ params }: CustomerDetailPageProps) 
                 )}
               </CardContent>
             </Card>
+          </TabsContent>
+
+          <TabsContent value="compliance">
+            <div className="space-y-6">
+              <div className="flex items-center gap-2 mb-4">
+                <Shield className="h-5 w-5 text-blue-600" />
+                <h3 className="text-lg font-semibold">Safety & Compliance Profile</h3>
+                <DemoIndicator type="demo" label="Simulated Compliance Data" />
+              </div>
+              
+              {complianceProfile ? (
+                <div className="space-y-6">
+                  {/* Compliance Overview */}
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <Card>
+                      <CardContent className="p-4 text-center">
+                        <div className="text-2xl font-bold text-green-600">
+                          {complianceProfile.complianceRate}%
+                        </div>
+                        <p className="text-sm text-gray-600">Compliance Rate</p>
+                      </CardContent>
+                    </Card>
+                    <Card>
+                      <CardContent className="p-4 text-center">
+                        <div className="text-2xl font-bold text-blue-600">
+                          {complianceProfile.dgShipments}
+                        </div>
+                        <p className="text-sm text-gray-600">DG Shipments</p>
+                      </CardContent>
+                    </Card>
+                    <Card>
+                      <CardContent className="p-4 text-center">
+                        <div className="text-2xl font-bold text-yellow-600">
+                          {complianceProfile.violations.length}
+                        </div>
+                        <p className="text-sm text-gray-600">Active Violations</p>
+                      </CardContent>
+                    </Card>
+                    <Card>
+                      <CardContent className="p-4 text-center">
+                        <div className="text-2xl font-bold text-purple-600">
+                          {complianceProfile.safetyRating.toFixed(1)}
+                        </div>
+                        <p className="text-sm text-gray-600">Safety Rating</p>
+                      </CardContent>
+                    </Card>
+                  </div>
+
+                  {/* DG Authorizations */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Dangerous Goods Authorizations</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {complianceProfile.authorizedGoods.slice(0, 6).map((good: any, index: number) => (
+                          <div key={index} className="border rounded-lg p-3">
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <p className="font-medium">UN{good.unNumber}</p>
+                                <p className="text-sm text-gray-600">{good.properShippingName}</p>
+                                <Badge className="mt-1 text-xs">Class {good.hazardClass}</Badge>
+                              </div>
+                              <Badge className="bg-green-100 text-green-800">Authorized</Badge>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                      {complianceProfile.authorizedGoods.length > 6 && (
+                        <p className="text-sm text-gray-500 mt-3 text-center">
+                          +{complianceProfile.authorizedGoods.length - 6} more authorizations
+                        </p>
+                      )}
+                    </CardContent>
+                  </Card>
+
+                  {/* Recent Violations */}
+                  {complianceProfile.violations.length > 0 && (
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                          <AlertTriangle className="h-5 w-5 text-red-600" />
+                          Recent Violations
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="space-y-3">
+                          {complianceProfile.violations.map((violation: any) => (
+                            <div key={violation.id} className="border rounded-lg p-3 flex items-center justify-between">
+                              <div>
+                                <p className="font-medium">{violation.type}</p>
+                                <p className="text-sm text-gray-600">Shipment: {violation.shipmentId}</p>
+                                <p className="text-xs text-gray-500">{formatDate(violation.date)}</p>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <Badge className={violation.severity === 'High' ? 'bg-red-100 text-red-800' : 
+                                  violation.severity === 'Medium' ? 'bg-yellow-100 text-yellow-800' : 
+                                  'bg-blue-100 text-blue-800'}>
+                                  {violation.severity}
+                                </Badge>
+                                <Badge className={violation.status === 'Open' ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'}>
+                                  {violation.status}
+                                </Badge>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <Shield className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                  <p className="text-gray-600">No compliance data available</p>
+                </div>
+              )}
+            </div>
           </TabsContent>
 
           <TabsContent value="routes">

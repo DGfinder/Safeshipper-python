@@ -27,9 +27,22 @@ import {
   Phone,
   Mail,
   Settings,
-  RefreshCw
+  RefreshCw,
+  Shield,
+  Award,
+  BarChart3,
+  Building2,
+  Archive,
+  Beaker,
+  ClipboardCheck
 } from "lucide-react";
-import { AuthGuard } from "@/shared/components/common/auth-guard";
+import { CustomerAuthGuard } from "@/shared/components/auth/customer-auth-guard";
+import { useCustomerProfile, useCustomerAccess, useCustomerCompliance } from "@/shared/hooks/useCustomerProfile";
+import { useCustomerDocuments } from "@/shared/hooks/useCustomerDocuments";
+import { simulatedDataService } from "@/shared/services/simulatedDataService";
+import { DemoIndicator, ApiStatusIndicator } from "@/shared/components/ui/demo-indicator";
+import { customerApiService } from "@/shared/services/customerApiService";
+import { getEnvironmentConfig } from "@/shared/config/environment";
 import { MobileNavWrapper } from "@/shared/components/layout/mobile-bottom-nav";
 import { useTheme } from "@/shared/services/ThemeContext";
 import { useAccessibility } from "@/shared/services/AccessibilityContext";
@@ -91,10 +104,47 @@ export default function CustomerPortalPage() {
   
   const { isDark } = useTheme();
   const { preferences } = useAccessibility();
+  const { data: customerAccess } = useCustomerAccess();
+  const { data: customerProfile } = useCustomerProfile(customerAccess?.customerId || "");
+  const { data: complianceProfile } = useCustomerCompliance(customerAccess?.customerId || "");
+  const { data: documents } = useCustomerDocuments();
+  const config = getEnvironmentConfig();
+  const [apiStatus, setApiStatus] = useState(customerApiService.getApiStatus());
 
-  // Mock data - replace with real API calls
   useEffect(() => {
-    const mockShipments: CustomerShipment[] = [
+    const interval = setInterval(() => {
+      setApiStatus(customerApiService.getApiStatus());
+    }, 10000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Load real customer data and shipments
+  useEffect(() => {
+    if (customerProfile) {
+      // Get customer's actual shipments from simulated data service
+      const customerShipments = simulatedDataService.getCustomerShipments(customerProfile.name);
+      
+      const transformedShipments: CustomerShipment[] = customerShipments.map((shipment) => ({
+        id: shipment.id,
+        trackingNumber: shipment.trackingNumber,
+        externalReference: `REF-${shipment.id.slice(-6)}`,
+        status: shipment.status.toLowerCase().replace('_', '_') as any,
+        origin: shipment.route.split(' → ')[0],
+        destination: shipment.route.split(' → ')[1],
+        estimatedDelivery: shipment.estimatedDelivery,
+        packages: Math.floor(Math.random() * 5) + 1,
+        weight: parseFloat(shipment.weight.replace(/[^0-9.]/g, '')),
+        value: Math.floor(Math.random() * 5000) + 1000,
+        serviceType: shipment.dangerousGoods?.length > 0 ? "Dangerous Goods" : "Standard",
+        lastUpdate: shipment.createdAt,
+        hasHazmat: shipment.dangerousGoods?.length > 0,
+        customerNotes: shipment.dangerousGoods?.length > 0 ? "Dangerous goods shipment - special handling required" : undefined
+      }));
+      
+      setShipments(transformedShipments);
+    } else {
+      // Fallback mock data for demo
+      const mockShipments: CustomerShipment[] = [
       {
         id: "1",
         trackingNumber: "SS-2024-001234",
@@ -205,12 +255,15 @@ export default function CustomerPortalPage() {
     ];
 
     setTimeout(() => {
-      setShipments(mockShipments);
+      if (!customerProfile) {
+        setShipments(mockShipments);
+      }
       setRequests(mockRequests);
       setNotifications(mockNotifications);
       setLoading(false);
     }, 1000);
-  }, []);
+    }
+  }, [customerProfile]);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -308,7 +361,7 @@ export default function CustomerPortalPage() {
 
   if (showAdvancedTracking && selectedShipment) {
     return (
-      <AuthGuard>
+      <CustomerAuthGuard>
         <MobileNavWrapper>
           <div className="min-h-screen bg-surface-background">
             <AdvancedTracking
@@ -320,12 +373,12 @@ export default function CustomerPortalPage() {
             />
           </div>
         </MobileNavWrapper>
-      </AuthGuard>
+      </CustomerAuthGuard>
     );
   }
 
   return (
-    <AuthGuard>
+    <CustomerAuthGuard>
       <MobileNavWrapper 
         showFAB={true} 
         fabVariant="expandable"
@@ -356,8 +409,60 @@ export default function CustomerPortalPage() {
           </div>
 
         <div className="px-6 py-6">
+          {/* Demo Indicator */}
+          {(config.apiMode === "demo" || config.enableTerryMode) && (
+            <div className="mb-6 space-y-2">
+              <DemoIndicator 
+                type={config.apiMode === "demo" ? "demo" : apiStatus.connected ? "live" : "hybrid"} 
+                label={`Customer Portal - ${config.apiMode.toUpperCase()} Mode`}
+                size="md"
+              />
+              <ApiStatusIndicator 
+                isConnected={apiStatus.connected}
+                lastUpdate={apiStatus.lastCheck}
+              />
+            </div>
+          )}
+
+          {/* Customer Profile Overview */}
+          {customerProfile && (
+            <Card className="mb-6">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-4">
+                    <div className="p-3 bg-blue-100 rounded-lg">
+                      <Building2 className="h-8 w-8 text-blue-600" />
+                    </div>
+                    <div>
+                      <h2 className="text-xl font-bold text-gray-900">{customerProfile.name}</h2>
+                      <div className="flex items-center space-x-4 text-sm text-gray-600">
+                        <span className="flex items-center gap-1">
+                          <Award className="h-4 w-4" />
+                          {customerProfile.tier} Tier
+                        </span>
+                        <span>•</span>
+                        <span>{customerProfile.category}</span>
+                        <span>•</span>
+                        <span>{customerProfile.totalShipments} Total Shipments</span>
+                      </div>
+                    </div>
+                  </div>
+                  {complianceProfile && (
+                    <div className="text-right">
+                      <div className="flex items-center gap-2 mb-1">
+                        <Shield className="h-4 w-4 text-green-600" />
+                        <span className="text-lg font-bold text-green-600">{complianceProfile.complianceRate}%</span>
+                      </div>
+                      <p className="text-sm text-gray-600">Compliance Rate</p>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           {/* Quick Stats */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
             <Card>
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
@@ -393,13 +498,29 @@ export default function CustomerPortalPage() {
                 </div>
               </CardContent>
             </Card>
+
+            {complianceProfile && (
+              <Card>
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm text-gray-600">Safety Rating</p>
+                      <p className="text-3xl font-bold text-green-600">{complianceProfile.safetyRating}/5.0</p>
+                    </div>
+                    <BarChart3 className="h-8 w-8 text-green-600" />
+                  </div>
+                </CardContent>
+              </Card>
+            )}
           </div>
 
           {/* Main Content */}
           <Tabs defaultValue="shipments" className="space-y-6">
-            <TabsList className="grid w-full grid-cols-4">
+            <TabsList className="grid w-full grid-cols-6">
               <TabsTrigger value="shipments">My Shipments</TabsTrigger>
-              <TabsTrigger value="requests">Service Requests</TabsTrigger>
+              <TabsTrigger value="compliance">Compliance</TabsTrigger>
+              <TabsTrigger value="documents">Documents</TabsTrigger>
+              <TabsTrigger value="requests">Requests</TabsTrigger>
               <TabsTrigger value="notifications">Notifications</TabsTrigger>
               <TabsTrigger value="account">Account</TabsTrigger>
             </TabsList>
@@ -511,6 +632,242 @@ export default function CustomerPortalPage() {
               </Card>
             </TabsContent>
 
+            <TabsContent value="compliance" className="space-y-6">
+              {complianceProfile ? (
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {/* Compliance Overview */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <Shield className="h-5 w-5" />
+                        Compliance Overview
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="text-center p-4 bg-green-50 rounded-lg">
+                          <div className="text-2xl font-bold text-green-600">{complianceProfile.complianceRate}%</div>
+                          <div className="text-sm text-gray-600">Compliance Rate</div>
+                        </div>
+                        <div className="text-center p-4 bg-blue-50 rounded-lg">
+                          <div className="text-2xl font-bold text-blue-600">{complianceProfile.safetyRating}/5.0</div>
+                          <div className="text-sm text-gray-600">Safety Rating</div>
+                        </div>
+                      </div>
+                      
+                      <div className="grid grid-cols-2 gap-4 text-sm">
+                        <div>
+                          <span className="text-gray-600">Total Shipments:</span>
+                          <span className="font-medium ml-2">{complianceProfile.totalShipments}</span>
+                        </div>
+                        <div>
+                          <span className="text-gray-600">DG Shipments:</span>
+                          <span className="font-medium ml-2">{complianceProfile.dgShipments}</span>
+                        </div>
+                      </div>
+                      
+                      {complianceProfile.violations.length > 0 && (
+                        <div className="p-3 bg-yellow-50 rounded-lg">
+                          <div className="flex items-center gap-2 text-yellow-800">
+                            <AlertTriangle className="h-4 w-4" />
+                            <span className="font-medium">{complianceProfile.violations.length} Open Violations</span>
+                          </div>
+                          <p className="text-sm text-yellow-700 mt-1">Please review and address compliance issues</p>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+
+                  {/* Dangerous Goods Authorizations */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <AlertTriangle className="h-5 w-5" />
+                        DG Authorizations
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-3">
+                        {complianceProfile.authorizedGoods.slice(0, 5).map((dg, index) => (
+                          <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
+                            <div>
+                              <div className="font-medium">UN{dg.unNumber}</div>
+                              <div className="text-sm text-gray-600">{dg.properShippingName}</div>
+                              <div className="text-xs text-blue-600">Class {dg.hazardClass}</div>
+                            </div>
+                            <div className="text-right">
+                              <Badge className="bg-green-100 text-green-800">Active</Badge>
+                              <div className="text-xs text-gray-500 mt-1">Until {new Date(dg.authorizedUntil).toLocaleDateString()}</div>
+                            </div>
+                          </div>
+                        ))}
+                        
+                        {complianceProfile.authorizedGoods.length > 5 && (
+                          <div className="text-center">
+                            <Button variant="outline" size="sm">
+                              View All ({complianceProfile.authorizedGoods.length}) Authorizations
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Recent Violations */}
+                  {complianceProfile.violations.length > 0 && (
+                    <Card className="lg:col-span-2">
+                      <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                          <AlertTriangle className="h-5 w-5 text-orange-600" />
+                          Compliance Violations
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="space-y-3">
+                          {complianceProfile.violations.map((violation) => (
+                            <div key={violation.id} className="flex items-center justify-between p-4 border rounded-lg">
+                              <div className="flex-1">
+                                <div className="flex items-center gap-3 mb-2">
+                                  <Badge className={
+                                    violation.severity === 'High' ? 'bg-red-100 text-red-800' :
+                                    violation.severity === 'Medium' ? 'bg-yellow-100 text-yellow-800' :
+                                    'bg-blue-100 text-blue-800'
+                                  }>
+                                    {violation.severity}
+                                  </Badge>
+                                  <Badge className={
+                                    violation.status === 'Open' ? 'bg-orange-100 text-orange-800' :
+                                    'bg-green-100 text-green-800'
+                                  }>
+                                    {violation.status}
+                                  </Badge>
+                                </div>
+                                <h4 className="font-medium">{violation.type}</h4>
+                                <p className="text-sm text-gray-600">{violation.description}</p>
+                                <p className="text-xs text-gray-500 mt-1">Shipment: {violation.shipmentId}</p>
+                              </div>
+                              <div className="text-right">
+                                <div className="text-sm text-gray-600">{new Date(violation.date).toLocaleDateString()}</div>
+                                <Button variant="outline" size="sm" className="mt-2">
+                                  View Details
+                                </Button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+                </div>
+              ) : (
+                <Card>
+                  <CardContent className="p-8 text-center">
+                    <Shield className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                    <h3 className="text-lg font-semibold text-gray-900 mb-2">Compliance Data Loading</h3>
+                    <p className="text-gray-600">
+                      Your compliance profile and safety metrics are being loaded.
+                    </p>
+                  </CardContent>
+                </Card>
+              )}
+            </TabsContent>
+
+            <TabsContent value="documents" className="space-y-6">
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                {/* Document Stats */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Archive className="h-5 w-5" />
+                      Document Library
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="text-center p-3 bg-blue-50 rounded-lg">
+                        <div className="text-2xl font-bold text-blue-600">{documents?.length || 0}</div>
+                        <div className="text-sm text-gray-600">Total Documents</div>
+                      </div>
+                      <div className="text-center p-3 bg-orange-50 rounded-lg">
+                        <div className="text-2xl font-bold text-orange-600">
+                          {documents?.filter(d => d.category === 'safety').length || 0}
+                        </div>
+                        <div className="text-sm text-gray-600">Safety Docs</div>
+                      </div>
+                    </div>
+                    
+                    <div className="text-center">
+                      <Button className="w-full" onClick={() => window.location.href = '/customer-portal/documents'}>
+                        <Archive className="h-4 w-4 mr-2" />
+                        View All Documents
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Recent Documents */}
+                <Card className="lg:col-span-2">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <FileText className="h-5 w-5" />
+                      Recent Documents
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3">
+                      {documents?.slice(0, 5).map((document) => (
+                        <div key={document.id} className="flex items-center justify-between p-3 border rounded-lg">
+                          <div className="flex items-center gap-3">
+                            <div className="p-2 bg-gray-50 rounded">
+                              {document.type === 'sds' && <Beaker className="h-4 w-4 text-orange-600" />}
+                              {document.type === 'compliance_certificate' && <Award className="h-4 w-4 text-green-600" />}
+                              {document.type === 'inspection_report' && <ClipboardCheck className="h-4 w-4 text-blue-600" />}
+                              {!['sds', 'compliance_certificate', 'inspection_report'].includes(document.type) && 
+                                <FileText className="h-4 w-4 text-gray-600" />}
+                            </div>
+                            <div>
+                              <div className="font-medium text-sm">{document.title}</div>
+                              <div className="text-xs text-gray-600">{document.fileName}</div>
+                              <div className="flex items-center gap-2 mt-1">
+                                <Badge className={{
+                                  'safety': 'bg-orange-100 text-orange-800',
+                                  'compliance': 'bg-green-100 text-green-800',
+                                  'operational': 'bg-blue-100 text-blue-800',
+                                  'financial': 'bg-purple-100 text-purple-800'
+                                }[document.category]}>
+                                  {document.category}
+                                </Badge>
+                                {document.metadata.unNumber && (
+                                  <Badge variant="outline" className="text-orange-600 border-orange-600">
+                                    UN{document.metadata.unNumber}
+                                  </Badge>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Button variant="outline" size="sm">
+                              <Eye className="h-4 w-4 mr-1" />
+                              View
+                            </Button>
+                            <Button variant="outline" size="sm">
+                              <Download className="h-4 w-4 mr-1" />
+                              Download
+                            </Button>
+                          </div>
+                        </div>
+                      )) || (
+                        <div className="text-center py-8">
+                          <FileText className="h-8 w-8 text-gray-400 mx-auto mb-2" />
+                          <p className="text-gray-600">No documents available</p>
+                        </div>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </TabsContent>
+
             <TabsContent value="requests" className="space-y-6">
               <Card>
                 <CardHeader>
@@ -599,26 +956,65 @@ export default function CustomerPortalPage() {
                     <CardTitle>Account Information</CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    <div>
-                      <label className="text-sm font-medium text-gray-600">Company Name</label>
-                      <p className="text-gray-900">Demo Company Ltd</p>
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium text-gray-600">Account Number</label>
-                      <p className="text-gray-900">CUST-001</p>
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium text-gray-600">Primary Contact</label>
-                      <p className="text-gray-900">John Doe</p>
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium text-gray-600">Email</label>
-                      <p className="text-gray-900">john@democompany.com</p>
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium text-gray-600">Phone</label>
-                      <p className="text-gray-900">+1-555-0123</p>
-                    </div>
+                    {customerProfile ? (
+                      <>
+                        <div>
+                          <label className="text-sm font-medium text-gray-600">Company Name</label>
+                          <p className="text-gray-900">{customerProfile.name}</p>
+                        </div>
+                        <div>
+                          <label className="text-sm font-medium text-gray-600">Account Number</label>
+                          <p className="text-gray-900">{customerProfile.id}</p>
+                        </div>
+                        <div>
+                          <label className="text-sm font-medium text-gray-600">Email</label>
+                          <p className="text-gray-900">{customerProfile.email}</p>
+                        </div>
+                        <div>
+                          <label className="text-sm font-medium text-gray-600">Phone</label>
+                          <p className="text-gray-900">{customerProfile.phone}</p>
+                        </div>
+                        <div>
+                          <label className="text-sm font-medium text-gray-600">Address</label>
+                          <p className="text-gray-900">{customerProfile.address}</p>
+                          <p className="text-gray-900">{customerProfile.city}, {customerProfile.state} {customerProfile.country}</p>
+                        </div>
+                        <div>
+                          <label className="text-sm font-medium text-gray-600">Customer Tier</label>
+                          <Badge className={{
+                            'PLATINUM': 'bg-purple-100 text-purple-800',
+                            'GOLD': 'bg-yellow-100 text-yellow-800',
+                            'SILVER': 'bg-gray-100 text-gray-800',
+                            'BRONZE': 'bg-orange-100 text-orange-800'
+                          }[customerProfile.tier]}>
+                            {customerProfile.tier}
+                          </Badge>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <div>
+                          <label className="text-sm font-medium text-gray-600">Company Name</label>
+                          <p className="text-gray-900">Demo Company Ltd</p>
+                        </div>
+                        <div>
+                          <label className="text-sm font-medium text-gray-600">Account Number</label>
+                          <p className="text-gray-900">CUST-001</p>
+                        </div>
+                        <div>
+                          <label className="text-sm font-medium text-gray-600">Primary Contact</label>
+                          <p className="text-gray-900">John Doe</p>
+                        </div>
+                        <div>
+                          <label className="text-sm font-medium text-gray-600">Email</label>
+                          <p className="text-gray-900">john@democompany.com</p>
+                        </div>
+                        <div>
+                          <label className="text-sm font-medium text-gray-600">Phone</label>
+                          <p className="text-gray-900">+1-555-0123</p>
+                        </div>
+                      </>
+                    )}
                   </CardContent>
                 </Card>
 
@@ -655,6 +1051,6 @@ export default function CustomerPortalPage() {
           </div>
         </div>
       </MobileNavWrapper>
-    </AuthGuard>
+    </CustomerAuthGuard>
   );
 }

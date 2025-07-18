@@ -8,7 +8,8 @@ import { Progress } from '@/shared/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/components/ui/tabs';
 import { useTheme } from '@/shared/services/ThemeContext';
 import { useAccessibility } from '@/shared/services/AccessibilityContext';
-import { cn } from '@/lib/utils';
+import { cn } from '@/shared/utils/cn';
+import { ShipmentDocuments } from './shipment-documents';
 import { formatDistance, format } from 'date-fns';
 import {
   MapPin,
@@ -1042,81 +1043,10 @@ export function AdvancedTracking({
         </TabsContent>
 
         <TabsContent value="documents" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <FileText className="h-5 w-5" />
-                Documents & Attachments
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {shipmentData.attachments && shipmentData.attachments.length > 0 && (
-                  <div>
-                    <h4 className="font-medium mb-3">Shipment Documents</h4>
-                    <div className="space-y-2">
-                      {shipmentData.attachments.map((doc) => (
-                        <div key={doc.id} className="flex items-center justify-between p-3 border rounded-lg">
-                          <div className="flex items-center gap-3">
-                            <FileText className="h-5 w-5 text-neutral-500" />
-                            <div>
-                              <p className="font-medium">{doc.name}</p>
-                              <p className="text-sm text-neutral-500">
-                                {doc.type} • Uploaded by {doc.uploadedBy} • {format(doc.uploadedAt, 'MMM dd, yyyy')}
-                              </p>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <Button variant="outline" size="sm">
-                              <Eye className="h-4 w-4 mr-2" />
-                              View
-                            </Button>
-                            <Button variant="outline" size="sm">
-                              <Download className="h-4 w-4 mr-2" />
-                              Download
-                            </Button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-                
-                {shipmentData.events.some(e => e.documents?.length) && (
-                  <div>
-                    <h4 className="font-medium mb-3">Event Documents</h4>
-                    <div className="space-y-2">
-                      {shipmentData.events.map((event) => 
-                        event.documents?.map((doc) => (
-                          <div key={doc.id} className="flex items-center justify-between p-3 border rounded-lg">
-                            <div className="flex items-center gap-3">
-                              <FileText className="h-5 w-5 text-neutral-500" />
-                              <div>
-                                <p className="font-medium">{doc.name}</p>
-                                <p className="text-sm text-neutral-500">
-                                  {doc.type} • {event.location.name} • {format(event.timestamp, 'MMM dd, yyyy')}
-                                </p>
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <Button variant="outline" size="sm">
-                                <Eye className="h-4 w-4 mr-2" />
-                                View
-                              </Button>
-                              <Button variant="outline" size="sm">
-                                <Download className="h-4 w-4 mr-2" />
-                                Download
-                              </Button>
-                            </div>
-                          </div>
-                        ))
-                      )}
-                    </div>
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
+          <ShipmentDocuments 
+            shipmentId={shipmentData.id}
+            shipmentTrackingNumber={shipmentData.trackingNumber}
+          />
         </TabsContent>
 
         <TabsContent value="details" className="space-y-4">
