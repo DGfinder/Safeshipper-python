@@ -124,6 +124,24 @@ export default function Dashboard() {
   return (
     <DashboardLayout>
       <div className="space-y-6">
+        {/* Company Header */}
+        <div className="bg-gradient-to-r from-blue-600 to-blue-700 rounded-lg p-6 text-white">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl font-bold">OutbackHaul Transport Operations</h1>
+              <p className="text-blue-100 mt-1">
+                Road Train & Dangerous Goods Specialist • Perth, WA • 40 Trucks • Established 1987
+              </p>
+            </div>
+            <div className="text-right">
+              <div className="text-sm text-blue-100">Fleet Status</div>
+              <div className="text-xl font-bold">
+                {Math.round((stats?.activeRoutes || 23) / 40 * 100)}% Active
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {statCardsData.map((card, index) => {
