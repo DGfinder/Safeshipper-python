@@ -1325,23 +1325,10 @@ class SimulatedDataService {
     // Free time allowance (days)
     const freeTimeAllowance = tier === 'PLATINUM' ? 3 : tier === 'GOLD' ? 2 : 1;
     
-    // Calculate demurrage history for this customer
-    const customerShipments = this.getCustomerShipments(this.getCustomerByName(tier)?.name || 'Unknown');
-    const demurrageHistory = customerShipments
-      .filter(s => s.demurrage && s.demurrage.demurrageCost > 0)
-      .map(s => ({
-        shipmentId: s.id,
-        trackingNumber: s.trackingNumber,
-        demurrageDays: s.demurrage.demurrageDays,
-        cost: s.demurrage.demurrageCost,
-        reason: s.demurrage.pickupDelay > 0 ? 'Pickup delay' : 'Delivery delay',
-        date: s.createdAt,
-        status: s.demurrage.status,
-      }));
-    
-    const totalDemurrageCost = demurrageHistory.reduce((sum, h) => sum + h.cost, 0);
-    const averageDemurrageDays = demurrageHistory.length > 0 ? 
-      demurrageHistory.reduce((sum, h) => sum + h.demurrageDays, 0) / demurrageHistory.length : 0;
+    // Initialize empty demurrage history to avoid circular reference
+    const demurrageHistory: any[] = [];
+    const totalDemurrageCost = 0;
+    const averageDemurrageDays = 0;
     
     return {
       dailyRate,
