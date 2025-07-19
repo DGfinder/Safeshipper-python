@@ -143,7 +143,7 @@ class CustomerApiService {
     };
 
     if (token) {
-      headers.Authorization = `Bearer ${token}`;
+      (headers as Record<string, string>).Authorization = `Bearer ${token}`;
     }
 
     try {
@@ -228,7 +228,7 @@ class CustomerApiService {
     if (cached) {
       return {
         success: true,
-        data: cached,
+        data: cached as any[],
         source: 'cache',
         timestamp: new Date().toISOString()
       };

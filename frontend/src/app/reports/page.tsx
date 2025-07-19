@@ -33,6 +33,7 @@ interface ReportMetrics {
   deliveredShipments: number;
   onTimeDeliveries: number;
   totalRevenue: number;
+  demurrageRevenue: number;
   averageDeliveryTime: number;
   customerSatisfaction: number;
   complianceRate: number;
@@ -59,6 +60,7 @@ export default function ReportsPage() {
     deliveredShipments: 1689,
     onTimeDeliveries: 1521,
     totalRevenue: 3850000,
+    demurrageRevenue: 127500, // Monthly demurrage revenue
     averageDeliveryTime: 2.3,
     customerSatisfaction: 4.6,
     complianceRate: 94.2,
@@ -133,6 +135,10 @@ export default function ReportsPage() {
           description: "Income breakdown by customer, route, and service type",
         },
         {
+          name: "Demurrage Revenue Report",
+          description: "Container detention charges, free time utilization, and revenue trends",
+        },
+        {
           name: "Cost Analysis",
           description: "Operational costs, fuel consumption, and profitability",
         },
@@ -164,6 +170,12 @@ export default function ReportsPage() {
     {
       name: "Customer Revenue Analysis",
       date: "2024-01-08",
+      type: "Financial",
+      status: "Ready",
+    },
+    {
+      name: "Demurrage Revenue Report",
+      date: "2024-01-12",
       type: "Financial",
       status: "Ready",
     },
@@ -230,7 +242,7 @@ export default function ReportsPage() {
         </div>
 
         {/* Key Metrics */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">
@@ -244,6 +256,23 @@ export default function ReportsPage() {
               </div>
               <p className="text-xs text-muted-foreground">
                 +18.2% from last period
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">
+                Demurrage Revenue
+              </CardTitle>
+              <Clock className="h-4 w-4 text-orange-600" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-orange-600">
+                {formatCurrency(metrics.demurrageRevenue)}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {((metrics.demurrageRevenue / metrics.totalRevenue) * 100).toFixed(1)}% of total revenue
               </p>
             </CardContent>
           </Card>
@@ -271,7 +300,7 @@ export default function ReportsPage() {
               <CardTitle className="text-sm font-medium">
                 On-Time Performance
               </CardTitle>
-              <Clock className="h-4 w-4 text-purple-600" />
+              <TrendingUp className="h-4 w-4 text-purple-600" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-purple-600">
@@ -300,6 +329,62 @@ export default function ReportsPage() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Demurrage Revenue Analytics */}
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Clock className="h-5 w-5 text-orange-600" />
+              Demurrage Revenue Analytics
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+              <div className="space-y-2">
+                <div className="text-sm text-gray-600">Monthly Revenue</div>
+                <div className="text-2xl font-bold text-orange-600">{formatCurrency(metrics.demurrageRevenue)}</div>
+                <div className="text-xs text-green-600">+15.8% vs last month</div>
+              </div>
+              <div className="space-y-2">
+                <div className="text-sm text-gray-600">Active Charges</div>
+                <div className="text-2xl font-bold text-red-600">23</div>
+                <div className="text-xs text-gray-600">shipments accumulating</div>
+              </div>
+              <div className="space-y-2">
+                <div className="text-sm text-gray-600">Avg Daily Rate</div>
+                <div className="text-2xl font-bold text-blue-600">$145</div>
+                <div className="text-xs text-gray-600">AUD per container</div>
+              </div>
+              <div className="space-y-2">
+                <div className="text-sm text-gray-600">Free Time Usage</div>
+                <div className="text-2xl font-bold text-purple-600">78%</div>
+                <div className="text-xs text-yellow-600">avg utilization</div>
+              </div>
+            </div>
+            <div className="mt-6 pt-4 border-t">
+              <div className="flex justify-between items-center">
+                <div>
+                  <div className="text-sm font-medium">Demurrage by Customer Tier</div>
+                  <div className="text-xs text-gray-600">Revenue distribution this month</div>
+                </div>
+                <div className="flex gap-4 text-sm">
+                  <div className="text-center">
+                    <div className="font-bold text-yellow-600">$45,200</div>
+                    <div className="text-xs text-gray-600">Mining</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="font-bold text-blue-600">$38,150</div>
+                    <div className="text-xs text-gray-600">Industrial</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="font-bold text-green-600">$44,150</div>
+                    <div className="text-xs text-gray-600">Standard</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Additional Metrics */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">

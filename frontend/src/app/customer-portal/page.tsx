@@ -688,7 +688,7 @@ export default function CustomerPortalPage() {
                     </CardHeader>
                     <CardContent>
                       <div className="space-y-3">
-                        {complianceProfile.authorizedGoods.slice(0, 5).map((dg, index) => (
+                        {complianceProfile.authorizedGoods.slice(0, 5).map((dg: any, index: number) => (
                           <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
                             <div>
                               <div className="font-medium">UN{dg.unNumber}</div>
@@ -724,7 +724,7 @@ export default function CustomerPortalPage() {
                       </CardHeader>
                       <CardContent>
                         <div className="space-y-3">
-                          {complianceProfile.violations.map((violation) => (
+                          {complianceProfile.violations.map((violation: any) => (
                             <div key={violation.id} className="flex items-center justify-between p-4 border rounded-lg">
                               <div className="flex-1">
                                 <div className="flex items-center gap-3 mb-2">
@@ -981,12 +981,12 @@ export default function CustomerPortalPage() {
                         </div>
                         <div>
                           <label className="text-sm font-medium text-gray-600">Customer Tier</label>
-                          <Badge className={{
+                          <Badge className={({
                             'PLATINUM': 'bg-purple-100 text-purple-800',
                             'GOLD': 'bg-yellow-100 text-yellow-800',
                             'SILVER': 'bg-gray-100 text-gray-800',
                             'BRONZE': 'bg-orange-100 text-orange-800'
-                          }[customerProfile.tier]}>
+                          } as any)[customerProfile.tier] || 'bg-gray-100 text-gray-800'}>
                             {customerProfile.tier}
                           </Badge>
                         </div>

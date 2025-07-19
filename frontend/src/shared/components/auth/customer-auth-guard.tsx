@@ -98,7 +98,7 @@ function CustomerLogin({ onSuccess }: CustomerLoginProps) {
       }
 
       // Real API login
-      const result = await login(email, password);
+      const result = await (login as any)({ email, password });
       
       if (result.requiresMFA) {
         // Handle MFA flow if needed
@@ -124,7 +124,7 @@ function CustomerLogin({ onSuccess }: CustomerLoginProps) {
       <div className="max-w-md w-full space-y-6">
         {/* Demo Indicator */}
         {(config.apiMode === "demo" || config.enableTerryMode) && (
-          <DemoIndicator mode="customer-portal" />
+          <DemoIndicator type="demo" label="Customer Portal Demo" />
         )}
 
         {/* Login Card */}

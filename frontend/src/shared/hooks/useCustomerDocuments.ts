@@ -106,7 +106,7 @@ function generateCustomerDocuments(customerId: string): CustomerDocument[] {
 
     // SDS Documents for dangerous goods shipments
     if (hasHazmat) {
-      shipment.dangerousGoods.forEach((dg, dgIndex) => {
+      shipment.dangerousGoods.forEach((dg: any, dgIndex: number) => {
         documents.push({
           id: `sds-${shipment.id}-${dgIndex}`,
           type: "sds",

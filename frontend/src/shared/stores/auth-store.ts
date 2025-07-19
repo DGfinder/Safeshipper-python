@@ -1,11 +1,17 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
+import { validateDemoCredentials, validateCustomerCredentials, DemoUser } from "@/shared/config/demo-users";
+import { getEnvironmentConfig } from "@/shared/config/environment";
 
 interface User {
   id: string;
-  username: string;
+  username?: string;
   email: string;
+  firstName?: string;
+  lastName?: string;
   role: string;
+  department?: string;
+  permissions?: string[];
   avatar: string;
 }
 
@@ -18,7 +24,8 @@ interface AuthState {
   requiresMFA: boolean;
   tempToken: string | null;
   availableMFAMethods: any[];
-  login: (email: string, password: string) => Promise<any>;
+  login: (userData: Partial<User>) => void;
+  loginWithCredentials: (email: string, password: string) => Promise<any>;
   loginWithMFA: (
     tempToken: string,
     deviceId: string,
@@ -43,11 +50,77 @@ export const useAuthStore = create<AuthState>()(
       tempToken: null,
       availableMFAMethods: [],
 
-      login: async (email: string, password: string) => {
+      // Simple login for demo mode
+      login: (userData: Partial<User>) => {
+        const user: User = {
+          id: userData.id || 'demo-user',
+          username: userData.username || userData.email,
+          email: userData.email || '',
+          firstName: userData.firstName,
+          lastName: userData.lastName,
+          role: userData.role || 'USER',
+          department: userData.department,
+          permissions: userData.permissions || [],
+          avatar: userData.avatar || (userData.firstName && userData.lastName ? 
+            `${userData.firstName.charAt(0)}${userData.lastName.charAt(0)}`.toUpperCase() : 
+            userData.email?.substring(0, 2).toUpperCase() || 'U'),
+        };
+
+        // Store demo token
+        if (typeof window !== "undefined") {
+          localStorage.setItem("access_token", "demo_token");
+          localStorage.setItem("refresh_token", "demo_refresh_token");
+        }
+
+        set({
+          user,
+          isAuthenticated: true,
+          isLoading: false,
+          token: "demo_token",
+          requiresMFA: false,
+        });
+      },
+
+      // Full login with credentials (for production)
+      loginWithCredentials: async (email: string, password: string) => {
         set({ isLoading: true, requiresMFA: false });
+        const config = getEnvironmentConfig();
 
         try {
-          // First try MFA challenge endpoint
+          // In demo mode, use demo credentials
+          if (config.apiMode === 'demo') {
+            // Check demo credentials
+            const demoUser = validateDemoCredentials(email, password);
+            const customerUser = validateCustomerCredentials(email, password);
+            
+            if (demoUser) {
+              get().login({
+                id: demoUser.id,
+                email: demoUser.email,
+                firstName: demoUser.firstName,
+                lastName: demoUser.lastName,
+                role: demoUser.role,
+                department: demoUser.department,
+                permissions: demoUser.permissions,
+              });
+              return { requiresMFA: false, user: demoUser };
+            } else if (customerUser) {
+              get().login({
+                id: `customer-${customerUser.email}`,
+                email: customerUser.email,
+                firstName: customerUser.name.split(' ')[0],
+                lastName: customerUser.name.split(' ').slice(1).join(' '),
+                role: 'CUSTOMER',
+                department: customerUser.category,
+                permissions: ['customer_portal'],
+              });
+              return { requiresMFA: false, user: customerUser };
+            } else {
+              throw new Error('Invalid demo credentials');
+            }
+          }
+
+          // Production API call
           const response = await fetch("/api/v1/auth/mfa/challenge/", {
             method: "POST",
             headers: {

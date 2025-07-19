@@ -19,6 +19,7 @@ import {
   RoutePerformanceChart,
   RealTimeMetricsChart,
   KPIGrid,
+  DemurrageRevenueChart,
 } from "@/components/charts/ChartComponents";
 import {
   BarChart3,
@@ -219,6 +220,7 @@ export default function AnalyticsPage() {
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   <ShipmentTrendsChart />
                   <FleetUtilizationChart />
+                  <DemurrageRevenueChart />
                   <RoutePerformanceChart />
                   <IncidentDistributionChart />
                 </div>

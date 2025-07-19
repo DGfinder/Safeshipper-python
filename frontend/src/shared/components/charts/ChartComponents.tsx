@@ -116,6 +116,17 @@ const generateRoutePerformanceData = () => {
   }));
 };
 
+const generateDemurrageRevenueData = () => {
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  return months.map(month => ({
+    month,
+    revenue: Math.floor(Math.random() * 50000) + 80000,
+    chargesApplied: Math.floor(Math.random() * 30) + 10,
+    averageRate: Math.floor(Math.random() * 50) + 120,
+    freeTimeUsage: Math.floor(Math.random() * 40) + 60,
+  }));
+};
+
 // Base chart component with accessibility and responsive features
 interface BaseChartProps {
   title: string;
@@ -629,6 +640,75 @@ export function KPIGrid({ className }: { className?: string }) {
   );
 }
 
+// Demurrage Revenue Chart
+export function DemurrageRevenueChart({ className }: { className?: string }) {
+  const [data] = useState(generateDemurrageRevenueData());
+  const [timeRange, setTimeRange] = useState('12M');
+
+  const handleExportComplete = (success: boolean, message: string) => {
+    if (success) {
+      toast.success(message);
+    } else {
+      toast.error(message);
+    }
+  };
+
+  return (
+    <BaseChart
+      title="Demurrage Revenue Trends"
+      description="Monthly demurrage revenue and charge application trends"
+      className={className}
+      actions={
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm">
+            <Calendar className="h-4 w-4 mr-2" />
+            {timeRange}
+          </Button>
+          <QuickExport
+            format="csv"
+            timeRange={timeRange}
+            selectedCharts={['demurrage']}
+            onExportComplete={handleExportComplete}
+          />
+        </div>
+      }
+    >
+      <ResponsiveContainer width="100%" height="100%">
+        <ComposedChart data={data}>
+          <CartesianGrid strokeDasharray="3 3" />
+          <XAxis dataKey="month" />
+          <YAxis yAxisId="left" />
+          <YAxis yAxisId="right" orientation="right" />
+          <Tooltip />
+          <Legend />
+          <Bar
+            yAxisId="left"
+            dataKey="revenue"
+            fill={COLORS.warning[1]}
+            name="Revenue (AUD)"
+          />
+          <Line
+            yAxisId="right"
+            type="monotone"
+            dataKey="chargesApplied"
+            stroke={COLORS.danger[1]}
+            strokeWidth={2}
+            name="Charges Applied"
+          />
+          <Line
+            yAxisId="right"
+            type="monotone"
+            dataKey="freeTimeUsage"
+            stroke={COLORS.primary[1]}
+            strokeWidth={2}
+            name="Free Time Usage %"
+          />
+        </ComposedChart>
+      </ResponsiveContainer>
+    </BaseChart>
+  );
+}
+
 // Export all chart components
 export {
   BaseChart,
@@ -638,4 +718,5 @@ export {
   generateComplianceData,
   generateIncidentData,
   generateRoutePerformanceData,
+  generateDemurrageRevenueData,
 };

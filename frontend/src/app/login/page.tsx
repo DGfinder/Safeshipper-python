@@ -6,7 +6,12 @@ import Image from "next/image";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
 import { Alert, AlertDescription } from "@/shared/components/ui/alert";
-import { Eye, EyeOff, AlertCircle } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/components/ui/tabs";
+import { Badge } from "@/shared/components/ui/badge";
+import { Eye, EyeOff, AlertCircle, Users, Building, User } from "lucide-react";
+import { validateDemoCredentials, validateCustomerCredentials, getAllDemoCredentials } from "@/shared/config/demo-users";
+import { useAuthStore } from "@/shared/stores/auth-store";
+import { useRouter } from "next/navigation";
 
 export default function LoginPage() {
   const [formData, setFormData] = useState({
@@ -16,6 +21,10 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
+  const [loginType, setLoginType] = useState<'internal' | 'customer'>('internal');
+  const { login } = useAuthStore();
+  const router = useRouter();
+  const demoCredentials = getAllDemoCredentials();
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -34,22 +43,63 @@ export default function LoginPage() {
       // For demo purposes, simulate login
       await new Promise((resolve) => setTimeout(resolve, 1000));
 
-      // Demo credentials check
-      if (
-        formData.email === "demo@safeshipper.com" &&
-        formData.password === "demo123"
-      ) {
-        // Simulate successful login
-        localStorage.setItem("auth_token", "demo_token");
-        window.location.href = "/dashboard";
+      if (loginType === 'internal') {
+        // Check internal demo credentials
+        const user = validateDemoCredentials(formData.email, formData.password);
+        if (user) {
+          // Set auth store with user data
+          login({
+            id: user.id,
+            email: user.email,
+            firstName: user.firstName,
+            lastName: user.lastName,
+            role: user.role,
+            department: user.department,
+            permissions: user.permissions,
+          });
+          
+          // Redirect to dashboard
+          router.push('/dashboard');
+        } else {
+          setError("Invalid credentials. Please use one of the demo accounts shown below.");
+        }
       } else {
-        setError("Invalid credentials. Use demo@safeshipper.com / demo123");
+        // Check customer demo credentials
+        const customerUser = validateCustomerCredentials(formData.email, formData.password);
+        if (customerUser) {
+          // Set auth store with customer data
+          login({
+            id: `customer-${customerUser.email}`,
+            email: customerUser.email,
+            firstName: customerUser.name.split(' ')[0],
+            lastName: customerUser.name.split(' ').slice(1).join(' '),
+            role: 'CUSTOMER',
+            department: customerUser.category,
+            permissions: ['customer_portal'],
+          });
+          
+          // Redirect to customer portal
+          router.push('/customer-portal');
+        } else {
+          setError("Invalid customer credentials. Please use one of the demo accounts shown below.");
+        }
       }
     } catch {
       setError("Login failed. Please try again.");
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleQuickLogin = (email: string, password: string) => {
+    setFormData({ email, password });
+    // Auto-submit after a short delay
+    setTimeout(() => {
+      const form = document.getElementById('login-form') as HTMLFormElement;
+      if (form) {
+        form.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
+      }
+    }, 100);
   };
 
   return (
@@ -138,7 +188,7 @@ export default function LoginPage() {
               </Alert>
             )}
 
-            <form onSubmit={handleSubmit} className="space-y-5">
+            <form id="login-form" onSubmit={handleSubmit} className="space-y-5">
               <div>
                 <label
                   htmlFor="email"
@@ -224,14 +274,87 @@ export default function LoginPage() {
             </form>
 
             {/* Demo Credentials */}
-            <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-              <p className="text-sm text-blue-800 font-medium mb-2">
-                Demo Credentials:
-              </p>
-              <p className="text-xs text-blue-700">
-                Email: demo@safeshipper.com
-              </p>
-              <p className="text-xs text-blue-700">Password: demo123</p>
+            <div className="mt-6">
+              <Tabs value={loginType} onValueChange={(value) => setLoginType(value as 'internal' | 'customer')} className="w-full">
+                <TabsList className="grid w-full grid-cols-2">
+                  <TabsTrigger value="internal" className="flex items-center gap-2">
+                    <Users className="h-4 w-4" />
+                    Internal Users
+                  </TabsTrigger>
+                  <TabsTrigger value="customer" className="flex items-center gap-2">
+                    <Building className="h-4 w-4" />
+                    Customer Portal
+                  </TabsTrigger>
+                </TabsList>
+                
+                <TabsContent value="internal" className="space-y-4 mt-4">
+                  <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                    <p className="text-sm text-blue-800 font-medium mb-3">
+                      Internal Demo Accounts:
+                    </p>
+                    <div className="space-y-3">
+                      {demoCredentials.internal.map((user, index) => (
+                        <div key={index} className="flex items-center justify-between p-3 bg-white rounded-lg border border-blue-100">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-1">
+                              <User className="h-4 w-4 text-blue-600" />
+                              <span className="font-medium text-blue-900">{user.name}</span>
+                              <Badge variant="outline" className="text-xs">
+                                {user.role}
+                              </Badge>
+                            </div>
+                            <p className="text-xs text-blue-700 mb-1">{user.email}</p>
+                            <p className="text-xs text-blue-600">{user.department}</p>
+                          </div>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleQuickLogin(user.email, user.password)}
+                            className="text-xs"
+                          >
+                            Quick Login
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </TabsContent>
+                
+                <TabsContent value="customer" className="space-y-4 mt-4">
+                  <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+                    <p className="text-sm text-green-800 font-medium mb-3">
+                      Customer Demo Accounts:
+                    </p>
+                    <div className="space-y-3">
+                      {demoCredentials.customer.map((user, index) => (
+                        <div key={index} className="flex items-center justify-between p-3 bg-white rounded-lg border border-green-100">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-1">
+                              <Building className="h-4 w-4 text-green-600" />
+                              <span className="font-medium text-green-900">{user.name}</span>
+                              <Badge variant="outline" className="text-xs">
+                                {user.category}
+                              </Badge>
+                            </div>
+                            <p className="text-xs text-green-700 mb-1">{user.email}</p>
+                            <p className="text-xs text-green-600">{user.description}</p>
+                          </div>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleQuickLogin(user.email, user.password)}
+                            className="text-xs"
+                          >
+                            Quick Login
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </TabsContent>
+              </Tabs>
             </div>
           </div>
 

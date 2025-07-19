@@ -10,7 +10,7 @@ import { getEnvironmentConfig } from "@/shared/config/environment";
 
 export interface CustomerNotification {
   id: string;
-  type: "shipment_status" | "shipment_delayed" | "compliance_alert" | "system_update" | "billing" | "document_ready" | "inspection_required" | "certificate_expiry";
+  type: "shipment_status" | "shipment_delayed" | "compliance_alert" | "system_update" | "billing" | "document_ready" | "inspection_required" | "certificate_expiry" | "demurrage_alert";
   title: string;
   message: string;
   timestamp: string;
@@ -26,6 +26,8 @@ export interface CustomerNotification {
     violationId?: string;
     expiryDate?: string;
     severity?: "Low" | "Medium" | "High";
+    demurrageCost?: number;
+    demurrageDays?: number;
   };
   dismissible: boolean;
   autoExpire?: string;
@@ -38,18 +40,21 @@ export interface NotificationPreferences {
     complianceAlerts: boolean;
     systemUpdates: boolean;
     documentReady: boolean;
+    demurrageAlerts: boolean;
   };
   sms: {
     enabled: boolean;
     urgentOnly: boolean;
     complianceAlerts: boolean;
     emergencyAlerts: boolean;
+    demurrageAlerts: boolean;
   };
   push: {
     enabled: boolean;
     shipmentUpdates: boolean;
     complianceAlerts: boolean;
     realTimeTracking: boolean;
+    demurrageAlerts: boolean;
   };
   inApp: {
     enabled: boolean;
@@ -76,7 +81,7 @@ function generateComplianceNotifications(customerId: string): CustomerNotificati
 
   // Certificate expiry warnings
   complianceProfile.authorizedGoods.forEach((dg, index) => {
-    const expiryDate = new Date(dg.authorizedUntil);
+    const expiryDate = new Date((dg as any).authorizedUntil || Date.now() + 30 * 24 * 60 * 60 * 1000);
     const daysUntilExpiry = Math.ceil((expiryDate.getTime() - now) / (1000 * 60 * 60 * 24));
 
     if (daysUntilExpiry <= 30 && daysUntilExpiry > 0) {
@@ -93,7 +98,7 @@ function generateComplianceNotifications(customerId: string): CustomerNotificati
         actionLabel: "Renew Authorization",
         metadata: {
           certificateId: `cert-${dg.unNumber}`,
-          expiryDate: dg.authorizedUntil,
+          expiryDate: (dg as any).authorizedUntil || new Date().toISOString(),
           severity: daysUntilExpiry <= 7 ? "High" : "Medium"
         },
         dismissible: true,
@@ -109,7 +114,7 @@ function generateComplianceNotifications(customerId: string): CustomerNotificati
         id: `violation-${violation.id}`,
         type: "compliance_alert",
         title: `Compliance Violation Requires Attention`,
-        message: `${violation.type}: ${violation.description}. Please review and take corrective action.`,
+        message: `${violation.type}: ${(violation as any).description || 'Compliance issue detected'}. Please review and take corrective action.`,
         timestamp: violation.date,
         read: Math.random() > 0.5,
         priority: violation.severity === "High" ? "urgent" : violation.severity === "Medium" ? "high" : "medium",
@@ -119,7 +124,7 @@ function generateComplianceNotifications(customerId: string): CustomerNotificati
         metadata: {
           violationId: violation.id,
           shipmentId: violation.shipmentId,
-          severity: violation.severity
+          severity: violation.severity as "High" | "Medium" | "Low"
         },
         dismissible: false, // Compliance violations cannot be dismissed until resolved
       });
@@ -145,6 +150,62 @@ function generateComplianceNotifications(customerId: string): CustomerNotificati
       dismissible: true,
     });
   }
+
+  return notifications;
+}
+
+// Generate demurrage-related notifications based on shipment data
+function generateDemurrageNotifications(customerId: string): CustomerNotification[] {
+  const customer = simulatedDataService.getCustomerProfiles().find(c => c.id === customerId);
+  if (!customer) return [];
+
+  const shipments = simulatedDataService.getCustomerShipments(customer.name);
+  const notifications: CustomerNotification[] = [];
+  const now = Date.now();
+
+  shipments.forEach((shipment) => {
+    if (shipment.demurrage && shipment.demurrage.alerts && shipment.demurrage.alerts.length > 0) {
+      shipment.demurrage.alerts.forEach((alert: any, index: number) => {
+        let priority: "low" | "medium" | "high" | "urgent" = "medium";
+        let title = "Demurrage Alert";
+        let message = alert.message;
+
+        // Set priority based on demurrage status
+        if (shipment.demurrage.status === 'charges_applied') {
+          priority = "urgent";
+          title = "Demurrage Charges Applied";
+        } else if (shipment.demurrage.status === 'accumulating') {
+          priority = "high";
+          title = "Demurrage Accumulating";
+        } else if (shipment.demurrage.status === 'at_risk') {
+          priority = "medium";
+          title = "Demurrage Risk Warning";
+        }
+
+        notifications.push({
+          id: `demurrage-${shipment.id}-${index}`,
+          type: "demurrage_alert",
+          title,
+          message,
+          timestamp: alert.timestamp,
+          read: Math.random() > 0.6, // Most demurrage alerts should be unread
+          priority,
+          category: "financial",
+          actionUrl: `/shipments/${shipment.id}`,
+          actionLabel: "View Shipment",
+          metadata: {
+            shipmentId: shipment.id,
+            demurrageCost: shipment.demurrage.demurrageCost,
+            demurrageDays: shipment.demurrage.demurrageDays,
+            severity: priority === "urgent" ? "High" : priority === "high" ? "Medium" : "Low"
+          },
+          dismissible: shipment.demurrage.status === 'within_free_time', // Only dismissible if within free time
+          autoExpire: shipment.demurrage.status === 'within_free_time' ? 
+            new Date(now + 7 * 24 * 60 * 60 * 1000).toISOString() : undefined
+        });
+      });
+    }
+  });
 
   return notifications;
 }
@@ -238,6 +299,7 @@ export function useCustomerNotifications() {
         // Generate comprehensive demo notifications
         const complianceNotifications = generateComplianceNotifications(customerAccess.customerId);
         const shipmentNotifications = generateShipmentNotifications(customerAccess.customerId);
+        const demurrageNotifications = generateDemurrageNotifications(customerAccess.customerId);
         
         // Add some system notifications
         const systemNotifications: CustomerNotification[] = [
@@ -272,6 +334,7 @@ export function useCustomerNotifications() {
         const allNotifications = [
           ...complianceNotifications,
           ...shipmentNotifications,
+          ...demurrageNotifications,
           ...systemNotifications
         ];
 
@@ -294,8 +357,9 @@ export function useCustomerNotifications() {
       // Fallback to simulated notifications
       const complianceNotifications = generateComplianceNotifications(customerAccess.customerId);
       const shipmentNotifications = generateShipmentNotifications(customerAccess.customerId);
+      const demurrageNotifications = generateDemurrageNotifications(customerAccess.customerId);
       
-      return [...complianceNotifications, ...shipmentNotifications].sort((a, b) => 
+      return [...complianceNotifications, ...shipmentNotifications, ...demurrageNotifications].sort((a, b) => 
         new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
       );
     },
@@ -359,18 +423,21 @@ export function useNotificationPreferences() {
           complianceAlerts: true,
           systemUpdates: false,
           documentReady: true,
+          demurrageAlerts: true,
         },
         sms: {
           enabled: true,
           urgentOnly: true,
           complianceAlerts: true,
           emergencyAlerts: true,
+          demurrageAlerts: true,
         },
         push: {
           enabled: true,
           shipmentUpdates: true,
           complianceAlerts: true,
           realTimeTracking: true,
+          demurrageAlerts: true,
         },
         inApp: {
           enabled: true,

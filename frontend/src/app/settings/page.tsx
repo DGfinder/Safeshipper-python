@@ -25,6 +25,10 @@ import {
   RefreshCw,
   Eye,
   EyeOff,
+  Clock,
+  DollarSign,
+  AlertTriangle,
+  Info,
 } from "lucide-react";
 import { AuthGuard } from "@/shared/components/common/auth-guard";
 
@@ -67,6 +71,36 @@ export default function SettingsPage() {
     sessionTimeout: 480,
     loginNotifications: true,
     passwordExpiry: 90,
+  });
+
+  const [demurrageSettings, setDemurrageSettings] = useState({
+    enableDemurrage: true,
+    defaultRates: {
+      standard: 85,
+      premium: 125,
+      hazmat: 165,
+      mining: 145,
+    },
+    freeTimeAllowance: {
+      bronze: 1,
+      silver: 1,
+      gold: 2,
+      platinum: 3,
+    },
+    gracePeriod: 2, // hours
+    autoCalculation: true,
+    alertThresholds: {
+      atRisk: 6, // hours before demurrage
+      accumulating: 0, // hours after demurrage starts
+    },
+    currency: 'AUD',
+    businessDays: true,
+    weekendMultiplier: 1.5,
+    customRules: {
+      hazmatWeekendSurcharge: true,
+      miningBulkDiscount: 0.1,
+      newCustomerGracePeriod: 24,
+    },
   });
 
   const handleSave = async () => {
@@ -122,11 +156,12 @@ export default function SettingsPage() {
 
         {/* Settings Tabs */}
         <Tabs defaultValue="profile" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-5">
+          <TabsList className="grid w-full grid-cols-6">
             <TabsTrigger value="profile">Profile</TabsTrigger>
             <TabsTrigger value="notifications">Notifications</TabsTrigger>
             <TabsTrigger value="system">System</TabsTrigger>
             <TabsTrigger value="security">Security</TabsTrigger>
+            <TabsTrigger value="billing">Billing</TabsTrigger>
             <TabsTrigger value="data">Data</TabsTrigger>
           </TabsList>
 
@@ -649,6 +684,347 @@ export default function SettingsPage() {
                         })
                       }
                     />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="billing" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Clock className="h-5 w-5" />
+                  Demurrage Configuration
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <DollarSign className="h-5 w-5 text-gray-400" />
+                      <div>
+                        <p className="font-medium">Enable Demurrage Charges</p>
+                        <p className="text-sm text-gray-600">
+                          Automatically calculate and apply demurrage charges
+                        </p>
+                      </div>
+                    </div>
+                    <Switch
+                      checked={demurrageSettings.enableDemurrage}
+                      onCheckedChange={(checked) =>
+                        setDemurrageSettings({
+                          ...demurrageSettings,
+                          enableDemurrage: checked,
+                        })
+                      }
+                    />
+                  </div>
+
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-medium">Default Rates (per day)</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="standard-rate">Standard Rate (AUD)</Label>
+                        <Input
+                          id="standard-rate"
+                          type="number"
+                          value={demurrageSettings.defaultRates.standard}
+                          onChange={(e) =>
+                            setDemurrageSettings({
+                              ...demurrageSettings,
+                              defaultRates: {
+                                ...demurrageSettings.defaultRates,
+                                standard: parseInt(e.target.value),
+                              },
+                            })
+                          }
+                          disabled={!demurrageSettings.enableDemurrage}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="premium-rate">Premium Rate (AUD)</Label>
+                        <Input
+                          id="premium-rate"
+                          type="number"
+                          value={demurrageSettings.defaultRates.premium}
+                          onChange={(e) =>
+                            setDemurrageSettings({
+                              ...demurrageSettings,
+                              defaultRates: {
+                                ...demurrageSettings.defaultRates,
+                                premium: parseInt(e.target.value),
+                              },
+                            })
+                          }
+                          disabled={!demurrageSettings.enableDemurrage}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="hazmat-rate">Hazmat Rate (AUD)</Label>
+                        <Input
+                          id="hazmat-rate"
+                          type="number"
+                          value={demurrageSettings.defaultRates.hazmat}
+                          onChange={(e) =>
+                            setDemurrageSettings({
+                              ...demurrageSettings,
+                              defaultRates: {
+                                ...demurrageSettings.defaultRates,
+                                hazmat: parseInt(e.target.value),
+                              },
+                            })
+                          }
+                          disabled={!demurrageSettings.enableDemurrage}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="mining-rate">Mining Rate (AUD)</Label>
+                        <Input
+                          id="mining-rate"
+                          type="number"
+                          value={demurrageSettings.defaultRates.mining}
+                          onChange={(e) =>
+                            setDemurrageSettings({
+                              ...demurrageSettings,
+                              defaultRates: {
+                                ...demurrageSettings.defaultRates,
+                                mining: parseInt(e.target.value),
+                              },
+                            })
+                          }
+                          disabled={!demurrageSettings.enableDemurrage}
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-medium">Free Time Allowance (days)</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="bronze-days">Bronze Tier</Label>
+                        <Input
+                          id="bronze-days"
+                          type="number"
+                          value={demurrageSettings.freeTimeAllowance.bronze}
+                          onChange={(e) =>
+                            setDemurrageSettings({
+                              ...demurrageSettings,
+                              freeTimeAllowance: {
+                                ...demurrageSettings.freeTimeAllowance,
+                                bronze: parseInt(e.target.value),
+                              },
+                            })
+                          }
+                          disabled={!demurrageSettings.enableDemurrage}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="silver-days">Silver Tier</Label>
+                        <Input
+                          id="silver-days"
+                          type="number"
+                          value={demurrageSettings.freeTimeAllowance.silver}
+                          onChange={(e) =>
+                            setDemurrageSettings({
+                              ...demurrageSettings,
+                              freeTimeAllowance: {
+                                ...demurrageSettings.freeTimeAllowance,
+                                silver: parseInt(e.target.value),
+                              },
+                            })
+                          }
+                          disabled={!demurrageSettings.enableDemurrage}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="gold-days">Gold Tier</Label>
+                        <Input
+                          id="gold-days"
+                          type="number"
+                          value={demurrageSettings.freeTimeAllowance.gold}
+                          onChange={(e) =>
+                            setDemurrageSettings({
+                              ...demurrageSettings,
+                              freeTimeAllowance: {
+                                ...demurrageSettings.freeTimeAllowance,
+                                gold: parseInt(e.target.value),
+                              },
+                            })
+                          }
+                          disabled={!demurrageSettings.enableDemurrage}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="platinum-days">Platinum Tier</Label>
+                        <Input
+                          id="platinum-days"
+                          type="number"
+                          value={demurrageSettings.freeTimeAllowance.platinum}
+                          onChange={(e) =>
+                            setDemurrageSettings({
+                              ...demurrageSettings,
+                              freeTimeAllowance: {
+                                ...demurrageSettings.freeTimeAllowance,
+                                platinum: parseInt(e.target.value),
+                              },
+                            })
+                          }
+                          disabled={!demurrageSettings.enableDemurrage}
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-medium">Advanced Settings</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="grace-period">Grace Period (hours)</Label>
+                        <Input
+                          id="grace-period"
+                          type="number"
+                          value={demurrageSettings.gracePeriod}
+                          onChange={(e) =>
+                            setDemurrageSettings({
+                              ...demurrageSettings,
+                              gracePeriod: parseInt(e.target.value),
+                            })
+                          }
+                          disabled={!demurrageSettings.enableDemurrage}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="weekend-multiplier">Weekend Multiplier</Label>
+                        <Input
+                          id="weekend-multiplier"
+                          type="number"
+                          step="0.1"
+                          value={demurrageSettings.weekendMultiplier}
+                          onChange={(e) =>
+                            setDemurrageSettings({
+                              ...demurrageSettings,
+                              weekendMultiplier: parseFloat(e.target.value),
+                            })
+                          }
+                          disabled={!demurrageSettings.enableDemurrage}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="at-risk-threshold">At Risk Alert (hours before)</Label>
+                        <Input
+                          id="at-risk-threshold"
+                          type="number"
+                          value={demurrageSettings.alertThresholds.atRisk}
+                          onChange={(e) =>
+                            setDemurrageSettings({
+                              ...demurrageSettings,
+                              alertThresholds: {
+                                ...demurrageSettings.alertThresholds,
+                                atRisk: parseInt(e.target.value),
+                              },
+                            })
+                          }
+                          disabled={!demurrageSettings.enableDemurrage}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="new-customer-grace">New Customer Grace (hours)</Label>
+                        <Input
+                          id="new-customer-grace"
+                          type="number"
+                          value={demurrageSettings.customRules.newCustomerGracePeriod}
+                          onChange={(e) =>
+                            setDemurrageSettings({
+                              ...demurrageSettings,
+                              customRules: {
+                                ...demurrageSettings.customRules,
+                                newCustomerGracePeriod: parseInt(e.target.value),
+                              },
+                            })
+                          }
+                          disabled={!demurrageSettings.enableDemurrage}
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-medium">Business Rules</h3>
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="font-medium">Automatic Calculation</p>
+                          <p className="text-sm text-gray-600">
+                            Automatically calculate demurrage charges
+                          </p>
+                        </div>
+                        <Switch
+                          checked={demurrageSettings.autoCalculation}
+                          onCheckedChange={(checked) =>
+                            setDemurrageSettings({
+                              ...demurrageSettings,
+                              autoCalculation: checked,
+                            })
+                          }
+                          disabled={!demurrageSettings.enableDemurrage}
+                        />
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="font-medium">Business Days Only</p>
+                          <p className="text-sm text-gray-600">
+                            Count only business days for free time
+                          </p>
+                        </div>
+                        <Switch
+                          checked={demurrageSettings.businessDays}
+                          onCheckedChange={(checked) =>
+                            setDemurrageSettings({
+                              ...demurrageSettings,
+                              businessDays: checked,
+                            })
+                          }
+                          disabled={!demurrageSettings.enableDemurrage}
+                        />
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="font-medium">Hazmat Weekend Surcharge</p>
+                          <p className="text-sm text-gray-600">
+                            Apply surcharge for hazmat on weekends
+                          </p>
+                        </div>
+                        <Switch
+                          checked={demurrageSettings.customRules.hazmatWeekendSurcharge}
+                          onCheckedChange={(checked) =>
+                            setDemurrageSettings({
+                              ...demurrageSettings,
+                              customRules: {
+                                ...demurrageSettings.customRules,
+                                hazmatWeekendSurcharge: checked,
+                              },
+                            })
+                          }
+                          disabled={!demurrageSettings.enableDemurrage}
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Info className="h-5 w-5 text-blue-600" />
+                      <h3 className="font-medium text-blue-900">Configuration Summary</h3>
+                    </div>
+                    <div className="text-sm text-blue-700 space-y-1">
+                      <p>• Demurrage charges: {demurrageSettings.enableDemurrage ? 'Enabled' : 'Disabled'}</p>
+                      <p>• Standard rate: ${demurrageSettings.defaultRates.standard} AUD/day</p>
+                      <p>• Premium customers get {demurrageSettings.freeTimeAllowance.platinum} days free time</p>
+                      <p>• Grace period: {demurrageSettings.gracePeriod} hours</p>
+                      <p>• Weekend multiplier: {demurrageSettings.weekendMultiplier}x</p>
+                    </div>
                   </div>
                 </div>
               </CardContent>

@@ -187,7 +187,7 @@ function CustomerDocumentsContent() {
         {/* Demo Indicator */}
         {(config.apiMode === "demo" || config.enableTerryMode) && (
           <div className="mb-6">
-            <DemoIndicator mode="customer-portal" />
+            <DemoIndicator type="demo" label="Customer Portal Demo" />
           </div>
         )}
 

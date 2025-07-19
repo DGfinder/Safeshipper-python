@@ -426,6 +426,55 @@ export default function ShipmentDetailPage({
                       ).toLocaleDateString()}
                     </span>
                   </div>
+                  
+                  {/* Demurrage Information */}
+                  {shipment?.demurrage && (
+                    <div className="mt-4 p-3 border rounded-lg bg-gray-50">
+                      <div className="flex items-center justify-between mb-2">
+                        <h4 className="text-sm font-medium text-gray-700">Demurrage & Charges</h4>
+                        <Badge 
+                          variant="outline" 
+                          className={
+                            shipment.demurrage.status === 'charges_applied' ? 'bg-red-50 text-red-700 border-red-200' :
+                            shipment.demurrage.status === 'accumulating' ? 'bg-orange-50 text-orange-700 border-orange-200' :
+                            shipment.demurrage.status === 'at_risk' ? 'bg-yellow-50 text-yellow-700 border-yellow-200' :
+                            'bg-green-50 text-green-700 border-green-200'
+                          }
+                        >
+                          {shipment.demurrage.status.replace('_', ' ')}
+                        </Badge>
+                      </div>
+                      <div className="grid grid-cols-2 gap-3 text-sm">
+                        <div>
+                          <span className="text-gray-600">Daily Rate:</span>
+                          <span className="ml-2 font-medium">${shipment.demurrage.dailyRate} AUD</span>
+                        </div>
+                        <div>
+                          <span className="text-gray-600">Free Time:</span>
+                          <span className="ml-2 font-medium">{shipment.demurrage.freeTimeAllowance} days</span>
+                        </div>
+                        <div>
+                          <span className="text-gray-600">Demurrage Days:</span>
+                          <span className="ml-2 font-medium">{shipment.demurrage.demurrageDays}</span>
+                        </div>
+                        <div>
+                          <span className="text-gray-600">Total Charges:</span>
+                          <span className="ml-2 font-medium font-bold">${shipment.demurrage.demurrageCost} AUD</span>
+                        </div>
+                      </div>
+                      {shipment.demurrage.alerts && shipment.demurrage.alerts.length > 0 && (
+                        <div className="mt-3 p-2 bg-white rounded border">
+                          <div className="flex items-center gap-2">
+                            <Info className="h-4 w-4 text-blue-600" />
+                            <span className="text-sm text-blue-800 font-medium">Alert:</span>
+                          </div>
+                          <p className="text-sm text-blue-700 mt-1">
+                            {shipment.demurrage.alerts[0]?.message}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </div>

@@ -46,6 +46,7 @@ import {
   Workflow,
   LineChart,
   MonitorSpeaker,
+  Leaf,
 } from "lucide-react";
 
 interface NavigationItem {
@@ -126,6 +127,8 @@ const navigation: NavigationItem[] = [
     icon: Brain,
     children: [
       { name: "AI Insights", href: "/ai-insights", icon: Brain },
+      { name: "Exception Management", href: "/exceptions", icon: Zap, badge: "AI" },
+      { name: "Voice Interface", href: "/voice-interface", icon: MonitorSpeaker, badge: "Voice" },
     ],
   },
   {
@@ -151,6 +154,8 @@ const navigation: NavigationItem[] = [
       { name: "Reports Dashboard", href: "/reports", icon: BarChart },
       { name: "Advanced Analytics", href: "/analytics", icon: LineChart, badge: "New" },
       { name: "Business Intelligence", href: "/analytics/insights", icon: Brain, badge: "New" },
+      { name: "AI Cash Flow Intelligence", href: "/cash-flow", icon: Brain, badge: "AI" },
+      { name: "Sustainability & Carbon", href: "/sustainability", icon: Leaf, badge: "ESG" },
     ],
   },
   {

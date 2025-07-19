@@ -156,11 +156,13 @@ export default function CustomerDashboard() {
     ];
 
     const mockCostAnalysis: CostAnalysis[] = [
-      { category: "Standard Shipping", amount: 18500, percentage: 40.5, change: 5.2 },
-      { category: "Express Shipping", amount: 15200, percentage: 33.3, change: 12.1 },
-      { category: "Hazmat Handling", amount: 8900, percentage: 19.5, change: -2.3 },
-      { category: "Insurance", amount: 2070, percentage: 4.5, change: 1.8 },
-      { category: "Other Services", amount: 1000, percentage: 2.2, change: -0.5 }
+      { category: "Standard Shipping", amount: 18500, percentage: 35.8, change: 5.2 },
+      { category: "Express Shipping", amount: 15200, percentage: 29.4, change: 12.1 },
+      { category: "Hazmat Handling", amount: 8900, percentage: 17.2, change: -2.3 },
+      { category: "Demurrage Charges", amount: 4850, percentage: 9.4, change: 15.8 },
+      { category: "Insurance", amount: 2070, percentage: 4.0, change: 1.8 },
+      { category: "Other Services", amount: 1000, percentage: 1.9, change: -0.5 },
+      { category: "Detention Fees", amount: 1200, percentage: 2.3, change: 8.2 }
     ];
 
     setTimeout(() => {
@@ -424,6 +426,65 @@ export default function CustomerDashboard() {
                   </div>
                 </div>
               ))}
+            </div>
+          </CardContent>
+        </Card>
+        
+        {/* Demurrage Overview */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center space-x-2">
+              <Clock className="h-5 w-5" />
+              <span>Demurrage Overview</span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="bg-blue-50 p-4 rounded-lg">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm text-blue-600 font-medium">This Month</p>
+                      <p className="text-2xl font-bold text-blue-900">$4,850</p>
+                    </div>
+                    <div className="text-blue-600">
+                      <TrendingUp className="h-6 w-6" />
+                    </div>
+                  </div>
+                  <p className="text-xs text-blue-600 mt-2">+15.8% from last month</p>
+                </div>
+                <div className="bg-orange-50 p-4 rounded-lg">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm text-orange-600 font-medium">Active Alerts</p>
+                      <p className="text-2xl font-bold text-orange-900">3</p>
+                    </div>
+                    <div className="text-orange-600">
+                      <AlertTriangle className="h-6 w-6" />
+                    </div>
+                  </div>
+                  <p className="text-xs text-orange-600 mt-2">2 shipments at risk</p>
+                </div>
+              </div>
+              <div className="space-y-3">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-gray-600">Average Free Time Used</span>
+                  <span className="font-medium">2.3 days</span>
+                </div>
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-gray-600">Total Demurrage Days</span>
+                  <span className="font-medium">18 days</span>
+                </div>
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-gray-600">Average Rate</span>
+                  <span className="font-medium">$145 AUD/day</span>
+                </div>
+              </div>
+              <div className="pt-3 border-t">
+                <Button variant="outline" className="w-full">
+                  View Detailed Report
+                </Button>
+              </div>
             </div>
           </CardContent>
         </Card>

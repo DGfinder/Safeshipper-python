@@ -777,10 +777,13 @@ class SimulatedDataService {
       const createdDate = randomDate(new Date('2024-01-01'), new Date('2024-01-31'));
       const estimatedDelivery = new Date(createdDate.getTime() + (route.estimatedHours + Math.floor(seededRandom() * 48)) * 60 * 60 * 1000);
       
+      const client = this.getRandomCustomer();
+      const demurrageData = this.generateDemurrageData(status, createdDate, estimatedDelivery, client);
+      
       this.shipments.push({
         id: `OH-${i + 1}-2024`,
         trackingNumber: `OH-2024-${(i + 1).toString().padStart(5, '0')}`,
-        client: this.getRandomCustomer(),
+        client,
         route: `${route.origin.name} → ${route.destination.name}`,
         weight: `${Math.floor(seededRandom() * 40) + 10},${Math.floor(seededRandom() * 900) + 100} KG`,
         distance: `${route.distance} km`,
@@ -799,6 +802,7 @@ class SimulatedDataService {
         emergencyContact: COMPANY_INFO.emergencyContact,
         isCompliant,
         complianceIssues: isCompliant ? [] : this.generateComplianceIssues(dangGoods),
+        demurrage: demurrageData,
       });
     }
   }
@@ -841,6 +845,123 @@ class SimulatedDataService {
     ).filter((issue, index, arr) => arr.indexOf(issue) === index);
   }
 
+  // Generate demurrage data for shipments
+  private generateDemurrageData(status: string, createdDate: Date, estimatedDelivery: Date, client: string) {
+    const now = new Date('2024-01-31T12:00:00Z');
+    
+    // Get customer profile for demurrage terms
+    const customerProfile = this.getCustomerProfiles().find(c => c.name === client);
+    
+    // Base demurrage rates (per day in AUD)
+    const baseRates = {
+      standard: 85,
+      premium: 125,
+      hazmat: 165,
+      mining: 145,
+    };
+    
+    // Determine rate based on customer type
+    let dailyRate = baseRates.standard;
+    if (customerProfile?.category === 'MINING') dailyRate = baseRates.mining;
+    else if (customerProfile?.category === 'INDUSTRIAL') dailyRate = baseRates.hazmat;
+    else if (customerProfile?.tier === 'PLATINUM') dailyRate = baseRates.premium;
+    
+    // Free time allowance (days)
+    const freeTimeAllowance = customerProfile?.tier === 'PLATINUM' ? 3 : customerProfile?.tier === 'GOLD' ? 2 : 1;
+    
+    // Calculate scheduled pickup/delivery dates
+    const scheduledPickup = new Date(createdDate);
+    scheduledPickup.setDate(scheduledPickup.getDate() + 1); // Next day pickup
+    
+    const scheduledDelivery = new Date(estimatedDelivery);
+    
+    // Generate actual dates based on status
+    let actualPickup = null;
+    let actualDelivery = null;
+    let pickupDelay = 0;
+    let deliveryDelay = 0;
+    
+    if (status === 'IN_TRANSIT' || status === 'DELIVERED') {
+      // Pickup occurred
+      actualPickup = new Date(scheduledPickup);
+      pickupDelay = Math.floor(seededRandom() * 3); // 0-2 days delay
+      actualPickup.setDate(actualPickup.getDate() + pickupDelay);
+      
+      if (status === 'DELIVERED') {
+        // Delivery occurred
+        actualDelivery = new Date(scheduledDelivery);
+        deliveryDelay = Math.floor(seededRandom() * 4); // 0-3 days delay
+        actualDelivery.setDate(actualDelivery.getDate() + deliveryDelay);
+      }
+    }
+    
+    // Calculate demurrage days
+    const pickupDemurrageDays = Math.max(0, pickupDelay - freeTimeAllowance);
+    const deliveryDemurrageDays = Math.max(0, deliveryDelay - freeTimeAllowance);
+    const totalDemurrageDays = pickupDemurrageDays + deliveryDemurrageDays;
+    
+    // Calculate costs
+    const demurrageCost = totalDemurrageDays * dailyRate;
+    const projectedCost = status === 'IN_TRANSIT' ? 
+      (pickupDemurrageDays * dailyRate) + Math.max(0, Math.floor(seededRandom() * 2) * dailyRate) : 
+      demurrageCost;
+    
+    // Determine status
+    let demurrageStatus = 'within_free_time';
+    if (totalDemurrageDays > 0) {
+      demurrageStatus = status === 'DELIVERED' ? 'charges_applied' : 'accumulating';
+    } else if (status === 'IN_TRANSIT' && pickupDelay >= freeTimeAllowance) {
+      demurrageStatus = 'at_risk';
+    }
+    
+    return {
+      dailyRate,
+      freeTimeAllowance,
+      scheduledPickup: scheduledPickup.toISOString(),
+      scheduledDelivery: scheduledDelivery.toISOString(),
+      actualPickup: actualPickup?.toISOString() || null,
+      actualDelivery: actualDelivery?.toISOString() || null,
+      pickupDelay,
+      deliveryDelay,
+      demurrageDays: totalDemurrageDays,
+      demurrageCost,
+      projectedCost,
+      status: demurrageStatus,
+      lastCalculated: now.toISOString(),
+      alerts: this.generateDemurrageAlerts(demurrageStatus, totalDemurrageDays, projectedCost),
+    };
+  }
+  
+  // Generate demurrage alerts
+  private generateDemurrageAlerts(status: string, days: number, cost: number) {
+    const alerts = [];
+    
+    if (status === 'at_risk') {
+      alerts.push({
+        type: 'warning',
+        message: 'Approaching demurrage threshold - pickup delayed',
+        priority: 'medium',
+        actionRequired: 'Contact customer to expedite pickup',
+      });
+    } else if (status === 'accumulating') {
+      alerts.push({
+        type: 'error',
+        message: `Demurrage charges accumulating: ${days} days @ $${cost} AUD`,
+        priority: 'high',
+        actionRequired: 'Notify customer and billing department',
+      });
+    } else if (status === 'charges_applied' && cost > 0) {
+      alerts.push({
+        type: 'info',
+        message: `Demurrage charges applied: $${cost} AUD`,
+        priority: 'low',
+        actionRequired: 'Verify charges included in invoice',
+      });
+    }
+    
+    return alerts;
+  }
+
   // Public methods to access data
   public getDrivers() {
     return this.drivers;
@@ -877,6 +998,9 @@ class SimulatedDataService {
     const pendingReviews = this.shipments.filter(s => !s.isCompliant).length;
     const complianceRate = ((totalShipments - pendingReviews) / totalShipments) * 100;
     
+    // Calculate demurrage statistics
+    const demurrageStats = this.calculateDemurrageStats();
+    
     return {
       totalShipments,
       activeShipments,
@@ -884,11 +1008,13 @@ class SimulatedDataService {
       pendingReviews,
       complianceRate: Math.round(complianceRate * 10) / 10,
       activeRoutes: WA_ROUTES.length,
+      demurrage: demurrageStats,
       trends: {
         shipments_change: "+15.3%",
         weekly_shipments: Math.floor(totalShipments / 4),
         compliance_trend: "+2.4%",
         routes_change: "+8.1%",
+        demurrage_trend: "+12.8%",
       },
       period: {
         start: thirtyDaysAgo.toISOString(),
@@ -897,6 +1023,68 @@ class SimulatedDataService {
       },
       last_updated: now.toISOString(),
       note: "OutbackHaul Transport - Real-time operational data",
+    };
+  }
+  
+  // Calculate demurrage statistics for dashboard
+  private calculateDemurrageStats() {
+    const activeAlerts = this.shipments.filter(s => 
+      s.demurrage && s.demurrage.alerts && s.demurrage.alerts.length > 0
+    ).length;
+    
+    const totalDemurrageCost = this.shipments.reduce((sum, s) => 
+      sum + (s.demurrage?.demurrageCost || 0), 0
+    );
+    
+    const shipmentsWithCharges = this.shipments.filter(s => 
+      s.demurrage && s.demurrage.demurrageCost > 0
+    ).length;
+    
+    const averageDelay = this.shipments.reduce((sum, s) => 
+      sum + (s.demurrage?.pickupDelay || 0) + (s.demurrage?.deliveryDelay || 0), 0
+    ) / this.shipments.length;
+    
+    return {
+      totalRevenue: Math.round(totalDemurrageCost),
+      activeAlerts,
+      shipmentsWithCharges,
+      averageDelay: Math.round(averageDelay * 10) / 10,
+      monthlyTrend: "+12.8%",
+    };
+  }
+  
+  // Get demurrage data for reporting
+  public getDemurrageReport(period: { start: string; end: string }) {
+    const start = new Date(period.start);
+    const end = new Date(period.end);
+    
+    const periodShipments = this.shipments.filter(s => {
+      const created = new Date(s.createdAt);
+      return created >= start && created <= end;
+    });
+    
+    const totalRevenue = periodShipments.reduce((sum, s) => 
+      sum + (s.demurrage?.demurrageCost || 0), 0
+    );
+    
+    const chargeBreakdown = periodShipments.reduce((acc, s) => {
+      if (s.demurrage && s.demurrage.demurrageCost > 0) {
+        const client = s.client;
+        acc[client] = (acc[client] || 0) + s.demurrage.demurrageCost;
+      }
+      return acc;
+    }, {} as Record<string, number>);
+    
+    return {
+      period,
+      totalRevenue,
+      totalShipments: periodShipments.length,
+      shipmentsWithCharges: periodShipments.filter(s => 
+        s.demurrage && s.demurrage.demurrageCost > 0
+      ).length,
+      averageChargePerShipment: totalRevenue / periodShipments.length,
+      clientBreakdown: chargeBreakdown,
+      lastUpdated: new Date().toISOString(),
     };
   }
 
@@ -1054,6 +1242,7 @@ class SimulatedDataService {
         locationLat,
         locationLng,
         shipmentHistory: customerData.shipments,
+        demurrageTerms: this.getCustomerDemurrageTerms(tier, category),
       });
     });
 
@@ -1117,6 +1306,80 @@ class SimulatedDataService {
     };
   }
 
+  // Method to get customer demurrage terms
+  public getCustomerDemurrageTerms(tier: string, category: string) {
+    // Base demurrage rates (per day in AUD)
+    const baseRates = {
+      standard: 85,
+      premium: 125,
+      hazmat: 165,
+      mining: 145,
+    };
+    
+    // Determine rate based on customer type and tier
+    let dailyRate = baseRates.standard;
+    if (category === 'MINING') dailyRate = baseRates.mining;
+    else if (category === 'INDUSTRIAL') dailyRate = baseRates.hazmat;
+    else if (tier === 'PLATINUM') dailyRate = baseRates.premium;
+    
+    // Free time allowance (days)
+    const freeTimeAllowance = tier === 'PLATINUM' ? 3 : tier === 'GOLD' ? 2 : 1;
+    
+    // Calculate demurrage history for this customer
+    const customerShipments = this.getCustomerShipments(this.getCustomerByName(tier)?.name || 'Unknown');
+    const demurrageHistory = customerShipments
+      .filter(s => s.demurrage && s.demurrage.demurrageCost > 0)
+      .map(s => ({
+        shipmentId: s.id,
+        trackingNumber: s.trackingNumber,
+        demurrageDays: s.demurrage.demurrageDays,
+        cost: s.demurrage.demurrageCost,
+        reason: s.demurrage.pickupDelay > 0 ? 'Pickup delay' : 'Delivery delay',
+        date: s.createdAt,
+        status: s.demurrage.status,
+      }));
+    
+    const totalDemurrageCost = demurrageHistory.reduce((sum, h) => sum + h.cost, 0);
+    const averageDemurrageDays = demurrageHistory.length > 0 ? 
+      demurrageHistory.reduce((sum, h) => sum + h.demurrageDays, 0) / demurrageHistory.length : 0;
+    
+    return {
+      dailyRate,
+      freeTimeAllowance,
+      currency: 'AUD',
+      terms: {
+        pickup: {
+          freeTime: freeTimeAllowance,
+          rateAfterFreeTime: dailyRate,
+        },
+        delivery: {
+          freeTime: freeTimeAllowance,
+          rateAfterFreeTime: dailyRate,
+        },
+        calculation: 'Per calendar day',
+        minimumCharge: dailyRate,
+        gracePeriod: tier === 'PLATINUM' ? '4 hours' : '2 hours',
+      },
+      history: {
+        totalCharges: totalDemurrageCost,
+        totalIncidents: demurrageHistory.length,
+        averageDaysPerIncident: Math.round(averageDemurrageDays * 10) / 10,
+        lastIncident: demurrageHistory[0]?.date || null,
+        recentCharges: demurrageHistory.slice(0, 5),
+      },
+      thresholds: {
+        alertAfterDays: Math.max(1, freeTimeAllowance - 1),
+        warningAfterDays: freeTimeAllowance,
+        criticalAfterDays: freeTimeAllowance + 1,
+      },
+      disputeProcess: {
+        timeLimit: '48 hours',
+        contactEmail: 'billing@outbackhaul.com.au',
+        requiresDocumentation: true,
+      },
+    };
+  }
+  
   // Method to get customer dangerous goods authorizations
   public getCustomerDGAuthorizations(category: string) {
     const allGoods = [

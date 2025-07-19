@@ -46,6 +46,10 @@ import {
   Workflow,
   LineChart,
   MonitorSpeaker,
+  DollarSign,
+  Route,
+  Monitor,
+  Shield as ShieldAnalytics,
 } from "lucide-react";
 
 interface NavigationItem {
@@ -54,6 +58,8 @@ interface NavigationItem {
   icon: any;
   children?: NavigationItem[];
   badge?: string;
+  requiredPermissions?: string[];
+  requiredRoles?: string[];
 }
 
 const navigation: NavigationItem[] = [
@@ -62,7 +68,7 @@ const navigation: NavigationItem[] = [
     icon: Home,
     children: [
       { name: "Overview", href: "/dashboard", icon: Home },
-      { name: "Operations Center", href: "/operations", icon: MonitorSpeaker, badge: "New" },
+      { name: "Operations Center", href: "/operations", icon: MonitorSpeaker, badge: "New", requiredRoles: ["ADMIN", "DISPATCHER", "MANAGER"] },
       { name: "Live Map", href: "/dashboard/live-map", icon: MapPin },
       { name: "Search", href: "/search", icon: Search },
     ],
@@ -71,17 +77,27 @@ const navigation: NavigationItem[] = [
     name: "Shipments",
     icon: Package,
     children: [
-      { name: "All Shipments", href: "/shipments", icon: Package },
+      { name: "All Shipments", href: "/shipments", icon: Package, requiredPermissions: ["all_shipments"] },
+      {
+        name: "My Shipments",
+        href: "/shipments/my-shipments",
+        icon: Package,
+        requiredRoles: ["DRIVER"],
+        requiredPermissions: ["my_shipments"]
+      },
       {
         name: "Manifest Upload",
         href: "/shipments/manifest-upload",
         icon: Upload,
+        requiredRoles: ["ADMIN", "DISPATCHER"],
+        requiredPermissions: ["shipment_management"]
       },
     ],
   },
   {
     name: "Enterprise Integration",
     icon: Layers,
+    requiredRoles: ["ADMIN", "MANAGER"],
     children: [
       { name: "ERP Integration", href: "/erp-integration", icon: Workflow, badge: "New" },
       { name: "API Gateway", href: "/api-gateway", icon: Globe, badge: "New" },
@@ -91,6 +107,7 @@ const navigation: NavigationItem[] = [
   {
     name: "Operations",
     icon: Truck,
+    requiredRoles: ["ADMIN", "DISPATCHER", "MANAGER"],
     children: [
       { name: "Fleet Management", href: "/fleet", icon: Truck },
       { name: "IoT Monitoring", href: "/iot-monitoring", icon: Activity },
@@ -108,8 +125,8 @@ const navigation: NavigationItem[] = [
       },
       { name: "Incident Management", href: "/incidents", icon: ClipboardCheck },
       { name: "Training", href: "/training", icon: GraduationCap },
-      { name: "Inspections", href: "/inspections", icon: ClipboardCheck, badge: "New" },
-      { name: "Audits", href: "/audits", icon: FileText, badge: "New" },
+      { name: "Inspections", href: "/inspections", icon: ClipboardCheck, badge: "New", requiredRoles: ["ADMIN", "INSPECTOR"], requiredPermissions: ["safety_inspections"] },
+      { name: "Audits", href: "/audits", icon: FileText, badge: "New", requiredRoles: ["ADMIN", "INSPECTOR"], requiredPermissions: ["compliance_audits"] },
     ],
   },
   {
@@ -124,6 +141,7 @@ const navigation: NavigationItem[] = [
   {
     name: "AI Tools",
     icon: Brain,
+    requiredRoles: ["ADMIN", "MANAGER"],
     children: [
       { name: "AI Insights", href: "/ai-insights", icon: Brain },
     ],
@@ -138,6 +156,7 @@ const navigation: NavigationItem[] = [
   {
     name: "Customer Portal",
     icon: UserCheck,
+    requiredRoles: ["ADMIN", "DISPATCHER", "MANAGER"],
     children: [
       { name: "Portal Dashboard", href: "/customer-portal", icon: UserCheck, badge: "New" },
       { name: "Self-Service", href: "/customer-portal/requests", icon: Users, badge: "New" },
@@ -147,6 +166,7 @@ const navigation: NavigationItem[] = [
   {
     name: "Reports & Analytics",
     icon: BarChart3,
+    requiredRoles: ["ADMIN", "MANAGER"],
     children: [
       { name: "Reports Dashboard", href: "/reports", icon: BarChart },
       { name: "Advanced Analytics", href: "/analytics", icon: LineChart, badge: "New" },
@@ -154,11 +174,24 @@ const navigation: NavigationItem[] = [
     ],
   },
   {
+    name: "Advanced Analytics",
+    icon: TrendingUp,
+    requiredRoles: ["ADMIN", "MANAGER"],
+    children: [
+      { name: "Supply Chain Stress", href: "/supply-chain-stress", icon: ShieldAnalytics, badge: "Analytics" },
+      { name: "Insurance Pricing", href: "/insurance-pricing", icon: DollarSign, badge: "Analytics" },
+      { name: "Route Optimization", href: "/route-optimization", icon: Route, badge: "Analytics" },
+      { name: "Digital Twin", href: "/digital-twin", icon: Monitor, badge: "Analytics" },
+    ],
+  },
+  {
     name: "Management",
     icon: Users,
+    requiredRoles: ["ADMIN", "MANAGER"],
+    requiredPermissions: ["user_management"],
     children: [
-      { name: "Users", href: "/users", icon: Users },
-      { name: "Customers", href: "/customers", icon: Building2 },
+      { name: "Users", href: "/users", icon: Users, requiredPermissions: ["user_management"] },
+      { name: "Customers", href: "/customers", icon: Building2, requiredPermissions: ["all_customers"] },
       { name: "Settings", href: "/settings", icon: Settings },
     ],
   },
@@ -169,6 +202,56 @@ interface SidebarProps {
   onToggleCollapse?: () => void;
   isMobile?: boolean;
   onClose?: () => void;
+}
+
+// Helper function to check if user has required permissions
+function hasRequiredAccess(item: NavigationItem, user: any): boolean {
+  if (!user) return false;
+  
+  // Check required roles
+  if (item.requiredRoles && item.requiredRoles.length > 0) {
+    if (!item.requiredRoles.includes(user.role)) {
+      return false;
+    }
+  }
+  
+  // Check required permissions
+  if (item.requiredPermissions && item.requiredPermissions.length > 0) {
+    if (!user.permissions || !Array.isArray(user.permissions)) {
+      return false;
+    }
+    
+    const hasPermission = item.requiredPermissions.some(permission => 
+      user.permissions.includes(permission)
+    );
+    
+    if (!hasPermission) {
+      return false;
+    }
+  }
+  
+  return true;
+}
+
+// Helper function to filter navigation items based on user permissions
+function filterNavigationItems(items: NavigationItem[], user: any): NavigationItem[] {
+  return items.filter(item => {
+    if (!hasRequiredAccess(item, user)) {
+      return false;
+    }
+    
+    // Filter children as well
+    if (item.children) {
+      const filteredChildren = item.children.filter(child => hasRequiredAccess(child, user));
+      // Only show parent if it has accessible children
+      return filteredChildren.length > 0;
+    }
+    
+    return true;
+  }).map(item => ({
+    ...item,
+    children: item.children ? item.children.filter(child => hasRequiredAccess(child, user)) : undefined
+  }));
 }
 
 export function Sidebar({ 
@@ -185,6 +268,9 @@ export function Sidebar({
     "Shipments",
     "Enterprise Integration",
   ]);
+  
+  // Filter navigation items based on user permissions
+  const filteredNavigation = filterNavigationItems(navigation, user);
 
   const toggleSection = (sectionName: string) => {
     if (isCollapsed) return; // Don't expand sections when collapsed
@@ -410,7 +496,7 @@ export function Sidebar({
         aria-label="Main navigation"
         role="navigation"
       >
-        {navigation.map((item) => (
+        {filteredNavigation.map((item) => (
           <NavigationSection key={item.name} item={item} />
         ))}
       </nav>
