@@ -72,7 +72,8 @@
       "Bash(then tail -3 \"$file\")",
       "Bash(else echo \"File not found\")",
       "Bash(cd:*)",
-      "Bash(do mkdir -p features/$feature/{components,hooks,services,stores,types,utils})"
+      "Bash(do mkdir -p features/$feature/{components,hooks,services,stores,types,utils})",
+      "Bash(cd:*)"
     ],
     "deny": []
   }

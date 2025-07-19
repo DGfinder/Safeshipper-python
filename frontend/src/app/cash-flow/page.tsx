@@ -46,6 +46,7 @@ import {
   ArrowDown,
 } from "lucide-react";
 import { AuthGuard } from "@/shared/components/common/auth-guard";
+import { ErrorBoundary } from "@/shared/components/common/error-boundary";
 import {
   useCashFlowPredictions,
   useWorkingCapitalInsights,
@@ -131,7 +132,8 @@ export default function CashFlowDashboard() {
 
   return (
     <AuthGuard>
-      <div className="p-6 space-y-6">
+      <ErrorBoundary>
+        <div className="p-6 space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
@@ -699,7 +701,8 @@ export default function CashFlowDashboard() {
             </div>
           </TabsContent>
         </Tabs>
-      </div>
+        </div>
+      </ErrorBoundary>
     </AuthGuard>
   );
 }

@@ -113,7 +113,9 @@ export function useSpeechRecognition() {
   const finalTranscriptRef = useRef('');
 
   useEffect(() => {
-    // Check if speech recognition is supported
+    // Check if we're in the browser and speech recognition is supported
+    if (typeof window === 'undefined') return;
+    
     const SpeechRecognition = 
       (window as any).SpeechRecognition || 
       (window as any).webkitSpeechRecognition;
@@ -213,6 +215,9 @@ export function useTextToSpeech() {
   const [selectedVoice, setSelectedVoice] = useState<SpeechSynthesisVoice | null>(null);
   
   useEffect(() => {
+    // Check if we're in the browser and speech synthesis is supported
+    if (typeof window === 'undefined') return;
+    
     if ('speechSynthesis' in window) {
       setIsSupported(true);
       
@@ -243,7 +248,7 @@ export function useTextToSpeech() {
     pitch?: number;
     volume?: number;
   }) => {
-    if (!isSupported || !text.trim()) return;
+    if (typeof window === 'undefined' || !isSupported || !text.trim()) return;
     
     // Cancel any ongoing speech
     speechSynthesis.cancel();
@@ -263,22 +268,19 @@ export function useTextToSpeech() {
   }, [isSupported, selectedVoice]);
 
   const stop = useCallback(() => {
-    if (isSupported) {
-      speechSynthesis.cancel();
-      setIsSpeaking(false);
-    }
+    if (typeof window === 'undefined' || !isSupported) return;
+    speechSynthesis.cancel();
+    setIsSpeaking(false);
   }, [isSupported]);
 
   const pause = useCallback(() => {
-    if (isSupported && isSpeaking) {
-      speechSynthesis.pause();
-    }
+    if (typeof window === 'undefined' || !isSupported || !isSpeaking) return;
+    speechSynthesis.pause();
   }, [isSupported, isSpeaking]);
 
   const resume = useCallback(() => {
-    if (isSupported) {
-      speechSynthesis.resume();
-    }
+    if (typeof window === 'undefined' || !isSupported) return;
+    speechSynthesis.resume();
   }, [isSupported]);
 
   return {

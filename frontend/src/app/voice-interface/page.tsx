@@ -54,6 +54,7 @@ import {
   Package,
 } from "lucide-react";
 import { AuthGuard } from "@/shared/components/common/auth-guard";
+import { ErrorBoundary } from "@/shared/components/common/error-boundary";
 import { useVoiceInterface } from "@/shared/hooks/useVoiceInterface";
 
 export default function VoiceInterfaceDashboard() {
@@ -132,7 +133,8 @@ export default function VoiceInterfaceDashboard() {
 
   return (
     <AuthGuard>
-      <div className="space-y-6 p-6">
+      <ErrorBoundary>
+        <div className="space-y-6 p-6">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
@@ -668,7 +670,8 @@ export default function VoiceInterfaceDashboard() {
             </Card>
           </TabsContent>
         </Tabs>
-      </div>
+        </div>
+      </ErrorBoundary>
     </AuthGuard>
   );
 }

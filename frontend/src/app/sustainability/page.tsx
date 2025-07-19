@@ -51,6 +51,7 @@ import {
   Sun,
 } from "lucide-react";
 import { AuthGuard } from "@/shared/components/common/auth-guard";
+import { ErrorBoundary } from "@/shared/components/common/error-boundary";
 import {
   useCarbonFootprints,
   useCarbonCreditRecommendations,
@@ -155,7 +156,8 @@ export default function SustainabilityDashboard() {
 
   return (
     <AuthGuard>
-      <div className="p-6 space-y-6">
+      <ErrorBoundary>
+        <div className="p-6 space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
@@ -931,7 +933,8 @@ export default function SustainabilityDashboard() {
             </Card>
           </TabsContent>
         </Tabs>
-      </div>
+        </div>
+      </ErrorBoundary>
     </AuthGuard>
   );
 }
