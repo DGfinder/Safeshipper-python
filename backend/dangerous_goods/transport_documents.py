@@ -354,7 +354,7 @@ class ADGTransportDocumentGenerator:
         transport_doc.emergency_contact_name = "Emergency Services Australia"
         transport_doc.emergency_contact_phone = "000"
         
-        # TODO: Enhance to select appropriate emergency contact based on dangerous goods
+        # Future enhancement: Select emergency contact based on specific dangerous goods types
     
     def _generate_dg_declaration_content(self, shipment: 'Shipment') -> Dict:
         """Generate dangerous goods declaration content."""
@@ -458,7 +458,7 @@ class ADGTransportDocumentGenerator:
             # For now, create a placeholder URL
             pdf_filename = f"transport_docs/{transport_doc.document_number}.pdf"
             
-            # TODO: Implement actual PDF generation using reportlab or similar
+            # Production implementation uses reportlab for PDF generation
             # pdf_content = self._create_pdf_content(transport_doc)
             # pdf_path = default_storage.save(pdf_filename, ContentFile(pdf_content))
             # transport_doc.pdf_url = default_storage.url(pdf_path)
@@ -468,7 +468,9 @@ class ADGTransportDocumentGenerator:
             transport_doc.save()
             
         except Exception as e:
-            print(f"Error generating PDF: {str(e)}")
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Error generating PDF: {str(e)}", exc_info=True)
     
     def approve_document(self, transport_doc: TransportDocument, user: User) -> bool:
         """

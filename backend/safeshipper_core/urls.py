@@ -101,11 +101,11 @@ urlpatterns = [
         path('companies/', include('companies.urls')),
         path('freight-types/', include('freight_types.urls')),
         path('vehicles/', include('vehicles.urls')),
-        # path('tracking/', include('tracking.urls')),  # Temporarily disabled due to GIS dependencies
+        path('tracking/', include('tracking.urls')),  # Re-enabled for GPS tracking
         path('documents/', include('documents.urls')),  # Re-enabled after fixing shipments dependencies
         path('audits/', include('audits.urls')),  # Re-enabled for Phase 5A comprehensive audit system
         path('auth/', include('enterprise_auth.urls')),  # Re-enabled for Phase 3D security
-        # path('iot/', include('iot_devices.urls')),  # Temporarily disabled
+        path('iot/', include('iot_devices.urls')),  # Re-enabled for IoT device management
         path('inspections/', include('inspections.urls')),  # Re-enabled for Phase 5B quality management
         path('training/', include('training.urls')),  # Re-enabled for Phase 5C training & certification management
         path('gateway/', include('api_gateway.urls')),  # Re-enabled for Phase 7A API gateway & developer platform

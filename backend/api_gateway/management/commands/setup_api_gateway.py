@@ -1,3 +1,9 @@
+"""
+SECURITY WARNING: This management command contains development passwords.
+DO NOT use in production without changing all passwords and API keys.
+This is intended for development and demo environments only.
+"""
+
 from django.core.management.base import BaseCommand
 from django.contrib.auth import get_user_model
 from django.utils import timezone
@@ -17,10 +23,11 @@ class Command(BaseCommand):
         # Get or create admin user
         admin_user = User.objects.filter(is_superuser=True).first()
         if not admin_user:
+            # WARNING: Change password in production deployment
             admin_user = User.objects.create_superuser(
                 username='api_admin',
                 email='api@safeshipper.com',
-                password='admin123',
+                password='CHANGE_IN_PRODUCTION_123!',
                 first_name='API',
                 last_name='Administrator'
             )
@@ -37,7 +44,8 @@ class Command(BaseCommand):
             }
         )
         if created:
-            developer_user.set_password('dev123')
+            # WARNING: Change password in production deployment
+            developer_user.set_password('CHANGE_IN_PRODUCTION_dev123!')
             developer_user.save()
             self.stdout.write(f'Created developer user: {developer_user.username}')
         

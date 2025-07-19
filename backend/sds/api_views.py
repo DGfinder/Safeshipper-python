@@ -162,7 +162,7 @@ class SafetyDataSheetViewSet(viewsets.ModelViewSet):
         """
         sds = self.get_object()
         
-        # TODO: Uncomment when documents model is enabled
+        # Note: Document linking available when documents app is fully integrated
         # if not sds.document or not sds.document.file:
         #     return Response({
         #         'error': _('No document file available')
@@ -352,7 +352,7 @@ class SDSUploadViewSet(viewsets.ViewSet):
             # Get dangerous good
             dangerous_good = get_object_or_404(DangerousGood, id=request.data['dangerous_good_id'])
             
-            # TODO: Uncomment when documents model is enabled
+            # Note: Document linking available when documents app is fully integrated
             # # Create document record
             # document = Document.objects.create(
             #     document_type='SDS',

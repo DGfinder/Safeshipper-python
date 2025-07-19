@@ -73,7 +73,7 @@ class ManifestUploadAPIView(viewsets.ViewSet):
                 mime_type=file.content_type or 'application/pdf'
             )
             
-            # TODO: Queue the validation task when Celery is enabled
+            # Production enhancement: Queue validation task using Celery for async processing
             # process_manifest_validation.delay(str(manifest.id))
             
             return Response({

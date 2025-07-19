@@ -57,5 +57,5 @@ def worker_shutting_down_handler(sender=None, **kwds):
 @app.task(bind=True, ignore_result=True)
 def debug_task(self):
     """Debug task for testing Celery setup."""
-    print(f'Request: {self.request!r}')
-    logger.info(f'Debug task executed: {self.request.id}') 
+    logger.info(f'Debug task executed: {self.request.id}')
+    logger.debug(f'Request details: {self.request!r}') 

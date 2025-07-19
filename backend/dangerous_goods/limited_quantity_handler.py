@@ -405,6 +405,9 @@ def setup_common_lq_limits():
                 created_count += 1
                 
         except DangerousGood.DoesNotExist:
-            print(f"Warning: Dangerous good {lq_info['un_number']} not found")
+            # Log warning for missing dangerous good instead of printing
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.warning(f"Dangerous good {lq_info['un_number']} not found during LQ setup")
     
     return created_count

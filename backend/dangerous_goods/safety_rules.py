@@ -10,7 +10,7 @@ from .models import DangerousGood, SegregationGroup
 # from .models import DangerousGood, SegregationRule, SegregationGroup
 # from django.db.models import Q
 
-# print("dangerous_goods/safety_rules.py loaded") # Optional: for debugging import
+# Module for dangerous goods safety and compatibility rules
 
 class DGClass:
     """Constants for Dangerous Goods classes and divisions."""
@@ -241,7 +241,7 @@ def check_item_bulk_incompatibility(dg1, dg2, vehicle_type_or_compartment_detail
     # Bulk transport often has specific segregation requirements.
     # This function would consult relevant parts of regulations (IATA, IMDG, ADR)
     # and your SegregationRule model, possibly with rules specific to bulk transport.
-    # print(f"Checking bulk incompatibility: {dg1.un_number if dg1 else 'N/A'} vs {dg2.un_number if dg2 else 'N/A'} - No specific rule implemented yet.")
+    # TODO: Implement specific bulk incompatibility rules for dangerous goods
     return False # Default to no conflict
 
 # You would add more specific rule functions here as needed,

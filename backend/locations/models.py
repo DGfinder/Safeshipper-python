@@ -253,5 +253,7 @@ class GeoLocation(models.Model):
             return inside
         except Exception as e:
             # Log the error but return False to be safe
-            print(f"Error checking point in geofence: {str(e)}")
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Error checking point in geofence: {str(e)}", exc_info=True)
             return False
