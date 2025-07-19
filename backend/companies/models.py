@@ -111,7 +111,14 @@ class Company(models.Model):
     currency = models.CharField(
         _("Default Currency"),
         max_length=3,
-        default='USD'
+        default='USD',
+        validators=[
+            RegexValidator(
+                regex=r'^[A-Z]{3}$',
+                message=_('Currency must be a valid 3-letter ISO 4217 code (e.g., USD, EUR, GBP)')
+            )
+        ],
+        help_text=_('ISO 4217 three-letter currency code (e.g., USD, EUR, GBP)')
     )
     
     # Compliance and certification

@@ -63,7 +63,7 @@ INSTALLED_APPS = [
     'enterprise_auth',  # Re-enabled for Phase 3D security
     # 'incidents',
     # 'training',
-    # 'iot_devices',
+    'iot_devices',  # Re-enabled for GPS tracking and IoT device management
     'documents',  # Re-enabled after fixing shipments dependencies
     'manifests',  # Re-enabled after fixing documents dependencies
     'audits',     # Re-enabled for Phase 5A comprehensive audit system

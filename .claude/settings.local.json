@@ -73,7 +73,8 @@
       "Bash(else echo \"File not found\")",
       "Bash(cd:*)",
       "Bash(do mkdir -p features/$feature/{components,hooks,services,stores,types,utils})",
-      "Bash(cd:*)"
+      "Bash(cd:*)",
+      "Bash(./venv/bin/python manage.py makemigrations:*)"
     ],
     "deny": []
   }
