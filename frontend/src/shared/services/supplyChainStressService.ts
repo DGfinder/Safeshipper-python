@@ -288,7 +288,7 @@ class SupplyChainStressService {
       ],
     };
 
-    const categoryEvents = events[category] || ['Operational stress factor'];
+    const categoryEvents = events[category as keyof typeof events] || ['Operational stress factor'];
     return [categoryEvents[Math.floor(this.seededRandom() * categoryEvents.length)]];
   }
 
@@ -337,7 +337,7 @@ class SupplyChainStressService {
       },
     };
 
-    const impact = baseImpacts[category] || {
+    const impact = baseImpacts[category as keyof typeof baseImpacts] || {
       delayProbability: 50,
       costIncrease: 20,
       capacityReduction: 20,
@@ -407,7 +407,7 @@ class SupplyChainStressService {
       ],
     };
 
-    const categoryStrategies = strategies[category] || [
+    const categoryStrategies = strategies[category as keyof typeof strategies] || [
       {
         strategy: 'Implement standard mitigation protocol',
         effectiveness: 70,
@@ -564,7 +564,7 @@ class SupplyChainStressService {
       warning: 360,   // 6 hours
       info: 1440,     // 24 hours
     };
-    return timeFrames[severity] || 360;
+    return timeFrames[severity as keyof typeof timeFrames] || 360;
   }
 
   // Generate network resilience metrics

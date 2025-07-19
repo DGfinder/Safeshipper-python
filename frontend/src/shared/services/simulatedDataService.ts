@@ -374,7 +374,7 @@ export const DANGEROUS_GOODS_CATALOG = {
       compliance: "COMPLIANT",
     },
   ],
-  industrial: [
+  manufacturing: [
     {
       unNumber: "1789",
       properShippingName: "HYDROCHLORIC ACID",
@@ -409,7 +409,7 @@ export const DANGEROUS_GOODS_CATALOG = {
       compliance: "COMPLIANT",
     }
   ],
-  agricultural: [
+  farming: [
     {
       unNumber: "2758",
       properShippingName: "CARBAMATE PESTICIDE, LIQUID, TOXIC",
@@ -433,7 +433,7 @@ export const DANGEROUS_GOODS_CATALOG = {
       compliance: "COMPLIANT",
     }
   ],
-  medical: [
+  pharmaceutical: [
     {
       unNumber: "1170",
       properShippingName: "ETHANOL",

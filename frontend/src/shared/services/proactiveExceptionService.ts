@@ -451,7 +451,7 @@ class ProactiveExceptionService {
       ],
     };
 
-    const actions = actionTemplates[type] || [
+    const actions = actionTemplates[type as keyof typeof actionTemplates] || [
       {
         action: 'Escalate to operations manager for manual resolution',
         priority: 1,
@@ -531,7 +531,7 @@ class ProactiveExceptionService {
       },
     };
 
-    const attemptData = attempts[type] || {
+    const attemptData = attempts[type as keyof typeof attempts] || {
       action: 'Automatic escalation to operations team',
       result: 'partial' as const,
       details: 'Alert sent to operations dashboard',
@@ -542,7 +542,7 @@ class ProactiveExceptionService {
       id: `AUTO-${Date.now()}-${index}`,
       action: attemptData.action,
       attemptedAt,
-      result: attemptData.result,
+      result: attemptData.result as "success" | "partial" | "failed",
       impactReduction: attemptData.impactReduction,
       details: attemptData.details,
       nextSteps: attemptData.result === 'success' ? 
@@ -575,7 +575,7 @@ class ProactiveExceptionService {
       ],
     };
 
-    return measures[type] || [
+    return measures[type as keyof typeof measures] || [
       'Implement enhanced monitoring systems',
       'Establish proactive alert mechanisms',
       'Create standard operating procedures for early intervention',
@@ -624,7 +624,7 @@ class ProactiveExceptionService {
       equipment_failure: ['Sensor malfunctions', 'Power failures', 'Connectivity issues', 'Wear and tear'],
     };
 
-    return triggers[type] || ['Operational factors', 'External dependencies', 'System limitations'];
+    return triggers[type as keyof typeof triggers] || ['Operational factors', 'External dependencies', 'System limitations'];
   }
 
   // Generate AI insights for continuous improvement
