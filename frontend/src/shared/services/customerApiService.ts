@@ -196,7 +196,7 @@ class CustomerApiService {
     
     if (apiResponse.success && apiResponse.data) {
       this.setCache(cacheKey, apiResponse.data);
-      return apiResponse;
+      return apiResponse as ApiResponse<any>;
     }
 
     // Fallback to simulated data
@@ -238,7 +238,7 @@ class CustomerApiService {
     
     if (apiResponse.success && apiResponse.data) {
       this.setCache(cacheKey, apiResponse.data);
-      return apiResponse;
+      return apiResponse as ApiResponse<any[]>;
     }
 
     // Fallback to simulated data
@@ -270,7 +270,7 @@ class CustomerApiService {
     if (cached) {
       return {
         success: true,
-        data: cached,
+        data: cached as any[],
         source: 'cache',
         timestamp: new Date().toISOString()
       };
@@ -288,7 +288,7 @@ class CustomerApiService {
     
     if (apiResponse.success && apiResponse.data) {
       this.setCache(cacheKey, apiResponse.data, 180000); // 3 minutes for documents
-      return apiResponse;
+      return apiResponse as ApiResponse<any[]>;
     }
 
     // Fallback to simulated data - this would be implemented in useCustomerDocuments hook
@@ -308,7 +308,7 @@ class CustomerApiService {
     if (cached) {
       return {
         success: true,
-        data: cached,
+        data: cached as any,
         source: 'cache',
         timestamp: new Date().toISOString()
       };
@@ -318,7 +318,7 @@ class CustomerApiService {
     
     if (apiResponse.success && apiResponse.data) {
       this.setCache(cacheKey, apiResponse.data);
-      return apiResponse;
+      return apiResponse as ApiResponse<any>;
     }
 
     // Fallback to simulated data
@@ -350,7 +350,7 @@ class CustomerApiService {
     if (cached) {
       return {
         success: true,
-        data: cached,
+        data: cached as any[],
         source: 'cache',
         timestamp: new Date().toISOString()
       };
@@ -360,7 +360,7 @@ class CustomerApiService {
     
     if (apiResponse.success && apiResponse.data) {
       this.setCache(cacheKey, apiResponse.data, 60000); // 1 minute for notifications
-      return apiResponse;
+      return apiResponse as ApiResponse<any[]>;
     }
 
     // Fallback to mock notifications

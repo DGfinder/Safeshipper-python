@@ -261,7 +261,7 @@ class ProactiveExceptionService {
       },
     };
 
-    return details[type] || {
+    return details[type as keyof typeof details] || {
       title: 'Operational Exception',
       description: 'System detected an operational exception requiring attention.',
       rootCause: 'Multiple contributing factors identified by AI analysis',
@@ -276,7 +276,7 @@ class ProactiveExceptionService {
       critical: { delay: 12, satisfaction: 90, financial: 15000, compliance: 80 },
     }[severity] || { delay: 2, satisfaction: 30, financial: 1000, compliance: 15 };
 
-    const typeMultiplier = {
+    const typeMultipliers = {
       delivery_delay: 1.0,
       route_disruption: 1.2,
       weather_impact: 1.5,
@@ -287,7 +287,8 @@ class ProactiveExceptionService {
       capacity_shortage: 1.1,
       port_congestion: 1.4,
       equipment_failure: 1.6,
-    }[type] || 1.0;
+    };
+    const typeMultiplier = typeMultipliers[type as keyof typeof typeMultipliers] || 1.0;
 
     const cascadeEffects = this.generateCascadeEffects(type, severity);
 
@@ -335,7 +336,7 @@ class ProactiveExceptionService {
       ],
     };
 
-    const typeEffects = effects[type] || ['Operational disruption', 'Cost implications'];
+    const typeEffects = effects[type as keyof typeof effects] || ['Operational disruption', 'Cost implications'];
     const severityCount = severity === 'critical' ? typeEffects.length : 
                          severity === 'high' ? Math.min(3, typeEffects.length) :
                          severity === 'medium' ? Math.min(2, typeEffects.length) : 1;
@@ -351,7 +352,7 @@ class ProactiveExceptionService {
       critical: 360, // 6 hours
     }[severity] || 60;
 
-    const typeMultiplier = {
+    const typeMultipliers = {
       delivery_delay: 0.5,
       route_disruption: 0.7,
       weather_impact: 2.0,
@@ -362,7 +363,8 @@ class ProactiveExceptionService {
       capacity_shortage: 1.3,
       port_congestion: 2.5,
       equipment_failure: 1.8,
-    }[type] || 1.0;
+    };
+    const typeMultiplier = typeMultipliers[type as keyof typeof typeMultipliers] || 1.0;
 
     return Math.round(baseTimes * typeMultiplier);
   }

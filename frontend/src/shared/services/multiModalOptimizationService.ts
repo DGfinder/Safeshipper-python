@@ -462,7 +462,7 @@ class MultiModalOptimizationService {
   }
 
   private generateMultiModalRoutes(modes: TransportMode[], request: OptimizationRequest): any[] {
-    const routes = [];
+    const routes: any[] = [];
     
     // Generate common multi-modal combinations for Australian context
     const combinations = [
@@ -560,7 +560,7 @@ class MultiModalOptimizationService {
     const key = `${origin}-${destination}`;
     const reverseKey = `${destination}-${origin}`;
     
-    return distances[key] || distances[reverseKey] || 500 + this.seededRandom() * 1000;
+    return distances[key as keyof typeof distances] || distances[reverseKey as keyof typeof distances] || 500 + this.seededRandom() * 1000;
   }
 
   private getTransferPoint(currentMode: TransportMode, nextMode: string): string {
@@ -576,7 +576,7 @@ class MultiModalOptimizationService {
   }
 
   private generateRiskFactors(mode: TransportMode, distance: number): RoutRiskFactor[] {
-    const factors = [];
+    const factors: RoutRiskFactor[] = [];
     
     if (mode.mode === 'road' && distance > 1000) {
       factors.push({
@@ -670,7 +670,7 @@ class MultiModalOptimizationService {
   }
 
   private generateAlternatives(routes: any[], optimal: any, request: OptimizationRequest): AlternativeRoute[] {
-    const alternatives = [];
+    const alternatives: AlternativeRoute[] = [];
     
     // Find different route types for alternatives
     const otherRoutes = routes.filter(route => route !== optimal).slice(0, 3);
@@ -754,9 +754,9 @@ class MultiModalOptimizationService {
   }
 
   private assessRouteRisk(route: any): any {
-    const allRisks = route.segments.flatMap(seg => seg.riskFactors);
-    const criticalRisks = allRisks.filter(risk => risk.severity === 'critical');
-    const highRisks = allRisks.filter(risk => risk.severity === 'high');
+    const allRisks = route.segments.flatMap((seg: any) => seg.riskFactors);
+    const criticalRisks = allRisks.filter((risk: any) => risk.severity === 'critical');
+    const highRisks = allRisks.filter((risk: any) => risk.severity === 'high');
     
     let overallRisk: 'low' | 'medium' | 'high' | 'critical';
     if (criticalRisks.length > 0) overallRisk = 'critical';

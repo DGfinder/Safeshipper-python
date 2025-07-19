@@ -468,7 +468,7 @@ class DigitalTwinService {
       'Sydney': { latitude: -33.8688, longitude: 151.2093 },
     };
 
-    const coords = locations[location] || locations['Perth'];
+    const coords = locations[location as keyof typeof locations] || locations['Perth'];
     
     return {
       latitude: coords.latitude,

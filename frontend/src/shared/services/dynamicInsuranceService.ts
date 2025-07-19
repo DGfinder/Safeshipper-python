@@ -302,7 +302,7 @@ class DynamicInsuranceService {
       '2.2': 1.1,  // Non-flammable gases
       '9': 1.1,    // Miscellaneous
     };
-    return multipliers[hazardClass] || 1.0;
+    return multipliers[hazardClass as keyof typeof multipliers] || 1.0;
   }
 
   private async calculateAdjustmentFactors(request: InsuranceQuoteRequest): Promise<AdjustmentFactor[]> {
@@ -387,12 +387,12 @@ class DynamicInsuranceService {
     });
 
     // Market volatility factor
-    const marketConditions = this.getCurrentMarketConditions();
+    const marketMultiplier = 1.0 + (this.seededRandom() > 0.8 ? 0.1 : 0);
     factors.push({
       factor: 'market_volatility',
-      description: `Market conditions: ${marketConditions.description}`,
-      multiplier: marketConditions.multiplier,
-      impact: Math.round(600 * marketConditions.multiplier - 600),
+      description: `Market conditions: ${marketMultiplier > 1.0 ? 'high demand' : 'stable market'}`,
+      multiplier: marketMultiplier,
+      impact: Math.round(600 * marketMultiplier - 600),
       source: 'Market Analytics',
       confidence: 82,
       validityPeriod: 48,
@@ -493,7 +493,7 @@ class DynamicInsuranceService {
       'fair': 1.05,
       'poor': 1.15,
     };
-    multiplier *= paymentMultipliers[profile.paymentHistory] || 1.0;
+    multiplier *= paymentMultipliers[profile.paymentHistory as keyof typeof paymentMultipliers] || 1.0;
     descriptions.push(`${profile.paymentHistory} payment history`);
 
     return {
@@ -534,22 +534,6 @@ class DynamicInsuranceService {
     };
   }
 
-  private getCurrentMarketConditions(): { description: string; multiplier: number } {
-    // Simulate market conditions
-    const conditions = [
-      { condition: true, factor: 'stable market', multiplier: 1.0 },
-      { condition: this.seededRandom() > 0.8, factor: 'high demand period', multiplier: 1.1 },
-      { condition: this.seededRandom() > 0.9, factor: 'capacity shortage', multiplier: 1.15 },
-      { condition: this.seededRandom() > 0.95, factor: 'market volatility', multiplier: 1.2 },
-    ];
-
-    const activeCondition = conditions.find(c => c.condition) || conditions[0];
-    
-    return {
-      description: activeCondition.factor,
-      multiplier: activeCondition.multiplier,
-    };
-  }
 
   private applyAdjustments(basePremium: number, factors: AdjustmentFactor[]): number {
     let adjustedPremium = basePremium;
@@ -749,7 +733,7 @@ class DynamicInsuranceService {
       ],
     };
 
-    return actions[category] || actions.medium;
+    return actions[category as keyof typeof actions] || actions.medium;
   }
 
   private generatePaymentTerms(premium: number): PaymentTerms {
