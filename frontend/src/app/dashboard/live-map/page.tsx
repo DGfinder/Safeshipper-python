@@ -23,6 +23,7 @@ import { useMockFleetStatus } from "@/shared/hooks/useMockAPI";
 import { useRealTimeFleetTracking } from "@/shared/hooks/useRealTimeData";
 import { MapDashboardLayout } from "@/shared/components/layout/map-dashboard-layout";
 import { DataFreshnessIndicator } from "@/shared/components/ui/connection-status";
+import { useAuthStore } from "@/shared/stores/auth-store";
 
 // Dynamically import FleetMap to avoid SSR issues
 const FleetMap = dynamic(
@@ -50,15 +51,16 @@ export default function LiveMapPage() {
     null,
   );
   const [refreshInterval, setRefreshInterval] = useState(10000); // 10 seconds
+  const { user } = useAuthStore();
 
-  // Use mock API for demo with real-time updates
+  // Use mock API for demo with real-time updates and role-based filtering
   const {
     data: fleetData,
     isLoading,
     error,
     refetch,
     isRefetching,
-  } = useMockFleetStatus(refreshInterval);
+  } = useMockFleetStatus(refreshInterval, user?.role, user?.id);
   
   // Enable real-time updates
   const { lastUpdate } = useRealTimeFleetTracking();

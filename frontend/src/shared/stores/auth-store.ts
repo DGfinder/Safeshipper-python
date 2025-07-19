@@ -36,6 +36,7 @@ interface AuthState {
   setHydrated: (hydrated: boolean) => void;
   getToken: () => string | null;
   clearMFAState: () => void;
+  syncUserToSettings: () => void;
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -79,6 +80,11 @@ export const useAuthStore = create<AuthState>()(
           token: "demo_token",
           requiresMFA: false,
         });
+
+        // Sync user data to settings store
+        setTimeout(() => {
+          get().syncUserToSettings();
+        }, 100);
       },
 
       // Full login with credentials (for production)
@@ -259,6 +265,13 @@ export const useAuthStore = create<AuthState>()(
             localStorage.removeItem("refresh_token");
           }
 
+          // Clear sensitive settings before logging out
+          if (typeof window !== "undefined") {
+            import("@/shared/utils/store-sync").then(({ handleLogoutSettings }) => {
+              handleLogoutSettings();
+            });
+          }
+
           set({
             user: null,
             isAuthenticated: false,
@@ -289,6 +302,16 @@ export const useAuthStore = create<AuthState>()(
           tempToken: null,
           availableMFAMethods: [],
         });
+      },
+
+      syncUserToSettings: () => {
+        const state = get();
+        if (state.user && typeof window !== "undefined") {
+          // Import sync utilities dynamically to avoid circular dependency
+          import("@/shared/utils/store-sync").then(({ handleLoginSettings }) => {
+            handleLoginSettings(state.user);
+          });
+        }
       },
     }),
     {

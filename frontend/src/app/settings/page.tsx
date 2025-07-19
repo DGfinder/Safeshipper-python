@@ -29,79 +29,41 @@ import {
   DollarSign,
   AlertTriangle,
   Info,
+  Search,
+  X,
 } from "lucide-react";
 import { AuthGuard } from "@/shared/components/common/auth-guard";
+import { useSettingsStore, TIMEZONE_GROUPS_EXPORT as TIMEZONE_GROUPS, DATE_FORMATS, CURRENCIES, settingsUtils } from "@/shared/stores/settings-store";
+import { useAuthStore } from "@/shared/stores/auth-store";
 
 export default function SettingsPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
 
-  // Mock settings state - in production this would come from the backend
-  const [userSettings, setUserSettings] = useState({
-    name: "John Dispatcher",
-    email: "john@safeshipper.com",
-    phone: "+1-555-0123",
-    role: "DISPATCHER",
-    timezone: "America/Toronto",
-    language: "en",
-  });
+  // Use centralized settings store
+  const {
+    profile,
+    notifications,
+    system,
+    security,
+    demurrage,
+    data,
+    compliance,
+    updateProfile,
+    updateNotifications,
+    updateSystem,
+    updateSecurity,
+    updateDemurrage,
+    updateData,
+    updateCompliance,
+    exportSettings,
+    importSettings,
+    resetSettings,
+  } = useSettingsStore();
 
-  const [notificationSettings, setNotificationSettings] = useState({
-    emailNotifications: true,
-    smsNotifications: false,
-    pushNotifications: true,
-    shipmentUpdates: true,
-    inspectionAlerts: true,
-    complianceAlerts: true,
-    systemMaintenance: false,
-  });
-
-  const [systemSettings, setSystemSettings] = useState({
-    autoRefresh: true,
-    refreshInterval: 30,
-    darkMode: false,
-    defaultMapView: "standard",
-    measurementUnit: "metric",
-    dateFormat: "DD/MM/YYYY",
-    timeFormat: "24h",
-  });
-
-  const [securitySettings, setSecuritySettings] = useState({
-    twoFactorAuth: false,
-    sessionTimeout: 480,
-    loginNotifications: true,
-    passwordExpiry: 90,
-  });
-
-  const [demurrageSettings, setDemurrageSettings] = useState({
-    enableDemurrage: true,
-    defaultRates: {
-      standard: 85,
-      premium: 125,
-      hazmat: 165,
-      mining: 145,
-    },
-    freeTimeAllowance: {
-      bronze: 1,
-      silver: 1,
-      gold: 2,
-      platinum: 3,
-    },
-    gracePeriod: 2, // hours
-    autoCalculation: true,
-    alertThresholds: {
-      atRisk: 6, // hours before demurrage
-      accumulating: 0, // hours after demurrage starts
-    },
-    currency: 'AUD',
-    businessDays: true,
-    weekendMultiplier: 1.5,
-    customRules: {
-      hazmatWeekendSurcharge: true,
-      miningBulkDiscount: 0.1,
-      newCustomerGracePeriod: 24,
-    },
-  });
+  // Get user info from auth store for profile initialization
+  const { user } = useAuthStore();
 
   const handleSave = async () => {
     setSaving(true);
@@ -131,7 +93,7 @@ export default function SettingsPage() {
     <AuthGuard>
       <div className="p-6 space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <h1 className="text-3xl font-bold text-gray-900">Settings</h1>
             <p className="text-gray-600 mt-1">
@@ -139,6 +101,24 @@ export default function SettingsPage() {
             </p>
           </div>
           <div className="flex items-center gap-3">
+            {/* Search functionality */}
+            <div className="relative">
+              <Search className="h-4 w-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+              <Input
+                placeholder="Search settings..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10 pr-10 w-64"
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery("")}
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              )}
+            </div>
             <Button
               onClick={handleSave}
               disabled={saving}
@@ -176,14 +156,25 @@ export default function SettingsPage() {
               <CardContent className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-2">
-                    <Label htmlFor="name">Full Name</Label>
+                    <Label htmlFor="firstName">First Name</Label>
                     <Input
-                      id="name"
-                      value={userSettings.name}
+                      id="firstName"
+                      value={profile.firstName || user?.firstName || ""}
                       onChange={(e) =>
-                        setUserSettings({
-                          ...userSettings,
-                          name: e.target.value,
+                        updateProfile({
+                          firstName: e.target.value,
+                        })
+                      }
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="lastName">Last Name</Label>
+                    <Input
+                      id="lastName"
+                      value={profile.lastName || user?.lastName || ""}
+                      onChange={(e) =>
+                        updateProfile({
+                          lastName: e.target.value,
                         })
                       }
                     />
@@ -193,10 +184,9 @@ export default function SettingsPage() {
                     <Input
                       id="email"
                       type="email"
-                      value={userSettings.email}
+                      value={profile.email || user?.email || ""}
                       onChange={(e) =>
-                        setUserSettings({
-                          ...userSettings,
+                        updateProfile({
                           email: e.target.value,
                         })
                       }
@@ -206,20 +196,20 @@ export default function SettingsPage() {
                     <Label htmlFor="phone">Phone Number</Label>
                     <Input
                       id="phone"
-                      value={userSettings.phone}
+                      value={profile.phone}
                       onChange={(e) =>
-                        setUserSettings({
-                          ...userSettings,
+                        updateProfile({
                           phone: e.target.value,
                         })
                       }
+                      placeholder="+61 4XX XXX XXX"
                     />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="role">Role</Label>
                     <Input
                       id="role"
-                      value={userSettings.role}
+                      value={user?.role || ""}
                       disabled
                       className="bg-gray-50"
                     />
@@ -228,38 +218,33 @@ export default function SettingsPage() {
                     <Label htmlFor="timezone">Timezone</Label>
                     <select
                       id="timezone"
-                      value={userSettings.timezone}
+                      value={profile.timezone}
                       onChange={(e) =>
-                        setUserSettings({
-                          ...userSettings,
+                        updateProfile({
                           timezone: e.target.value,
                         })
                       }
                       className="w-full border border-gray-200 rounded-md px-3 py-2"
                     >
-                      <option value="America/Toronto">
-                        Eastern Time (Toronto)
-                      </option>
-                      <option value="America/Vancouver">
-                        Pacific Time (Vancouver)
-                      </option>
-                      <option value="America/Winnipeg">
-                        Central Time (Winnipeg)
-                      </option>
-                      <option value="America/Halifax">
-                        Atlantic Time (Halifax)
-                      </option>
+                      {Object.entries(TIMEZONE_GROUPS).map(([region, timezones]) => (
+                        <optgroup key={region} label={region}>
+                          {timezones.map((tz) => (
+                            <option key={tz.value} value={tz.value}>
+                              {tz.label}
+                            </option>
+                          ))}
+                        </optgroup>
+                      ))}
                     </select>
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="language">Language</Label>
                     <select
                       id="language"
-                      value={userSettings.language}
+                      value={profile.language}
                       onChange={(e) =>
-                        setUserSettings({
-                          ...userSettings,
-                          language: e.target.value,
+                        updateProfile({
+                          language: e.target.value as 'en' | 'fr',
                         })
                       }
                       className="w-full border border-gray-200 rounded-md px-3 py-2"
@@ -333,10 +318,9 @@ export default function SettingsPage() {
                         </div>
                       </div>
                       <Switch
-                        checked={notificationSettings.emailNotifications}
+                        checked={notifications.emailNotifications}
                         onCheckedChange={(checked) =>
-                          setNotificationSettings({
-                            ...notificationSettings,
+                          updateNotifications({
                             emailNotifications: checked,
                           })
                         }
@@ -353,10 +337,9 @@ export default function SettingsPage() {
                         </div>
                       </div>
                       <Switch
-                        checked={notificationSettings.smsNotifications}
+                        checked={notifications.smsNotifications}
                         onCheckedChange={(checked) =>
-                          setNotificationSettings({
-                            ...notificationSettings,
+                          updateNotifications({
                             smsNotifications: checked,
                           })
                         }
@@ -373,10 +356,9 @@ export default function SettingsPage() {
                         </div>
                       </div>
                       <Switch
-                        checked={notificationSettings.pushNotifications}
+                        checked={notifications.pushNotifications}
                         onCheckedChange={(checked) =>
-                          setNotificationSettings({
-                            ...notificationSettings,
+                          updateNotifications({
                             pushNotifications: checked,
                           })
                         }
@@ -396,11 +378,13 @@ export default function SettingsPage() {
                         </p>
                       </div>
                       <Switch
-                        checked={notificationSettings.shipmentUpdates}
+                        checked={notifications.categories.shipmentUpdates}
                         onCheckedChange={(checked) =>
-                          setNotificationSettings({
-                            ...notificationSettings,
-                            shipmentUpdates: checked,
+                          updateNotifications({
+                            categories: {
+                              ...notifications.categories,
+                              shipmentUpdates: checked,
+                            },
                           })
                         }
                       />
@@ -413,11 +397,13 @@ export default function SettingsPage() {
                         </p>
                       </div>
                       <Switch
-                        checked={notificationSettings.inspectionAlerts}
+                        checked={notifications.categories.inspectionAlerts}
                         onCheckedChange={(checked) =>
-                          setNotificationSettings({
-                            ...notificationSettings,
-                            inspectionAlerts: checked,
+                          updateNotifications({
+                            categories: {
+                              ...notifications.categories,
+                              inspectionAlerts: checked,
+                            },
                           })
                         }
                       />
@@ -430,11 +416,13 @@ export default function SettingsPage() {
                         </p>
                       </div>
                       <Switch
-                        checked={notificationSettings.complianceAlerts}
+                        checked={notifications.categories.complianceAlerts}
                         onCheckedChange={(checked) =>
-                          setNotificationSettings({
-                            ...notificationSettings,
-                            complianceAlerts: checked,
+                          updateNotifications({
+                            categories: {
+                              ...notifications.categories,
+                              complianceAlerts: checked,
+                            },
                           })
                         }
                       />
@@ -447,11 +435,13 @@ export default function SettingsPage() {
                         </p>
                       </div>
                       <Switch
-                        checked={notificationSettings.systemMaintenance}
+                        checked={notifications.categories.systemMaintenance}
                         onCheckedChange={(checked) =>
-                          setNotificationSettings({
-                            ...notificationSettings,
-                            systemMaintenance: checked,
+                          updateNotifications({
+                            categories: {
+                              ...notifications.categories,
+                              systemMaintenance: checked,
+                            },
                           })
                         }
                       />
@@ -482,10 +472,9 @@ export default function SettingsPage() {
                         </p>
                       </div>
                       <Switch
-                        checked={systemSettings.autoRefresh}
+                        checked={system.autoRefresh}
                         onCheckedChange={(checked) =>
-                          setSystemSettings({
-                            ...systemSettings,
+                          updateSystem({
                             autoRefresh: checked,
                           })
                         }
@@ -498,14 +487,13 @@ export default function SettingsPage() {
                       <Input
                         id="refresh-interval"
                         type="number"
-                        value={systemSettings.refreshInterval}
+                        value={system.refreshInterval}
                         onChange={(e) =>
-                          setSystemSettings({
-                            ...systemSettings,
+                          updateSystem({
                             refreshInterval: parseInt(e.target.value),
                           })
                         }
-                        disabled={!systemSettings.autoRefresh}
+                        disabled={!system.autoRefresh}
                       />
                     </div>
                     <div className="flex items-center justify-between">
@@ -514,11 +502,10 @@ export default function SettingsPage() {
                         <p className="text-sm text-gray-600">Use dark theme</p>
                       </div>
                       <Switch
-                        checked={systemSettings.darkMode}
+                        checked={system.theme === 'dark'}
                         onCheckedChange={(checked) =>
-                          setSystemSettings({
-                            ...systemSettings,
-                            darkMode: checked,
+                          updateSystem({
+                            theme: checked ? 'dark' : 'light',
                           })
                         }
                       />
@@ -531,11 +518,10 @@ export default function SettingsPage() {
                       <Label htmlFor="map-view">Default Map View</Label>
                       <select
                         id="map-view"
-                        value={systemSettings.defaultMapView}
+                        value={system.defaultMapView}
                         onChange={(e) =>
-                          setSystemSettings({
-                            ...systemSettings,
-                            defaultMapView: e.target.value,
+                          updateSystem({
+                            defaultMapView: e.target.value as 'standard' | 'satellite' | 'terrain',
                           })
                         }
                         className="w-full border border-gray-200 rounded-md px-3 py-2"
@@ -549,11 +535,10 @@ export default function SettingsPage() {
                       <Label htmlFor="measurement-unit">Measurement Unit</Label>
                       <select
                         id="measurement-unit"
-                        value={systemSettings.measurementUnit}
+                        value={system.measurementUnit}
                         onChange={(e) =>
-                          setSystemSettings({
-                            ...systemSettings,
-                            measurementUnit: e.target.value,
+                          updateSystem({
+                            measurementUnit: e.target.value as 'metric' | 'imperial',
                           })
                         }
                         className="w-full border border-gray-200 rounded-md px-3 py-2"
@@ -566,35 +551,54 @@ export default function SettingsPage() {
                       <Label htmlFor="date-format">Date Format</Label>
                       <select
                         id="date-format"
-                        value={systemSettings.dateFormat}
+                        value={system.dateFormat}
                         onChange={(e) =>
-                          setSystemSettings({
-                            ...systemSettings,
+                          updateSystem({
                             dateFormat: e.target.value,
                           })
                         }
                         className="w-full border border-gray-200 rounded-md px-3 py-2"
                       >
-                        <option value="DD/MM/YYYY">DD/MM/YYYY</option>
-                        <option value="MM/DD/YYYY">MM/DD/YYYY</option>
-                        <option value="YYYY-MM-DD">YYYY-MM-DD</option>
+                        {DATE_FORMATS.map((fmt) => (
+                          <option key={fmt.value} value={fmt.value}>
+                            {fmt.label}
+                          </option>
+                        ))}
                       </select>
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="time-format">Time Format</Label>
                       <select
                         id="time-format"
-                        value={systemSettings.timeFormat}
+                        value={system.timeFormat}
                         onChange={(e) =>
-                          setSystemSettings({
-                            ...systemSettings,
-                            timeFormat: e.target.value,
+                          updateSystem({
+                            timeFormat: e.target.value as '12h' | '24h',
                           })
                         }
                         className="w-full border border-gray-200 rounded-md px-3 py-2"
                       >
                         <option value="24h">24 Hour</option>
                         <option value="12h">12 Hour (AM/PM)</option>
+                      </select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="currency">Currency</Label>
+                      <select
+                        id="currency"
+                        value={system.currency}
+                        onChange={(e) =>
+                          updateSystem({
+                            currency: e.target.value,
+                          })
+                        }
+                        className="w-full border border-gray-200 rounded-md px-3 py-2"
+                      >
+                        {CURRENCIES.map((currency) => (
+                          <option key={currency.value} value={currency.value}>
+                            {currency.label}
+                          </option>
+                        ))}
                       </select>
                     </div>
                   </div>
@@ -624,10 +628,9 @@ export default function SettingsPage() {
                       </div>
                     </div>
                     <Switch
-                      checked={securitySettings.twoFactorAuth}
+                      checked={security.twoFactorAuth}
                       onCheckedChange={(checked) =>
-                        setSecuritySettings({
-                          ...securitySettings,
+                        updateSecurity({
                           twoFactorAuth: checked,
                         })
                       }
@@ -641,10 +644,9 @@ export default function SettingsPage() {
                     <Input
                       id="session-timeout"
                       type="number"
-                      value={securitySettings.sessionTimeout}
+                      value={security.sessionTimeout}
                       onChange={(e) =>
-                        setSecuritySettings({
-                          ...securitySettings,
+                        updateSecurity({
                           sessionTimeout: parseInt(e.target.value),
                         })
                       }
@@ -659,10 +661,9 @@ export default function SettingsPage() {
                       </p>
                     </div>
                     <Switch
-                      checked={securitySettings.loginNotifications}
+                      checked={security.loginNotifications}
                       onCheckedChange={(checked) =>
-                        setSecuritySettings({
-                          ...securitySettings,
+                        updateSecurity({
                           loginNotifications: checked,
                         })
                       }
@@ -676,10 +677,9 @@ export default function SettingsPage() {
                     <Input
                       id="password-expiry"
                       type="number"
-                      value={securitySettings.passwordExpiry}
+                      value={security.passwordExpiry}
                       onChange={(e) =>
-                        setSecuritySettings({
-                          ...securitySettings,
+                        updateSecurity({
                           passwordExpiry: parseInt(e.target.value),
                         })
                       }
@@ -711,10 +711,9 @@ export default function SettingsPage() {
                       </div>
                     </div>
                     <Switch
-                      checked={demurrageSettings.enableDemurrage}
+                      checked={demurrage.enableDemurrage}
                       onCheckedChange={(checked) =>
-                        setDemurrageSettings({
-                          ...demurrageSettings,
+                        updateDemurrage({
                           enableDemurrage: checked,
                         })
                       }
@@ -725,75 +724,71 @@ export default function SettingsPage() {
                     <h3 className="text-lg font-medium">Default Rates (per day)</h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <Label htmlFor="standard-rate">Standard Rate (AUD)</Label>
+                        <Label htmlFor="standard-rate">Standard Rate</Label>
                         <Input
                           id="standard-rate"
                           type="number"
-                          value={demurrageSettings.defaultRates.standard}
+                          value={demurrage.defaultRates.standard}
                           onChange={(e) =>
-                            setDemurrageSettings({
-                              ...demurrageSettings,
+                            updateDemurrage({
                               defaultRates: {
-                                ...demurrageSettings.defaultRates,
+                                ...demurrage.defaultRates,
                                 standard: parseInt(e.target.value),
                               },
                             })
                           }
-                          disabled={!demurrageSettings.enableDemurrage}
+                          disabled={!demurrage.enableDemurrage}
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="premium-rate">Premium Rate (AUD)</Label>
+                        <Label htmlFor="premium-rate">Premium Rate</Label>
                         <Input
                           id="premium-rate"
                           type="number"
-                          value={demurrageSettings.defaultRates.premium}
+                          value={demurrage.defaultRates.premium}
                           onChange={(e) =>
-                            setDemurrageSettings({
-                              ...demurrageSettings,
+                            updateDemurrage({
                               defaultRates: {
-                                ...demurrageSettings.defaultRates,
+                                ...demurrage.defaultRates,
                                 premium: parseInt(e.target.value),
                               },
                             })
                           }
-                          disabled={!demurrageSettings.enableDemurrage}
+                          disabled={!demurrage.enableDemurrage}
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="hazmat-rate">Hazmat Rate (AUD)</Label>
+                        <Label htmlFor="hazmat-rate">Hazmat Rate</Label>
                         <Input
                           id="hazmat-rate"
                           type="number"
-                          value={demurrageSettings.defaultRates.hazmat}
+                          value={demurrage.defaultRates.hazmat}
                           onChange={(e) =>
-                            setDemurrageSettings({
-                              ...demurrageSettings,
+                            updateDemurrage({
                               defaultRates: {
-                                ...demurrageSettings.defaultRates,
+                                ...demurrage.defaultRates,
                                 hazmat: parseInt(e.target.value),
                               },
                             })
                           }
-                          disabled={!demurrageSettings.enableDemurrage}
+                          disabled={!demurrage.enableDemurrage}
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="mining-rate">Mining Rate (AUD)</Label>
+                        <Label htmlFor="specialized-rate">Specialized Rate</Label>
                         <Input
-                          id="mining-rate"
+                          id="specialized-rate"
                           type="number"
-                          value={demurrageSettings.defaultRates.mining}
+                          value={demurrage.defaultRates.specialized}
                           onChange={(e) =>
-                            setDemurrageSettings({
-                              ...demurrageSettings,
+                            updateDemurrage({
                               defaultRates: {
-                                ...demurrageSettings.defaultRates,
-                                mining: parseInt(e.target.value),
+                                ...demurrage.defaultRates,
+                                specialized: parseInt(e.target.value),
                               },
                             })
                           }
-                          disabled={!demurrageSettings.enableDemurrage}
+                          disabled={!demurrage.enableDemurrage}
                         />
                       </div>
                     </div>
@@ -807,17 +802,16 @@ export default function SettingsPage() {
                         <Input
                           id="bronze-days"
                           type="number"
-                          value={demurrageSettings.freeTimeAllowance.bronze}
+                          value={demurrage.freeTimeAllowance.bronze}
                           onChange={(e) =>
-                            setDemurrageSettings({
-                              ...demurrageSettings,
-                              freeTimeAllowance: {
-                                ...demurrageSettings.freeTimeAllowance,
+                            updateDemurrage({
+                                                            freeTimeAllowance: {
+                                ...demurrage.freeTimeAllowance,
                                 bronze: parseInt(e.target.value),
                               },
                             })
                           }
-                          disabled={!demurrageSettings.enableDemurrage}
+                          disabled={!demurrage.enableDemurrage}
                         />
                       </div>
                       <div className="space-y-2">
@@ -825,17 +819,16 @@ export default function SettingsPage() {
                         <Input
                           id="silver-days"
                           type="number"
-                          value={demurrageSettings.freeTimeAllowance.silver}
+                          value={demurrage.freeTimeAllowance.silver}
                           onChange={(e) =>
-                            setDemurrageSettings({
-                              ...demurrageSettings,
-                              freeTimeAllowance: {
-                                ...demurrageSettings.freeTimeAllowance,
+                            updateDemurrage({
+                                                            freeTimeAllowance: {
+                                ...demurrage.freeTimeAllowance,
                                 silver: parseInt(e.target.value),
                               },
                             })
                           }
-                          disabled={!demurrageSettings.enableDemurrage}
+                          disabled={!demurrage.enableDemurrage}
                         />
                       </div>
                       <div className="space-y-2">
@@ -843,17 +836,16 @@ export default function SettingsPage() {
                         <Input
                           id="gold-days"
                           type="number"
-                          value={demurrageSettings.freeTimeAllowance.gold}
+                          value={demurrage.freeTimeAllowance.gold}
                           onChange={(e) =>
-                            setDemurrageSettings({
-                              ...demurrageSettings,
-                              freeTimeAllowance: {
-                                ...demurrageSettings.freeTimeAllowance,
+                            updateDemurrage({
+                                                            freeTimeAllowance: {
+                                ...demurrage.freeTimeAllowance,
                                 gold: parseInt(e.target.value),
                               },
                             })
                           }
-                          disabled={!demurrageSettings.enableDemurrage}
+                          disabled={!demurrage.enableDemurrage}
                         />
                       </div>
                       <div className="space-y-2">
@@ -861,17 +853,16 @@ export default function SettingsPage() {
                         <Input
                           id="platinum-days"
                           type="number"
-                          value={demurrageSettings.freeTimeAllowance.platinum}
+                          value={demurrage.freeTimeAllowance.platinum}
                           onChange={(e) =>
-                            setDemurrageSettings({
-                              ...demurrageSettings,
-                              freeTimeAllowance: {
-                                ...demurrageSettings.freeTimeAllowance,
+                            updateDemurrage({
+                                                            freeTimeAllowance: {
+                                ...demurrage.freeTimeAllowance,
                                 platinum: parseInt(e.target.value),
                               },
                             })
                           }
-                          disabled={!demurrageSettings.enableDemurrage}
+                          disabled={!demurrage.enableDemurrage}
                         />
                       </div>
                     </div>
@@ -885,14 +876,13 @@ export default function SettingsPage() {
                         <Input
                           id="grace-period"
                           type="number"
-                          value={demurrageSettings.gracePeriod}
+                          value={demurrage.gracePeriod}
                           onChange={(e) =>
-                            setDemurrageSettings({
-                              ...demurrageSettings,
-                              gracePeriod: parseInt(e.target.value),
+                            updateDemurrage({
+                                                            gracePeriod: parseInt(e.target.value),
                             })
                           }
-                          disabled={!demurrageSettings.enableDemurrage}
+                          disabled={!demurrage.enableDemurrage}
                         />
                       </div>
                       <div className="space-y-2">
@@ -901,14 +891,13 @@ export default function SettingsPage() {
                           id="weekend-multiplier"
                           type="number"
                           step="0.1"
-                          value={demurrageSettings.weekendMultiplier}
+                          value={demurrage.weekendMultiplier}
                           onChange={(e) =>
-                            setDemurrageSettings({
-                              ...demurrageSettings,
-                              weekendMultiplier: parseFloat(e.target.value),
+                            updateDemurrage({
+                                                            weekendMultiplier: parseFloat(e.target.value),
                             })
                           }
-                          disabled={!demurrageSettings.enableDemurrage}
+                          disabled={!demurrage.enableDemurrage}
                         />
                       </div>
                       <div className="space-y-2">
@@ -916,17 +905,16 @@ export default function SettingsPage() {
                         <Input
                           id="at-risk-threshold"
                           type="number"
-                          value={demurrageSettings.alertThresholds.atRisk}
+                          value={demurrage.alertThresholds.atRisk}
                           onChange={(e) =>
-                            setDemurrageSettings({
-                              ...demurrageSettings,
-                              alertThresholds: {
-                                ...demurrageSettings.alertThresholds,
+                            updateDemurrage({
+                                                            alertThresholds: {
+                                ...demurrage.alertThresholds,
                                 atRisk: parseInt(e.target.value),
                               },
                             })
                           }
-                          disabled={!demurrageSettings.enableDemurrage}
+                          disabled={!demurrage.enableDemurrage}
                         />
                       </div>
                       <div className="space-y-2">
@@ -934,17 +922,16 @@ export default function SettingsPage() {
                         <Input
                           id="new-customer-grace"
                           type="number"
-                          value={demurrageSettings.customRules.newCustomerGracePeriod}
+                          value={demurrage.customRules.newCustomerGracePeriod}
                           onChange={(e) =>
-                            setDemurrageSettings({
-                              ...demurrageSettings,
-                              customRules: {
-                                ...demurrageSettings.customRules,
+                            updateDemurrage({
+                                                            customRules: {
+                                ...demurrage.customRules,
                                 newCustomerGracePeriod: parseInt(e.target.value),
                               },
                             })
                           }
-                          disabled={!demurrageSettings.enableDemurrage}
+                          disabled={!demurrage.enableDemurrage}
                         />
                       </div>
                     </div>
@@ -961,14 +948,13 @@ export default function SettingsPage() {
                           </p>
                         </div>
                         <Switch
-                          checked={demurrageSettings.autoCalculation}
+                          checked={demurrage.autoCalculation}
                           onCheckedChange={(checked) =>
-                            setDemurrageSettings({
-                              ...demurrageSettings,
-                              autoCalculation: checked,
+                            updateDemurrage({
+                                                            autoCalculation: checked,
                             })
                           }
-                          disabled={!demurrageSettings.enableDemurrage}
+                          disabled={!demurrage.enableDemurrage}
                         />
                       </div>
                       <div className="flex items-center justify-between">
@@ -979,14 +965,13 @@ export default function SettingsPage() {
                           </p>
                         </div>
                         <Switch
-                          checked={demurrageSettings.businessDays}
+                          checked={demurrage.businessDays}
                           onCheckedChange={(checked) =>
-                            setDemurrageSettings({
-                              ...demurrageSettings,
-                              businessDays: checked,
+                            updateDemurrage({
+                                                            businessDays: checked,
                             })
                           }
-                          disabled={!demurrageSettings.enableDemurrage}
+                          disabled={!demurrage.enableDemurrage}
                         />
                       </div>
                       <div className="flex items-center justify-between">
@@ -997,17 +982,16 @@ export default function SettingsPage() {
                           </p>
                         </div>
                         <Switch
-                          checked={demurrageSettings.customRules.hazmatWeekendSurcharge}
+                          checked={demurrage.customRules.hazmatWeekendSurcharge}
                           onCheckedChange={(checked) =>
-                            setDemurrageSettings({
-                              ...demurrageSettings,
-                              customRules: {
-                                ...demurrageSettings.customRules,
+                            updateDemurrage({
+                                                            customRules: {
+                                ...demurrage.customRules,
                                 hazmatWeekendSurcharge: checked,
                               },
                             })
                           }
-                          disabled={!demurrageSettings.enableDemurrage}
+                          disabled={!demurrage.enableDemurrage}
                         />
                       </div>
                     </div>
@@ -1019,11 +1003,13 @@ export default function SettingsPage() {
                       <h3 className="font-medium text-blue-900">Configuration Summary</h3>
                     </div>
                     <div className="text-sm text-blue-700 space-y-1">
-                      <p>• Demurrage charges: {demurrageSettings.enableDemurrage ? 'Enabled' : 'Disabled'}</p>
-                      <p>• Standard rate: ${demurrageSettings.defaultRates.standard} AUD/day</p>
-                      <p>• Premium customers get {demurrageSettings.freeTimeAllowance.platinum} days free time</p>
-                      <p>• Grace period: {demurrageSettings.gracePeriod} hours</p>
-                      <p>• Weekend multiplier: {demurrageSettings.weekendMultiplier}x</p>
+                      <p>• Demurrage charges: {demurrage.enableDemurrage ? 'Enabled' : 'Disabled'}</p>
+                      <p>• Standard rate: ${demurrage.defaultRates.standard} {demurrage.currency}/day</p>
+                      <p>• Premium customers get {demurrage.freeTimeAllowance.platinum} days free time</p>
+                      <p>• Grace period: {demurrage.gracePeriod} hours</p>
+                      <p>• Weekend multiplier: {demurrage.weekendMultiplier}x</p>
+                      <p>• Tax included: {demurrage.taxConfiguration?.taxIncluded ? 'Yes' : 'No'}</p>
+                      <p>• Seasonal adjustments: {demurrage.customRules?.seasonalAdjustments ? 'Enabled' : 'Disabled'}</p>
                     </div>
                   </div>
                 </div>

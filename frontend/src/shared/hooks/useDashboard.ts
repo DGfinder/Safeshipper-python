@@ -360,7 +360,7 @@ async function fetchPODStats(token: string): Promise<PODStats> {
   };
 }
 
-async function fetchRecentShipments(token: string, limit: number = 10): Promise<RecentShipments> {
+async function fetchRecentShipments(token: string, limit: number = 10, userRole?: string, userId?: string): Promise<RecentShipments> {
   try {
     const response = await fetch(`${API_BASE_URL}/dashboard/recent-shipments/?limit=${limit}`, {
       headers: {
@@ -371,41 +371,42 @@ async function fetchRecentShipments(token: string, limit: number = 10): Promise<
 
     if (!response.ok) {
       console.warn(`Recent shipments API failed (${response.status}), falling back to mock data`);
-      return getMockRecentShipments();
+      return getMockRecentShipments(userRole, userId);
     }
 
     return response.json();
   } catch (error) {
     console.warn("Recent shipments API error, falling back to mock data:", error);
-    return getMockRecentShipments();
+    return getMockRecentShipments(userRole, userId);
   }
 }
 
-function getMockRecentShipments(): RecentShipments {
-  return {
-    shipments: [
-      {
-        id: '1',
-        identifier: 'OHT-24-3276',
-        origin: 'Perth, WA',
-        destination: 'Port Hedland, WA',
-        status: 'IN_TRANSIT',
-        progress: 88,
-        dangerous_goods: ['Class 1.5D', 'Class 8'],
-        hazchem_code: '3YE',
-        created_at: new Date().toISOString(),
-      },
-      {
-        id: '2',
-        identifier: 'OHT-24-3275',
-        origin: 'Kalgoorlie, WA',
-        destination: 'Perth, WA',
-        status: 'IN_TRANSIT',
-        progress: 45,
-        dangerous_goods: ['Class 3'],
-        hazchem_code: '3Y',
-        created_at: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString(),
-      },
+function getMockRecentShipments(userRole?: string, userId?: string): RecentShipments {
+  let allShipments = [
+    {
+      id: '1',
+      identifier: 'OHT-24-3276',
+      origin: 'Perth, WA',
+      destination: 'Port Hedland, WA',
+      status: 'IN_TRANSIT',
+      progress: 88,
+      dangerous_goods: ['Class 1.5D', 'Class 8'],
+      hazchem_code: '3YE',
+      created_at: new Date().toISOString(),
+      assigned_driver_id: 'driver-001', // Assign to demo driver
+    },
+    {
+      id: '2',
+      identifier: 'OHT-24-3275',
+      origin: 'Kalgoorlie, WA',
+      destination: 'Perth, WA',
+      status: 'IN_TRANSIT',
+      progress: 45,
+      dangerous_goods: ['Class 3'],
+      hazchem_code: '3Y',
+      created_at: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString(),
+      assigned_driver_id: 'driver-2',
+    },
       {
         id: '3',
         identifier: 'OHT-24-3274',
@@ -416,6 +417,7 @@ function getMockRecentShipments(): RecentShipments {
         dangerous_goods: ['Class 8', 'Class 3'],
         hazchem_code: '2XE',
         created_at: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString(),
+        assigned_driver_id: 'driver-3',
       },
       {
         id: '4',
@@ -427,6 +429,7 @@ function getMockRecentShipments(): RecentShipments {
         dangerous_goods: ['Class 1.5D'],
         hazchem_code: '1X',
         created_at: new Date(Date.now() - 18 * 60 * 60 * 1000).toISOString(),
+        assigned_driver_id: 'driver-4',
       },
       {
         id: '5',
@@ -438,9 +441,19 @@ function getMockRecentShipments(): RecentShipments {
         dangerous_goods: ['Class 3'],
         hazchem_code: '3Y',
         created_at: new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString(),
+        assigned_driver_id: 'driver-5',
       }
-    ],
-    total: 5,
+    ];
+
+  // Filter shipments based on user role
+  let filteredShipments = allShipments;
+  if (userRole === 'DRIVER' && userId) {
+    filteredShipments = allShipments.filter(shipment => shipment.assigned_driver_id === userId);
+  }
+
+  return {
+    shipments: filteredShipments,
+    total: filteredShipments.length,
     limit: 10,
     last_updated: new Date().toISOString()
   };
@@ -510,14 +523,14 @@ export function usePODStats(refetchInterval: number = 60000) {
 }
 
 export function useRecentShipments(limit: number = 10, refetchInterval: number = 60000) {
-  const { getToken } = useAuthStore();
+  const { getToken, user } = useAuthStore();
 
   return useQuery({
-    queryKey: ["recent-shipments", limit],
+    queryKey: ["recent-shipments", limit, user?.role, user?.id],
     queryFn: () => {
       const token = getToken();
       if (!token) throw new Error("No authentication token");
-      return fetchRecentShipments(token, limit);
+      return fetchRecentShipments(token, limit, user?.role, user?.id);
     },
     enabled: !!getToken(),
     refetchInterval,

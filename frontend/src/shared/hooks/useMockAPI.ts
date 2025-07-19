@@ -4,13 +4,23 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { simulatedDataService } from "@/shared/services/simulatedDataService";
 
-// Get realistic fleet data from simulated service
-const getSimulatedFleetData = () => {
+// Get realistic fleet data from simulated service with role-based filtering
+const getSimulatedFleetData = (userRole?: string, userId?: string) => {
   const fleetData = simulatedDataService.getFleetStatus();
+  
+  // Filter vehicles based on user role
+  let filteredVehicles = fleetData.vehicles;
+  
+  if (userRole === 'DRIVER' && userId) {
+    // Drivers should only see their assigned vehicle
+    filteredVehicles = fleetData.vehicles.filter(vehicle => 
+      vehicle.assignedDriver?.id === userId
+    );
+  }
   
   // Transform the data to match the expected API format
   return {
-    vehicles: fleetData.vehicles.map(vehicle => ({
+    vehicles: filteredVehicles.map(vehicle => ({
       id: vehicle.id,
       registration_number: vehicle.registration,
       vehicle_type: vehicle.type,
@@ -59,7 +69,7 @@ const getSimulatedFleetData = () => {
       next_service: vehicle.nextService,
       last_inspection: vehicle.lastInspection,
     })),
-    total_vehicles: fleetData.total_vehicles,
+    total_vehicles: filteredVehicles.length,
     timestamp: fleetData.timestamp,
   };
 };
@@ -130,11 +140,11 @@ async function mockAPICall<T>(data: T, delay = 1000): Promise<T> {
   return data;
 }
 
-// Fleet Status Hook
-export function useMockFleetStatus(pollingInterval = 10000) {
+// Fleet Status Hook with role-based filtering
+export function useMockFleetStatus(pollingInterval = 10000, userRole?: string, userId?: string) {
   return useQuery({
-    queryKey: ["mock-fleet-status"],
-    queryFn: () => mockAPICall(getSimulatedFleetData()),
+    queryKey: ["mock-fleet-status", userRole, userId],
+    queryFn: () => mockAPICall(getSimulatedFleetData(userRole, userId)),
     refetchInterval: pollingInterval,
     refetchIntervalInBackground: true,
   });

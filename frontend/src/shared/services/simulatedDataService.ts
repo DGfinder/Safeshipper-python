@@ -625,7 +625,18 @@ class SimulatedDataService {
       for (let i = 0; i < count; i++) {
         const make = specs.makes[Math.floor(seededRandom() * specs.makes.length)];
         const year = Math.floor(seededRandom() * 10) + 2014;
-        const assignedDriver = seededRandom() > 0.2 ? this.drivers[Math.floor(seededRandom() * this.drivers.length)] : null;
+        
+        // Assign demo driver to first vehicle for role-based testing
+        let assignedDriver;
+        if (vehicleId === 1) {
+          assignedDriver = {
+            id: 'driver-001',
+            name: 'Jake Morrison',
+            email: 'driver@safeshipper.com',
+          };
+        } else {
+          assignedDriver = seededRandom() > 0.2 ? this.drivers[Math.floor(seededRandom() * this.drivers.length)] : null;
+        }
         
         const statuses = ["ACTIVE", "IN_TRANSIT", "MAINTENANCE", "AVAILABLE"];
         const status = assignedDriver ? 
