@@ -2,8 +2,14 @@
 "use client";
 
 import React, { Suspense, useState, useMemo } from "react";
-import { Canvas } from "@react-three/fiber";
-import { OrbitControls, Text, Box, Environment } from "@react-three/drei";
+import dynamic from "next/dynamic";
+
+// Dynamic import for React Three Fiber components to disable SSR
+const Canvas = dynamic(() => import("@react-three/fiber").then(mod => ({ default: mod.Canvas })), { ssr: false });
+const OrbitControls = dynamic(() => import("@react-three/drei").then(mod => ({ default: mod.OrbitControls })), { ssr: false });
+const Text = dynamic(() => import("@react-three/drei").then(mod => ({ default: mod.Text })), { ssr: false });
+const Box = dynamic(() => import("@react-three/drei").then(mod => ({ default: mod.Box })), { ssr: false });
+const Environment = dynamic(() => import("@react-three/drei").then(mod => ({ default: mod.Environment })), { ssr: false });
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
 import { Button } from "@/shared/components/ui/button";
 import { Badge } from "@/shared/components/ui/badge";
@@ -180,6 +186,12 @@ function DigitalTwin3DScene({ selectedShipment, onShipmentSelect }: any) {
     </Canvas>
   );
 }
+
+// Dynamic wrapper for the 3D scene to prevent SSR
+const Dynamic3DScene = dynamic(() => Promise.resolve(DigitalTwin3DScene), { 
+  ssr: false,
+  loading: () => <div className="flex items-center justify-center h-full">Loading 3D scene...</div>
+});
 
 export default function DigitalTwinDashboard() {
   const [selectedShipment, setSelectedShipment] = useState<any>(null);
@@ -373,12 +385,10 @@ export default function DigitalTwinDashboard() {
               </CardTitle>
             </CardHeader>
             <CardContent className="h-80">
-              <Suspense fallback={<div className="flex items-center justify-center h-full">Loading 3D scene...</div>}>
-                <DigitalTwin3DScene 
-                  selectedShipment={selectedShipment}
-                  onShipmentSelect={setSelectedShipment}
-                />
-              </Suspense>
+              <Dynamic3DScene 
+                selectedShipment={selectedShipment}
+                onShipmentSelect={setSelectedShipment}
+              />
             </CardContent>
           </Card>
         )}
@@ -393,12 +403,10 @@ export default function DigitalTwinDashboard() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="h-80">
-                <Suspense fallback={<div className="flex items-center justify-center h-full">Loading...</div>}>
-                  <DigitalTwin3DScene 
-                    selectedShipment={selectedShipment}
-                    onShipmentSelect={setSelectedShipment}
-                  />
-                </Suspense>
+                <Dynamic3DScene 
+                  selectedShipment={selectedShipment}
+                  onShipmentSelect={setSelectedShipment}
+                />
               </CardContent>
             </Card>
 
