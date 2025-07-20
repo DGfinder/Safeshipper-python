@@ -557,4 +557,5 @@ export const settingsStoreUtils = {
 
     return warnings;
   },
+}
 };
