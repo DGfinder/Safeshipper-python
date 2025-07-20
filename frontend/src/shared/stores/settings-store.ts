@@ -524,7 +524,7 @@ export const useSettingsStore = create<SettingsStore>()(
 );
 
 // Settings utility functions
-export const settingsUtils = {
+export const settingsStoreUtils = {
   // Get display value for timezone
   getTimezoneDisplay: (timezone: string) => {
     const tz = ALL_TIMEZONES.find(t => t.value === timezone);
