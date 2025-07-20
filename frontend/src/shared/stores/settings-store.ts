@@ -15,6 +15,7 @@ export const GLOBAL_TIMEZONES = ALL_TIMEZONES;
 export const TIMEZONE_GROUPS_EXPORT = TIMEZONE_GROUPS;
 export const DATE_FORMATS = DATE_FORMAT_OPTIONS;
 export const CURRENCIES = CURRENCY_OPTIONS;
+export { settingsUtils };
 
 // Settings interfaces
 export interface ProfileSettings {
@@ -211,7 +212,7 @@ function getSmartDefaults(): AppSettings {
       email: "",
       phone: "",
       timezone: smartDefaults.timezone,
-      language: smartDefaults.detectedLocale.split('-')[0] as 'en' | 'fr' | 'es' | 'de' | 'zh' | 'ja' || "en",
+      language: (smartDefaults.detectedLocale.split('-')[0] === 'fr' ? 'fr' : 'en') as 'en' | 'fr',
     },
     notifications: {
     emailNotifications: true,
@@ -346,6 +347,7 @@ function getSmartDefaults(): AppSettings {
   lastUpdated: new Date().toISOString(),
   version: "1.0.0",
 };
+}
 
 // Create default settings
 const defaultSettings = getSmartDefaults();
@@ -557,5 +559,4 @@ export const settingsStoreUtils = {
 
     return warnings;
   },
-}
 };

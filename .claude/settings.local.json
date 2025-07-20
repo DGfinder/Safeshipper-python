@@ -76,6 +76,7 @@
       "Bash(cd:*)",
       "Bash(./venv/bin/python manage.py makemigrations:*)",
       "Bash(cd:*)",
+      "Bash(cd:*)",
       "Bash(cd:*)"
     ],
     "deny": []
