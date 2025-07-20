@@ -74,6 +74,7 @@ export interface SDSSearchParams {
   flash_point_max?: number;
   physical_state?: string;
   hazard_code?: string;
+  updated_after?: string;
 }
 
 export interface SDSLookupRequest {
