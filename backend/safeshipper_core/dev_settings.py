@@ -5,9 +5,12 @@ import os
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 # Security - development only
-SECRET_KEY = 'dev-secret-key-change-in-production-12345678901234567890'
-DEBUG = True
-ALLOWED_HOSTS = ['127.0.0.1', 'localhost']
+import os
+from decouple import config
+
+SECRET_KEY = config('SECRET_KEY', default='dev-secret-key-change-in-production-12345678901234567890')
+DEBUG = config('DEBUG', default=True, cast=bool)
+ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='127.0.0.1,localhost').split(',')
 
 # Applications
 INSTALLED_APPS = [

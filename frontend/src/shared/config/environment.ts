@@ -28,6 +28,11 @@ export const getEnvironmentConfig = (): EnvironmentConfig => {
 
 // Demo mode utilities
 export const isDemoMode = (): boolean => {
+  // Disable demo mode in production environment unless explicitly enabled
+  if (process.env.NODE_ENV === 'production' && process.env.NEXT_PUBLIC_ALLOW_DEMO_IN_PRODUCTION !== 'true') {
+    return false;
+  }
+  
   const config = getEnvironmentConfig();
   return config.apiMode === 'demo' || config.apiMode === 'hybrid';
 };
@@ -72,6 +77,29 @@ export const DEMO_CONFIG = {
     established: "1987"
   },
   
+  // Demo security controls
+  security: {
+    sessionTimeoutMinutes: parseInt(process.env.NEXT_PUBLIC_DEMO_SESSION_TIMEOUT || '60'), // 1 hour default
+    maxConcurrentSessions: parseInt(process.env.NEXT_PUBLIC_DEMO_MAX_SESSIONS || '3'),
+    restrictedActions: [
+      'user_management',
+      'system_configuration', 
+      'delete_shipments',
+      'delete_customers',
+      'modify_audit_logs'
+    ],
+    allowedOperations: [
+      'view_shipments',
+      'create_shipments', 
+      'update_shipments',
+      'view_customers',
+      'create_customers',
+      'update_customers',
+      'view_reports',
+      'export_data'
+    ]
+  },
+  
   // Demo scenarios for Terry
   scenarios: {
     complianceViolation: {
@@ -91,5 +119,38 @@ export const DEMO_CONFIG = {
     }
   }
 } as const;
+
+// Demo security utilities
+export const isDemoActionAllowed = (action: string): boolean => {
+  if (!isDemoMode()) return true; // Production mode allows all actions based on user permissions
+  
+  const { restrictedActions, allowedOperations } = DEMO_CONFIG.security;
+  
+  // Block restricted actions in demo mode
+  if (restrictedActions.includes(action as any)) {
+    console.warn(`Demo Mode: Action "${action}" is restricted in demo environment`);
+    return false;
+  }
+  
+  // Allow explicitly permitted operations
+  return allowedOperations.includes(action as any);
+};
+
+export const getDemoSessionTimeout = (): number => {
+  return DEMO_CONFIG.security.sessionTimeoutMinutes * 60 * 1000; // Convert to milliseconds
+};
+
+export const showDemoWarning = (action: string): string => {
+  return `Demo Mode: The "${action}" action is restricted in this demonstration environment. In production, this would be available based on your user permissions.`;
+};
+
+export const isDemoSessionExpired = (loginTime: number): boolean => {
+  if (!isDemoMode()) return false;
+  
+  const sessionTimeout = getDemoSessionTimeout();
+  const currentTime = Date.now();
+  
+  return (currentTime - loginTime) > sessionTimeout;
+};
 
 export default getEnvironmentConfig();

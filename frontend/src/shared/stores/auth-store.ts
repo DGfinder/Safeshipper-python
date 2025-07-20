@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import { validateDemoCredentials, validateCustomerCredentials, DemoUser } from "@/shared/config/demo-users";
-import { getEnvironmentConfig } from "@/shared/config/environment";
+import { getEnvironmentConfig, isDemoMode, isDemoSessionExpired, getDemoSessionTimeout } from "@/shared/config/environment";
 
 interface User {
   id: string;
@@ -24,6 +24,8 @@ interface AuthState {
   requiresMFA: boolean;
   tempToken: string | null;
   availableMFAMethods: any[];
+  loginTime: number | null;
+  sessionTimeout: NodeJS.Timeout | null;
   login: (userData: Partial<User>) => void;
   loginWithCredentials: (email: string, password: string) => Promise<any>;
   loginWithMFA: (
@@ -37,6 +39,9 @@ interface AuthState {
   getToken: () => string | null;
   clearMFAState: () => void;
   syncUserToSettings: () => void;
+  checkSessionTimeout: () => boolean;
+  setupDemoSessionTimeout: () => void;
+  clearSessionTimeout: () => void;
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -50,6 +55,8 @@ export const useAuthStore = create<AuthState>()(
       requiresMFA: false,
       tempToken: null,
       availableMFAMethods: [],
+      loginTime: null,
+      sessionTimeout: null,
 
       // Simple login for demo mode
       login: (userData: Partial<User>) => {
@@ -73,13 +80,21 @@ export const useAuthStore = create<AuthState>()(
           localStorage.setItem("refresh_token", "demo_refresh_token");
         }
 
+        const loginTime = Date.now();
+        
         set({
           user,
           isAuthenticated: true,
           isLoading: false,
           token: "demo_token",
           requiresMFA: false,
+          loginTime,
         });
+
+        // Setup demo session timeout if in demo mode
+        if (isDemoMode()) {
+          get().setupDemoSessionTimeout();
+        }
 
         // Sync user data to settings store
         setTimeout(() => {
@@ -279,7 +294,11 @@ export const useAuthStore = create<AuthState>()(
             requiresMFA: false,
             tempToken: null,
             availableMFAMethods: [],
+            loginTime: null,
           });
+
+          // Clear session timeout
+          get().clearSessionTimeout();
         }
       },
 
@@ -313,6 +332,45 @@ export const useAuthStore = create<AuthState>()(
           });
         }
       },
+
+      // Demo session timeout management
+      setupDemoSessionTimeout: () => {
+        if (!isDemoMode()) return;
+        
+        const timeoutDuration = getDemoSessionTimeout();
+        const timeout = setTimeout(() => {
+          const state = get();
+          if (state.loginTime && isDemoSessionExpired(state.loginTime)) {
+            console.warn('Demo session expired. Logging out...');
+            get().logout();
+            
+            // Show user-friendly message
+            if (typeof window !== "undefined") {
+              alert('Your demo session has expired. Please log in again.');
+            }
+          }
+        }, timeoutDuration);
+        
+        set({ sessionTimeout: timeout });
+      },
+
+      clearSessionTimeout: () => {
+        const state = get();
+        if (state.sessionTimeout) {
+          clearTimeout(state.sessionTimeout);
+          set({ sessionTimeout: null });
+        }
+      },
+
+      checkSessionTimeout: () => {
+        const state = get();
+        if (isDemoMode() && state.loginTime && isDemoSessionExpired(state.loginTime)) {
+          console.warn('Demo session expired during check. Logging out...');
+          get().logout();
+          return true; // Session expired
+        }
+        return false; // Session still valid
+      },
     }),
     {
       name: "auth-storage",
@@ -320,6 +378,7 @@ export const useAuthStore = create<AuthState>()(
       partialize: (state) => ({
         user: state.user,
         isAuthenticated: state.isAuthenticated,
+        loginTime: state.loginTime,
       }),
       onRehydrateStorage: () => (state) => {
         state?.setHydrated(true);

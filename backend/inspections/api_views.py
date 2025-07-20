@@ -51,6 +51,159 @@ class InspectionViewSet(viewsets.ModelViewSet):
     ordering = ['-created_at']
 
     def get_queryset(self):
+        """Filter inspections based on user role and permissions."""
+        queryset = Inspection.objects.select_related(
+            'shipment', 'inspector', 'template'
+        ).prefetch_related('items', 'photos')
+        
+        # Role-based filtering
+        user_role = getattr(self.request.user, 'role', 'USER')
+        
+        if user_role == 'DRIVER':
+            # Drivers see only their own inspections
+            queryset = queryset.filter(inspector=self.request.user)
+        elif user_role == 'CUSTOMER':
+            # Customers see inspections for their shipments only
+            if hasattr(self.request.user, 'company'):
+                queryset = queryset.filter(shipment__customer=self.request.user.company)
+        
+        return queryset
+
+    def get_serializer_class(self):
+        """Use appropriate serializer based on action."""
+        if self.action == 'create':
+            return InspectionCreateSerializer
+        elif self.action in ['update', 'partial_update']:
+            return InspectionUpdateSerializer
+        return InspectionSerializer
+
+    def perform_create(self, serializer):
+        """Set inspector to current user and validate permissions."""
+        # Default inspector to current user if not specified
+        if not serializer.validated_data.get('inspector'):
+            serializer.save(inspector=self.request.user)
+        else:
+            # Only allow admins/managers to assign inspections to other users
+            if (self.request.user != serializer.validated_data.get('inspector') and 
+                not getattr(self.request.user, 'is_staff', False)):
+                raise ValidationError("You can only create inspections for yourself.")
+            serializer.save()
+
+    @action(detail=False, methods=['get'], url_path='by-shipment/(?P<shipment_id>[^/.]+)')
+    def by_shipment(self, request, shipment_id=None):
+        """Get inspections for a specific shipment - matches frontend mock API structure."""
+        try:
+            shipment = Shipment.objects.get(id=shipment_id)
+        except Shipment.DoesNotExist:
+            return Response(
+                {'error': 'Shipment not found'}, 
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        inspections = self.get_queryset().filter(shipment=shipment)
+        
+        # Transform to match frontend mock structure
+        inspections_data = []
+        for inspection in inspections:
+            items_data = []
+            for item in inspection.items.all():
+                photos = [photo.image.url for photo in item.photos.all() if photo.image]
+                items_data.append({
+                    'id': str(item.id),
+                    'description': item.description,
+                    'status': item.result,
+                    'photos': photos,
+                    'notes': item.notes or '',
+                })
+            
+            inspections_data.append({
+                'id': str(inspection.id),
+                'shipment_id': str(inspection.shipment.id),
+                'inspector': {
+                    'name': f"{inspection.inspector.first_name} {inspection.inspector.last_name}".strip(),
+                    'role': getattr(inspection.inspector, 'role', 'INSPECTOR')
+                },
+                'inspection_type': inspection.inspection_type,
+                'timestamp': inspection.created_at.isoformat(),
+                'status': inspection.status,
+                'items': items_data,
+            })
+        
+        return Response(inspections_data)
+
+    @action(detail=False, methods=['post'], url_path='create-inspection')
+    def create_inspection(self, request):
+        """Create a new inspection - matches frontend mock API structure."""
+        shipment_id = request.data.get('shipmentId')
+        inspection_type = request.data.get('inspectionType', 'PRE_TRIP')
+        items = request.data.get('items', [])
+        
+        if not shipment_id:
+            return Response(
+                {'error': 'shipmentId is required'}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        try:
+            shipment = Shipment.objects.get(id=shipment_id)
+        except Shipment.DoesNotExist:
+            return Response(
+                {'error': 'Shipment not found'}, 
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        # Create inspection
+        inspection = Inspection.objects.create(
+            shipment=shipment,
+            inspector=request.user,
+            inspection_type=inspection_type,
+            status='COMPLETED',
+            overall_result='PASS',  # Default, will be calculated from items
+            started_at=timezone.now(),
+            completed_at=timezone.now()
+        )
+        
+        # Create inspection items
+        items_data = []
+        for item_data in items:
+            item = InspectionItem.objects.create(
+                inspection=inspection,
+                description=item_data.get('description', ''),
+                result=item_data.get('status', 'PASS'),
+                notes=item_data.get('notes', ''),
+                is_required=True
+            )
+            items_data.append({
+                'id': str(item.id),
+                'description': item.description,
+                'status': item.result,
+                'photos': [],  # No photos in this simplified version
+                'notes': item.notes,
+            })
+        
+        # Calculate overall result
+        has_failures = any(item.result == 'FAIL' for item in inspection.items.all())
+        inspection.overall_result = 'FAIL' if has_failures else 'PASS'
+        inspection.save()
+        
+        # Return response in expected format
+        response_data = {
+            'id': str(inspection.id),
+            'shipment_id': str(inspection.shipment.id),
+            'inspector': {
+                'name': f"{inspection.inspector.first_name} {inspection.inspector.last_name}".strip(),
+                'role': getattr(inspection.inspector, 'role', 'INSPECTOR')
+            },
+            'inspection_type': inspection.inspection_type,
+            'timestamp': inspection.created_at.isoformat(),
+            'status': inspection.status,
+            'items': items_data,
+        }
+        
+        return Response(response_data, status=status.HTTP_201_CREATED)
+    ordering = ['-created_at']
+
+    def get_queryset(self):
         """Filter inspections based on user permissions"""
         user = self.request.user
         queryset = Inspection.objects.select_related(

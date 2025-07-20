@@ -51,6 +51,260 @@ def update_location(request):
         try:
             lat = float(latitude)
             lng = float(longitude)
+            
+            if not (-90 <= lat <= 90):
+                return Response(
+                    {'error': 'Invalid latitude. Must be between -90 and 90'}, 
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            if not (-180 <= lng <= 180):
+                return Response(
+                    {'error': 'Invalid longitude. Must be between -180 and 180'}, 
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+        except (TypeError, ValueError):
+            return Response(
+                {'error': 'Latitude and longitude must be valid numbers'}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Get driver's assigned vehicle
+        try:
+            vehicle = Vehicle.objects.get(assigned_driver=request.user)
+        except Vehicle.DoesNotExist:
+            return Response(
+                {'error': 'No vehicle assigned to this driver'}, 
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        # Update vehicle location
+        location_point = Point(lng, lat, srid=4326)
+        accuracy = data.get('accuracy')
+        speed = data.get('speed')
+        heading = data.get('heading')
+        
+        # Parse timestamp or use current time
+        timestamp_str = data.get('timestamp')
+        if timestamp_str:
+            try:
+                from dateutil import parser
+                timestamp = parser.parse(timestamp_str)
+            except:
+                timestamp = timezone.now()
+        else:
+            timestamp = timezone.now()
+
+        # Use service to update location
+        update_vehicle_location(
+            vehicle=vehicle,
+            location=location_point,
+            timestamp=timestamp,
+            accuracy=accuracy,
+            speed=speed,
+            heading=heading,
+            source='MOBILE_APP'
+        )
+
+        return Response({
+            'status': 'success',
+            'message': 'Location updated successfully',
+            'vehicle_id': str(vehicle.id),
+            'timestamp': timestamp.isoformat()
+        })
+
+    except Exception as e:
+        logger.error(f"Error updating location for user {request.user.id}: {str(e)}")
+        return Response(
+            {'error': 'Internal server error'}, 
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])  # Public endpoint
+def public_tracking(request, tracking_number):
+    """
+    Public tracking endpoint - matches frontend mock API structure.
+    No authentication required for customer tracking.
+    """
+    # Input validation
+    if not tracking_number or len(tracking_number.strip()) == 0:
+        return Response(
+            {'error': 'Tracking number is required'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    
+    # Sanitize tracking number (remove special characters, limit length)
+    import re
+    tracking_number = re.sub(r'[^a-zA-Z0-9\-_]', '', tracking_number.strip())
+    if len(tracking_number) > 50:
+        return Response(
+            {'error': 'Tracking number too long'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    
+    try:
+        from shipments.models import Shipment
+        from documents.models import Document
+        
+        # Find shipment by tracking number
+        try:
+            shipment = Shipment.objects.select_related(
+                'customer', 'carrier', 'assigned_vehicle', 'assigned_vehicle__assigned_driver'
+            ).get(tracking_number=tracking_number)
+        except Shipment.DoesNotExist:
+            return Response(
+                {'error': 'Shipment not found'}, 
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        # Get vehicle location if available
+        vehicle_location = None
+        if shipment.assigned_vehicle:
+            # Get latest GPS event for the vehicle
+            latest_gps = GPSEvent.objects.filter(
+                vehicle=shipment.assigned_vehicle
+            ).order_by('-timestamp').first()
+            
+            if latest_gps:
+                vehicle_location = {
+                    'latitude': latest_gps.location.y,
+                    'longitude': latest_gps.location.x,
+                    'last_updated': latest_gps.timestamp.isoformat(),
+                    'is_fresh': (timezone.now() - latest_gps.timestamp).seconds < 1800  # Fresh if < 30 min
+                }
+        
+        # Build status timeline
+        status_timeline = []
+        
+        # Add creation event
+        status_timeline.append({
+            'status': 'CREATED',
+            'timestamp': shipment.created_at.isoformat(),
+            'description': 'Shipment created and prepared for dispatch'
+        })
+        
+        # Add current status if different
+        if shipment.status != 'PENDING':
+            description_map = {
+                'IN_TRANSIT': 'Shipment picked up and in transit',
+                'OUT_FOR_DELIVERY': 'Out for delivery',
+                'DELIVERED': 'Shipment delivered successfully',
+                'AT_HUB': 'Shipment at distribution hub',
+                'EXCEPTION': 'Exception occurred during transit'
+            }
+            
+            status_timeline.append({
+                'status': shipment.status,
+                'timestamp': shipment.updated_at.isoformat(),
+                'description': description_map.get(shipment.status, f'Status changed to {shipment.status}')
+            })
+        
+        # Get documents
+        documents = []
+        try:
+            docs = Document.objects.filter(shipment=shipment)
+            for doc in docs:
+                documents.append({
+                    'id': str(doc.id),
+                    'type': doc.document_type,
+                    'type_display': doc.get_document_type_display() if hasattr(doc, 'get_document_type_display') else doc.document_type,
+                    'filename': doc.filename if hasattr(doc, 'filename') else f"{doc.document_type}.pdf",
+                    'status': 'available',
+                    'status_display': 'Available',
+                    'upload_date': doc.created_at.isoformat(),
+                    'download_url': doc.file.url if hasattr(doc, 'file') and doc.file else '#'
+                })
+        except:
+            pass
+        
+        # Get communications/notifications
+        communications = []
+        if shipment.status == 'DELIVERED':
+            communications.append({
+                'id': f"sms-{shipment.id}",
+                'type': 'sms',
+                'type_display': 'SMS Notification',
+                'subject': 'Shipment Status Update',
+                'message': 'Your shipment has been delivered successfully.',
+                'sent_at': shipment.updated_at.isoformat(),
+                'sender': 'SafeShipper System',
+                'status': 'delivered'
+            })
+        
+        # Calculate items summary
+        total_items = 0
+        total_weight = 0
+        has_dangerous_goods = False
+        dangerous_goods_count = 0
+        
+        try:
+            from manifests.models import ConsignmentItem
+            items = ConsignmentItem.objects.filter(shipment=shipment)
+            total_items = items.count()
+            total_weight = sum(item.weight_kg or 0 for item in items)
+            has_dangerous_goods = items.filter(dangerous_good__isnull=False).exists()
+            dangerous_goods_count = items.filter(dangerous_good__isnull=False).count()
+        except:
+            pass
+        
+        # Get proof of delivery if delivered
+        proof_of_delivery = None
+        if shipment.status == 'DELIVERED':
+            # Extract POD from notes (simplified implementation)
+            if shipment.notes and '[POD]' in shipment.notes:
+                proof_of_delivery = {
+                    'delivery_date': shipment.actual_delivery_date.isoformat() if shipment.actual_delivery_date else shipment.updated_at.isoformat(),
+                    'recipient_name': 'Customer Representative',  # Extract from notes if needed
+                    'recipient_signature_url': 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
+                    'delivery_photos': [],
+                    'delivery_notes': shipment.notes,
+                    'delivered_by': f"{shipment.assigned_vehicle.assigned_driver.first_name} {shipment.assigned_vehicle.assigned_driver.last_name}".strip() if shipment.assigned_vehicle and shipment.assigned_vehicle.assigned_driver else "Driver"
+                }
+        
+        # Build complete response
+        response_data = {
+            'tracking_number': shipment.tracking_number,
+            'status': shipment.status,
+            'status_display': shipment.get_status_display(),
+            'customer_reference': shipment.reference_number or '',
+            'origin_location': shipment.origin_location,
+            'destination_location': shipment.destination_location,
+            'estimated_delivery_date': shipment.estimated_delivery_date.isoformat() if shipment.estimated_delivery_date else None,
+            'created_at': shipment.created_at.isoformat(),
+            'updated_at': shipment.updated_at.isoformat(),
+            'vehicle_location': vehicle_location,
+            'driver_name': shipment.assigned_vehicle.assigned_driver.first_name if shipment.assigned_vehicle and shipment.assigned_vehicle.assigned_driver else None,
+            'vehicle_registration': shipment.assigned_vehicle.registration_number if shipment.assigned_vehicle else None,
+            'status_timeline': status_timeline,
+            'route_info': {
+                'has_live_tracking': vehicle_location is not None,
+                'tracking_available': vehicle_location is not None,
+                'note': 'Live tracking available' if vehicle_location else 'Tracking will be available once shipment is in transit'
+            },
+            'documents': documents,
+            'communications': communications,
+            'items_summary': {
+                'total_items': total_items,
+                'total_weight_kg': total_weight,
+                'has_dangerous_goods': has_dangerous_goods,
+                'dangerous_goods_count': dangerous_goods_count
+            },
+            'proof_of_delivery': proof_of_delivery
+        }
+        
+        return Response(response_data)
+        
+    except Exception as e:
+        logger.error(f"Error in public tracking for {tracking_number}: {str(e)}")
+        return Response(
+            {'error': 'Internal server error'}, 
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+        try:
+            lat = float(latitude)
+            lng = float(longitude)
             if not (-90 <= lat <= 90) or not (-180 <= lng <= 180):
                 raise ValueError("Invalid coordinates")
         except (ValueError, TypeError):

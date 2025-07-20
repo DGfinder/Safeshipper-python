@@ -14,11 +14,29 @@ export interface DemoUser {
   avatar?: string;
 }
 
+// Demo users with environment-based password configuration
+const getDemoPassword = (role: string): string => {
+  // Use environment variables for demo passwords, fallback to secure defaults
+  const envPassword = process.env[`NEXT_PUBLIC_DEMO_${role.toUpperCase()}_PASSWORD`];
+  if (envPassword) return envPassword;
+  
+  // Secure fallback passwords (should be overridden in production demo environments)
+  const fallbackPasswords: Record<string, string> = {
+    'ADMIN': process.env.NEXT_PUBLIC_DEMO_FALLBACK_PASSWORD || 'Demo2024!Admin',
+    'DISPATCHER': process.env.NEXT_PUBLIC_DEMO_FALLBACK_PASSWORD || 'Demo2024!Dispatch', 
+    'DRIVER': process.env.NEXT_PUBLIC_DEMO_FALLBACK_PASSWORD || 'Demo2024!Driver',
+    'INSPECTOR': process.env.NEXT_PUBLIC_DEMO_FALLBACK_PASSWORD || 'Demo2024!Inspector',
+    'MANAGER': process.env.NEXT_PUBLIC_DEMO_FALLBACK_PASSWORD || 'Demo2024!Manager'
+  };
+  
+  return fallbackPasswords[role] || 'Demo2024!Default';
+};
+
 export const demoUsers: DemoUser[] = [
   {
     id: 'admin-001',
     email: 'admin@safeshipper.com',
-    password: 'admin123',
+    password: getDemoPassword('ADMIN'),
     firstName: 'Sarah',
     lastName: 'Richardson',
     role: 'ADMIN',
@@ -38,7 +56,7 @@ export const demoUsers: DemoUser[] = [
   {
     id: 'dispatcher-001',
     email: 'dispatcher@safeshipper.com',
-    password: 'dispatcher123',
+    password: getDemoPassword('DISPATCHER'),
     firstName: 'Michael',
     lastName: 'Chen',
     role: 'DISPATCHER',
@@ -57,7 +75,7 @@ export const demoUsers: DemoUser[] = [
   {
     id: 'driver-001',
     email: 'driver@safeshipper.com',
-    password: 'driver123',
+    password: getDemoPassword('DRIVER'),
     firstName: 'Jake',
     lastName: 'Morrison',
     role: 'DRIVER',
@@ -75,7 +93,7 @@ export const demoUsers: DemoUser[] = [
   {
     id: 'inspector-001',
     email: 'inspector@safeshipper.com',
-    password: 'inspector123',
+    password: getDemoPassword('INSPECTOR'),
     firstName: 'Dr. Emma',
     lastName: 'Wilson',
     role: 'INSPECTOR',
@@ -94,7 +112,7 @@ export const demoUsers: DemoUser[] = [
   {
     id: 'manager-001',
     email: 'manager@safeshipper.com',
-    password: 'manager123',
+    password: getDemoPassword('MANAGER'),
     firstName: 'David',
     lastName: 'Thompson',
     role: 'MANAGER',
@@ -112,25 +130,32 @@ export const demoUsers: DemoUser[] = [
   }
 ];
 
+// Customer demo users with environment-based password configuration
+const getCustomerDemoPassword = (): string => {
+  return process.env.NEXT_PUBLIC_DEMO_CUSTOMER_PASSWORD || 
+         process.env.NEXT_PUBLIC_DEMO_FALLBACK_PASSWORD || 
+         'Demo2024!Customer';
+};
+
 export const customerDemoUsers = [
   {
     name: "BHP Billiton",
     email: "logistics@bhpbilliton.com.au",
-    password: "demo123",
+    password: getCustomerDemoPassword(),
     category: "Mining",
     description: "Australia's largest mining company"
   },
   {
     name: "Wesfarmers Chemicals",
     email: "logistics@wesfarmerschemicals.com.au",
-    password: "demo123",
+    password: getCustomerDemoPassword(),
     category: "Industrial",
     description: "Industrial chemicals and energy company"
   },
   {
     name: "CBH Group",
     email: "logistics@cbhgroup.com.au",
-    password: "demo123",
+    password: getCustomerDemoPassword(),
     category: "Agricultural",
     description: "Cooperative bulk handling of agricultural products"
   }

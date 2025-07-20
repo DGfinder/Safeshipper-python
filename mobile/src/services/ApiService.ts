@@ -66,7 +66,7 @@ class ApiService {
     // Request interceptor for authentication
     this.client.interceptors.request.use(
       async (config) => {
-        const token = await AsyncStorage.getItem('auth_token');
+        const token = await AsyncStorage.getItem('access_token');
         if (token) {
           config.headers.Authorization = `Bearer ${token}`;
         }
@@ -99,7 +99,7 @@ class ApiService {
   }
 
   private async handleUnauthorized() {
-    await AsyncStorage.multiRemove(['auth_token', 'user_data']);
+    await AsyncStorage.multiRemove(['access_token', 'user_data']);
     // Navigate to login screen (implement based on your navigation setup)
   }
 
@@ -270,7 +270,7 @@ class ApiService {
 
   async logout(): Promise<ApiResponse<void>> {
     const result = await this.makeRequest('/auth/logout/', 'POST', {}, false);
-    await AsyncStorage.multiRemove(['auth_token', 'user_data']);
+    await AsyncStorage.multiRemove(['access_token', 'user_data']);
     return result;
   }
 

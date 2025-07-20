@@ -26,6 +26,7 @@ import { useUsers, User } from "@/shared/hooks/useUsers";
 import { UserCreateForm } from "@/shared/components/users/UserCreateForm";
 import { UserEditForm } from "@/shared/components/users/UserEditForm";
 import { UserDeleteDialog } from "@/shared/components/users/UserDeleteDialog";
+import { useDemoSecurity } from "@/shared/hooks/useDemoSecurity";
 
 export default function UsersPage() {
   const [showCreateForm, setShowCreateForm] = useState(false);
@@ -34,6 +35,7 @@ export default function UsersPage() {
   const [searchTerm, setSearchTerm] = useState("");
 
   const { data: users, isLoading, error, refetch } = useUsers();
+  const { executeWithPermission } = useDemoSecurity();
 
   // Filter users based on search term
   const filteredUsers = useMemo(() => {
@@ -134,7 +136,10 @@ export default function UsersPage() {
           </div>
           <Button
             className="bg-[#153F9F] hover:bg-blue-700"
-            onClick={() => setShowCreateForm(true)}
+            onClick={() => executeWithPermission(
+              'user_management',
+              () => setShowCreateForm(true)
+            )}
           >
             <Plus className="w-4 h-4 mr-2" />
             Add User
@@ -284,7 +289,10 @@ export default function UsersPage() {
                             <Button
                               variant="ghost"
                               size="sm"
-                              onClick={() => setDeletingUser(user)}
+                              onClick={() => executeWithPermission(
+                                'user_management',
+                                () => setDeletingUser(user)
+                              )}
                               className="text-red-600 hover:text-red-700 hover:bg-red-50"
                             >
                               <Trash2 className="w-4 h-4" />

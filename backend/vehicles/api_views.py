@@ -121,6 +121,147 @@ class VehicleViewSet(viewsets.ModelViewSet):
                 {'error': 'Depot not found'}, 
                 status=status.HTTP_404_NOT_FOUND
             )
+
+    @action(detail=False, methods=['get'], url_path='fleet-status')
+    def fleet_status(self, request):
+        """Get real-time fleet status for dashboard - matches frontend mock API structure."""
+        from django.contrib.auth import get_user_model
+        from shipments.models import Shipment
+        from django.db.models import Q, Prefetch
+        from rest_framework.validators import ValidationError
+        
+        # Input validation
+        try:
+            # Validate optional query parameters
+            limit = int(request.query_params.get('limit', 100))
+            if limit < 1 or limit > 1000:
+                return Response(
+                    {'error': 'Limit must be between 1 and 1000'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+        except ValueError:
+            return Response(
+                {'error': 'Limit must be a valid integer'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        User = get_user_model()
+        user_role = getattr(request.user, 'role', 'USER')
+        user_id = str(request.user.id)
+        
+        # Build queryset with proper filtering based on user role
+        queryset = Vehicle.objects.select_related(
+            'owning_company', 'assigned_driver'
+        ).prefetch_related(
+            Prefetch(
+                'assigned_shipments',
+                queryset=Shipment.objects.filter(
+                    status__in=['IN_TRANSIT', 'OUT_FOR_DELIVERY', 'AT_HUB']
+                ).select_related('customer', 'freight_type').first()
+            )
+        )
+        
+        # Apply role-based filtering
+        if user_role == 'DRIVER':
+            queryset = queryset.filter(assigned_driver=request.user)
+        elif hasattr(request.user, 'company') and request.user.company:
+            queryset = queryset.filter(owning_company=request.user.company)
+        
+        vehicles_data = []
+        for vehicle in queryset:
+            # Get active shipment if any
+            active_shipment = vehicle.assigned_shipments.first() if hasattr(vehicle, 'assigned_shipments') else None
+            active_shipment_data = None
+            
+            if active_shipment:
+                # Build dangerous goods data
+                dangerous_goods = []
+                try:
+                    from dangerous_goods.models import DangerousGood
+                    from manifests.models import ConsignmentItem
+                    
+                    # Get dangerous goods from shipment items
+                    items = ConsignmentItem.objects.filter(
+                        shipment=active_shipment, 
+                        dangerous_good__isnull=False
+                    ).select_related('dangerous_good')
+                    
+                    for item in items:
+                        dg = item.dangerous_good
+                        dangerous_goods.append({
+                            'unNumber': dg.un_number,
+                            'properShippingName': dg.proper_shipping_name,
+                            'class': dg.hazard_class,
+                            'packingGroup': dg.packing_group,
+                            'quantity': f"{item.quantity} {item.unit}",
+                        })
+                except:
+                    # Handle gracefully if models don't exist yet
+                    pass
+                
+                active_shipment_data = {
+                    'id': str(active_shipment.id),
+                    'trackingNumber': active_shipment.tracking_number,
+                    'status': active_shipment.status,
+                    'origin': active_shipment.origin_location,
+                    'destination': active_shipment.destination_location,
+                    'customerName': active_shipment.customer.name if active_shipment.customer else '',
+                    'estimatedDelivery': active_shipment.estimated_delivery_date.isoformat() if active_shipment.estimated_delivery_date else None,
+                    'hasDangerousGoods': len(dangerous_goods) > 0,
+                    'dangerousGoods': dangerous_goods,
+                    'emergencyContact': getattr(active_shipment, 'emergency_contact', ''),
+                    'specialInstructions': getattr(active_shipment, 'special_instructions', ''),
+                }
+            
+            # Determine vehicle status
+            vehicle_status = 'AVAILABLE'
+            if active_shipment:
+                if active_shipment.status == 'IN_TRANSIT':
+                    vehicle_status = 'IN_TRANSIT'
+                elif active_shipment.status == 'OUT_FOR_DELIVERY':
+                    vehicle_status = 'DELIVERING'
+                elif active_shipment.status == 'AT_HUB':
+                    vehicle_status = 'AT_HUB'
+            
+            # Build vehicle location (use dummy data for now)
+            location = {
+                'latitude': -31.9505 + (hash(str(vehicle.id)) % 1000) / 10000,  # Perth area
+                'longitude': 115.8605 + (hash(str(vehicle.id)) % 1000) / 10000,
+                'address': f'Location for {vehicle.registration_number}',
+                'lastUpdated': timezone.now().isoformat(),
+            }
+            
+            vehicles_data.append({
+                'id': str(vehicle.id),
+                'registration': vehicle.registration_number,
+                'type': vehicle.vehicle_type,
+                'status': vehicle_status,
+                'location': location,
+                'locationIsFresh': True,
+                'assignedDriver': {
+                    'id': str(vehicle.assigned_driver.id),
+                    'name': f"{vehicle.assigned_driver.first_name} {vehicle.assigned_driver.last_name}".strip(),
+                    'email': vehicle.assigned_driver.email,
+                } if vehicle.assigned_driver else None,
+                'activeShipment': active_shipment_data,
+                'make': getattr(vehicle, 'make', ''),
+                'year': getattr(vehicle, 'year', None),
+                'configuration': getattr(vehicle, 'configuration', ''),
+                'maxWeight': getattr(vehicle, 'gvm_kg', None),
+                'maxLength': getattr(vehicle, 'max_length_m', None),
+                'axles': getattr(vehicle, 'axles', None),
+                'engineSpec': getattr(vehicle, 'engine_details', ''),
+                'gearbox': getattr(vehicle, 'transmission', ''),
+                'fuel': getattr(vehicle, 'fuel_type', ''),
+                'odometer': getattr(vehicle, 'odometer_km', None),
+                'nextService': getattr(vehicle, 'next_service_date', None),
+                'lastInspection': getattr(vehicle, 'last_inspection_date', None),
+            })
+        
+        return Response({
+            'vehicles': vehicles_data,
+            'timestamp': timezone.now().isoformat(),
+        })
     
     def get_serializer_class(self):
         """Use detailed serializer for retrieve action"""

@@ -113,6 +113,158 @@ class ShipmentViewSet(viewsets.ModelViewSet):
         except Exception as e:
             raise serializers.ValidationError({"detail": "An error occurred while updating the shipment."})
 
+    @action(detail=True, methods=['get'], url_path='events')
+    def get_events(self, request, pk=None):
+        """Get shipment events/activity log - matches frontend mock API structure."""
+        shipment = self.get_object()
+        
+        # Build events from various sources
+        events = []
+        
+        # Status change events (from audit logs if available)
+        try:
+            from simple_history.models import HistoricalRecords
+            if hasattr(shipment, 'history'):
+                for record in shipment.history.all()[:10]:  # Last 10 changes
+                    if record.history_type in ['+', '~']:  # Created or Changed
+                        events.append({
+                            'id': f"status-{record.history_id}",
+                            'timestamp': record.history_date.isoformat(),
+                            'user': {
+                                'name': f"{record.history_user.first_name} {record.history_user.last_name}".strip() if record.history_user else "System",
+                                'role': getattr(record.history_user, 'role', 'SYSTEM') if record.history_user else 'SYSTEM'
+                            },
+                            'event_type': 'STATUS_CHANGE',
+                            'details': f"Shipment status changed to {record.status}"
+                        })
+        except:
+            pass
+        
+        # Comments from shipment notes
+        if hasattr(shipment, 'notes') and shipment.notes:
+            events.append({
+                'id': f"comment-{shipment.id}",
+                'timestamp': shipment.updated_at.isoformat(),
+                'user': {
+                    'name': f"{shipment.requested_by.first_name} {shipment.requested_by.last_name}".strip() if shipment.requested_by else "Unknown",
+                    'role': getattr(shipment.requested_by, 'role', 'USER') if shipment.requested_by else 'USER'
+                },
+                'event_type': 'COMMENT',
+                'details': shipment.notes
+            })
+        
+        # Inspection events
+        try:
+            from inspections.models import HazardInspection
+            inspections = HazardInspection.objects.filter(
+                shipment=shipment
+            ).order_by('-created_at')[:5]
+            
+            for inspection in inspections:
+                events.append({
+                    'id': f"inspection-{inspection.id}",
+                    'timestamp': inspection.created_at.isoformat(),
+                    'user': {
+                        'name': f"{inspection.inspector.first_name} {inspection.inspector.last_name}".strip() if inspection.inspector else "Inspector",
+                        'role': getattr(inspection.inspector, 'role', 'INSPECTOR') if inspection.inspector else 'INSPECTOR'
+                    },
+                    'event_type': 'INSPECTION',
+                    'details': f"{inspection.inspection_type} inspection completed. Status: {inspection.status}"
+                })
+        except:
+            pass
+        
+        # Sort events by timestamp (newest first)
+        events.sort(key=lambda x: x['timestamp'], reverse=True)
+        
+        return Response(events)
+
+    @action(detail=True, methods=['post'], url_path='add-event')
+    def add_event(self, request, pk=None):
+        """Add a new event/comment to shipment - matches frontend mock API structure."""
+        shipment = self.get_object()
+        
+        event_type = request.data.get('eventType', 'COMMENT')
+        details = request.data.get('details', '')
+        
+        if not details:
+            return Response(
+                {'error': 'details field is required'}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Create the event
+        new_event = {
+            'id': f"comment-{timezone.now().timestamp()}",
+            'timestamp': timezone.now().isoformat(),
+            'user': {
+                'name': f"{request.user.first_name} {request.user.last_name}".strip(),
+                'role': getattr(request.user, 'role', 'USER')
+            },
+            'event_type': event_type,
+            'details': details
+        }
+        
+        # Store as shipment note (simplified for now)
+        if not shipment.notes:
+            shipment.notes = details
+        else:
+            shipment.notes = f"{shipment.notes}\n\n[{timezone.now().strftime('%Y-%m-%d %H:%M')}] {details}"
+        
+        shipment.save(update_fields=['notes', 'updated_at'])
+        
+        return Response(new_event, status=status.HTTP_201_CREATED)
+
+    @action(detail=True, methods=['post'], url_path='submit-pod')
+    def submit_pod(self, request, pk=None):
+        """Submit proof of delivery - matches frontend mock API structure."""
+        shipment = self.get_object()
+        
+        signature = request.data.get('signature')
+        photos = request.data.get('photos', [])
+        recipient = request.data.get('recipient')
+        
+        if not signature:
+            return Response(
+                {'error': 'signature is required'}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        if not recipient:
+            return Response(
+                {'error': 'recipient is required'}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Create POD data
+        pod_data = {
+            'id': f"pod-{timezone.now().timestamp()}",
+            'shipment_id': str(shipment.id),
+            'signature': signature,
+            'photos': photos,
+            'recipient': recipient,
+            'timestamp': timezone.now().isoformat(),
+            'driver': {
+                'name': f"{request.user.first_name} {request.user.last_name}".strip(),
+                'id': str(request.user.id)
+            }
+        }
+        
+        # Update shipment status to DELIVERED
+        shipment.status = 'DELIVERED'
+        shipment.actual_delivery_date = timezone.now()
+        
+        # Store POD data in shipment notes (simplified for now)
+        pod_note = f"[POD] Delivered to {recipient} at {timezone.now().strftime('%Y-%m-%d %H:%M')}"
+        if not shipment.notes:
+            shipment.notes = pod_note
+        else:
+            shipment.notes = f"{shipment.notes}\n\n{pod_note}"
+        
+        shipment.save(update_fields=['status', 'actual_delivery_date', 'notes', 'updated_at'])
+        
+        return Response(pod_data, status=status.HTTP_201_CREATED)
+
     @action(detail=True, methods=['patch'], url_path='update-status')
     def update_status(self, request, pk=None):
         """Custom endpoint for updating shipment status with role-based validation and POD support."""
