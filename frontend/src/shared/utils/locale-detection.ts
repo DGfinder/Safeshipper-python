@@ -109,6 +109,33 @@ export const REGIONAL_DEFAULTS = {
     timeFormat: '24h' as const,
     businessHours: { start: '09:00', end: '18:00' },
   },
+  'Middle East': {
+    timezone: 'Asia/Dubai',
+    dateFormat: 'DD/MM/YYYY',
+    currency: 'AED',
+    measurementUnit: 'metric' as const,
+    numberFormat: 'International' as const,
+    timeFormat: '24h' as const,
+    businessHours: { start: '08:00', end: '17:00' },
+  },
+  'Africa': {
+    timezone: 'Africa/Cairo',
+    dateFormat: 'DD/MM/YYYY',
+    currency: 'ZAR',
+    measurementUnit: 'metric' as const,
+    numberFormat: 'International' as const,
+    timeFormat: '24h' as const,
+    businessHours: { start: '08:00', end: '17:00' },
+  },
+  'South America': {
+    timezone: 'America/Sao_Paulo',
+    dateFormat: 'DD/MM/YYYY',
+    currency: 'BRL',
+    measurementUnit: 'metric' as const,
+    numberFormat: 'International' as const,
+    timeFormat: '24h' as const,
+    businessHours: { start: '09:00', end: '18:00' },
+  },
   'Global': {
     timezone: 'UTC',
     dateFormat: 'YYYY-MM-DD',
@@ -227,12 +254,22 @@ export class LocaleDetector {
     const tz = timezone || this.detectTimezone();
     
     if (tz.startsWith('America/')) {
+      // Detect South America vs North America
+      if (tz.includes('Sao_Paulo') || tz.includes('Buenos_Aires') || tz.includes('Lima') || tz.includes('Bogota')) {
+        return 'South America';
+      }
       return 'North America';
-    } else if (tz.startsWith('Europe/') || tz.startsWith('Africa/')) {
+    } else if (tz.startsWith('Europe/')) {
       return 'Europe';
+    } else if (tz.startsWith('Africa/')) {
+      return 'Africa';
     } else if (tz.startsWith('Australia/') || tz.startsWith('Pacific/Auckland')) {
       return 'Australia';
     } else if (tz.startsWith('Asia/')) {
+      // Detect Middle East vs Asia
+      if (tz.includes('Dubai') || tz.includes('Qatar') || tz.includes('Kuwait') || tz.includes('Riyadh')) {
+        return 'Middle East';
+      }
       return 'Asia';
     }
     
@@ -372,7 +409,7 @@ export const settingsUtils = {
     const region = LocaleDetector.detectRegion(timezone);
     
     const currencyOption = CURRENCY_OPTIONS.find(c => c.value === currency);
-    if (currencyOption && !currencyOption.regions.includes(region) && !currencyOption.regions.includes('Global')) {
+    if (currencyOption && !(currencyOption.regions as readonly string[]).includes(region) && !(currencyOption.regions as readonly string[]).includes('Global')) {
       warnings.push(`Currency ${currency} may not be common in ${region}`);
     }
     
