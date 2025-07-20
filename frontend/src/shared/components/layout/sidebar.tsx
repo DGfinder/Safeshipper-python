@@ -420,7 +420,7 @@ export function Sidebar({
         )}>
           <Link href="/dashboard" className={cn(
             "flex items-center",
-            isCollapsed ? "space-x-0" : "space-x-3"
+            isCollapsed ? "space-x-0" : "space-x-2"
           )}>
             <div className="relative h-8 w-8 flex-shrink-0">
               <Image
@@ -432,12 +432,12 @@ export function Sidebar({
               />
             </div>
             {!isCollapsed && (
-              <div className="relative h-6 w-32">
+              <div className="relative h-8 w-40">
                 <Image
-                  src="/logo.svg"
+                  src="/logo-text.png"
                   alt="SafeShipper"
-                  width={128}
-                  height={24}
+                  width={160}
+                  height={32}
                   className="object-contain"
                 />
               </div>
