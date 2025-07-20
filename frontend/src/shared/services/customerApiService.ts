@@ -53,9 +53,19 @@ class CustomerApiService {
       return false;
     }
 
+    // Skip health check during SSR to avoid URL parsing errors
+    if (typeof window === 'undefined') {
+      return false;
+    }
+
     try {
       const startTime = Date.now();
-      const response = await fetch(`${this.baseUrl}/health/`, {
+      // Construct absolute URL for fetch
+      const healthUrl = this.baseUrl.startsWith('http') 
+        ? `${this.baseUrl}/health/`
+        : `${window.location.origin}${this.baseUrl}/health/`;
+      
+      const response = await fetch(healthUrl, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',

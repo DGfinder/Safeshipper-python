@@ -127,7 +127,9 @@ export function FleetMap({
   };
 
   const callEmergencyContact = (contact: string) => {
-    window.open(`tel:${contact}`, '_self');
+    if (typeof window !== 'undefined') {
+      window.open(`tel:${contact}`, '_self');
+    }
   };
 
   // Filter vehicles that have location data and match current filters

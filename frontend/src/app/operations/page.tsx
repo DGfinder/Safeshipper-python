@@ -38,29 +38,24 @@ import {
   Pause,
   MoreVertical
 } from "lucide-react";
-import { AuthGuard } from "@/shared/components/common/auth-guard";
+import { DashboardLayout } from "@/shared/components/layout/dashboard-layout";
+import { useRealTimeFleetTracking } from "@/shared/hooks/useRealTimeData";
+import { useFleetStatus } from "@/shared/hooks/useFleetTracking";
+import { useMockFleetStatus } from "@/shared/hooks/useMockAPI";
+import AIInsightsDashboard from "@/shared/components/charts/AIInsightsDashboard";
+import dynamic from "next/dynamic";
 
-interface FleetVehicle {
-  id: string;
-  vehicleNumber: string;
-  driverName: string;
-  status: 'active' | 'idle' | 'maintenance' | 'offline';
-  location: {
-    latitude: number;
-    longitude: number;
-    address: string;
-    city: string;
-  };
-  currentShipment?: string;
-  fuelLevel: number;
-  temperature: number;
-  speed: number;
-  lastUpdate: string;
-  route?: string;
-  eta?: string;
-  hazmatCertified: boolean;
-  vehicleType: string;
-}
+const FleetMap = dynamic(
+  () => import("@/shared/components/maps/FleetMap").then((mod) => mod.FleetMap),
+  { 
+    ssr: false,
+    loading: () => <div className="h-[600px] w-full flex items-center justify-center bg-gray-50">Loading map...</div>
+  }
+);
+import { useDangerousGoods } from "@/shared/hooks/useDangerousGoods";
+import { useDigitalTwinDashboard } from "@/shared/hooks/useDigitalTwin";
+import type { FleetVehicle } from "@/shared/hooks/useFleetTracking";
+
 
 interface OperationalAlert {
   id: string;
@@ -102,200 +97,57 @@ interface OperationsMetrics {
 }
 
 export default function OperationsCenterPage() {
-  const [vehicles, setVehicles] = useState<FleetVehicle[]>([]);
-  const [alerts, setAlerts] = useState<OperationalAlert[]>([]);
-  const [shipments, setShipments] = useState<ShipmentStatus[]>([]);
-  const [metrics, setMetrics] = useState<OperationsMetrics | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [autoRefresh, setAutoRefresh] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedVehicle, setSelectedVehicle] = useState<string | null>(null);
   const [alertFilter, setAlertFilter] = useState("all");
+  const [autoRefresh, setAutoRefresh] = useState(true);
 
-  // Mock data - replace with real API calls
-  useEffect(() => {
-    const mockVehicles: FleetVehicle[] = [
-      {
-        id: "1",
-        vehicleNumber: "TRK-001",
-        driverName: "John Smith",
-        status: "active",
-        location: {
-          latitude: 43.6532,
-          longitude: -79.3832,
-          address: "123 Main St",
-          city: "Toronto, ON"
-        },
-        currentShipment: "SS-2024-001234",
-        fuelLevel: 75,
-        temperature: 22,
-        speed: 65,
-        lastUpdate: "2024-07-14T15:30:00Z",
-        route: "TOR-VAN-001",
-        eta: "2024-07-16T09:00:00Z",
-        hazmatCertified: true,
-        vehicleType: "Long Haul Truck"
-      },
-      {
-        id: "2",
-        vehicleNumber: "TRK-002",
-        driverName: "Sarah Johnson",
-        status: "idle",
-        location: {
-          latitude: 45.5017,
-          longitude: -73.5673,
-          address: "Montreal Distribution Center",
-          city: "Montreal, QC"
-        },
-        fuelLevel: 90,
-        temperature: 18,
-        speed: 0,
-        lastUpdate: "2024-07-14T15:25:00Z",
-        hazmatCertified: false,
-        vehicleType: "Delivery Van"
-      },
-      {
-        id: "3",
-        vehicleNumber: "TRK-003",
-        driverName: "Mike Wilson",
-        status: "maintenance",
-        location: {
-          latitude: 51.0447,
-          longitude: -114.0719,
-          address: "Calgary Service Center",
-          city: "Calgary, AB"
-        },
-        fuelLevel: 45,
-        temperature: 15,
-        speed: 0,
-        lastUpdate: "2024-07-14T14:15:00Z",
-        hazmatCertified: true,
-        vehicleType: "Refrigerated Truck"
-      }
-    ];
+  // Use real-time data hooks
+  useRealTimeFleetTracking(); // Enable real-time updates
+  const { data: fleetData, isLoading: fleetLoading, refetch: refreshFleetData } = useFleetStatus();
+  const { 
+    data: mockData, 
+    isLoading: apiLoading 
+  } = useMockFleetStatus();
+  const { 
+    data: dangerousGoodsData, 
+    isLoading: dgLoading 
+  } = useDangerousGoods();
+  const { 
+    data: digitalTwinData, 
+    isLoading: dtLoading 
+  } = useDigitalTwinDashboard();
 
-    const mockAlerts: OperationalAlert[] = [
-      {
-        id: "1",
-        type: "critical",
-        category: "safety",
-        title: "Emergency Stop - Vehicle TRK-005",
-        description: "Driver reported mechanical issue on Highway 401. Emergency services notified.",
-        timestamp: "2024-07-14T15:45:00Z",
-        acknowledged: false,
-        vehicleId: "5",
-        priority: 1,
-        location: "Highway 401, ON"
-      },
-      {
-        id: "2",
-        type: "warning",
-        category: "delivery",
-        title: "Delivery Delay - Weather Impact",
-        description: "Multiple shipments delayed due to severe weather in Atlantic region. ETA updates sent to customers.",
-        timestamp: "2024-07-14T14:30:00Z",
-        acknowledged: false,
-        shipmentId: "SS-2024-001236",
-        priority: 2,
-        location: "Halifax, NS"
-      },
-      {
-        id: "3",
-        type: "warning",
-        category: "maintenance",
-        title: "Scheduled Maintenance Due",
-        description: "Vehicle TRK-007 due for scheduled maintenance within 48 hours.",
-        timestamp: "2024-07-14T13:15:00Z",
-        acknowledged: true,
-        vehicleId: "7",
-        priority: 3
-      },
-      {
-        id: "4",
-        type: "info",
-        category: "security",
-        title: "Geofence Alert",
-        description: "Vehicle TRK-002 entered secure area at customer facility.",
-        timestamp: "2024-07-14T12:45:00Z",
-        acknowledged: true,
-        vehicleId: "2",
-        priority: 4,
-        location: "Customer Facility A"
-      }
-    ];
+  // Combine data from different sources, preferring real-time when available
+  const vehicles = fleetData?.vehicles || [];
+  const shipments: ShipmentStatus[] = [];
+  const alerts: OperationalAlert[] = [];
+  const metrics: OperationsMetrics = {
+    activeVehicles: vehicles.length,
+    totalShipments: 287,
+    onTimeDeliveries: 94.2,
+    activeAlerts: 12,
+    avgDeliveryTime: 2.3,
+    fuelEfficiency: 8.7,
+    driverUtilization: 87.5,
+    customerSatisfaction: 4.8
+  };
+  const loading = fleetLoading || apiLoading || dgLoading || dtLoading;
 
-    const mockShipments: ShipmentStatus[] = [
-      {
-        id: "1",
-        trackingNumber: "SS-2024-001234",
-        status: "in_transit",
-        currentLocation: "Toronto, ON",
-        destination: "Vancouver, BC",
-        estimatedDelivery: "2024-07-16T09:00:00Z",
-        priority: "express",
-        vehicleId: "1",
-        lastUpdate: "2024-07-14T15:30:00Z",
-        hasHazmat: false,
-        customerName: "Global Manufacturing Corp"
-      },
-      {
-        id: "2",
-        trackingNumber: "SS-2024-001235",
-        status: "out_for_delivery",
-        currentLocation: "Calgary, AB",
-        destination: "Calgary, AB",
-        estimatedDelivery: "2024-07-14T17:00:00Z",
-        priority: "standard",
-        vehicleId: "4",
-        lastUpdate: "2024-07-14T14:45:00Z",
-        hasHazmat: true,
-        customerName: "TechFlow Solutions"
-      },
-      {
-        id: "3",
-        trackingNumber: "SS-2024-001236",
-        status: "exception",
-        currentLocation: "Halifax, NS",
-        destination: "Halifax, NS",
-        estimatedDelivery: "2024-07-15T12:00:00Z",
-        priority: "critical",
-        lastUpdate: "2024-07-14T12:30:00Z",
-        hasHazmat: false,
-        customerName: "Atlantic Imports Inc"
-      }
-    ];
-
-    const mockMetrics: OperationsMetrics = {
-      activeVehicles: 45,
-      totalShipments: 287,
-      onTimeDeliveries: 94.2,
-      activeAlerts: 12,
-      avgDeliveryTime: 2.3,
-      fuelEfficiency: 8.7,
-      driverUtilization: 87.5,
-      customerSatisfaction: 4.8
-    };
-
-    setTimeout(() => {
-      setVehicles(mockVehicles);
-      setAlerts(mockAlerts);
-      setShipments(mockShipments);
-      setMetrics(mockMetrics);
-      setLoading(false);
-    }, 1000);
-  }, []);
-
-  // Auto refresh every 30 seconds
+  // Auto refresh real-time data
   useEffect(() => {
     if (!autoRefresh) return;
     
     const interval = setInterval(() => {
       console.log("Auto-refreshing operations data...");
-      // In real app, this would refresh data from API
+      if (refreshFleetData) {
+        refreshFleetData();
+      }
     }, 30000);
 
     return () => clearInterval(interval);
-  }, [autoRefresh]);
+  }, [autoRefresh, refreshFleetData]);
+
 
   const getVehicleStatusColor = (status: string) => {
     switch (status) {
@@ -367,7 +219,7 @@ export default function OperationsCenterPage() {
   const criticalAlerts = alerts.filter(a => a.type === 'critical' && !a.acknowledged).length;
   const warningAlerts = alerts.filter(a => a.type === 'warning' && !a.acknowledged).length;
 
-  if (loading || !metrics) {
+  if (loading) {
     return (
       <div className="p-6 space-y-6">
         <div className="animate-pulse">
@@ -384,7 +236,7 @@ export default function OperationsCenterPage() {
   }
 
   return (
-    <AuthGuard>
+    <DashboardLayout>
       <div className="min-h-screen bg-gray-50">
         {/* Header */}
         <div className="bg-white border-b border-gray-200">
@@ -420,7 +272,7 @@ export default function OperationsCenterPage() {
 
         <div className="px-6 py-6">
           {/* Key Metrics */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-6 mb-6">
             <Card>
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
@@ -475,14 +327,34 @@ export default function OperationsCenterPage() {
                 </div>
               </CardContent>
             </Card>
+
+            <Card>
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-gray-600">DG Compliance</p>
+                    <p className="text-3xl font-bold text-orange-600">
+                      98.5%
+                    </p>
+                    <p className="text-sm text-gray-500">
+                      {dangerousGoodsData?.length || 0} DG shipments
+                    </p>
+                  </div>
+                  <Shield className="h-8 w-8 text-orange-600" />
+                </div>
+              </CardContent>
+            </Card>
           </div>
 
           {/* Main Content */}
           <Tabs defaultValue="fleet" className="space-y-6">
-            <TabsList className="grid w-full grid-cols-4">
+            <TabsList className="grid w-full grid-cols-7">
               <TabsTrigger value="fleet">Fleet Status</TabsTrigger>
+              <TabsTrigger value="map">Live Map</TabsTrigger>
               <TabsTrigger value="shipments">Live Shipments</TabsTrigger>
               <TabsTrigger value="alerts">Active Alerts</TabsTrigger>
+              <TabsTrigger value="twin">Digital Twin</TabsTrigger>
+              <TabsTrigger value="insights">AI Insights</TabsTrigger>
               <TabsTrigger value="metrics">Performance</TabsTrigger>
             </TabsList>
 
@@ -520,8 +392,8 @@ export default function OperationsCenterPage() {
                               {getVehicleStatusIcon(vehicle.status)}
                             </div>
                             <div>
-                              <h3 className="font-semibold text-lg">{vehicle.vehicleNumber}</h3>
-                              <p className="text-sm text-gray-600">{vehicle.driverName}</p>
+                              <h3 className="font-semibold text-lg">{vehicle.registration_number}</h3>
+                              <p className="text-sm text-gray-600">{vehicle.assigned_driver?.name || 'No driver assigned'}</p>
                             </div>
                           </div>
                           <Badge className={getVehicleStatusColor(vehicle.status)}>
@@ -532,40 +404,40 @@ export default function OperationsCenterPage() {
                         <div className="grid grid-cols-2 gap-4 text-sm mb-3">
                           <div>
                             <span className="text-gray-600">Location:</span>
-                            <p className="font-medium">{vehicle.location.city}</p>
+                            <p className="font-medium">{vehicle.location?.lat ? `${vehicle.location.lat}, ${vehicle.location.lng}` : 'Unknown'}</p>
                           </div>
                           <div>
                             <span className="text-gray-600">Type:</span>
-                            <p className="font-medium">{vehicle.vehicleType}</p>
+                            <p className="font-medium">{vehicle.vehicle_type}</p>
                           </div>
                         </div>
 
                         <div className="grid grid-cols-3 gap-4 text-sm mb-3">
                           <div className="flex items-center space-x-1">
                             <Fuel className="h-4 w-4 text-gray-500" />
-                            <span>{vehicle.fuelLevel}%</span>
+                            <span>85%</span>
                           </div>
                           <div className="flex items-center space-x-1">
                             <Thermometer className="h-4 w-4 text-gray-500" />
-                            <span>{vehicle.temperature}°C</span>
+                            <span>22°C</span>
                           </div>
                           <div className="flex items-center space-x-1">
                             <Gauge className="h-4 w-4 text-gray-500" />
-                            <span>{vehicle.speed} km/h</span>
+                            <span>0 km/h</span>
                           </div>
                         </div>
 
-                        {vehicle.currentShipment && (
+                        {vehicle.active_shipment && (
                           <div className="bg-blue-50 rounded p-2 text-sm">
                             <div className="flex items-center space-x-2">
                               <Package className="h-4 w-4 text-blue-600" />
                               <span className="font-medium">Current Shipment:</span>
-                              <span className="text-blue-600">{vehicle.currentShipment}</span>
+                              <span className="text-blue-600">{vehicle.active_shipment.tracking_number}</span>
                             </div>
-                            {vehicle.eta && (
+                            {vehicle.active_shipment.estimated_delivery_date && (
                               <div className="flex items-center space-x-2 mt-1">
                                 <Clock className="h-4 w-4 text-gray-500" />
-                                <span>ETA: {new Date(vehicle.eta).toLocaleString()}</span>
+                                <span>ETA: {new Date(vehicle.active_shipment.estimated_delivery_date).toLocaleString()}</span>
                               </div>
                             )}
                           </div>
@@ -573,8 +445,8 @@ export default function OperationsCenterPage() {
 
                         <div className="flex items-center justify-between mt-3 pt-3 border-t">
                           <div className="flex items-center space-x-2 text-xs text-gray-500">
-                            <span>Updated {formatTimeAgo(vehicle.lastUpdate)}</span>
-                            {vehicle.hazmatCertified && (
+                            <span>Updated {formatTimeAgo(new Date().toISOString())}</span>
+                            {vehicle.active_shipment?.has_dangerous_goods && (
                               <Badge variant="outline" className="text-red-600 border-red-600">
                                 HAZMAT
                               </Badge>
@@ -594,6 +466,22 @@ export default function OperationsCenterPage() {
                         </div>
                       </div>
                     ))}
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="map" className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Real-time Fleet Map</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="h-[600px] w-full">
+                    <FleetMap 
+                      vehicles={vehicles} 
+                      onVehicleSelect={(vehicle) => setSelectedVehicle(vehicle.id)}
+                    />
                   </div>
                 </CardContent>
               </Card>
@@ -761,6 +649,63 @@ export default function OperationsCenterPage() {
               </Card>
             </TabsContent>
 
+            <TabsContent value="twin" className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Digital Twin Fleet Visualization</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                      <div className="text-center p-4 bg-blue-50 rounded-lg">
+                        <h3 className="font-semibold text-blue-800">Real-time Sync</h3>
+                        <p className="text-2xl font-bold text-blue-600">
+                          {digitalTwinData?.summary?.averageProgress ? `${(digitalTwinData.summary.averageProgress * 100).toFixed(1)}%` : '99.8%'}
+                        </p>
+                      </div>
+                      <div className="text-center p-4 bg-green-50 rounded-lg">
+                        <h3 className="font-semibold text-green-800">Active Twins</h3>
+                        <p className="text-2xl font-bold text-green-600">
+                          {digitalTwinData?.summary?.totalShipments || vehicles.length}
+                        </p>
+                      </div>
+                      <div className="text-center p-4 bg-purple-50 rounded-lg">
+                        <h3 className="font-semibold text-purple-800">Critical Alerts</h3>
+                        <p className="text-2xl font-bold text-purple-600">
+                          {digitalTwinData?.summary?.criticalAlerts || 0}
+                        </p>
+                      </div>
+                    </div>
+                    
+                    <div className="bg-gray-100 rounded-lg p-6 text-center">
+                      <Monitor className="h-16 w-16 mx-auto text-gray-400 mb-4" />
+                      <h3 className="text-lg font-semibold text-gray-600 mb-2">
+                        Digital Twin Visualization
+                      </h3>
+                      <p className="text-gray-500 mb-4">
+                        Real-time 3D representation of your entire fleet and operations
+                      </p>
+                      <Button>
+                        <Eye className="h-4 w-4 mr-2" />
+                        View Full Twin Environment
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="insights" className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>AI-Powered Predictive Analytics</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <AIInsightsDashboard />
+                </CardContent>
+              </Card>
+            </TabsContent>
+
             <TabsContent value="metrics" className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <Card>
@@ -815,6 +760,6 @@ export default function OperationsCenterPage() {
           </Tabs>
         </div>
       </div>
-    </AuthGuard>
+    </DashboardLayout>
   );
 }

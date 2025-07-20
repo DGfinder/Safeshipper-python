@@ -5,12 +5,25 @@
   "start_url": "/dashboard",
   "display": "standalone",
   "background_color": "#ffffff",
-  "theme_color": "#2563eb",
+  "theme_color": "#153F9F",
   "orientation": "portrait-primary",
   "scope": "/",
   "lang": "en",
   "categories": ["logistics", "shipping", "business", "productivity"],
-  "icons": [],
+  "icons": [
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "/symbol.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ],
   "screenshots": [],
   "shortcuts": [],
   "related_applications": [
