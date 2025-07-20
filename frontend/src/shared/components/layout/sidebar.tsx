@@ -9,6 +9,7 @@ import { useAuthStore } from "@/shared/stores/auth-store";
 import UnifiedSearchBar from "@/shared/components/search/UnifiedSearchBar";
 import { ConnectionStatus } from "@/shared/components/ui/connection-status";
 import { ThemeToggle } from "@/shared/components/ui/theme-toggle";
+import { TextLogo } from "@/shared/components/ui/text-logo";
 import { useTheme } from "@/shared/services/ThemeContext";
 import {
   Home,
@@ -432,15 +433,7 @@ export function Sidebar({
               />
             </div>
             {!isCollapsed && (
-              <div className="relative h-8 w-40">
-                <Image
-                  src="/logo-text.png"
-                  alt="SafeShipper"
-                  width={160}
-                  height={32}
-                  className="object-contain"
-                />
-              </div>
+              <TextLogo size="lg" className="ml-1" />
             )}
           </Link>
           

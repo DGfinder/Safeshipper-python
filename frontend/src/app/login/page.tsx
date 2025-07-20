@@ -9,6 +9,7 @@ import { Alert, AlertDescription } from "@/shared/components/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/components/ui/tabs";
 import { Badge } from "@/shared/components/ui/badge";
 import { Eye, EyeOff, AlertCircle, Users, Building, User } from "lucide-react";
+import { TextLogo } from "@/shared/components/ui/text-logo";
 import { validateDemoCredentials, validateCustomerCredentials, getAllDemoCredentials } from "@/shared/config/demo-users";
 import { useAuthStore } from "@/shared/stores/auth-store";
 import { useRouter } from "next/navigation";
@@ -165,9 +166,7 @@ export default function LoginPage() {
                   className="object-contain"
                 />
               </div>
-              <span className="text-2xl font-bold text-[#153F9F]">
-                SafeShipper
-              </span>
+              <TextLogo size="xl" />
             </div>
             <h2 className="text-3xl font-bold text-gray-900 mb-2">
               Welcome to SafeShipper! 👋
