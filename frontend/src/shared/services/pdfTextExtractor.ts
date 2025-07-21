@@ -254,4 +254,226 @@ export class PDFTextExtractor {
     
     return allHighlights;
   }
+
+  /**
+   * Enhanced search for dangerous goods with fuzzy matching and UN number detection
+   */
+  static async searchDangerousGoodsEnhanced(
+    file: File | string,
+    dangerousGoodsKeywords: string[],
+    options: {
+      fuzzyMatch?: boolean;
+      unNumberPattern?: boolean;
+      confidenceThreshold?: number;
+    } = {}
+  ): Promise<HighlightArea[]> {
+    const { fuzzyMatch = true, unNumberPattern = true, confidenceThreshold = 0.6 } = options;
+    
+    const textPositions = await this.extractTextWithPositions(file);
+    let enhancedKeywords = [...dangerousGoodsKeywords];
+
+    // Add UN number patterns if enabled
+    if (unNumberPattern) {
+      const unPatterns = [
+        'UN\\d{4}',
+        '\\bUN\\s*\\d{4}\\b',
+        '\\b\\d{4}\\b', // standalone 4-digit numbers that might be UN numbers
+      ];
+      enhancedKeywords.push(...unPatterns);
+    }
+
+    // Add fuzzy variations if enabled
+    if (fuzzyMatch) {
+      const fuzzyVariations = this.generateFuzzyVariations(dangerousGoodsKeywords);
+      enhancedKeywords.push(...fuzzyVariations);
+    }
+
+    const keywordPositions = this.findKeywordPositionsEnhanced(textPositions, enhancedKeywords, {
+      fuzzyMatch,
+      confidenceThreshold
+    });
+    
+    const allHighlights: HighlightArea[] = [];
+    keywordPositions.forEach((positions) => {
+      allHighlights.push(...positions);
+    });
+    
+    return allHighlights;
+  }
+
+  /**
+   * Generate fuzzy variations of keywords for better matching
+   */
+  private static generateFuzzyVariations(keywords: string[]): string[] {
+    const variations: string[] = [];
+    
+    keywords.forEach(keyword => {
+      // Convert to lowercase for case-insensitive matching
+      variations.push(keyword.toLowerCase());
+      
+      // Add variations with common punctuation removed
+      const noPunctuation = keyword.replace(/[^\w\s]/g, ' ').trim();
+      if (noPunctuation !== keyword) {
+        variations.push(noPunctuation);
+      }
+      
+      // Add variations with extra spaces removed
+      const normalized = keyword.replace(/\s+/g, ' ').trim();
+      if (normalized !== keyword) {
+        variations.push(normalized);
+      }
+    });
+    
+    return Array.from(new Set(variations)); // Remove duplicates
+  }
+
+  /**
+   * Enhanced keyword position finding with fuzzy matching
+   */
+  private static findKeywordPositionsEnhanced(
+    textPositions: TextPosition[],
+    keywords: string[],
+    options: { fuzzyMatch?: boolean; confidenceThreshold?: number } = {}
+  ): Map<string, HighlightArea[]> {
+    const { fuzzyMatch = true, confidenceThreshold = 0.6 } = options;
+    const keywordPositions = new Map<string, HighlightArea[]>();
+    
+    keywords.forEach(keyword => {
+      const positions: HighlightArea[] = [];
+      const lowerKeyword = keyword.toLowerCase();
+      
+      // Group text positions by page and line
+      const pageGroups = this.groupTextByPageAndLine(textPositions);
+      
+      pageGroups.forEach((lines, page) => {
+        lines.forEach(line => {
+          const lineText = line.map(pos => pos.text).join(' ').toLowerCase();
+          
+          // Regular exact matching
+          let searchIndex = 0;
+          while (searchIndex < lineText.length) {
+            const index = lineText.indexOf(lowerKeyword, searchIndex);
+            if (index === -1) break;
+            
+            const keywordPosition = this.calculateKeywordPosition(
+              line,
+              index,
+              keyword.length
+            );
+            
+            if (keywordPosition) {
+              positions.push({
+                page,
+                x: keywordPosition.x,
+                y: keywordPosition.y,
+                width: keywordPosition.width,
+                height: keywordPosition.height,
+                color: 'yellow',
+                keyword,
+                id: `${keyword}-${page}-${positions.length}`,
+              });
+            }
+            
+            searchIndex = index + 1;
+          }
+
+          // Fuzzy matching for partial matches
+          if (fuzzyMatch && keyword.length > 3) {
+            const fuzzyMatches = this.findFuzzyMatches(lineText, lowerKeyword, confidenceThreshold);
+            fuzzyMatches.forEach(match => {
+              const keywordPosition = this.calculateKeywordPosition(
+                line,
+                match.index,
+                match.length
+              );
+              
+              if (keywordPosition) {
+                positions.push({
+                  page,
+                  x: keywordPosition.x,
+                  y: keywordPosition.y,
+                  width: keywordPosition.width,
+                  height: keywordPosition.height,
+                  color: match.confidence > 0.8 ? 'yellow' : 'orange',
+                  keyword: `${keyword} (${Math.round(match.confidence * 100)}%)`,
+                  id: `${keyword}-fuzzy-${page}-${positions.length}`,
+                });
+              }
+            });
+          }
+        });
+      });
+      
+      if (positions.length > 0) {
+        keywordPositions.set(keyword, positions);
+      }
+    });
+    
+    return keywordPositions;
+  }
+
+  /**
+   * Find fuzzy matches using simple string similarity
+   */
+  private static findFuzzyMatches(
+    text: string, 
+    keyword: string, 
+    threshold: number
+  ): Array<{ index: number; length: number; confidence: number }> {
+    const matches: Array<{ index: number; length: number; confidence: number }> = [];
+    const words = text.split(/\s+/);
+    let currentIndex = 0;
+
+    words.forEach((word, wordIndex) => {
+      const similarity = this.calculateStringSimilarity(word, keyword);
+      if (similarity >= threshold) {
+        matches.push({
+          index: currentIndex,
+          length: word.length,
+          confidence: similarity
+        });
+      }
+      currentIndex += word.length + 1; // +1 for space
+    });
+
+    return matches;
+  }
+
+  /**
+   * Calculate string similarity using simple character comparison
+   */
+  private static calculateStringSimilarity(str1: string, str2: string): number {
+    if (str1 === str2) return 1.0;
+    
+    const longer = str1.length > str2.length ? str1 : str2;
+    const shorter = str1.length > str2.length ? str2 : str1;
+    
+    if (longer.length === 0) return 1.0;
+    
+    const distance = this.levenshteinDistance(longer, shorter);
+    return (longer.length - distance) / longer.length;
+  }
+
+  /**
+   * Calculate Levenshtein distance between two strings
+   */
+  private static levenshteinDistance(str1: string, str2: string): number {
+    const matrix = Array(str2.length + 1).fill(null).map(() => Array(str1.length + 1).fill(null));
+    
+    for (let i = 0; i <= str1.length; i++) matrix[0][i] = i;
+    for (let j = 0; j <= str2.length; j++) matrix[j][0] = j;
+    
+    for (let j = 1; j <= str2.length; j++) {
+      for (let i = 1; i <= str1.length; i++) {
+        const indicator = str1[i - 1] === str2[j - 1] ? 0 : 1;
+        matrix[j][i] = Math.min(
+          matrix[j][i - 1] + 1,     // deletion
+          matrix[j - 1][i] + 1,     // insertion
+          matrix[j - 1][i - 1] + indicator // substitution
+        );
+      }
+    }
+    
+    return matrix[str2.length][str1.length];
+  }
 }
