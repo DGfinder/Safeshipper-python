@@ -16,10 +16,12 @@ const nextConfig = {
 
   // Enable experimental features for better performance
   experimental: {
-    optimizePackageImports: ['lucide-react', '@tanstack/react-query'],
-    serverComponentsExternalPackages: ['@tanstack/react-query'],
+    optimizePackageImports: ['lucide-react'],
     typedRoutes: true,
   },
+
+  // External packages for server components (Next.js 15+)
+  serverExternalPackages: ['@tanstack/react-query'],
 
   // Configure webpack for better bundle optimization
   webpack: (config, { dev, isServer }) => {

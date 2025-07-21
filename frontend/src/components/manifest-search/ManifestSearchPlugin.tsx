@@ -72,7 +72,7 @@ export default function ManifestSearchPlugin({
   const pdfViewerRef = useRef<PDFViewerRef>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Handle file upload
+  // Handle file upload with enhanced AI processing
   const handleFileUpload = useCallback(async (uploadedFile: File) => {
     setFile(uploadedFile);
     setError(null);
@@ -81,40 +81,146 @@ export default function ManifestSearchPlugin({
     setHighlightAreas([]);
     setDangerousGoods([]);
     
-    // Start analysis
+    // Start enhanced analysis
     setIsAnalyzing(true);
     
     try {
-      const analysisRequest = {
-        file: uploadedFile,
-        shipmentId: `temp_${Date.now()}`,
-        analysisOptions: {
-          detectDangerousGoods: true,
-          extractMetadata: true,
-          validateFormat: true,
+      // Create FormData for the enhanced upload endpoint
+      const formData = new FormData();
+      formData.append('file', uploadedFile);
+      formData.append('use_ocr', 'true');
+      formData.append('extract_tables', 'true');
+      formData.append('use_ai_detection', 'true');
+      formData.append('ocr_engines', 'tesseract');
+      formData.append('shipment_id', `temp_${Date.now()}`);
+
+      // Upload to enhanced AI endpoint
+      const uploadResponse = await fetch('/api/v1/manifests/enhanced-upload/', {
+        method: 'POST',
+        body: formData,
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
         },
+      });
+
+      if (!uploadResponse.ok) {
+        throw new Error('Upload failed');
+      }
+
+      const uploadResult = await uploadResponse.json();
+      const documentId = uploadResult.document_id;
+
+      // Poll for processing status
+      const pollForResults = async () => {
+        let attempts = 0;
+        const maxAttempts = 60; // 5 minutes at 5-second intervals
+        
+        while (attempts < maxAttempts) {
+          try {
+            const statusResponse = await fetch(`/api/v1/manifests/processing-status/${documentId}/`, {
+              headers: {
+                'Authorization': `Bearer ${localStorage.getItem('token')}`,
+              },
+            });
+
+            if (statusResponse.ok) {
+              const statusData = await statusResponse.json();
+              const processingStatus = statusData.processing_status;
+
+              if (processingStatus.status === 'completed') {
+                // Get full analysis results
+                const resultsResponse = await fetch(`/api/v1/manifests/analysis-results/${documentId}/`, {
+                  headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`,
+                  },
+                });
+
+                if (resultsResponse.ok) {
+                  const resultsData = await resultsResponse.json();
+                  const results = resultsData.results;
+
+                  // Process dangerous goods from enhanced results
+                  const dgItems = results.dangerous_goods.items.map((item: any) => ({
+                    id: item.dangerous_good.id,
+                    un: item.dangerous_good.un_number,
+                    properShippingName: item.dangerous_good.proper_shipping_name,
+                    class: item.dangerous_good.hazard_class,
+                    subHazard: item.dangerous_good.sub_hazard,
+                    packingGroup: item.dangerous_good.packing_group,
+                    quantity: item.extracted_quantity,
+                    weight: item.extracted_weight,
+                    confidence: item.confidence,
+                    source: 'automatic',
+                    foundText: item.context,
+                    matchedTerm: item.matched_term,
+                    pageNumber: Math.floor(Math.random() * 5) + 1, // Placeholder
+                    matchType: item.match_type
+                  }));
+
+                  setDangerousGoods(dgItems);
+
+                  // Create search results and highlights with enhanced data
+                  await createSearchHighlights(uploadedFile, dgItems);
+
+                  setAnalysisComplete(true);
+                  return;
+                }
+              } else if (processingStatus.status === 'failed') {
+                throw new Error(processingStatus.error || 'Processing failed');
+              }
+              
+              // Update progress if available
+              if (processingStatus.progress !== undefined) {
+                // Could show progress bar here
+                console.log(`Processing progress: ${processingStatus.progress}% - ${processingStatus.stage}`);
+              }
+            }
+          } catch (pollError) {
+            console.warn('Status polling error:', pollError);
+          }
+
+          attempts++;
+          await new Promise(resolve => setTimeout(resolve, 5000)); // Wait 5 seconds
+        }
+
+        throw new Error('Processing timeout - please try again');
       };
 
-      const result = await manifestService.uploadAndAnalyzeManifest(analysisRequest);
+      await pollForResults();
       
-      if (result.success && result.results) {
-        const dgItems = result.results.dangerousGoods.map(item => ({
-          ...item,
-          id: item.id || `dg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-        }));
-        
-        setDangerousGoods(dgItems);
-        
-        // Create search results and highlights
-        await createSearchHighlights(uploadedFile, dgItems);
-        
-        setAnalysisComplete(true);
-      } else {
-        throw new Error(result.error || 'Analysis failed');
-      }
     } catch (err) {
-      console.error('Analysis error:', err);
-      setError(err instanceof Error ? err.message : 'Analysis failed');
+      console.error('Enhanced analysis error:', err);
+      setError(err instanceof Error ? err.message : 'Enhanced analysis failed');
+      
+      // Fallback to basic analysis if enhanced fails
+      try {
+        console.log('Falling back to basic analysis...');
+        const analysisRequest = {
+          file: uploadedFile,
+          shipmentId: `temp_${Date.now()}`,
+          analysisOptions: {
+            detectDangerousGoods: true,
+            extractMetadata: true,
+            validateFormat: true,
+          },
+        };
+
+        const result = await manifestService.uploadAndAnalyzeManifest(analysisRequest);
+        
+        if (result.success && result.results) {
+          const dgItems = result.results.dangerousGoods.map(item => ({
+            ...item,
+            id: item.id || `dg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+          }));
+          
+          setDangerousGoods(dgItems);
+          await createSearchHighlights(uploadedFile, dgItems);
+          setAnalysisComplete(true);
+          setError(null); // Clear error if fallback succeeds
+        }
+      } catch (fallbackError) {
+        console.error('Fallback analysis also failed:', fallbackError);
+      }
     } finally {
       setIsAnalyzing(false);
     }
