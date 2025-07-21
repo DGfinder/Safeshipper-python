@@ -6,7 +6,7 @@ import { useState, useEffect } from "react";
 import { WebSocketProvider } from "@/shared/services/WebSocketContext";
 import { AccessibilityProvider } from "@/shared/services/AccessibilityContext";
 import { ThemeProvider } from "@/shared/services/ThemeContext";
-import { performanceMonitor } from "@/lib/performance";
+import { performanceMonitor } from "../lib/performance";
 
 export default function Providers({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(

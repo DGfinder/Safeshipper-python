@@ -25,10 +25,22 @@ const nextConfig = {
 
   // Configure webpack for better bundle optimization
   webpack: (config, { dev, isServer }) => {
-    // Add path aliases for better module resolution
+    // Add path aliases for better module resolution - ensure exact match with tsconfig.json
+    const path = require("path");
     config.resolve.alias = {
       ...config.resolve.alias,
-      "@": require("path").resolve(__dirname, "src"),
+      "@": path.resolve(__dirname, "src"),
+      "@/features": path.resolve(__dirname, "src/features"),
+      "@/shared": path.resolve(__dirname, "src/shared"),
+      "@/assets": path.resolve(__dirname, "src/assets"),
+      "@/styles": path.resolve(__dirname, "src/styles"),
+      "@/components": path.resolve(__dirname, "src/shared/components"),
+      "@/hooks": path.resolve(__dirname, "src/shared/hooks"),
+      "@/services": path.resolve(__dirname, "src/shared/services"),
+      "@/utils": path.resolve(__dirname, "src/shared/utils"),
+      "@/types": path.resolve(__dirname, "src/shared/types"),
+      "@/stores": path.resolve(__dirname, "src/shared/stores"),
+      "@/lib": path.resolve(__dirname, "src/lib"),
     };
 
     // Optimize bundle size
