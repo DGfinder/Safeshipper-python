@@ -43,6 +43,9 @@ const nextConfig = {
       "@/lib": path.resolve(__dirname, "src/lib"),
     };
 
+    // Ensure proper file extension resolution
+    config.resolve.extensions = [...(config.resolve.extensions || []), '.ts', '.tsx', '.js', '.jsx'];
+
     // Optimize bundle size
     if (!dev && !isServer) {
       config.optimization.splitChunks = {
