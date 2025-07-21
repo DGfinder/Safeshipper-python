@@ -194,17 +194,138 @@ features/analytics/stores/
 
 ## 🚀 Performance Optimizations
 
-### Code Splitting
+### Server-Side Rendering (SSR)
+
+SafeShipper leverages Next.js 14's App Router with React Server Components for optimal performance:
+
+```typescript
+// Server-side API client with caching
+export const serverApi = {
+  getDashboardStats: cache(async () => {
+    const response = await fetch(`${API_BASE_URL}/api/dashboard/stats/`, {
+      next: { revalidate: 60 }, // Cache for 60 seconds
+    });
+    return await response.json();
+  }),
+};
+
+// Server component with data fetching
+async function ServerDashboard() {
+  const stats = await serverApi.getDashboardStats();
+  return <Dashboard stats={stats} />;
+}
+```
+
+**Benefits**:
+- **Sub-2s page loads**: Critical data rendered on server
+- **SEO optimization**: Fully rendered HTML for search engines  
+- **Reduced hydration**: Smaller client-side JavaScript bundles
+- **Automatic caching**: React cache() prevents duplicate requests
+
+### Advanced Caching Strategy
+
+#### Three-Layer Caching Architecture
+
+1. **Server-Side Caching (React cache())**
+```typescript
+// Automatic request deduplication
+const getDashboardStats = cache(async () => {
+  return await fetch(API_URL, { next: { revalidate: 60 } });
+});
+```
+
+2. **HTTP Caching (CDN + Headers)**
+```javascript
+// next.config.js
+async headers() {
+  return [
+    {
+      source: "/api/(.*)",
+      headers: [
+        {
+          key: "Cache-Control",
+          value: "public, s-maxage=60, stale-while-revalidate=300",
+        },
+      ],
+    },
+  ];
+}
+```
+
+3. **Client-Side Caching (Memory + Storage)**
+```typescript
+// Intelligent memory cache with LRU eviction
+class MemoryCache {
+  private cache = new Map<string, CacheEntry<any>>();
+  
+  set<T>(key: string, data: T, ttlSeconds: number = 300): void {
+    // LRU eviction when cache is full
+    if (this.cache.size >= this.maxSize) {
+      const firstKey = this.cache.keys().next().value;
+      this.cache.delete(firstKey);
+    }
+    
+    this.cache.set(key, {
+      data,
+      timestamp: Date.now(),
+      expiry: Date.now() + (ttlSeconds * 1000)
+    });
+  }
+}
+```
+
+### Code Splitting & Bundle Optimization
 
 - **Route-based splitting**: Automatic with Next.js App Router
 - **Feature-based splitting**: Lazy loading of feature modules
 - **Component-based splitting**: Dynamic imports for heavy components
-
-### Bundle Optimization
-
 - **Tree shaking**: Enabled through ES modules and barrel exports
 - **Dead code elimination**: Automatic with modern bundlers
 - **Bundle analysis**: Regular monitoring of bundle sizes
+
+#### Dynamic Imports for Heavy Components
+```typescript
+// Lazy load expensive 3D components
+const LoadPlanner3D = dynamic(() => import('./LoadPlanner3D'), {
+  loading: () => <LoadPlannerSkeleton />,
+  ssr: false // Client-side only for WebGL
+});
+
+// Code splitting with Suspense
+<Suspense fallback={<ChartSkeleton />}>
+  <AnalyticsChart />
+</Suspense>
+```
+
+### Performance Monitoring
+
+```typescript
+// Real-time Web Vitals tracking
+export const performanceMonitor = new PerformanceMonitor();
+
+// Track component load times
+export function usePerformanceMonitoring(componentName: string) {
+  const startTime = performance.now();
+  
+  return {
+    loadTime: performance.now() - startTime,
+    reportComponentLoad: () => {
+      const loadTime = performance.now() - startTime;
+      console.debug(`${componentName} loaded in ${loadTime.toFixed(2)}ms`);
+    }
+  };
+}
+
+// Automatic reporting to analytics
+export function reportWebVitals(metric: any) {
+  if (process.env.NODE_ENV === 'production') {
+    fetch('/api/analytics/web-vitals', {
+      method: 'POST',
+      body: JSON.stringify(metric),
+    });
+  }
+}
+```
 
 ## 🧪 Testing Strategy
 
@@ -283,24 +404,157 @@ __tests__/
 - **Error Tracking**: Runtime error monitoring
 - **Analytics**: User behavior tracking
 
+## 🛡️ Error Handling & Recovery
+
+### Comprehensive Error Boundaries
+
+```typescript
+// Global error boundary with recovery options
+export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
+  static getDerivedStateFromError(error: Error): ErrorBoundaryState {
+    const errorId = `error_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    return { hasError: true, error, errorId };
+  }
+
+  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+    // Report to error tracking service
+    if (process.env.NODE_ENV === 'production') {
+      this.reportError(error, errorInfo, this.state.errorId);
+    }
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return <ErrorFallback onRetry={this.handleRetry} errorId={this.state.errorId} />;
+    }
+    return this.props.children;
+  }
+}
+```
+
+### Centralized Error Management
+
+```typescript
+// Error handler with categorization and user-friendly messages
+class ErrorHandler {
+  createError(type: ErrorType, message: string, options: ErrorOptions): AppError {
+    const appError: AppError = {
+      id: generateErrorId(),
+      type,
+      message,
+      userMessage: this.getDefaultUserMessage(type, options.severity),
+      retryable: options.retryable || false,
+      context: options.context,
+      timestamp: new Date().toISOString(),
+    };
+    
+    this.reportError(appError);
+    return appError;
+  }
+
+  private getDefaultUserMessage(type: ErrorType, severity: ErrorSeverity): string {
+    // Context-aware error messages for different scenarios
+    const messageMap = {
+      [ErrorType.NETWORK]: {
+        [ErrorSeverity.HIGH]: 'Network error occurred. Please try again.',
+        [ErrorSeverity.MEDIUM]: 'Connection is slow. Please wait...',
+      },
+      // ... more error types
+    };
+    
+    return messageMap[type]?.[severity] || 'An error occurred. Please try again.';
+  }
+}
+```
+
+### API Error Handling with Retry Logic
+
+```typescript
+// Intelligent retry with exponential backoff
+export async function retryWithBackoff<T>(
+  operation: () => Promise<T>,
+  maxAttempts: number = 3,
+  baseDelay: number = 1000
+): Promise<T> {
+  let lastError: any;
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      return await operation();
+    } catch (error) {
+      lastError = error;
+      
+      if (attempt === maxAttempts) throw error;
+      
+      // Check if error is retryable
+      const appError = handleApiError(error);
+      if (!appError.retryable) throw error;
+
+      // Exponential backoff with jitter
+      const delay = baseDelay * Math.pow(2, attempt - 1) + Math.random() * 1000;
+      await new Promise(resolve => setTimeout(resolve, delay));
+    }
+  }
+
+  throw lastError;
+}
+```
+
 ## 🔧 Build & Deployment
 
 ### Development
 
 ```bash
-npm run dev              # Development server
-npm run build            # Production build
-npm run test             # Run tests
-npm run lint             # Code linting
+npm run dev              # Development server with SSR
+npm run build            # Production build with optimizations
+npm run start            # Production server
+npm run test             # Run tests with coverage
+npm run lint             # ESLint code analysis
 npm run type-check       # TypeScript checking
+npm run analyze          # Bundle size analysis
+npm run lighthouse       # Performance audit
 ```
 
-### Production
+### Production Optimizations
 
-- **Static Generation**: Optimized for performance
-- **Edge Runtime**: Fast global deployment
-- **CDN Integration**: Asset optimization
-- **Security**: Headers and CSP configuration
+- **Server-Side Rendering**: React 18 SSR with streaming
+- **Multi-stage Docker builds**: Optimized container images
+- **Advanced caching**: Three-layer caching strategy
+- **Bundle optimization**: Tree shaking and code splitting
+- **Edge deployment**: CDN integration with caching headers
+- **Error monitoring**: Comprehensive error boundaries and reporting
+- **Performance tracking**: Real-time Web Vitals monitoring
+- **Security headers**: CSP, HSTS, and security middleware
+
+### Docker Production Build
+
+```dockerfile
+# Multi-stage build for optimal production images
+FROM node:18-alpine AS deps
+RUN apk add --no-cache libc6-compat
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci --only=production --legacy-peer-deps
+
+FROM node:18-alpine AS builder
+WORKDIR /app
+COPY --from=deps /app/node_modules ./node_modules
+COPY . .
+ENV NEXT_TELEMETRY_DISABLED 1
+ENV NODE_ENV production
+RUN npm run build
+
+FROM node:18-alpine AS runner
+WORKDIR /app
+ENV NODE_ENV production
+RUN addgroup --system --gid 1001 nodejs
+RUN adduser --system --uid 1001 nextjs
+COPY --from=builder /app/.next/standalone ./
+COPY --from=builder /app/.next/static ./.next/static
+USER nextjs
+EXPOSE 3000
+CMD ["node", "server.js"]
+```
 
 ## 📈 Scalability Considerations
 

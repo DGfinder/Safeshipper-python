@@ -12,10 +12,13 @@ const nextConfig = {
   // Optimize build output
   poweredByHeader: false,
   compress: true,
+  output: process.env.NODE_ENV === 'production' ? 'standalone' : undefined,
 
   // Enable experimental features for better performance
   experimental: {
-    // optimizePackageImports: ['@heroicons/react', 'lucide-react'], // Removed - packages not installed
+    optimizePackageImports: ['lucide-react', '@tanstack/react-query'],
+    serverComponentsExternalPackages: ['@tanstack/react-query'],
+    typedRoutes: true,
   },
 
   // Configure webpack for better bundle optimization
@@ -79,6 +82,30 @@ const nextConfig = {
           {
             key: "X-XSS-Protection",
             value: "1; mode=block",
+          },
+          {
+            key: "Referrer-Policy",
+            value: "strict-origin-when-cross-origin",
+          },
+        ],
+      },
+      // Cache static assets
+      {
+        source: "/favicon.ico",
+        headers: [
+          {
+            key: "Cache-Control",
+            value: "public, max-age=31536000, immutable",
+          },
+        ],
+      },
+      // Cache API responses for 60 seconds
+      {
+        source: "/api/(.*)",
+        headers: [
+          {
+            key: "Cache-Control",
+            value: "public, s-maxage=60, stale-while-revalidate=300",
           },
         ],
       },
