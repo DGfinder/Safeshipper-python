@@ -45,6 +45,16 @@ const nextConfig = {
 
     // Ensure proper file extension resolution
     config.resolve.extensions = [...(config.resolve.extensions || []), '.ts', '.tsx', '.js', '.jsx'];
+    
+    // Add fallback strategies for module resolution
+    config.resolve.fallback = {
+      ...config.resolve.fallback,
+      fs: false,
+      path: false,
+    };
+
+    // Force webpack to prefer our aliases over node_modules
+    config.resolve.preferRelative = true;
 
     // Optimize bundle size
     if (!dev && !isServer) {
