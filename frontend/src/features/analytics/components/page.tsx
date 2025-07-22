@@ -19,7 +19,7 @@ import {
   RoutePerformanceChart,
   RealTimeMetricsChart,
   KPIGrid,
-} from "@/components/charts/ChartComponents";
+} from "@/shared/components/charts/ChartComponents";
 import {
   BarChart3,
   TrendingUp,
