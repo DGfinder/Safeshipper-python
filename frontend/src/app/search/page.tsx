@@ -426,16 +426,18 @@ function SearchPageContent() {
 
                             {/* Action Buttons */}
                             <div className="flex items-center gap-2 ml-4">
-                              <Link href={result.url}>
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  className="flex items-center gap-1"
-                                >
-                                  <Eye className="h-4 w-4" />
-                                  View
-                                </Button>
-                              </Link>
+                              {result.url && (
+                                <Link href={result.url as any}>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="flex items-center gap-1"
+                                  >
+                                    <Eye className="h-4 w-4" />
+                                    View
+                                  </Button>
+                                </Link>
+                              )}
                               <Button variant="ghost" size="sm">
                                 <ExternalLink className="h-4 w-4" />
                               </Button>
