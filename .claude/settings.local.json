@@ -79,7 +79,8 @@
       "Bash(cd:*)",
       "Bash(cd:*)",
       "Bash(convert:*)",
-      "Bash(chmod:*)"
+      "Bash(chmod:*)",
+      "Bash(cat:*)"
     ],
     "deny": []
   }

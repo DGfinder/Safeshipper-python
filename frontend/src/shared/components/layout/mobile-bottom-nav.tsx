@@ -177,7 +177,7 @@ export function MobileBottomNav() {
           return (
             <Link
               key={item.id}
-              href={item.href}
+              href={item.href as any}
               className={cn(
                 'flex flex-col items-center justify-center min-w-0 flex-1 px-2 py-1 text-xs font-medium transition-colors',
                 'focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 rounded-md',
@@ -259,7 +259,7 @@ export function MobileMoreMenu() {
             return (
               <Link
                 key={item.id}
-                href={item.href}
+                href={item.href as any}
                 className={cn(
                   'flex items-center px-3 py-2 rounded-md text-sm font-medium transition-colors',
                   'focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2',

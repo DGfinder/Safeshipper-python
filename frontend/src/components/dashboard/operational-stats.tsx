@@ -3,7 +3,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
 import { Badge } from "@/shared/components/ui/badge";
 import { CheckCircle, MessageSquare, FileCheck, Activity } from "lucide-react";
-import type { InspectionStats, PODStats } from "@/utils/lib/server-api";
+import type { InspectionStats, PODStats } from "@/lib/server-api";
 
 interface OperationalStatsProps {
   inspectionStats: InspectionStats;

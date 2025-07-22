@@ -5,7 +5,7 @@ import { Badge } from "@/shared/components/ui/badge";
 import { Button } from "@/shared/components/ui/button";
 import { Progress } from "@/shared/components/ui/progress";
 import { Truck, Eye, MapPin, MoreVertical } from "lucide-react";
-import type { RecentShipmentsResponse } from "@/utils/lib/server-api";
+import type { RecentShipmentsResponse } from "@/lib/server-api";
 
 interface RecentShipmentsTableProps {
   shipments: RecentShipmentsResponse;

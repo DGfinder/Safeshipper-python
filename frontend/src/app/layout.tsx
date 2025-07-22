@@ -1,24 +1,9 @@
 import type { Metadata, Viewport } from "next";
-import { Inter, JetBrains_Mono, Poppins } from "next/font/google";
+// Using system fonts to avoid network dependency issues during build
 import "../styles/globals.css";
 import Providers from "./providers";
 import { ErrorBoundary } from "../components/error-boundary";
 
-const inter = Inter({
-  variable: "--font-inter",
-  subsets: ["latin"],
-});
-
-const jetbrainsMono = JetBrains_Mono({
-  variable: "--font-mono",
-  subsets: ["latin"],
-});
-
-const poppins = Poppins({
-  variable: "--font-poppins",
-  subsets: ["latin"],
-  weight: ["400", "500", "700"],
-});
 
 export const metadata: Metadata = {
   title: "SafeShipper",
@@ -61,11 +46,10 @@ export default function RootLayout({
         <link rel="icon" type="image/png" href="/favicon.png" />
         <link rel="icon" type="image/svg+xml" href="/symbol.svg" />
         <link rel="apple-touch-icon" href="/icon-512.png" />
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
       </head>
       <body
-        className={`${poppins.variable} ${inter.variable} ${jetbrainsMono.variable} font-sans antialiased bg-surface-background text-surface-foreground`}
+        className="font-sans antialiased bg-surface-background text-surface-foreground"
+        style={{ fontFamily: "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" }}
       >
         <a href="#main-content" className="skip-link">
           Skip to main content

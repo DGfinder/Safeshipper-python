@@ -470,7 +470,7 @@ export default function ManifestSearchPlugin({
                 ref={pdfViewerRef}
                 file={file}
                 highlightAreas={highlightAreas}
-                currentHighlight={currentHighlight}
+                currentHighlight={currentHighlight || undefined}
                 onHighlightClick={handleHighlightClick}
               />
             </div>
