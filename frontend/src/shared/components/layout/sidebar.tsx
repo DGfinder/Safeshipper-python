@@ -119,6 +119,7 @@ const navigation: NavigationItem[] = [
     icon: Shield,
     children: [
       { name: "DG Compliance", href: "/dg-compliance", icon: Shield },
+      { name: "Live Compliance", href: "/compliance-live", icon: Activity, badge: "Live" },
       {
         name: "Emergency Procedures",
         href: "/emergency-procedures",
@@ -145,6 +146,7 @@ const navigation: NavigationItem[] = [
     requiredRoles: ["ADMIN", "MANAGER"],
     children: [
       { name: "AI Insights", href: "/ai-insights", icon: Brain },
+      { name: "Risk Analytics", href: "/risk-analytics", icon: TrendingUp, badge: "New" },
     ],
   },
   {
