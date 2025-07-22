@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Inter, JetBrains_Mono, Poppins } from "next/font/google";
 import "../styles/globals.css";
 import Providers from "./providers";
-import { ErrorBoundary } from "@/components/error-boundary";
+import { ErrorBoundary } from "../components/error-boundary";
 
 const inter = Inter({
   variable: "--font-inter",
