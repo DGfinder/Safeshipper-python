@@ -300,7 +300,7 @@ export function FloatingActionButton({
     if (action.onClick) {
       action.onClick();
     } else if (action.href) {
-      router.push(action.href);
+      router.push(action.href as any);
     }
     
     if (variant === 'expandable') {
@@ -528,7 +528,7 @@ export function SpeedDial({
     if (action.onClick) {
       action.onClick();
     } else if (action.href) {
-      router.push(action.href);
+      router.push(action.href as any);
     }
     
     setIsOpen(false);

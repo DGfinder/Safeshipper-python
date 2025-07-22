@@ -302,7 +302,7 @@ export function Sidebar({
     if (!item.children) {
       return (
         <Link
-          href={item.href!}
+          href={item.href! as any}
           className={cn(
             "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors relative group",
             isActive(item.href!)
@@ -381,7 +381,7 @@ export function Sidebar({
             {item.children.map((child) => (
               <Link
                 key={child.name}
-                href={child.href!}
+                href={child.href! as any}
                 className={cn(
                   "flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-[#153F9F] focus:ring-offset-2",
                   isActive(child.href!)

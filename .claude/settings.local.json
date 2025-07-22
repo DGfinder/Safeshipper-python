@@ -80,7 +80,8 @@
       "Bash(cd:*)",
       "Bash(convert:*)",
       "Bash(chmod:*)",
-      "Bash(cat:*)"
+      "Bash(cat:*)",
+      "Bash(timeout 30s npm run build)"
     ],
     "deny": []
   }

@@ -233,7 +233,7 @@ export function MobileMoreMenu() {
             return (
               <Link
                 key={action.id}
-                href={action.href}
+                href={action.href as any}
                 className={cn(
                   'flex flex-col items-center justify-center p-4 rounded-lg border-2 border-gray-200',
                   'hover:border-blue-300 hover:bg-blue-50 transition-colors',

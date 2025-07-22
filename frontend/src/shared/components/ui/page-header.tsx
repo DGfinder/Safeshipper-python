@@ -84,7 +84,7 @@ export function PageHeader({
             <React.Fragment key={index}>
               <ChevronRight className="h-4 w-4" />
               {item.href ? (
-                <Link href={item.href} className="flex items-center hover:text-gray-700 transition-colors">
+                <Link href={item.href as any} className="flex items-center hover:text-gray-700 transition-colors">
                   {item.icon && <item.icon className="h-4 w-4 mr-1" />}
                   {item.label}
                 </Link>
