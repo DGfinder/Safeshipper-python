@@ -4,7 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useState, useEffect } from "react";
-import { cn } from "@/lib/utils";
+import { cn } from "@/utils/lib/utils";
 import { useAuthStore } from "@/shared/stores/auth-store";
 import UnifiedSearchBar from "@/shared/components/search/UnifiedSearchBar";
 import { ConnectionStatus } from "@/shared/components/ui/connection-status";

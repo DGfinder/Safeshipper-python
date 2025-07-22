@@ -1,5 +1,5 @@
 import { Suspense } from "react";
-import { serverApi, type DashboardStats, type FleetStatus, type RecentShipmentsResponse } from "@/lib/server-api";
+import { serverApi, type DashboardStats, type FleetStatus, type RecentShipmentsResponse } from "@/utils/lib/server-api";
 import { StatCards } from "./stat-cards";
 import { CompanyHeader } from "./company-header";
 import { RecentShipmentsTable } from "./recent-shipments-table";

@@ -2,7 +2,7 @@
 
 import { Card, CardContent } from "@/shared/components/ui/card";
 import { Truck, FileText, Shield, MapPin } from "lucide-react";
-import type { DashboardStats, FleetStatus } from "@/lib/server-api";
+import type { DashboardStats, FleetStatus } from "@/utils/lib/server-api";
 
 interface StatCardsProps {
   stats: DashboardStats;

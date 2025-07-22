@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { AuthGuard } from "@/shared/components/common/auth-guard";
 import { Sidebar } from "./sidebar";
 import { Header } from "./header";
-import { cn } from "@/lib/utils";
+import { cn } from "@/utils/lib/utils";
 
 interface DashboardLayoutProps {
   children: React.ReactNode;

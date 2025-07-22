@@ -1,4 +1,4 @@
-import type { CompanyMetadata, FleetStatus } from "@/lib/server-api";
+import type { CompanyMetadata, FleetStatus } from "@/utils/lib/server-api";
 
 interface CompanyHeaderProps {
   company: CompanyMetadata;
