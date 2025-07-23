@@ -44,14 +44,14 @@ export function WebSocketProvider({ children, url }: WebSocketProviderProps) {
 
   const { getToken, isAuthenticated } = useAuthStore();
 
-  // Get WebSocket URL - fallback to mock WebSocket for development
+  // Get WebSocket URL - specific for chat functionality
   const getWebSocketUrl = () => {
     if (url) return url;
     
-    // In production, this would be your actual WebSocket endpoint
+    // Chat WebSocket endpoint
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const host = window.location.host;
-    return `${protocol}//${host}/ws/`;
+    const host = process.env.NODE_ENV === 'development' ? 'localhost:8000' : window.location.host;
+    return `${protocol}//${host}/ws/chat/`;
   };
 
   // Mock WebSocket for development

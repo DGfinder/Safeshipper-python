@@ -3,7 +3,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "react-hot-toast";
 import { useState, useEffect } from "react";
-import { WebSocketProvider } from "@/shared/services/WebSocketContext";
+import { WebSocketProvider } from "@/contexts/WebSocketContext";
 import { AccessibilityProvider } from "@/shared/services/AccessibilityContext";
 import { ThemeProvider } from "@/shared/services/ThemeContext";
 import { performanceMonitor } from "@/utils/performance-monitor";

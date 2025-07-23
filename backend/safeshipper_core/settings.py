@@ -35,6 +35,7 @@ INSTALLED_APPS = [
     'django.contrib.gis',
     
     # Third-party apps
+    'channels',
     'rest_framework',
     'drf_spectacular',
     'simple_history',
@@ -73,7 +74,7 @@ INSTALLED_APPS = [
     'erp_integration', # Re-enabled for Phase 7B ERP integration framework
     'customer_portal', # Re-enabled for Phase 8A customer portal & self-service
     'mobile_api', # Re-enabled for Phase 8B mobile API foundation
-    # 'communications', # Temporarily disabled
+    'communications', # Re-enabled for Phase 1 communication system
     'dashboards', # Re-enabled for Phase 3A analytics
     'load_plans', # Re-enabled for Phase 3B load planning
     'epg',        # Re-enabled after fixing shipments dependencies
@@ -120,6 +121,7 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'safeshipper_core.wsgi.application'
+ASGI_APPLICATION = 'safeshipper_core.asgi.application'
 
 # Database
 DATABASES = {
@@ -176,6 +178,18 @@ CACHES = {
 # Session settings
 SESSION_ENGINE = 'django.contrib.sessions.backends.cache'
 SESSION_CACHE_ALIAS = 'default'
+
+# Channel Layers (for WebSocket support)
+CHANNEL_LAYERS = {
+    'default': {
+        'BACKEND': 'channels_redis.core.RedisChannelLayer',
+        'CONFIG': {
+            'hosts': [config('REDIS_URL', default='redis://127.0.0.1:6379/2')],
+            'capacity': 1500,  # Maximum messages in a channel
+            'expiry': 60,      # Message expiry in seconds
+        },
+    },
+}
 
 # REST framework settings
 REST_FRAMEWORK = {
@@ -519,3 +533,26 @@ CELERY_WORKER_MAX_TASKS_PER_CHILD = 1000
 
 # Celery Beat Settings (if you later add periodic tasks)
 # CELERY_BEAT_SCHEDULE = {}
+
+# WebSocket Configuration (Django Channels)
+ASGI_APPLICATION = 'safeshipper_core.asgi.application'
+
+# Channel Layers Configuration
+CHANNEL_LAYERS = {
+    'default': {
+        'BACKEND': 'channels_redis.core.RedisChannelLayer',
+        'CONFIG': {
+            'hosts': [config('REDIS_URL', default='redis://localhost:6379/0')],
+            'capacity': 1500,
+            'expiry': 60,
+        },
+    },
+}
+
+# Fallback to in-memory channel layer for development if Redis is not available
+if DEBUG and not config('REDIS_URL', default=None):
+    CHANNEL_LAYERS = {
+        'default': {
+            'BACKEND': 'channels.layers.InMemoryChannelLayer',
+        },
+    }
