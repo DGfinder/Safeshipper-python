@@ -31,8 +31,8 @@ import {
 } from "lucide-react";
 import { AuthGuard } from "@/shared/components/common/auth-guard";
 import { MobileNavWrapper } from "@/shared/components/layout/mobile-bottom-nav";
-import { useTheme } from "@/shared/services/ThemeContext";
-import { useAccessibility } from "@/shared/services/AccessibilityContext";
+import { useTheme } from "@/contexts/ThemeContext";
+import { useAccessibility } from "@/contexts/AccessibilityContext";
 import { AdvancedTracking } from "@/shared/components/customer/advanced-tracking";
 import { FloatingActionButton } from "@/shared/components/ui/floating-action-button";
 import { toast } from "react-hot-toast";

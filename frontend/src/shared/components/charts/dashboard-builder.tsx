@@ -9,8 +9,8 @@ import { Label } from '@/shared/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/components/ui/tabs';
 import { ScrollArea } from '@/shared/components/ui/scroll-area';
-import { useTheme } from '@/shared/services/ThemeContext';
-import { useAccessibility } from '@/shared/services/AccessibilityContext';
+import { useTheme } from '@/contexts/ThemeContext';
+import { useAccessibility } from '@/contexts/AccessibilityContext';
 import { cn } from '@/lib/utils';
 import { toast } from 'react-hot-toast';
 import {

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { useWebSocketSubscription } from '@/shared/services/WebSocketContext';
+import { useWebSocketSubscription } from '@/contexts/WebSocketContext';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import type { FleetVehicle, FleetStatusResponse } from './useFleetTracking';
 import type { DashboardStats, RecentActivity } from './useDashboard';

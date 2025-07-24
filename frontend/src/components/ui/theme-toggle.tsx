@@ -3,8 +3,8 @@
 import React, { useState } from 'react';
 import { Button } from '@/shared/components/ui/button';
 import { Badge } from '@/shared/components/ui/badge';
-import { useTheme, type ThemeMode } from '@/shared/services/ThemeContext';
-import { useAccessibility } from '@/shared/services/AccessibilityContext';
+import { useTheme, type ThemeMode } from '@/contexts/ThemeContext';
+import { useAccessibility } from '@/contexts/AccessibilityContext';
 import {
   DropdownMenu,
   DropdownMenuContent,

@@ -8,8 +8,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/components/ui
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/components/ui/select";
 import { MobileNavWrapper } from "@/shared/components/layout/mobile-bottom-nav";
 import { AuthGuard } from "@/shared/components/common/auth-guard";
-import { useAccessibility } from "@/shared/services/AccessibilityContext";
-import { useTheme } from "@/shared/services/ThemeContext";
+import { useAccessibility } from "@/contexts/AccessibilityContext";
+import { useTheme } from "@/contexts/ThemeContext";
 import { usePerformanceMonitoring } from "@/shared/utils/performance";
 import {
   ShipmentTrendsChart,
