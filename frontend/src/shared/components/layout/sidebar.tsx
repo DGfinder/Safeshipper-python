@@ -10,7 +10,7 @@ import UnifiedSearchBar from "@/shared/components/search/UnifiedSearchBar";
 import { ConnectionStatus } from "@/shared/components/ui/connection-status";
 import { ThemeToggle } from "@/shared/components/ui/theme-toggle";
 import { TextLogo } from "@/shared/components/ui/text-logo";
-import { useTheme } from "@/shared/services/ThemeContext";
+import { useTheme } from "@/contexts/ThemeContext";
 import {
   Home,
   Users,

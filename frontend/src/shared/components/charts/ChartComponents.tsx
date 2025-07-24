@@ -34,7 +34,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui/card';
 import { Button } from '@/shared/components/ui/button';
 import { Badge } from '@/shared/components/ui/badge';
-import { useAccessibility } from '@/shared/services/AccessibilityContext';
+import { useAccessibility } from '@/contexts/AccessibilityContext';
 import { cn } from '@/lib/utils';
 import { QuickExport } from '@/shared/components/ui/export-dialog';
 import { toast } from 'react-hot-toast';

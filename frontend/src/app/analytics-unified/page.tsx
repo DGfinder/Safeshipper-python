@@ -77,8 +77,8 @@ import {
   usePODStats,
   useRecentShipments
 } from "@/shared/hooks/useDashboard";
-import { useAccessibility } from "@/shared/services/AccessibilityContext";
-import { useTheme } from "@/shared/services/ThemeContext";
+import { useAccessibility } from "@/contexts/AccessibilityContext";
+import { useTheme } from "@/contexts/ThemeContext";
 import { usePerformanceMonitoring } from "@/shared/utils/performance";
 import { ExportDialog } from "@/shared/components/ui/export-dialog";
 import { toast } from "react-hot-toast";

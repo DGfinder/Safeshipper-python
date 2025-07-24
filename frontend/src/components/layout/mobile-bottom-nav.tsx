@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/shared/components/ui/badge';
-import { useAccessibility } from '@/shared/services/AccessibilityContext';
+import { useAccessibility } from '@/contexts/AccessibilityContext';
 import { useRealTimeDashboardStats } from '@/shared/hooks/useRealTimeData';
 import { NotificationCenter, NotificationBell, useNotifications } from '@/shared/components/ui/notification-center';
 import {

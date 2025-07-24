@@ -12,7 +12,7 @@ import { Switch } from "@/shared/components/ui/switch";
 import { Alert, AlertDescription } from "@/shared/components/ui/alert";
 import { CustomerAuthGuard } from "@/shared/components/auth/customer-auth-guard";
 import { MobileNavWrapper } from "@/shared/components/layout/mobile-bottom-nav";
-import { useTheme } from "@/shared/services/ThemeContext";
+import { useTheme } from "@/contexts/ThemeContext";
 import { usePerformanceMonitoring } from "@/shared/utils/performance";
 import { 
   useCustomerNotifications, 

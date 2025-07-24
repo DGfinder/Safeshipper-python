@@ -44,8 +44,8 @@ import { DemoIndicator, ApiStatusIndicator } from "@/shared/components/ui/demo-i
 import { customerApiService } from "@/shared/services/customerApiService";
 import { getEnvironmentConfig } from "@/shared/config/environment";
 import { MobileNavWrapper } from "@/shared/components/layout/mobile-bottom-nav";
-import { useTheme } from "@/shared/services/ThemeContext";
-import { useAccessibility } from "@/shared/services/AccessibilityContext";
+import { useTheme } from "@/contexts/ThemeContext";
+import { useAccessibility } from "@/contexts/AccessibilityContext";
 import { AdvancedTracking } from "@/shared/components/customer/advanced-tracking";
 import { FloatingActionButton } from "@/shared/components/ui/floating-action-button";
 import { toast } from "react-hot-toast";

@@ -16,7 +16,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/shared/components/ui/dialog';
-import { useAccessibility } from '@/shared/services/AccessibilityContext';
+import { useAccessibility } from '@/contexts/AccessibilityContext';
 import { exportAnalyticsData, type ExportFormat } from '@/shared/utils/export';
 import { cn } from '@/lib/utils';
 import {

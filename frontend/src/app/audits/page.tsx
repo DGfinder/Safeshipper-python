@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Alert, AlertDescription } from "@/shared/components/ui/alert";
 import { Calendar } from "@/shared/components/ui/calendar";
 import { DashboardLayout } from "@/shared/components/layout/dashboard-layout";
-import { useTheme } from "@/shared/services/ThemeContext";
+import { useTheme } from "@/contexts/ThemeContext";
 import { usePerformanceMonitoring } from "@/shared/utils/performance";
 import {
   Shield,
