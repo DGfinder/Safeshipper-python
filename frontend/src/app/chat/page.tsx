@@ -2,15 +2,31 @@
 'use client';
 
 import React from 'react';
-import { ChatInterface } from '@/components/communications/ChatInterface';
+import { ChatInterface } from '@/shared/components/communications/ChatInterface';
 import { useAuthStore } from '@/shared/stores/auth-store';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { User as ChatUser } from '@/shared/hooks/useChat';
 
 export default function ChatPage() {
   const { user } = useAuthStore();
 
+  // Convert auth store user to chat user format
+  const convertToChatUser = (authUser: any): ChatUser => {
+    const name = authUser?.firstName && authUser?.lastName 
+      ? `${authUser.firstName} ${authUser.lastName}`
+      : authUser?.username || authUser?.email || 'Unknown User';
+    
+    return {
+      id: authUser?.id || 'demo-user-1',
+      name,
+      email: authUser?.email || 'demo@safeshipper.com',
+      avatar: authUser?.avatar,
+      status: 'online' as const
+    };
+  };
+
   // Mock current user for testing
-  const currentUser = user || {
+  const currentUser = user ? convertToChatUser(user) : {
     id: 'demo-user-1',
     name: 'Demo User',
     email: 'demo@safeshipper.com',

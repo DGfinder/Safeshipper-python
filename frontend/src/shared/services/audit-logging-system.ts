@@ -7,7 +7,7 @@
 interface AuditEvent {
   id: string;
   eventType: 'SHIPMENT' | 'COMPLIANCE' | 'DOCUMENT' | 'CERTIFICATE' | 'INCIDENT' | 'ACCESS' | 'SYSTEM';
-  category: 'CREATE' | 'READ' | 'UPDATE' | 'DELETE' | 'APPROVE' | 'REJECT' | 'VALIDATE' | 'AUTHENTICATE' | 'AUTHORIZE';
+  category: 'CREATE' | 'READ' | 'UPDATE' | 'DELETE' | 'APPROVE' | 'REJECT' | 'VALIDATE' | 'AUTHENTICATE' | 'AUTHORIZE' | 'ERROR';
   severity: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
   timestamp: Date;
   userId: string;

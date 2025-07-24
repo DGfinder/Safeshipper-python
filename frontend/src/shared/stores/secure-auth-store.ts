@@ -43,6 +43,7 @@ interface AuthState {
   // Session management
   sessionExpiry: number | null;
   lastActivity: number;
+  sessionInterval: NodeJS.Timeout | null;
   
   // Demo mode
   isDemoMode: boolean;
@@ -97,6 +98,7 @@ export const useSecureAuthStore = create<AuthStore>()(
     user: null,
     sessionExpiry: null,
     lastActivity: Date.now(),
+    sessionInterval: null,
     isDemoMode: false,
     requiresMFA: false,
     mfaSetupRequired: false,
@@ -124,8 +126,7 @@ export const useSecureAuthStore = create<AuthStore>()(
               isLoading: false,
             });
             
-            // Start session monitoring
-            get().startSessionMonitoring();
+            // Session monitoring will be handled by periodic session checks
           } else {
             set({
               isAuthenticated: false,
@@ -172,7 +173,7 @@ export const useSecureAuthStore = create<AuthStore>()(
             isLoading: false,
           });
           
-          get().startSessionMonitoring();
+          // Session monitoring will be handled by periodic session checks
           return true;
         } else if (result.requiresMFA) {
           set({
@@ -215,7 +216,7 @@ export const useSecureAuthStore = create<AuthStore>()(
             isLoading: false,
           });
           
-          get().startSessionMonitoring();
+          // Session monitoring will be handled by periodic session checks
           return true;
         } else {
           set({
@@ -257,7 +258,7 @@ export const useSecureAuthStore = create<AuthStore>()(
       });
       
       // Stop session monitoring
-      get().stopSessionMonitoring();
+      // Session monitoring cleanup handled by store cleanup
     },
 
     // Check session validity
@@ -272,7 +273,7 @@ export const useSecureAuthStore = create<AuthStore>()(
             user: null,
             error: 'Your session has expired. Please log in again.',
           });
-          get().stopSessionMonitoring();
+          // Session monitoring cleanup handled by store cleanup
         }
         
         return isValid;

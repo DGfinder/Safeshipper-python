@@ -82,7 +82,9 @@ export class CSRFProtection {
         this.currentToken = data.csrf_token;
         
         // Store token in cookie
-        this.setTokenCookie(this.currentToken);
+        if (this.currentToken) {
+          this.setTokenCookie(this.currentToken);
+        }
         
         return this.currentToken;
       } else {
