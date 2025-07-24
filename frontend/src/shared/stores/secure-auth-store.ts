@@ -411,51 +411,6 @@ export const useSecureAuthStore = create<AuthStore>()(
         return false;
       }
     },
-
-    // Session monitoring (private methods)
-    sessionInterval: null as NodeJS.Timeout | null,
-
-    startSessionMonitoring: () => {
-      const state = get();
-      
-      // Clear existing interval
-      if (state.sessionInterval) {
-        clearInterval(state.sessionInterval);
-      }
-
-      // Start new monitoring
-      const interval = setInterval(async () => {
-        const currentState = get();
-        
-        if (!currentState.isAuthenticated) {
-          clearInterval(interval);
-          return;
-        }
-
-        // Check if user has been inactive too long
-        const inactiveTime = Date.now() - currentState.lastActivity;
-        if (inactiveTime > ACTIVITY_TIMEOUT) {
-          await currentState.logout();
-          return;
-        }
-
-        // Check session validity
-        const isValid = await currentState.checkSession();
-        if (!isValid) {
-          await currentState.logout();
-        }
-      }, SESSION_CHECK_INTERVAL);
-
-      set({ sessionInterval: interval });
-    },
-
-    stopSessionMonitoring: () => {
-      const interval = get().sessionInterval;
-      if (interval) {
-        clearInterval(interval);
-        set({ sessionInterval: null });
-      }
-    },
   }))
 );
 

@@ -61,7 +61,7 @@ class PerformanceMonitor {
         if (navigationEntries.length > 0) {
           const nav = navigationEntries[0];
           this.metrics.ttfb = nav.responseStart - nav.requestStart;
-          this.metrics.fcp = nav.loadEventEnd - nav.navigationStart;
+          this.metrics.fcp = nav.loadEventEnd - nav.startTime;
         }
       }
     }

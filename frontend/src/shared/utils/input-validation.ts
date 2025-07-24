@@ -51,7 +51,7 @@ export const ValidationPatterns = {
   LONGITUDE: /^-?(180(\.0+)?|((1[0-7]\d)|([1-9]?\d))(\.\d+)?)$/,
   
   // SQL injection detection
-  SQL_INJECTION: /(\b(SELECT|INSERT|UPDATE|DELETE|DROP|CREATE|ALTER|EXEC|UNION|SCRIPT)\b|[';--]|\/\*|\*\/)/i,
+  SQL_INJECTION: /(\b(SELECT|INSERT|UPDATE|DELETE|DROP|CREATE|ALTER|EXEC|UNION|SCRIPT)\b|[';]|--|\/\*|\*\/)/i,
   
   // XSS detection
   XSS_PATTERNS: /<[^>]*script[^>]*>|<[^>]*on\w+\s*=|javascript:|data:text\/html|vbscript:/i,
@@ -93,7 +93,7 @@ export class InputSanitizer {
    */
   static sanitizeSQLInput(input: string): string {
     return input
-      .replace(/[';--]/g, '') // Remove SQL comment patterns
+      .replace(/[';]|--/g, '') // Remove SQL comment patterns
       .replace(/\b(SELECT|INSERT|UPDATE|DELETE|DROP|CREATE|ALTER|EXEC|UNION)\b/gi, '')
       .replace(/[<>]/g, '');
   }
@@ -142,7 +142,7 @@ export class InputSanitizer {
   /**
    * Recursively sanitize object properties
    */
-  private static sanitizeObject(obj: any): any {
+  public static sanitizeObject(obj: any): any {
     if (typeof obj === 'string') {
       return this.sanitizeText(obj);
     }
