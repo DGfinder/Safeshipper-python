@@ -120,7 +120,7 @@ export const useChat = () => {
 
       // Show notification if not in current channel
       if (message.channel_id !== chatState.selectedChannelId && message.sender.id !== user?.id) {
-        toast.success(`New message from ${message.sender.name}`);
+        toast(`New message from ${message.sender.name}`, { icon: '💬' });
       }
     });
 
@@ -190,12 +190,12 @@ export const useChat = () => {
 
     const unsubscribeUserJoined = subscribe('user_joined', (data: any) => {
       const { user_id, channel_id } = data;
-      toast.success(`User joined ${channel_id}`);
+      toast(`User joined ${channel_id}`, { icon: '👋' });
     });
 
     const unsubscribeUserLeft = subscribe('user_left', (data: any) => {
       const { user_id, channel_id } = data;
-      toast.info(`User left ${channel_id}`);
+      toast(`User left ${channel_id}`, { icon: '👋' });
     });
 
     const unsubscribeReaction = subscribe('reaction_update', (data: any) => {

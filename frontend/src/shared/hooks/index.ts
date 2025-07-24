@@ -16,3 +16,5 @@ export * from './useLoadPlan';
 export * from './useMockAPI';
 export * from './useMockAuth';
 export * from './usePWA';
+export { useChat, type Message, type Channel } from './useChat';
+export type { User as ChatUser } from './useChat';
