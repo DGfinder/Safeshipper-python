@@ -56,6 +56,15 @@ const nextConfig = {
     // Force webpack to prefer our aliases over node_modules
     config.resolve.preferRelative = true;
 
+    // Fix for recharts/victory-vendor issue
+    if (!isServer) {
+      config.resolve.alias = {
+        ...config.resolve.alias,
+        'victory-vendor/d3-scale': 'd3-scale',
+        'victory-vendor/d3-shape': 'd3-shape',
+      };
+    }
+
     // Optimize bundle size
     if (!dev && !isServer) {
       config.optimization.splitChunks = {

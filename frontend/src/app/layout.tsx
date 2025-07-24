@@ -1,7 +1,7 @@
 import type { Metadata, Viewport } from "next";
 // Using system fonts to avoid network dependency issues during build
 import "../styles/globals.css";
-import Providers from "./providers";
+import ClientLayout from "./client-layout";
 import { ErrorBoundary } from "../components/error-boundary";
 
 
@@ -55,11 +55,11 @@ export default function RootLayout({
           Skip to main content
         </a>
         <ErrorBoundary>
-          <Providers>
+          <ClientLayout>
             <main id="main-content" className="min-h-screen">
               {children}
             </main>
-          </Providers>
+          </ClientLayout>
         </ErrorBoundary>
       </body>
     </html>
