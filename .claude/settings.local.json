@@ -84,6 +84,7 @@
       "Bash(timeout 30s npm run build)",
       "Bash(timeout 60s npm run build)",
       "Bash(./fix-utils-imports.sh)",
+      "Bash(cd:*)",
       "Bash(cd:*)"
     ],
     "deny": []
