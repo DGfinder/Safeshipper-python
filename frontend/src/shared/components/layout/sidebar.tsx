@@ -11,6 +11,7 @@ import { ConnectionStatus } from "@/shared/components/ui/connection-status";
 import { ThemeToggle } from "@/shared/components/ui/theme-toggle";
 import { TextLogo } from "@/shared/components/ui/text-logo";
 import { useTheme } from "@/contexts/ThemeContext";
+import { usePermissions } from "@/contexts/PermissionContext";
 import {
   Home,
   Users,
@@ -59,8 +60,7 @@ interface NavigationItem {
   icon: any;
   children?: NavigationItem[];
   badge?: string;
-  requiredPermissions?: string[];
-  requiredRoles?: string[];
+  requiredPermission?: string;
 }
 
 const navigation: NavigationItem[] = [
@@ -68,134 +68,125 @@ const navigation: NavigationItem[] = [
     name: "Dashboard",
     icon: Home,
     children: [
-      { name: "Overview", href: "/dashboard", icon: Home },
-      { name: "Operations Center", href: "/operations", icon: MonitorSpeaker, badge: "New", requiredRoles: ["ADMIN", "DISPATCHER", "MANAGER"] },
-      { name: "Live Map", href: "/dashboard/live-map", icon: MapPin },
-      { name: "Search", href: "/search", icon: Search },
+      { name: "Overview", href: "/dashboard", icon: Home, requiredPermission: "dashboard.view" },
+      { name: "Operations Center", href: "/operations", icon: MonitorSpeaker, badge: "New", requiredPermission: "operations.center.view" },
+      { name: "Live Map", href: "/dashboard/live-map", icon: MapPin, requiredPermission: "dashboard.view" },
+      { name: "Search", href: "/search", icon: Search, requiredPermission: "search.view" },
     ],
   },
   {
     name: "Shipments",
     icon: Package,
     children: [
-      { name: "All Shipments", href: "/shipments", icon: Package, requiredPermissions: ["all_shipments"] },
+      { name: "All Shipments", href: "/shipments", icon: Package, requiredPermission: "shipments.view.all" },
       {
         name: "My Shipments",
         href: "/shipments/my-shipments",
         icon: Package,
-        requiredRoles: ["DRIVER"],
-        requiredPermissions: ["my_shipments"]
+        requiredPermission: "shipments.view.own"
       },
       {
         name: "Manifest Upload",
         href: "/shipments/manifest-upload",
         icon: Upload,
-        requiredRoles: ["ADMIN", "DISPATCHER"],
-        requiredPermissions: ["shipment_management"]
+        requiredPermission: "shipments.manifest.upload"
       },
     ],
   },
   {
     name: "Enterprise Integration",
     icon: Layers,
-    requiredRoles: ["ADMIN", "MANAGER"],
     children: [
-      { name: "ERP Integration", href: "/erp-integration", icon: Workflow, badge: "New" },
-      { name: "API Gateway", href: "/api-gateway", icon: Globe, badge: "New" },
-      { name: "Developer Portal", href: "/developer", icon: Code2, badge: "New" },
+      { name: "ERP Integration", href: "/erp-integration", icon: Workflow, badge: "New", requiredPermission: "erp.integration.view" },
+      { name: "API Gateway", href: "/api-gateway", icon: Globe, badge: "New", requiredPermission: "api.gateway.view" },
+      { name: "Developer Portal", href: "/developer", icon: Code2, badge: "New", requiredPermission: "developer.portal.view" },
     ],
   },
   {
     name: "Operations",
     icon: Truck,
-    requiredRoles: ["ADMIN", "DISPATCHER", "MANAGER"],
     children: [
-      { name: "Fleet Management", href: "/fleet", icon: Truck },
-      { name: "IoT Monitoring", href: "/iot-monitoring", icon: Activity },
+      { name: "Fleet Management", href: "/fleet", icon: Truck, requiredPermission: "vehicle.view" },
+      { name: "IoT Monitoring", href: "/iot-monitoring", icon: Activity, requiredPermission: "iot.monitoring.view" },
     ],
   },
   {
     name: "Safety & Compliance",
     icon: Shield,
     children: [
-      { name: "DG Compliance", href: "/dg-compliance", icon: Shield },
-      { name: "Live Compliance", href: "/compliance-live", icon: Activity, badge: "Live" },
+      { name: "DG Compliance", href: "/dg-compliance", icon: Shield, requiredPermission: "safety.compliance.view" },
+      { name: "Live Compliance", href: "/compliance-live", icon: Activity, badge: "Live", requiredPermission: "safety.compliance.view" },
       {
         name: "Emergency Procedures",
         href: "/emergency-procedures",
         icon: AlertTriangle,
+        requiredPermission: "emergency.procedures.view"
       },
-      { name: "Incident Management", href: "/incidents", icon: ClipboardCheck },
-      { name: "Training", href: "/training", icon: GraduationCap },
-      { name: "Inspections", href: "/inspections", icon: ClipboardCheck, badge: "New", requiredRoles: ["ADMIN", "INSPECTOR"], requiredPermissions: ["safety_inspections"] },
-      { name: "Audits", href: "/audits", icon: FileText, badge: "New", requiredRoles: ["ADMIN", "INSPECTOR"], requiredPermissions: ["compliance_audits"] },
+      { name: "Incident Management", href: "/incidents", icon: ClipboardCheck, requiredPermission: "incidents.view" },
+      { name: "Training", href: "/training", icon: GraduationCap, requiredPermission: "training.view" },
+      { name: "Inspections", href: "/inspections", icon: ClipboardCheck, badge: "New", requiredPermission: "inspections.view" },
+      { name: "Audits", href: "/audits", icon: FileText, badge: "New", requiredPermission: "audits.view" },
     ],
   },
   {
     name: "Resources",
     icon: Database,
     children: [
-      { name: "SDS Library", href: "/sds-library", icon: Database },
-      { name: "SDS Enhanced", href: "/sds-enhanced", icon: BookOpen },
-      { name: "DG Checker", href: "/dg-checker", icon: Search },
+      { name: "SDS Library", href: "/sds-library", icon: Database, requiredPermission: "sds.library.view" },
+      { name: "SDS Enhanced", href: "/sds-enhanced", icon: BookOpen, requiredPermission: "sds.library.view" },
+      { name: "DG Checker", href: "/dg-checker", icon: Search, requiredPermission: "dg.checker.view" },
     ],
   },
   {
     name: "AI Tools",
     icon: Brain,
-    requiredRoles: ["ADMIN", "MANAGER"],
     children: [
-      { name: "AI Insights", href: "/ai-insights", icon: Brain },
-      { name: "Risk Analytics", href: "/risk-analytics", icon: TrendingUp, badge: "New" },
+      { name: "AI Insights", href: "/ai-insights", icon: Brain, requiredPermission: "ai.insights.view" },
+      { name: "Risk Analytics", href: "/risk-analytics", icon: TrendingUp, badge: "New", requiredPermission: "risk.analytics.view" },
     ],
   },
   {
     name: "Public Services",
     icon: MapPin,
     children: [
-      { name: "Track Shipment", href: "/track", icon: Search },
+      { name: "Track Shipment", href: "/track", icon: Search, requiredPermission: "track.shipment.view" },
     ],
   },
   {
     name: "Customer Portal",
     icon: UserCheck,
-    requiredRoles: ["ADMIN", "DISPATCHER", "MANAGER"],
     children: [
-      { name: "Portal Dashboard", href: "/customer-portal", icon: UserCheck, badge: "New" },
-      { name: "Self-Service", href: "/customer-portal/requests", icon: Users, badge: "New" },
-      { name: "Notifications", href: "/customer-portal/notifications", icon: AlertTriangle, badge: "New" },
+      { name: "Portal Dashboard", href: "/customer-portal", icon: UserCheck, badge: "New", requiredPermission: "customer.portal.admin" },
+      { name: "Self-Service", href: "/customer-portal/requests", icon: Users, badge: "New", requiredPermission: "customer.portal.admin" },
+      { name: "Notifications", href: "/customer-portal/notifications", icon: AlertTriangle, badge: "New", requiredPermission: "customer.portal.admin" },
     ],
   },
   {
     name: "Reports & Analytics",
     icon: BarChart3,
-    requiredRoles: ["ADMIN", "MANAGER"],
     children: [
-      { name: "Reports Dashboard", href: "/reports", icon: BarChart },
-      { name: "Advanced Analytics", href: "/analytics", icon: LineChart, badge: "New" },
-      { name: "Business Intelligence", href: "/analytics/insights", icon: Brain, badge: "New" },
+      { name: "Reports Dashboard", href: "/reports", icon: BarChart, requiredPermission: "reports.view" },
+      { name: "Advanced Analytics", href: "/analytics", icon: LineChart, badge: "New", requiredPermission: "analytics.advanced.view" },
+      { name: "Business Intelligence", href: "/analytics/insights", icon: Brain, badge: "New", requiredPermission: "analytics.advanced.view" },
     ],
   },
   {
     name: "Advanced Analytics",
     icon: TrendingUp,
-    requiredRoles: ["ADMIN", "MANAGER"],
     children: [
-      { name: "Supply Chain Stress", href: "/supply-chain-stress", icon: ShieldAnalytics, badge: "Analytics" },
-      { name: "Insurance Pricing", href: "/insurance-pricing", icon: DollarSign, badge: "Analytics" },
-      { name: "Route Optimization", href: "/route-optimization", icon: Route, badge: "Analytics" },
-      { name: "Digital Twin", href: "/digital-twin", icon: Monitor, badge: "Analytics" },
+      { name: "Supply Chain Stress", href: "/supply-chain-stress", icon: ShieldAnalytics, badge: "Analytics", requiredPermission: "supply.chain.analytics" },
+      { name: "Insurance Pricing", href: "/insurance-pricing", icon: DollarSign, badge: "Analytics", requiredPermission: "insurance.analytics" },
+      { name: "Route Optimization", href: "/route-optimization", icon: Route, badge: "Analytics", requiredPermission: "route.optimization" },
+      { name: "Digital Twin", href: "/digital-twin", icon: Monitor, badge: "Analytics", requiredPermission: "digital.twin.view" },
     ],
   },
   {
     name: "Management",
     icon: Users,
-    requiredRoles: ["ADMIN", "MANAGER"],
-    requiredPermissions: ["user_management"],
     children: [
-      { name: "Users", href: "/users", icon: Users, requiredPermissions: ["user_management"] },
-      { name: "Customers", href: "/customers", icon: Building2, requiredPermissions: ["all_customers"] },
-      { name: "Settings", href: "/settings", icon: Settings },
+      { name: "Users", href: "/users", icon: Users, requiredPermission: "users.manage" },
+      { name: "Customers", href: "/customers", icon: Building2, requiredPermission: "customers.manage" },
+      { name: "Settings", href: "/settings", icon: Settings, requiredPermission: "settings.manage" },
     ],
   },
 ];
@@ -207,53 +198,31 @@ interface SidebarProps {
   onClose?: () => void;
 }
 
-// Helper function to check if user has required permissions
-function hasRequiredAccess(item: NavigationItem, user: any): boolean {
-  if (!user) return false;
-  
-  // Check required roles
-  if (item.requiredRoles && item.requiredRoles.length > 0) {
-    if (!item.requiredRoles.includes(user.role)) {
-      return false;
-    }
-  }
-  
-  // Check required permissions
-  if (item.requiredPermissions && item.requiredPermissions.length > 0) {
-    if (!user.permissions || !Array.isArray(user.permissions)) {
-      return false;
-    }
-    
-    const hasPermission = item.requiredPermissions.some(permission => 
-      user.permissions.includes(permission)
-    );
-    
-    if (!hasPermission) {
-      return false;
-    }
-  }
-  
-  return true;
+// Helper function to check if user has required permission
+function hasPermission(permission: string | undefined, can: (permission: any) => boolean): boolean {
+  if (!permission) return true; // No permission required means everyone can see it
+  return can(permission);
 }
 
 // Helper function to filter navigation items based on user permissions
-function filterNavigationItems(items: NavigationItem[], user: any): NavigationItem[] {
+function filterNavigationItems(items: NavigationItem[], can: (permission: any) => boolean): NavigationItem[] {
   return items.filter(item => {
-    if (!hasRequiredAccess(item, user)) {
+    // Check if parent item has permission requirement
+    if (item.requiredPermission && !hasPermission(item.requiredPermission, can)) {
       return false;
     }
     
-    // Filter children as well
+    // Filter children and check if any are visible
     if (item.children) {
-      const filteredChildren = item.children.filter(child => hasRequiredAccess(child, user));
-      // Only show parent if it has accessible children
-      return filteredChildren.length > 0;
+      const filteredChildren = item.children.filter(child => hasPermission(child.requiredPermission, can));
+      // Only show parent if it has accessible children or no permission requirement
+      return filteredChildren.length > 0 || !item.requiredPermission;
     }
     
     return true;
   }).map(item => ({
     ...item,
-    children: item.children ? item.children.filter(child => hasRequiredAccess(child, user)) : undefined
+    children: item.children ? item.children.filter(child => hasPermission(child.requiredPermission, can)) : undefined
   }));
 }
 
@@ -266,6 +235,7 @@ export function Sidebar({
   const pathname = usePathname();
   const { user } = useAuthStore();
   const { isDark } = useTheme();
+  const { can } = usePermissions();
   const [expandedSections, setExpandedSections] = useState<string[]>([
     "Dashboard",
     "Shipments",
@@ -273,7 +243,7 @@ export function Sidebar({
   ]);
   
   // Filter navigation items based on user permissions
-  const filteredNavigation = filterNavigationItems(navigation, user);
+  const filteredNavigation = filterNavigationItems(navigation, can);
 
   const toggleSection = (sectionName: string) => {
     if (isCollapsed) return; // Don't expand sections when collapsed

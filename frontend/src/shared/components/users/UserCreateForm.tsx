@@ -7,23 +7,63 @@ import { X } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
 import { CreateUserRequest, useCreateUser } from "@/shared/hooks/useUsers";
+import { usePermissions } from "@/contexts/PermissionContext";
 
 interface UserCreateFormProps {
   onClose: () => void;
   onSuccess?: () => void;
 }
 
-const USER_ROLES = [
-  { value: "ADMIN", label: "Admin" },
-  { value: "DISPATCHER", label: "Dispatcher" },
-  { value: "COMPLIANCE_OFFICER", label: "Compliance Officer" },
-  { value: "DRIVER", label: "Driver" },
-  { value: "CUSTOMER", label: "Customer" },
-];
 
 export function UserCreateForm({ onClose, onSuccess }: UserCreateFormProps) {
+  const { can } = usePermissions();
   const createUserMutation = useCreateUser();
   const [showPassword, setShowPassword] = useState(false);
+
+  // Early access check - if user can't create users, show access denied
+  if (!can('users.create')) {
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
+          <div className="text-center py-8">
+            <h2 className="text-xl font-semibold text-gray-900 mb-4">Access Denied</h2>
+            <p className="text-gray-600 mb-6">
+              You don't have permission to create users.
+            </p>
+            <Button onClick={onClose} className="w-full">
+              Close
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Get available role options based on current user's permissions
+  const getRoleOptions = () => {
+    const options = [
+      { value: "DRIVER", label: "Driver", description: "Basic driver access" },
+      { value: "COMPLIANCE_OFFICER", label: "Compliance Officer", description: "Compliance oversight" },
+      { value: "CUSTOMER", label: "Customer", description: "Customer portal access" },
+    ];
+
+    // Add dispatcher role if user can assign it
+    if (can('users.edit.role')) {
+      options.push({ value: "DISPATCHER", label: "Dispatcher", description: "Operational control" });
+    }
+
+    // Add manager role if user has manager assignment permission
+    if (can('users.assign.manager')) {
+      options.push({ value: "MANAGER", label: "Manager", description: "Management access" });
+    }
+
+    // Add admin role if user has admin assignment permission  
+    if (can('users.assign.admin')) {
+      options.push({ value: "ADMIN", label: "Admin", description: "Full system access" });
+    }
+
+    return options;
+  };
 
   const {
     register,
@@ -42,6 +82,12 @@ export function UserCreateForm({ onClose, onSuccess }: UserCreateFormProps) {
   const password = watch("password");
 
   const onSubmit = async (data: CreateUserRequest) => {
+    // Early permission check for creating users
+    if (!can('users.create')) {
+      toast.error("You don't have permission to create users");
+      return;
+    }
+
     try {
       await createUserMutation.mutateAsync(data);
       toast.success("User created successfully!");
@@ -155,8 +201,8 @@ export function UserCreateForm({ onClose, onSuccess }: UserCreateFormProps) {
               {...register("role", { required: "Role is required" })}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
-              {USER_ROLES.map((role) => (
-                <option key={role.value} value={role.value}>
+              {getRoleOptions().map((role) => (
+                <option key={role.value} value={role.value} title={role.description}>
                   {role.label}
                 </option>
               ))}
@@ -227,31 +273,35 @@ export function UserCreateForm({ onClose, onSuccess }: UserCreateFormProps) {
           </div>
 
           {/* Status Checkboxes */}
-          <div className="space-y-2">
-            <div className="flex items-center">
-              <input
-                type="checkbox"
-                {...register("is_active")}
-                id="is_active"
-                defaultChecked
-                className="mr-2"
-              />
-              <label htmlFor="is_active" className="text-sm text-gray-600">
-                Active user
-              </label>
+          {can('users.edit.status') && (
+            <div className="space-y-2">
+              <div className="flex items-center">
+                <input
+                  type="checkbox"
+                  {...register("is_active")}
+                  id="is_active"
+                  defaultChecked
+                  className="mr-2"
+                />
+                <label htmlFor="is_active" className="text-sm text-gray-600">
+                  Active user
+                </label>
+              </div>
+              {can('users.assign.admin') && (
+                <div className="flex items-center">
+                  <input
+                    type="checkbox"
+                    {...register("is_staff")}
+                    id="is_staff"
+                    className="mr-2"
+                  />
+                  <label htmlFor="is_staff" className="text-sm text-gray-600">
+                    Staff user (admin privileges)
+                  </label>
+                </div>
+              )}
             </div>
-            <div className="flex items-center">
-              <input
-                type="checkbox"
-                {...register("is_staff")}
-                id="is_staff"
-                className="mr-2"
-              />
-              <label htmlFor="is_staff" className="text-sm text-gray-600">
-                Staff user (admin privileges)
-              </label>
-            </div>
-          </div>
+          )}
 
           {/* Action Buttons */}
           <div className="flex gap-3 pt-4">

@@ -35,7 +35,7 @@ import {
 } from "lucide-react";
 import { DashboardLayout } from "@/shared/components/layout/dashboard-layout";
 import { AuthGuard } from "@/shared/components/common/auth-guard";
-import { useRoleBasedAccess } from "@/shared/hooks/useRoleBasedAccess";
+import { usePermissions } from "@/contexts/PermissionContext";
 
 // Component imports
 import SDSUploadModal from "@/shared/components/sds/SDSUploadModal";
@@ -69,7 +69,7 @@ const SDSViewer = dynamic(() => import("@/shared/components/sds/SDSViewer"), {
 
 export default function UnifiedSDSPage() {
   // Role-based access control
-  const access = useRoleBasedAccess();
+  const { can, canUploadSDS, canAccessEmergencyInfo } = usePermissions();
 
   // Determine interface mode based on role and screen size
   const [interfaceMode, setInterfaceMode] = useState<'library' | 'emergency' | 'enhanced' | 'mobile'>('library');
@@ -107,18 +107,18 @@ export default function UnifiedSDSPage() {
   const bulkStatusUpdate = useSDSBulkStatusUpdate();
   const bulkDownload = useSDSBulkDownload();
 
-  // Determine default interface mode based on user role
+  // Determine default interface mode based on user permissions
   useEffect(() => {
-    if (access.isEmergencyResponder) {
+    if (canAccessEmergencyInfo && can('emergency.procedures.view')) {
       setInterfaceMode('emergency');
-    } else if (access.isDriver) {
+    } else if (can('shipments.view.own')) {
       setInterfaceMode('mobile');
-    } else if (access.hasAccess('sds_upload')) {
+    } else if (canUploadSDS) {
       setInterfaceMode('enhanced');
     } else {
       setInterfaceMode('library');
     }
-  }, [access]);
+  }, [canAccessEmergencyInfo, canUploadSDS, can]);
 
   // Get user location for emergency mode
   useEffect(() => {

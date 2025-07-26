@@ -4,6 +4,7 @@ import { toast } from "react-hot-toast";
 import { AlertTriangle, X } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
 import { useDeleteUser, User } from "@/shared/hooks/useUsers";
+import { usePermissions } from "@/contexts/PermissionContext";
 
 interface UserDeleteDialogProps {
   user: User;
@@ -16,9 +17,35 @@ export function UserDeleteDialog({
   onClose,
   onSuccess,
 }: UserDeleteDialogProps) {
+  const { can } = usePermissions();
   const deleteUserMutation = useDeleteUser();
 
+  // Early access check - if user can't delete users, show access denied
+  if (!can('users.delete')) {
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
+          <div className="text-center py-8">
+            <h2 className="text-xl font-semibold text-gray-900 mb-4">Access Denied</h2>
+            <p className="text-gray-600 mb-6">
+              You don't have permission to delete users.
+            </p>
+            <Button onClick={onClose} className="w-full">
+              Close
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   const handleDelete = async () => {
+    // Early permission check for deleting users
+    if (!can('users.delete')) {
+      toast.error("You don't have permission to delete users");
+      return;
+    }
+
     try {
       await deleteUserMutation.mutateAsync(user.id);
       toast.success("User deleted successfully!");

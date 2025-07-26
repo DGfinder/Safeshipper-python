@@ -80,3 +80,80 @@ All plans will follow this consistent format to ensure clarity.
 ## Review Summary
 
 A detailed summary of the completed work, including a list of all files created or modified and confirmation that all acceptance criteria have been met.
+
+---
+
+## Permission-Based Development Protocol
+
+SafeShipper follows the **"Build Once, Render for Permissions"** architectural pattern. All new features and components must adhere to this pattern.
+
+### Core Principle
+Never create separate components for different user roles. Instead, build unified components that conditionally render features based on granular permissions.
+
+### Permission System Usage
+
+#### 1. Component Development
+When building any new component or feature:
+
+```typescript
+// ✅ DO: Use permission-based conditional rendering
+function FeatureComponent() {
+  const { can, hasAnyRole } = usePermissions();
+  
+  return (
+    <div>
+      <BaseFeature />
+      {can('feature.advanced') && <AdvancedFeature />}
+      {can('feature.edit') && <EditControls />}
+      {hasAnyRole(['admin', 'manager']) && <AdminControls />}
+    </div>
+  );
+}
+
+// ❌ DON'T: Create role-specific components
+function AdminFeatureComponent() { /* ... */ }
+function UserFeatureComponent() { /* ... */ }
+```
+
+#### 2. Navigation Items
+All navigation items must use the `requiredPermission` property:
+
+```typescript
+const navigationItem = {
+  name: "Feature Name",
+  href: "/feature",
+  icon: FeatureIcon,
+  requiredPermission: "feature.view" // Single permission string
+};
+```
+
+#### 3. Permission Naming Convention
+Follow the `domain.action.scope?` pattern:
+- `user.view` - View users
+- `fleet.analytics.export` - Export fleet analytics
+- `shipments.view.own` - View own shipments only
+
+### Updated Security Review Checklist
+
+When implementing new features, verify:
+
+- **Permission Implementation**: Does the feature use the unified PermissionContext?
+- **Granular Access Control**: Are permissions specific enough to provide proper access control?
+- **No Role Duplication**: Have you avoided creating separate components for different roles?
+- **Type Safety**: Are all permission strings properly typed and validated?
+- **Consistent Patterns**: Does the implementation follow established permission patterns?
+- **Defense in Depth**: Are permissions checked at multiple component levels?
+
+### Required Documentation References
+- **Architecture Guide**: See `FRONTEND_ARCHITECTURE_GUIDE.md` for detailed patterns
+- **Implementation Details**: See `PERMISSION_SYSTEM_REFACTOR_SUMMARY.md` for technical specifications
+- **Migration Guide**: See `COMPONENT_MIGRATION_GUIDE.md` for converting existing components
+
+### Development Workflow Integration
+1. **Analysis**: Identify all permission requirements for the feature
+2. **Permission Definition**: Add required permissions to `PermissionContext.tsx`
+3. **Implementation**: Build unified components with conditional rendering
+4. **Testing**: Test with different user roles to verify access control
+5. **Security Review**: Ensure proper permission boundaries and no access bypasses
+
+---

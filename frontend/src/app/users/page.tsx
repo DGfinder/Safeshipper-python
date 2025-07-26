@@ -26,7 +26,7 @@ import { useUsers, User } from "@/shared/hooks/useUsers";
 import { UserCreateForm } from "@/shared/components/users/UserCreateForm";
 import { UserEditForm } from "@/shared/components/users/UserEditForm";
 import { UserDeleteDialog } from "@/shared/components/users/UserDeleteDialog";
-import { useDemoSecurity } from "@/shared/hooks/useDemoSecurity";
+import { usePermissions } from "@/contexts/PermissionContext";
 
 export default function UsersPage() {
   const [showCreateForm, setShowCreateForm] = useState(false);
@@ -35,7 +35,23 @@ export default function UsersPage() {
   const [searchTerm, setSearchTerm] = useState("");
 
   const { data: users, isLoading, error, refetch } = useUsers();
-  const { executeWithPermission } = useDemoSecurity();
+  const { can } = usePermissions();
+
+  // Early access check - if user can't view users, show access denied
+  if (!can('users.view')) {
+    return (
+      <DashboardLayout>
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center">
+            <h2 className="text-2xl font-semibold text-gray-900 mb-4">Access Denied</h2>
+            <p className="text-gray-600">
+              You don't have permission to view user management.
+            </p>
+          </div>
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   // Filter users based on search term
   const filteredUsers = useMemo(() => {
@@ -134,16 +150,15 @@ export default function UsersPage() {
               Manage system users, roles, and permissions
             </p>
           </div>
-          <Button
-            className="bg-[#153F9F] hover:bg-blue-700"
-            onClick={() => executeWithPermission(
-              'user_management',
-              () => setShowCreateForm(true)
-            )}
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            Add User
-          </Button>
+          {can('users.create') && (
+            <Button
+              className="bg-[#153F9F] hover:bg-blue-700"
+              onClick={() => setShowCreateForm(true)}
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              Add User
+            </Button>
+          )}
         </div>
 
         {/* Search and Filters */}
@@ -279,24 +294,25 @@ export default function UsersPage() {
                         </td>
                         <td className="py-3 px-4">
                           <div className="flex items-center space-x-2">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => setEditingUser(user)}
-                            >
-                              <Edit2 className="w-4 h-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => executeWithPermission(
-                                'user_management',
-                                () => setDeletingUser(user)
-                              )}
-                              className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
+                            {can('users.edit') && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setEditingUser(user)}
+                              >
+                                <Edit2 className="w-4 h-4" />
+                              </Button>
+                            )}
+                            {can('users.delete') && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setDeletingUser(user)}
+                                className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            )}
                           </div>
                         </td>
                       </tr>

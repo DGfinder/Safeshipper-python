@@ -63,13 +63,19 @@ export interface FleetStatusResponse {
 const API_BASE_URL = "/api/v1";
 
 // API Functions
-async function getFleetStatus(token: string): Promise<FleetStatusResponse> {
+async function getFleetStatus(token?: string): Promise<FleetStatusResponse> {
+  const headers: HeadersInit = {
+    "Content-Type": "application/json",
+  };
+  
+  // Only add Authorization header if token is provided
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
+  }
+  
   const response = await fetch(`${API_BASE_URL}/tracking/fleet-status/`, {
     method: "GET",
-    headers: {
-      Authorization: `Bearer ${token}`,
-      "Content-Type": "application/json",
-    },
+    headers,
   });
 
   if (!response.ok) {
@@ -87,10 +93,10 @@ export function useFleetStatus(pollingInterval = 10000) {
   return useQuery({
     queryKey: ["fleet-status"],
     queryFn: () => {
-      const token = getToken() || "demo-token"; // Bypass for demo
+      const token = getToken(); // Optional token
       return getFleetStatus(token);
     },
-    enabled: true, // Always enabled for demo
+    enabled: true, // Always enabled - backend handles auth
     refetchInterval: pollingInterval,
     refetchIntervalInBackground: true,
   });

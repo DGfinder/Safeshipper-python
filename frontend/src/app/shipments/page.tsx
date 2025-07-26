@@ -48,6 +48,7 @@ import {
   type SemanticAnalysis,
 } from "@/services/semanticSearchService";
 import { simulatedDataService } from "@/shared/services/simulatedDataService";
+import { usePermissions } from "@/contexts/PermissionContext";
 
 const getStatusColor = (status: string) => {
   switch (status) {
@@ -101,10 +102,27 @@ const getDGClassColor = (dgClass: string) => {
 };
 
 export default function ShipmentsPage() {
+  const { can } = usePermissions();
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [dgFilter, setDgFilter] = useState("all");
   const [dateFilter, setDateFilter] = useState("all");
+
+  // Early access check - if user can't view shipments, show access denied
+  if (!can('shipments.view.all') && !can('shipments.view.own')) {
+    return (
+      <DashboardLayout>
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center">
+            <h2 className="text-2xl font-semibold text-gray-900 mb-4">Access Denied</h2>
+            <p className="text-gray-600">
+              You don't have permission to view shipments.
+            </p>
+          </div>
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   // AI Search State
   const [isSemanticSearch, setIsSemanticSearch] = useState(false);
@@ -319,21 +337,25 @@ export default function ShipmentsPage() {
               </div>
             </div>
             <div className="flex gap-3">
-              <Link href="/shipments/manifest-upload">
-                <Button 
-                  variant="outline" 
-                  className="flex items-center gap-2 bg-white/10 border-white/20 text-white hover:bg-white/20 backdrop-blur-sm"
-                >
-                  <Package className="h-4 w-4" />
-                  Upload Manifest
-                </Button>
-              </Link>
-              <Link href="/shipments/create">
-                <Button className="flex items-center gap-2 bg-white text-blue-600 hover:bg-blue-50 shadow-md">
-                  <Plus className="h-4 w-4" />
-                  Create Shipment
-                </Button>
-              </Link>
+              {can('shipments.manifest.upload') && (
+                <Link href="/shipments/manifest-upload">
+                  <Button 
+                    variant="outline" 
+                    className="flex items-center gap-2 bg-white/10 border-white/20 text-white hover:bg-white/20 backdrop-blur-sm"
+                  >
+                    <Package className="h-4 w-4" />
+                    Upload Manifest
+                  </Button>
+                </Link>
+              )}
+              {can('shipment.creation') && (
+                <Link href="/shipments/create">
+                  <Button className="flex items-center gap-2 bg-white text-blue-600 hover:bg-blue-50 shadow-md">
+                    <Plus className="h-4 w-4" />
+                    Create Shipment
+                  </Button>
+                </Link>
+              )}
             </div>
           </div>
         </div>

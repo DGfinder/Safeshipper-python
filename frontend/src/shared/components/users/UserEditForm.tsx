@@ -7,6 +7,7 @@ import { X } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
 import { UpdateUserRequest, useUpdateUser, User } from "@/shared/hooks/useUsers";
+import { usePermissions } from "@/contexts/PermissionContext";
 
 interface UserEditFormProps {
   user: User;
@@ -14,16 +15,54 @@ interface UserEditFormProps {
   onSuccess?: () => void;
 }
 
-const USER_ROLES = [
-  { value: "ADMIN", label: "Admin" },
-  { value: "DISPATCHER", label: "Dispatcher" },
-  { value: "COMPLIANCE_OFFICER", label: "Compliance Officer" },
-  { value: "DRIVER", label: "Driver" },
-  { value: "CUSTOMER", label: "Customer" },
-];
-
 export function UserEditForm({ user, onClose, onSuccess }: UserEditFormProps) {
+  const { can } = usePermissions();
   const updateUserMutation = useUpdateUser();
+
+  // Early access check - if user can't even view users, show access denied
+  if (!can('users.view')) {
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
+          <div className="text-center py-8">
+            <h2 className="text-xl font-semibold text-gray-900 mb-4">Access Denied</h2>
+            <p className="text-gray-600 mb-6">
+              You don't have permission to view user details.
+            </p>
+            <Button onClick={onClose} className="w-full">
+              Close
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Get available role options based on current user's permissions
+  const getRoleOptions = () => {
+    const options = [
+      { value: "DRIVER", label: "Driver", description: "Basic driver access" },
+      { value: "COMPLIANCE_OFFICER", label: "Compliance Officer", description: "Compliance oversight" },
+      { value: "CUSTOMER", label: "Customer", description: "Customer portal access" },
+    ];
+
+    // Add operator role if user can assign it
+    if (can('users.edit.role')) {
+      options.push({ value: "DISPATCHER", label: "Dispatcher", description: "Operational control" });
+    }
+
+    // Add manager role if user has manager assignment permission
+    if (can('users.assign.manager')) {
+      options.push({ value: "MANAGER", label: "Manager", description: "Management access" });
+    }
+
+    // Add admin role if user has admin assignment permission  
+    if (can('users.assign.admin')) {
+      options.push({ value: "ADMIN", label: "Admin", description: "Full system access" });
+    }
+
+    return options;
+  };
 
   const {
     register,
@@ -46,6 +85,12 @@ export function UserEditForm({ user, onClose, onSuccess }: UserEditFormProps) {
   }, [user, reset]);
 
   const onSubmit = async (data: UpdateUserRequest) => {
+    // Early permission check for editing users
+    if (!can('users.edit')) {
+      toast.error("You don't have permission to edit users");
+      return;
+    }
+
     try {
       await updateUserMutation.mutateAsync({ id: user.id, data });
       toast.success("User updated successfully!");
@@ -133,50 +178,70 @@ export function UserEditForm({ user, onClose, onSuccess }: UserEditFormProps) {
           </div>
 
           {/* Role */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Role <span className="text-red-500">*</span>
-            </label>
-            <select
-              {...register("role", { required: "Role is required" })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            >
-              {USER_ROLES.map((role) => (
-                <option key={role.value} value={role.value}>
-                  {role.label}
-                </option>
-              ))}
-            </select>
-            {errors.role && (
-              <p className="text-red-500 text-sm mt-1">{errors.role.message}</p>
-            )}
-          </div>
+          {can('users.edit.role') ? (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Role <span className="text-red-500">*</span>
+              </label>
+              <select
+                {...register("role", { required: "Role is required" })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                {getRoleOptions().map((role) => (
+                  <option key={role.value} value={role.value} title={role.description}>
+                    {role.label}
+                  </option>
+                ))}
+              </select>
+              {errors.role && (
+                <p className="text-red-500 text-sm mt-1">{errors.role.message}</p>
+              )}
+            </div>
+          ) : (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Role
+              </label>
+              <Input
+                value={user.role_display || user.role}
+                disabled
+                className="bg-gray-100 text-gray-600"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                You don't have permission to change user roles
+              </p>
+            </div>
+          )}
 
           {/* Status Checkboxes */}
-          <div className="space-y-2">
-            <div className="flex items-center">
-              <input
-                type="checkbox"
-                {...register("is_active")}
-                id="is_active"
-                className="mr-2"
-              />
-              <label htmlFor="is_active" className="text-sm text-gray-600">
-                Active user
-              </label>
+          {can('users.edit.status') && (
+            <div className="space-y-2">
+              <div className="flex items-center">
+                <input
+                  type="checkbox"
+                  {...register("is_active")}
+                  id="is_active"
+                  className="mr-2"
+                />
+                <label htmlFor="is_active" className="text-sm text-gray-600">
+                  Active user
+                </label>
+              </div>
+              {can('users.assign.admin') && (
+                <div className="flex items-center">
+                  <input
+                    type="checkbox"
+                    {...register("is_staff")}
+                    id="is_staff"
+                    className="mr-2"
+                  />
+                  <label htmlFor="is_staff" className="text-sm text-gray-600">
+                    Staff user (admin privileges)
+                  </label>
+                </div>
+              )}
             </div>
-            <div className="flex items-center">
-              <input
-                type="checkbox"
-                {...register("is_staff")}
-                id="is_staff"
-                className="mr-2"
-              />
-              <label htmlFor="is_staff" className="text-sm text-gray-600">
-                Staff user (admin privileges)
-              </label>
-            </div>
-          </div>
+          )}
 
           {/* Password Change Note */}
           <div className="bg-blue-50 border border-blue-200 rounded-md p-3">
@@ -195,15 +260,17 @@ export function UserEditForm({ user, onClose, onSuccess }: UserEditFormProps) {
               className="flex-1"
               disabled={isSubmitting}
             >
-              Cancel
+              {can('users.edit') ? 'Cancel' : 'Close'}
             </Button>
-            <Button
-              type="submit"
-              className="flex-1 bg-[#153F9F] hover:bg-blue-700"
-              disabled={isSubmitting}
-            >
-              {isSubmitting ? "Updating..." : "Update User"}
-            </Button>
+            {can('users.edit') && (
+              <Button
+                type="submit"
+                className="flex-1 bg-[#153F9F] hover:bg-blue-700"
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? "Updating..." : "Update User"}
+              </Button>
+            )}
           </div>
         </form>
       </div>

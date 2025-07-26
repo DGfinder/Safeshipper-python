@@ -11,7 +11,7 @@ import { Alert, AlertDescription } from "@/shared/components/ui/alert";
 import { Progress } from "@/shared/components/ui/progress";
 import { DashboardLayout } from "@/shared/components/layout/dashboard-layout";
 import { AuthGuard } from "@/shared/components/common/auth-guard";
-import { useRoleBasedAccess } from "@/shared/hooks/useRoleBasedAccess";
+import { usePermissions } from "@/contexts/PermissionContext";
 
 // Chart components
 import {
@@ -169,7 +169,7 @@ const mockTrends = [
 ];
 
 export default function UnifiedAnalyticsPage() {
-  const access = useRoleBasedAccess();
+  const { can, hasAnyRole, canViewAnalytics } = usePermissions();
   const { loadTime } = usePerformanceMonitoring('UnifiedAnalyticsPage');
   const { preferences } = useAccessibility();
   const { isDark } = useTheme();
@@ -188,33 +188,33 @@ export default function UnifiedAnalyticsPage() {
   const { data: podStats, isLoading: podLoading } = usePODStats();
   const { data: recentShipments, isLoading: shipmentsLoading } = useRecentShipments(5);
 
-  // Get available tabs based on role
+  // Get available tabs based on permissions
   const getAvailableTabs = () => {
     const tabs = [];
     
     // Dashboard - always available
     tabs.push({ value: 'dashboard', label: 'Dashboard', icon: Layout });
     
-    // Performance analytics - for supervisors and above
-    if (access.hasMinimumRole('SUPERVISOR')) {
+    // Performance analytics - for operators and above
+    if (can('analytics.operational')) {
       tabs.push({ value: 'performance', label: 'Performance', icon: TrendingUp });
     }
     
-    // Compliance - for managers and above, or auditors
-    if (access.hasMinimumRole('MANAGER') || access.isAuditor) {
+    // Compliance - for managers and above
+    if (can('analytics.insights') || hasAnyRole(['manager', 'admin'])) {
       tabs.push({ value: 'compliance', label: 'Compliance', icon: Shield });
     }
     
-    // Incidents - for supervisors and above
-    if (access.hasMinimumRole('SUPERVISOR')) {
+    // Incidents - for operators and above
+    if (can('analytics.operational')) {
       tabs.push({ value: 'incidents', label: 'Incidents', icon: AlertTriangle });
     }
     
     // Real-time - for all authenticated users
     tabs.push({ value: 'realtime', label: 'Real-time', icon: Activity });
     
-    // AI Insights - only for admins and managers
-    if (access.hasAccess('analytics_full_access') || access.hasAccess('analytics_insights')) {
+    // AI Insights - only for users with analytics insights access
+    if (can('analytics.full.access') || can('analytics.insights')) {
       tabs.push({ value: 'insights', label: 'AI Insights', icon: Brain });
     }
 

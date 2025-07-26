@@ -24,6 +24,7 @@ const DynamicAccessibilityProvider = dynamic(
 
 // Import theme provider normally as it's designed to handle SSR
 import { ThemeProvider } from "@/contexts/ThemeContext";
+import { PermissionProvider } from "@/contexts/PermissionContext";
 
 // Error boundary for provider initialization failures
 interface ProviderErrorBoundaryState {
@@ -146,12 +147,14 @@ function ProviderWrapper({ children }: { children: React.ReactNode }) {
               <p className="text-yellow-800">Some features may not be available. The application will continue to work with basic functionality.</p>
             </div>
           }>
-            <DynamicAccessibilityProvider>
-              <DynamicWebSocketProvider>
-                {children}
-                <PerformanceMonitor />
-              </DynamicWebSocketProvider>
-            </DynamicAccessibilityProvider>
+            <PermissionProvider>
+              <DynamicAccessibilityProvider>
+                <DynamicWebSocketProvider>
+                  {children}
+                  <PerformanceMonitor />
+                </DynamicWebSocketProvider>
+              </DynamicAccessibilityProvider>
+            </PermissionProvider>
           </ProviderErrorBoundary>
         ) : (
           // SSR fallback - render children without client-specific providers
