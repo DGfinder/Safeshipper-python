@@ -1,15 +1,20 @@
 "use client";
 
 import React from "react";
-import { useFleetStatus } from "@/shared/hooks/useFleetTracking";
-import { useMockFleetStatus } from "@/shared/hooks/useMockAPI";
+import { useFleetStatus } from "@/shared/hooks/useVehicles";
+import { useAuth } from "@/shared/hooks/use-auth";
 import { VehicleList } from "@/features/fleet/components";
 import { usePermissions } from "@/contexts/PermissionContext";
 import { Loader2 } from "lucide-react";
 
 export default function VehiclesPage() {
   const { can } = usePermissions();
-  const { data: fleetData, isLoading, refetch } = useMockFleetStatus();
+  const { user } = useAuth();
+  const { data: fleetData, isLoading, refetch } = useFleetStatus(
+    10000,
+    user?.role,
+    user?.id
+  );
 
   // Early access check - if user can't view vehicles, show access denied
   if (!can('vehicle.view')) {

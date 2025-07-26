@@ -33,6 +33,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny
 from django.utils import timezone
+from tracking.public_views import public_tracking
 
 # Simple health check endpoint
 class HealthCheckView(APIView):
@@ -115,6 +116,9 @@ urlpatterns = [
         path('manifests/', include('manifests.urls')),  # Re-enabled after fixing documents dependencies
         # Basic search endpoints
         path('search/popular/', PopularSearchesView.as_view(), name='popular-searches'),
+        # Public tracking endpoint (matches frontend expectation)
+        path('public/tracking/<str:tracking_number>/', 
+             public_tracking, name='public_shipment_tracking'),
         # Temporarily disabled apps:
         # path('locations/', include('locations.urls')),
         # path('hazard-assessments/', include('hazard_assessments.urls')),

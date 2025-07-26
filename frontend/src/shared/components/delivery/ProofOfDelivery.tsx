@@ -20,7 +20,7 @@ import {
   X,
   Eye,
 } from "lucide-react";
-import { useMockSubmitPOD } from "@/shared/hooks/useMockAPI";
+import { useSubmitProofOfDelivery } from "@/shared/hooks/useShipmentsReal";
 
 interface ProofOfDeliveryProps {
   shipmentId: string;
@@ -54,7 +54,7 @@ export function ProofOfDelivery({
   const [isDrawing, setIsDrawing] = useState(false);
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const submitPODMutation = useMockSubmitPOD();
+  const submitPODMutation = useSubmitProofOfDelivery();
 
   // Mock signature drawing functionality
   const handleCanvasMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
@@ -132,10 +132,11 @@ export function ProofOfDelivery({
 
     try {
       const podData = await submitPODMutation.mutateAsync({
-        shipmentId,
+        shipment_id: shipmentId,
         signature,
         photos: photos.map((p) => p.url),
         recipient: `${recipientName}${recipientTitle ? ` - ${recipientTitle}` : ""}`,
+        delivery_notes: deliveryNotes,
       });
 
       setStep("complete");

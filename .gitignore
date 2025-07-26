@@ -202,3 +202,10 @@ config.local.json
 **/*secrets*.json
 **/api-keys.json
 **/*api-keys*.json
+
+# ================================================
+# PROJECT ARCHIVE
+# ================================================
+
+# Archived files and directories
+archive/

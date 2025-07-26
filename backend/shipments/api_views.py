@@ -184,7 +184,7 @@ class ShipmentViewSet(viewsets.ModelViewSet):
         """Add a new event/comment to shipment - matches frontend mock API structure."""
         shipment = self.get_object()
         
-        event_type = request.data.get('eventType', 'COMMENT')
+        event_type = request.data.get('event_type', 'COMMENT')
         details = request.data.get('details', '')
         
         if not details:
@@ -214,6 +214,138 @@ class ShipmentViewSet(viewsets.ModelViewSet):
         shipment.save(update_fields=['notes', 'updated_at'])
         
         return Response(new_event, status=status.HTTP_201_CREATED)
+
+    @action(detail=True, methods=['get'], url_path='inspections')
+    def get_shipment_inspections(self, request, pk=None):
+        """Get inspections for this shipment - matches frontend mock API structure."""
+        shipment = self.get_object()
+        
+        try:
+            from inspections.models import Inspection
+            inspections = Inspection.objects.filter(
+                shipment=shipment
+            ).select_related('inspector').prefetch_related('items__photos').order_by('-created_at')
+            
+            inspections_data = []
+            for inspection in inspections:
+                items_data = []
+                for item in inspection.items.all():
+                    photos = []
+                    if hasattr(item, 'photos'):
+                        photos = [photo.image.url for photo in item.photos.all() if photo.image]
+                    
+                    items_data.append({
+                        'id': str(item.id),
+                        'description': item.description,
+                        'status': item.result,
+                        'photos': photos,
+                        'notes': item.notes or '',
+                    })
+                
+                inspections_data.append({
+                    'id': str(inspection.id),
+                    'shipment_id': str(inspection.shipment.id),
+                    'inspector': {
+                        'name': f"{inspection.inspector.first_name} {inspection.inspector.last_name}".strip(),
+                        'role': getattr(inspection.inspector, 'role', 'INSPECTOR')
+                    },
+                    'inspection_type': inspection.inspection_type,
+                    'timestamp': inspection.created_at.isoformat(),
+                    'status': inspection.status,
+                    'items': items_data,
+                })
+            
+            return Response(inspections_data)
+            
+        except ImportError:
+            # Inspections app not available
+            return Response([])
+        except Exception as e:
+            logger.error(f"Error getting inspections for shipment {shipment.id}: {str(e)}")
+            return Response(
+                {'error': 'An error occurred while retrieving inspections'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+    @action(detail=True, methods=['post'], url_path='inspections')
+    def create_shipment_inspection(self, request, pk=None):
+        """Create a new inspection for this shipment - matches frontend mock API structure."""
+        shipment = self.get_object()
+        
+        inspection_type = request.data.get('inspection_type', 'PRE_TRIP')
+        items = request.data.get('items', [])
+        
+        if not items:
+            return Response(
+                {'error': 'items field is required'}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        try:
+            from inspections.models import Inspection, InspectionItem
+            
+            # Create inspection
+            inspection = Inspection.objects.create(
+                shipment=shipment,
+                inspector=request.user,
+                inspection_type=inspection_type,
+                status='COMPLETED',
+                overall_result='PASS',  # Will be calculated from items
+                started_at=timezone.now(),
+                completed_at=timezone.now()
+            )
+            
+            # Create inspection items
+            items_data = []
+            for item_data in items:
+                item = InspectionItem.objects.create(
+                    inspection=inspection,
+                    description=item_data.get('description', ''),
+                    result=item_data.get('status', 'PASS'),
+                    notes=item_data.get('notes', ''),
+                    is_required=True
+                )
+                items_data.append({
+                    'id': str(item.id),
+                    'description': item.description,
+                    'status': item.result,
+                    'photos': [],  # No photos in this simplified version
+                    'notes': item.notes,
+                })
+            
+            # Calculate overall result
+            has_failures = any(item.result == 'FAIL' for item in inspection.items.all())
+            inspection.overall_result = 'FAIL' if has_failures else 'PASS'
+            inspection.save()
+            
+            # Return response in expected format
+            response_data = {
+                'id': str(inspection.id),
+                'shipment_id': str(inspection.shipment.id),
+                'inspector': {
+                    'name': f"{inspection.inspector.first_name} {inspection.inspector.last_name}".strip(),
+                    'role': getattr(inspection.inspector, 'role', 'INSPECTOR')
+                },
+                'inspection_type': inspection.inspection_type,
+                'timestamp': inspection.created_at.isoformat(),
+                'status': inspection.status,
+                'items': items_data,
+            }
+            
+            return Response(response_data, status=status.HTTP_201_CREATED)
+            
+        except ImportError:
+            # Inspections app not available
+            return Response(
+                {'error': 'Inspections functionality not available'},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE
+            )
+        except Exception as e:
+            logger.error(f"Error creating inspection for shipment {shipment.id}: {str(e)}")
+            return Response(
+                {'error': 'An error occurred while creating the inspection'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
     @action(detail=True, methods=['post'], url_path='submit-pod')
     def submit_pod(self, request, pk=None):
@@ -317,6 +449,50 @@ class ShipmentViewSet(viewsets.ModelViewSet):
             return Response(
                 {"detail": str(e)}, 
                 status=status.HTTP_403_FORBIDDEN
+            )
+
+    @action(detail=True, methods=['post'], url_path='assign-driver')
+    def assign_driver(self, request, pk=None):
+        """Assign a driver to the shipment - matches frontend API structure."""
+        shipment = self.get_object()
+        driver_id = request.data.get('driver_id')
+        
+        if not driver_id:
+            return Response(
+                {'error': 'driver_id is required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        try:
+            from django.contrib.auth import get_user_model
+            User = get_user_model()
+            driver = User.objects.get(id=driver_id)
+            
+            # Validate driver role if available
+            if hasattr(driver, 'role') and driver.role != 'DRIVER':
+                return Response(
+                    {'error': 'Selected user is not a driver'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            # Assign driver to shipment
+            shipment.assigned_driver = driver
+            shipment.save(update_fields=['assigned_driver', 'updated_at'])
+            
+            # Return updated shipment
+            serializer = self.get_serializer(shipment)
+            return Response(serializer.data)
+            
+        except User.DoesNotExist:
+            return Response(
+                {'error': 'Driver not found'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        except Exception as e:
+            logger.error(f"Error assigning driver to shipment {shipment.id}: {str(e)}")
+            return Response(
+                {'error': 'An error occurred while assigning the driver'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
     
     @action(detail=True, methods=['post'], url_path='finalize-from-manifest')

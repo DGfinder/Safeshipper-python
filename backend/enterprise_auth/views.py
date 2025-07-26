@@ -35,19 +35,118 @@ class GoogleLogin(APIView):
     permission_classes = [AllowAny]
     
     def post(self, request, *args, **kwargs):
-        """Custom Google login with JWT response"""
+        """Handle Google OAuth2 login with JWT response"""
         try:
-            # For now, return a placeholder response
-            return Response({
-                'message': 'Google SSO login endpoint - Implementation pending',
-                'status': 'disabled'
-            }, status=status.HTTP_501_NOT_IMPLEMENTED)
+            access_token = request.data.get('access_token')
+            id_token = request.data.get('id_token')
             
+            if not access_token and not id_token:
+                return Response({
+                    'error': 'Access token or ID token required'
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            # Import here to handle potential missing dependency gracefully
+            try:
+                from google.oauth2 import id_token as google_id_token
+                from google.auth.transport import requests as google_requests
+            except ImportError:
+                logger.error("Google auth libraries not installed")
+                return Response({
+                    'error': 'Google authentication not configured'
+                }, status=status.HTTP_501_NOT_IMPLEMENTED)
+            
+            # Verify the token with Google
+            try:
+                if id_token:
+                    # Verify ID token
+                    client_id = settings.SOCIALACCOUNT_PROVIDERS['google']['APP']['client_id']
+                    if not client_id:
+                        raise ValueError("Google client ID not configured")
+                    
+                    idinfo = google_id_token.verify_oauth2_token(
+                        id_token, google_requests.Request(), client_id
+                    )
+                else:
+                    # For access token, we'd need to make an API call to Google
+                    # This is a simplified implementation
+                    return Response({
+                        'error': 'ID token preferred for verification'
+                    }, status=status.HTTP_400_BAD_REQUEST)
+                
+                # Extract user information
+                email = idinfo.get('email')
+                given_name = idinfo.get('given_name', '')
+                family_name = idinfo.get('family_name', '')
+                google_id = idinfo.get('sub')
+                
+                if not email:
+                    return Response({
+                        'error': 'Email not provided by Google'
+                    }, status=status.HTTP_400_BAD_REQUEST)
+                
+                # Get or create user
+                user, created = User.objects.get_or_create(
+                    email=email,
+                    defaults={
+                        'username': email,
+                        'first_name': given_name,
+                        'last_name': family_name,
+                        'is_active': True
+                    }
+                )
+                
+                # Create or update social account
+                try:
+                    social_account, _ = SocialAccount.objects.get_or_create(
+                        user=user,
+                        provider='google',
+                        defaults={
+                            'uid': google_id,
+                            'extra_data': {
+                                'given_name': given_name,
+                                'family_name': family_name,
+                                'email': email
+                            }
+                        }
+                    )
+                except Exception as e:
+                    logger.warning(f"Social account creation/update failed: {e}")
+                
+                # Create authentication log
+                AuthenticationLog.objects.create(
+                    user=user,
+                    method='GOOGLE_SSO',
+                    ip_address=request.META.get('REMOTE_ADDR'),
+                    user_agent=request.META.get('HTTP_USER_AGENT', ''),
+                    success=True
+                )
+                
+                # Generate JWT tokens
+                refresh = RefreshToken.for_user(user)
+                
+                return Response({
+                    'access_token': str(refresh.access_token),
+                    'refresh_token': str(refresh),
+                    'user': {
+                        'id': user.id,
+                        'email': user.email,
+                        'first_name': user.first_name,
+                        'last_name': user.last_name,
+                        'is_new_user': created
+                    }
+                })
+                
+            except ValueError as e:
+                logger.error(f"Google token verification failed: {e}")
+                return Response({
+                    'error': 'Invalid token'
+                }, status=status.HTTP_400_BAD_REQUEST)
+                
         except Exception as e:
             logger.error(f"Google SSO login error: {str(e)}")
             return Response({
                 'error': 'SSO authentication failed'
-            }, status=status.HTTP_400_BAD_REQUEST)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 class MicrosoftLogin(APIView):
@@ -55,19 +154,107 @@ class MicrosoftLogin(APIView):
     permission_classes = [AllowAny]
     
     def post(self, request, *args, **kwargs):
-        """Custom Microsoft login with JWT response"""
+        """Handle Microsoft OAuth2 login with JWT response"""
         try:
-            # For now, return a placeholder response
-            return Response({
-                'message': 'Microsoft SSO login endpoint - Implementation pending',
-                'status': 'disabled'
-            }, status=status.HTTP_501_NOT_IMPLEMENTED)
+            access_token = request.data.get('access_token')
             
+            if not access_token:
+                return Response({
+                    'error': 'Access token required'
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            # Verify token with Microsoft Graph API
+            try:
+                import requests
+                
+                # Call Microsoft Graph API to get user info
+                graph_response = requests.get(
+                    'https://graph.microsoft.com/v1.0/me',
+                    headers={'Authorization': f'Bearer {access_token}'}
+                )
+                
+                if graph_response.status_code != 200:
+                    return Response({
+                        'error': 'Invalid Microsoft access token'
+                    }, status=status.HTTP_400_BAD_REQUEST)
+                
+                user_info = graph_response.json()
+                
+                # Extract user information
+                email = user_info.get('mail') or user_info.get('userPrincipalName')
+                given_name = user_info.get('givenName', '')
+                family_name = user_info.get('surname', '')
+                microsoft_id = user_info.get('id')
+                
+                if not email:
+                    return Response({
+                        'error': 'Email not provided by Microsoft'
+                    }, status=status.HTTP_400_BAD_REQUEST)
+                
+                # Get or create user
+                user, created = User.objects.get_or_create(
+                    email=email,
+                    defaults={
+                        'username': email,
+                        'first_name': given_name,
+                        'last_name': family_name,
+                        'is_active': True
+                    }
+                )
+                
+                # Create or update social account
+                try:
+                    social_account, _ = SocialAccount.objects.get_or_create(
+                        user=user,
+                        provider='microsoft',
+                        defaults={
+                            'uid': microsoft_id,
+                            'extra_data': {
+                                'givenName': given_name,
+                                'surname': family_name,
+                                'mail': email,
+                                'userPrincipalName': user_info.get('userPrincipalName')
+                            }
+                        }
+                    )
+                except Exception as e:
+                    logger.warning(f"Microsoft social account creation/update failed: {e}")
+                
+                # Create authentication log
+                AuthenticationLog.objects.create(
+                    user=user,
+                    method='MICROSOFT_SSO',
+                    ip_address=request.META.get('REMOTE_ADDR'),
+                    user_agent=request.META.get('HTTP_USER_AGENT', ''),
+                    success=True
+                )
+                
+                # Generate JWT tokens
+                refresh = RefreshToken.for_user(user)
+                
+                return Response({
+                    'access_token': str(refresh.access_token),
+                    'refresh_token': str(refresh),
+                    'user': {
+                        'id': user.id,
+                        'email': user.email,
+                        'first_name': user.first_name,
+                        'last_name': user.last_name,
+                        'is_new_user': created
+                    }
+                })
+                
+            except requests.RequestException as e:
+                logger.error(f"Microsoft Graph API error: {e}")
+                return Response({
+                    'error': 'Failed to verify Microsoft token'
+                }, status=status.HTTP_400_BAD_REQUEST)
+                
         except Exception as e:
             logger.error(f"Microsoft SSO login error: {str(e)}")
             return Response({
                 'error': 'SSO authentication failed'
-            }, status=status.HTTP_400_BAD_REQUEST)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 @api_view(['GET'])

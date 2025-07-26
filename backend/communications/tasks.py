@@ -16,23 +16,35 @@ User = get_user_model()
 @shared_task(bind=True, max_retries=3, default_retry_delay=60)
 def send_email(self, recipient_email: str, subject: str, message: str, html_message: Optional[str] = None):
     """
-    Send email notification task.
-    Supports both plain text and HTML emails.
+    Send email notification task using enhanced email service.
+    Supports both plain text and HTML emails with production features.
     """
     try:
+        from communications.email_service import email_service
+        
         logger.info(f"Sending email to {recipient_email} with subject: {subject}")
         
-        send_mail(
+        # Use the enhanced email service
+        result = email_service.send_email(
+            recipient=recipient_email,
             subject=subject,
             message=message,
-            from_email=settings.DEFAULT_FROM_EMAIL,
-            recipient_list=[recipient_email],
-            html_message=html_message,
-            fail_silently=False
+            html_message=html_message
         )
         
-        logger.info(f"Email sent successfully to {recipient_email}")
-        return {'status': 'success', 'recipient': recipient_email}
+        if result['status'] == 'success':
+            logger.info(f"Email sent successfully to {recipient_email}")
+            return result
+        else:
+            # Raise exception to trigger retry for transient errors
+            error_type = result.get('error_type', 'unknown_error')
+            if error_type == 'validation_error':
+                # Don't retry validation errors
+                logger.error(f"Email validation error for {recipient_email}: {result['error']}")
+                return result
+            
+            # Retry for other errors
+            raise Exception(result['error'])
         
     except Exception as exc:
         logger.error(f"Failed to send email to {recipient_email}: {str(exc)}")
@@ -47,21 +59,28 @@ def send_email(self, recipient_email: str, subject: str, message: str, html_mess
 @shared_task(bind=True, max_retries=3, default_retry_delay=30)
 def send_sms(self, phone_number: str, message: str):
     """
-    Send SMS notification task.
-    TODO: Integrate with SMS provider (Twilio, AWS SNS, etc.)
+    Send SMS notification task via Twilio.
+    Now includes real Twilio integration.
     """
     try:
+        from communications.sms_service import sms_service
+        
         logger.info(f"Sending SMS to {phone_number}")
         
-        # TODO: Implement actual SMS sending
-        # For now, just log the message
-        logger.info(f"SMS to {phone_number}: {message}")
+        # Use the SMS service which handles Twilio integration
+        result = sms_service.send_sms(phone_number, message)
         
-        # Placeholder for actual SMS implementation:
-        # import twilio client or other SMS service
-        # client.messages.create(to=phone_number, from_=settings.SMS_FROM_NUMBER, body=message)
-        
-        return {'status': 'success', 'recipient': phone_number}
+        if result['status'] == 'success':
+            logger.info(f"SMS sent successfully to {phone_number}")
+            return result
+        else:
+            # If it's a validation error or other non-retriable error, don't retry
+            if result.get('error_type') == 'validation_error':
+                logger.error(f"SMS validation error for {phone_number}: {result['error']}")
+                return result
+            
+            # For other errors, raise exception to trigger retry
+            raise Exception(result['error'])
         
     except Exception as exc:
         logger.error(f"Failed to send SMS to {phone_number}: {str(exc)}")
@@ -80,23 +99,24 @@ def send_push_notification(self, device_token: str, title: str, body: str, data:
     TODO: Integrate with push notification service (FCM, APNS, etc.)
     """
     try:
+        from communications.sms_service import push_notification_service
+        
         logger.info(f"Sending push notification to device: {device_token[:10]}...")
         
-        # TODO: Implement actual push notification sending
-        # For now, just log the notification
-        logger.info(f"Push notification - Title: {title}, Body: {body}, Data: {data}")
+        # Use the push notification service which handles FCM integration
+        result = push_notification_service.send_push_notification(
+            device_token=device_token,
+            title=title,
+            body=body,
+            data=data
+        )
         
-        # Placeholder for actual push notification implementation:
-        # from pyfcm import FCMNotification
-        # push_service = FCMNotification(api_key=settings.FCM_SERVER_KEY)
-        # result = push_service.notify_single_device(
-        #     registration_id=device_token,
-        #     message_title=title,
-        #     message_body=body,
-        #     data_message=data
-        # )
-        
-        return {'status': 'success', 'device_token': device_token}
+        if result['status'] == 'success':
+            logger.info(f"Push notification sent successfully to {device_token[:10]}...")
+            return result
+        else:
+            # Raise exception to trigger retry
+            raise Exception(result['error'])
         
     except Exception as exc:
         logger.error(f"Failed to send push notification to {device_token}: {str(exc)}")
@@ -393,3 +413,72 @@ def _render_emergency_email_template(shipment, alert_type: str, message: str) ->
         </body>
         </html>
         """
+
+
+@shared_task(bind=True, max_retries=2, default_retry_delay=30)
+def send_welcome_email(self, user_id: int):
+    """Send welcome email to new user"""
+    try:
+        from communications.email_service import email_service
+        
+        user = User.objects.get(id=user_id)
+        result = email_service.send_welcome_email(user)
+        
+        logger.info(f"Welcome email sent to {user.email}: {result['status']}")
+        return result
+        
+    except User.DoesNotExist:
+        logger.error(f"User {user_id} not found for welcome email")
+        return {'status': 'failed', 'error': 'User not found'}
+    except Exception as exc:
+        logger.error(f"Failed to send welcome email to user {user_id}: {str(exc)}")
+        if self.request.retries < self.max_retries:
+            raise self.retry(exc=exc)
+        return {'status': 'failed', 'error': str(exc)}
+
+
+@shared_task(bind=True, max_retries=2, default_retry_delay=30)
+def send_password_reset_email(self, user_id: int, reset_token: str):
+    """Send password reset email"""
+    try:
+        from communications.email_service import email_service
+        
+        user = User.objects.get(id=user_id)
+        result = email_service.send_password_reset_email(user, reset_token)
+        
+        logger.info(f"Password reset email sent to {user.email}: {result['status']}")
+        return result
+        
+    except User.DoesNotExist:
+        logger.error(f"User {user_id} not found for password reset email")
+        return {'status': 'failed', 'error': 'User not found'}
+    except Exception as exc:
+        logger.error(f"Failed to send password reset email to user {user_id}: {str(exc)}")
+        if self.request.retries < self.max_retries:
+            raise self.retry(exc=exc)
+        return {'status': 'failed', 'error': str(exc)}
+
+
+@shared_task(bind=True, max_retries=3, default_retry_delay=60)
+def send_bulk_email_task(self, recipients: List[str], subject: str, message: str, html_message: Optional[str] = None):
+    """Send bulk email with batching"""
+    try:
+        from communications.email_service import email_service
+        
+        logger.info(f"Sending bulk email to {len(recipients)} recipients")
+        
+        result = email_service.send_bulk_email(
+            recipients=recipients,
+            subject=subject,
+            message=message,
+            html_message=html_message
+        )
+        
+        logger.info(f"Bulk email completed: {result['success_count']} success, {result['failed_count']} failed")
+        return result
+        
+    except Exception as exc:
+        logger.error(f"Failed to send bulk email: {str(exc)}")
+        if self.request.retries < self.max_retries:
+            raise self.retry(exc=exc)
+        return {'status': 'failed', 'error': str(exc), 'total_recipients': len(recipients)}

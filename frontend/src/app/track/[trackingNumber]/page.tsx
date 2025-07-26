@@ -29,8 +29,7 @@ import {
   Weight,
   Box,
 } from "lucide-react";
-import { usePublicShipmentTracking } from "@/shared/hooks/usePublicTracking";
-import { useMockPublicTracking } from "@/shared/hooks/useMockAPI";
+import { usePublicTracking } from "@/shared/hooks/useShipmentsReal";
 
 // Dynamically import map component to avoid SSR issues
 const ShipmentTrackingMap = dynamic(
@@ -109,7 +108,7 @@ export default function TrackingPage({ params }: TrackingPageProps) {
     error,
     refetch,
     isRefetching,
-  } = useMockPublicTracking(trackingNumber || "demo-tracking");
+  } = usePublicTracking(trackingNumber);
 
   const handleRefresh = () => {
     refetch();

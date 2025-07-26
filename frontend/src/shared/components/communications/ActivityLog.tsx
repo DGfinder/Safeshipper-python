@@ -20,7 +20,7 @@ import {
   Settings,
   Loader2,
 } from "lucide-react";
-import { useMockShipmentEvents, useMockAddEvent } from "@/shared/hooks/useMockAPI";
+import { useShipmentEvents, useAddShipmentEvent } from "@/shared/hooks/useShipmentsReal";
 import { formatDistanceToNow } from "date-fns";
 
 interface ActivityLogProps {
@@ -102,8 +102,8 @@ export function ActivityLog({ shipmentId, className }: ActivityLogProps) {
     isLoading,
     error,
     refetch,
-  } = useMockShipmentEvents(shipmentId);
-  const addEventMutation = useMockAddEvent();
+  } = useShipmentEvents(shipmentId);
+  const addEventMutation = useAddShipmentEvent();
 
   const handleAddComment = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -111,8 +111,8 @@ export function ActivityLog({ shipmentId, className }: ActivityLogProps) {
 
     try {
       await addEventMutation.mutateAsync({
-        shipmentId,
-        eventType: "COMMENT",
+        shipment_id: shipmentId,
+        event_type: "COMMENT",
         details: newComment.trim(),
       });
 

@@ -18,8 +18,8 @@ import {
   Package,
   AlertTriangle,
 } from "lucide-react";
-import { useFleetStatus, type FleetVehicle } from "@/shared/hooks/useFleetTracking";
-import { useMockFleetStatus } from "@/shared/hooks/useMockAPI";
+import { useFleetStatus } from "@/shared/hooks/useVehicles";
+import { useAuth } from "@/shared/hooks/use-auth";
 import { useRealTimeFleetTracking } from "@/shared/hooks/useRealTimeData";
 import { MapDashboardLayout } from "@/shared/components/layout/map-dashboard-layout";
 import { DataFreshnessIndicator } from "@/shared/components/ui/connection-status";
@@ -47,20 +47,18 @@ const FleetMap = dynamic(
 );
 
 export default function LiveMapPage() {
-  const [selectedVehicle, setSelectedVehicle] = useState<FleetVehicle | null>(
-    null,
-  );
+  const [selectedVehicle, setSelectedVehicle] = useState<any>(null);
   const [refreshInterval, setRefreshInterval] = useState(10000); // 10 seconds
-  const { user } = useAuthStore();
+  const { user } = useAuth();
 
-  // Use mock API for demo with real-time updates and role-based filtering
+  // Use real API with real-time updates and role-based filtering
   const {
     data: fleetData,
     isLoading,
     error,
     refetch,
     isRefetching,
-  } = useMockFleetStatus(refreshInterval, user?.role, user?.id);
+  } = useFleetStatus(refreshInterval, user?.role, user?.id);
   
   // Enable real-time updates
   const { lastUpdate } = useRealTimeFleetTracking();

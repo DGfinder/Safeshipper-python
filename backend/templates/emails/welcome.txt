@@ -1,0 +1,22 @@
+Welcome to SafeShipper, {{ user.first_name|default:"there" }}!
+
+Thank you for joining SafeShipper, the leading platform for secure logistics and dangerous goods management. We're excited to have you on board!
+
+What you can do with SafeShipper:
+✓ Track and manage dangerous goods shipments
+✓ Access comprehensive SDS (Safety Data Sheets) library  
+✓ Generate compliance documentation automatically
+✓ Real-time GPS tracking and monitoring
+✓ Emergency response procedures and alerts
+
+Your account is now active and ready to use. Visit {{ login_url }} to log in and start exploring.
+
+Account Details:
+- Email: {{ user.email }}
+- Account Type: Professional
+- Registration Date: {{ user.date_joined|date:"F j, Y" }}
+
+Need help? Contact our support team at {{ support_email }}
+
+© 2025 SafeShipper. All rights reserved.
+This email was sent to {{ user.email }} because you signed up for a SafeShipper account.

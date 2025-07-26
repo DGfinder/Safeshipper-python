@@ -23,9 +23,9 @@ import {
   Loader2,
 } from "lucide-react";
 import {
-  useMockInspections,
-  useMockCreateInspection,
-} from "@/shared/hooks/useMockAPI";
+  useShipmentInspections,
+  useCreateShipmentInspection,
+} from "@/shared/hooks/useShipmentsReal";
 
 interface HazardInspectionProps {
   shipmentId: string;
@@ -177,8 +177,8 @@ export function HazardInspection({
   const [notes, setNotes] = useState("");
 
   const { data: existingInspections, isLoading } =
-    useMockInspections(shipmentId);
-  const createInspectionMutation = useMockCreateInspection();
+    useShipmentInspections(shipmentId);
+  const createInspectionMutation = useCreateShipmentInspection();
 
   const checklist =
     INSPECTION_CHECKLISTS[
@@ -236,8 +236,8 @@ export function HazardInspection({
 
     try {
       await createInspectionMutation.mutateAsync({
-        shipmentId,
-        inspectionType,
+        shipment_id: shipmentId,
+        inspection_type: inspectionType,
         items,
       });
 

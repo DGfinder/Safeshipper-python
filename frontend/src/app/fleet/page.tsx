@@ -21,8 +21,8 @@ import {
   Settings,
   Plus,
 } from "lucide-react";
-import { useFleetStatus, type FleetVehicle } from "@/shared/hooks/useFleetTracking";
-import { useMockFleetStatus } from "@/shared/hooks/useMockAPI";
+import { useFleetStatus } from "@/shared/hooks/useVehicles";
+import { useAuth } from "@/shared/hooks/use-auth";
 import { usePermissions, Can } from "@/contexts/PermissionContext";
 import { VehicleList } from "@/features/fleet/components";
 
@@ -44,7 +44,12 @@ const FleetMap = dynamic(
 
 export default function FleetPage() {
   const [refreshing, setRefreshing] = useState(false);
-  const { data: fleetData, isLoading, refetch } = useMockFleetStatus();
+  const { user } = useAuth();
+  const { data: fleetData, isLoading, refetch } = useFleetStatus(
+    10000, // 10 second polling
+    user?.role,
+    user?.id
+  );
   const { can } = usePermissions();
 
   const handleRefresh = async () => {
@@ -55,10 +60,13 @@ export default function FleetPage() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case "ACTIVE":
+      case "AVAILABLE":
         return "bg-green-100 text-green-800";
       case "IN_TRANSIT":
+      case "DELIVERING":
         return "bg-blue-100 text-blue-800";
+      case "AT_HUB":
+        return "bg-purple-100 text-purple-800";
       case "MAINTENANCE":
         return "bg-yellow-100 text-yellow-800";
       case "OFFLINE":
@@ -92,10 +100,11 @@ export default function FleetPage() {
   }
 
   const vehicles = fleetData?.vehicles || [];
-  const activeVehicles = vehicles.filter((v) => v.status === "ACTIVE").length;
+  const availableVehicles = vehicles.filter((v) => v.status === "AVAILABLE").length;
   const inTransitVehicles = vehicles.filter(
-    (v) => v.status === "IN_TRANSIT",
+    (v) => v.status === "IN_TRANSIT" || v.status === "DELIVERING"
   ).length;
+  const atHubVehicles = vehicles.filter((v) => v.status === "AT_HUB").length;
   const maintenanceVehicles = vehicles.filter(
     (v) => v.status === "MAINTENANCE",
   ).length;
@@ -155,12 +164,12 @@ export default function FleetPage() {
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Active</CardTitle>
+              <CardTitle className="text-sm font-medium">Available</CardTitle>
               <Activity className="h-4 w-4 text-green-600" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-green-600">
-                {activeVehicles}
+                {availableVehicles}
               </div>
               <p className="text-xs text-muted-foreground">
                 Ready for dispatch
@@ -238,7 +247,7 @@ export default function FleetPage() {
                     <span className="text-sm">Active Vehicles</span>
                     <span className="font-medium">
                       {(
-                        ((activeVehicles + inTransitVehicles) /
+                        ((availableVehicles + inTransitVehicles) /
                           vehicles.length) *
                         100
                       ).toFixed(1)}
@@ -249,7 +258,7 @@ export default function FleetPage() {
                     <div
                       className="bg-blue-600 h-2 rounded-full"
                       style={{
-                        width: `${((activeVehicles + inTransitVehicles) / vehicles.length) * 100}%`,
+                        width: `${((availableVehicles + inTransitVehicles) / vehicles.length) * 100}%`,
                       }}
                     ></div>
                   </div>
