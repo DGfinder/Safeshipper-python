@@ -130,6 +130,8 @@ type Permission =
   // Customer & Portal Management  
   | "customer.portal.admin"          // Administer customer portal
   | "customer.portal.tracking"       // Track via customer portal
+  | "customer.portal.view"           // Access customer portal interface
+  | "driver.operations.view"         // Driver operations interface access
   
   // System Administration
   | "users.manage"                   // Manage users
@@ -185,7 +187,8 @@ const rolePermissions: Record<Role, Permission[]> = {
     "dg.checker.view",
     "track.shipment.view",
     "users.view",
-    "documents.view.all"
+    "documents.view.all",
+    "customer.portal.view"
   ],
   driver: [
     "dashboard.view",
@@ -207,6 +210,7 @@ const rolePermissions: Record<Role, Permission[]> = {
     "sds.mobile.interface",
     "sds.emergency.responder",
     "customer.portal.tracking",
+    "driver.operations.view",
     "users.view",
     "documents.view.all",
     "documents.download.all",

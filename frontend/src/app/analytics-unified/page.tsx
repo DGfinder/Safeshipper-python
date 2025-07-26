@@ -336,15 +336,15 @@ export default function UnifiedAnalyticsPage() {
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
             <div>
               <h1 className="text-2xl font-bold text-gray-900">
-                {access.isCustomer ? "Customer Dashboard" :
-                 access.isDriver ? "Driver Dashboard" :
-                 access.isAuditor ? "Compliance Analytics" :
+                {can('customer.portal.view') ? "Customer Dashboard" :
+                 can('driver.operations.view') ? "Driver Dashboard" :
+                 can('audits.view') ? "Compliance Analytics" :
                  "Analytics Dashboard"}
               </h1>
               <p className="text-gray-600">
-                {access.isCustomer ? "Track your shipments and view delivery status" :
-                 access.isDriver ? "Your assigned routes and vehicle status" :
-                 access.isAuditor ? "Compliance monitoring and audit reports" :
+                {can('customer.portal.view') ? "Track your shipments and view delivery status" :
+                 can('driver.operations.view') ? "Your assigned routes and vehicle status" :
+                 can('audits.view') ? "Compliance monitoring and audit reports" :
                  "Advanced insights and performance metrics for dangerous goods logistics"}
                 {loadTime && (
                   <span className="ml-2 text-xs text-gray-400">
@@ -368,7 +368,7 @@ export default function UnifiedAnalyticsPage() {
                 </SelectContent>
               </Select>
               
-              {access.hasMinimumRole('SUPERVISOR') && (
+              {can('analytics.operational') && (
                 <ExportDialog 
                   timeRange={selectedTimeRange} 
                   onExportComplete={handleExportComplete}
@@ -388,7 +388,7 @@ export default function UnifiedAnalyticsPage() {
           </div>
 
           {/* Company Header - for operational dashboard */}
-          {selectedView === 'dashboard' && access.hasMinimumRole('SUPERVISOR') && (
+          {selectedView === 'dashboard' && can('analytics.operational') && (
             <div className="bg-gradient-to-r from-blue-600 to-blue-700 rounded-lg p-6 text-white">
               <div className="flex items-center justify-between">
                 <div>
@@ -413,8 +413,8 @@ export default function UnifiedAnalyticsPage() {
               const Icon = card.icon;
               
               // Role-based filtering
-              if (access.isCustomer && !['Total Shipments'].includes(card.title)) return null;
-              if (access.isDriver && !['Total Shipments', 'Active Routes'].includes(card.title)) return null;
+              if (can('customer.portal.view') && !['Total Shipments'].includes(card.title)) return null;
+              if (can('driver.operations.view') && !['Total Shipments', 'Active Routes'].includes(card.title)) return null;
               
               return (
                 <Card
@@ -456,7 +456,7 @@ export default function UnifiedAnalyticsPage() {
           </div>
 
           {/* Key Performance Indicators - for managers and above */}
-          {access.hasMinimumRole('MANAGER') && (
+          {can('analytics.advanced.view') && (
             <div>
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-lg font-semibold">Key Performance Indicators</h2>
@@ -486,7 +486,7 @@ export default function UnifiedAnalyticsPage() {
             {/* Dashboard Tab */}
             <TabsContent value="dashboard" className="space-y-6">
               {/* Operational Stats Row - for supervisors and above */}
-              {access.hasMinimumRole('SUPERVISOR') && (
+              {can('analytics.operational') && (
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                   {/* Inspection Performance */}
                   <Card>
@@ -626,9 +626,9 @@ export default function UnifiedAnalyticsPage() {
                 <CardHeader>
                   <div className="flex items-center justify-between">
                     <CardTitle>
-                      {access.isCustomer ? "Your Shipments" : "Shipments in Transit"}
+                      {can('customer.portal.view') ? "Your Shipments" : "Shipments in Transit"}
                     </CardTitle>
-                    {access.hasMinimumRole('SUPERVISOR') && (
+                    {can('analytics.operational') && (
                       <Button variant="ghost" size="icon">
                         <MoreVertical className="w-4 h-4" />
                       </Button>
@@ -644,7 +644,7 @@ export default function UnifiedAnalyticsPage() {
                             "Identifier",
                             "Origin",
                             "Destination",
-                            ...(access.hasMinimumRole('SUPERVISOR') ? ["Dangerous Goods", "Hazchem Code"] : []),
+                            ...(can('analytics.operational') ? ["Dangerous Goods", "Hazchem Code"] : []),
                             "Progress",
                             "Actions",
                           ].map((header) => (
@@ -660,7 +660,7 @@ export default function UnifiedAnalyticsPage() {
                       <tbody className="bg-white divide-y divide-gray-200">
                         {shipmentsLoading ? (
                           <tr>
-                            <td colSpan={access.hasMinimumRole('SUPERVISOR') ? 7 : 5} className="px-6 py-8 text-center">
+                            <td colSpan={can('analytics.operational') ? 7 : 5} className="px-6 py-8 text-center">
                               <div className="flex items-center justify-center">
                                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
                               </div>
@@ -685,7 +685,7 @@ export default function UnifiedAnalyticsPage() {
                               <td className="px-6 py-4 whitespace-nowrap text-gray-900">
                                 {shipment.destination}
                               </td>
-                              {access.hasMinimumRole('SUPERVISOR') && (
+                              {can('analytics.operational') && (
                                 <>
                                   <td className="px-6 py-4 whitespace-nowrap">
                                     <div className="flex -space-x-2">
@@ -736,7 +736,7 @@ export default function UnifiedAnalyticsPage() {
                           ))
                         ) : (
                           <tr>
-                            <td colSpan={access.hasMinimumRole('SUPERVISOR') ? 7 : 5} className="px-6 py-8 text-center text-gray-500">
+                            <td colSpan={can('analytics.operational') ? 7 : 5} className="px-6 py-8 text-center text-gray-500">
                               No recent shipments found
                             </td>
                           </tr>
@@ -749,7 +749,7 @@ export default function UnifiedAnalyticsPage() {
             </TabsContent>
 
             {/* Performance Tab - for supervisors and above */}
-            {access.hasMinimumRole('SUPERVISOR') && (
+            {can('analytics.operational') && (
               <TabsContent value="performance" className="space-y-6">
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   <FleetUtilizationChart />
@@ -793,7 +793,7 @@ export default function UnifiedAnalyticsPage() {
             )}
 
             {/* Compliance Tab - for managers and above, or auditors */}
-            {(access.hasMinimumRole('MANAGER') || access.isAuditor) && (
+            {(can('analytics.advanced.view') || can('audits.view')) && (
               <TabsContent value="compliance" className="space-y-6">
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   <ComplianceRadarChart />
@@ -842,7 +842,7 @@ export default function UnifiedAnalyticsPage() {
             )}
 
             {/* Incidents Tab - for supervisors and above */}
-            {access.hasMinimumRole('SUPERVISOR') && (
+            {can('analytics.operational') && (
               <TabsContent value="incidents" className="space-y-6">
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   <IncidentDistributionChart />
@@ -899,7 +899,7 @@ export default function UnifiedAnalyticsPage() {
                     <CardHeader>
                       <CardTitle className="text-lg flex items-center gap-2">
                         <Activity className="h-5 w-5" />
-                        {access.isDriver ? "Your Vehicle Status" : "Live Fleet Status"}
+                        {can('driver.operations.view') ? "Your Vehicle Status" : "Live Fleet Status"}
                         <div className="ml-auto flex items-center gap-1">
                           <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
                           <span className="text-sm text-green-600">Live</span>
@@ -911,19 +911,19 @@ export default function UnifiedAnalyticsPage() {
                         <div className="grid grid-cols-3 gap-4 text-center">
                           <div>
                             <div className="text-2xl font-bold text-green-600">
-                              {access.isDriver ? "1" : "156"}
+                              {can('driver.operations.view') ? "1" : "156"}
                             </div>
                             <div className="text-sm text-gray-600">Active</div>
                           </div>
                           <div>
                             <div className="text-2xl font-bold text-yellow-600">
-                              {access.isDriver ? "0" : "23"}
+                              {can('driver.operations.view') ? "0" : "23"}
                             </div>
                             <div className="text-sm text-gray-600">Maintenance</div>
                           </div>
                           <div>
                             <div className="text-2xl font-bold text-gray-600">
-                              {access.isDriver ? "0" : "12"}
+                              {can('driver.operations.view') ? "0" : "12"}
                             </div>
                             <div className="text-sm text-gray-600">Offline</div>
                           </div>
@@ -936,8 +936,8 @@ export default function UnifiedAnalyticsPage() {
                     <CardHeader>
                       <CardTitle className="text-lg flex items-center gap-2">
                         <Package className="h-5 w-5" />
-                        {access.isCustomer ? "Your Shipments" : 
-                         access.isDriver ? "Assigned Shipments" : "Shipment Status"}
+                        {can('customer.portal.view') ? "Your Shipments" : 
+                         can('driver.operations.view') ? "Assigned Shipments" : "Shipment Status"}
                         <div className="ml-auto flex items-center gap-1">
                           <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse" />
                           <span className="text-sm text-blue-600">Updating</span>
@@ -949,13 +949,13 @@ export default function UnifiedAnalyticsPage() {
                         <div className="grid grid-cols-2 gap-4 text-center">
                           <div>
                             <div className="text-2xl font-bold text-blue-600">
-                              {access.isDriver ? "3" : "234"}
+                              {can('driver.operations.view') ? "3" : "234"}
                             </div>
                             <div className="text-sm text-gray-600">In Transit</div>
                           </div>
                           <div>
                             <div className="text-2xl font-bold text-green-600">
-                              {access.isDriver ? "12" : "89"}
+                              {can('driver.operations.view') ? "12" : "89"}
                             </div>
                             <div className="text-sm text-gray-600">Delivered</div>
                           </div>
@@ -968,7 +968,7 @@ export default function UnifiedAnalyticsPage() {
             </TabsContent>
 
             {/* AI Insights Tab - only for admins and managers */}
-            {(access.hasAccess('analytics_full_access') || access.hasAccess('analytics_insights')) && (
+            {(can('analytics.full.access') || can('analytics.insights')) && (
               <TabsContent value="insights" className="space-y-6">
                 {/* AI Status Banner */}
                 <Alert>
