@@ -9,6 +9,7 @@ import Toast from 'react-native-toast-message';
 
 import {locationService} from '../services/location';
 import {useAuth} from './AuthContext';
+import {usePermissions} from './PermissionContext';
 
 interface LocationData {
   latitude: number;
@@ -41,6 +42,7 @@ export const LocationProvider: React.FC<LocationProviderProps> = ({children}) =>
   const [isInitialized, setIsInitialized] = useState(false);
 
   const {isAuthenticated, user} = useAuth();
+  const {canAccessLocation} = usePermissions();
 
   // Initialize location service when user is authenticated
   useEffect(() => {
@@ -71,8 +73,8 @@ export const LocationProvider: React.FC<LocationProviderProps> = ({children}) =>
       setIsInitialized(true);
       setHasLocationPermission(true);
 
-      // Auto-start tracking for drivers when they login
-      if (user?.role === 'DRIVER') {
+      // Auto-start tracking for users with location permissions
+      if (canAccessLocation) {
         await startLocationTracking();
       }
 
@@ -104,6 +106,16 @@ export const LocationProvider: React.FC<LocationProviderProps> = ({children}) =>
 
   const startLocationTracking = async () => {
     try {
+      // Check if user has permission to access location tracking
+      if (!canAccessLocation) {
+        Alert.alert(
+          'Access Restricted',
+          'You do not have permission to use location tracking features.',
+          [{text: 'OK', style: 'cancel'}]
+        );
+        return;
+      }
+
       if (!hasLocationPermission) {
         Alert.alert(
           'Location Permission Required',

@@ -71,10 +71,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({children}) => {
 
       const response = await apiService.login(credentials);
       
-      // Validate that the user is a driver
-      if (response.user.role !== 'DRIVER') {
-        throw new Error('This app is only for drivers. Please contact your administrator.');
-      }
+      // Welcome all authenticated users - permission system will handle feature access
+      console.log(`Mobile login successful for ${response.user.role} user:`, response.user.email);
 
       // Store tokens securely
       await secureStorage.storeTokens(

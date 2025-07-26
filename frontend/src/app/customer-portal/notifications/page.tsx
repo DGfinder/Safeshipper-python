@@ -10,7 +10,7 @@ import { Label } from "@/shared/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/components/ui/select";
 import { Switch } from "@/shared/components/ui/switch";
 import { Alert, AlertDescription } from "@/shared/components/ui/alert";
-import { CustomerAuthGuard } from "@/shared/components/auth/customer-auth-guard";
+import { AuthGuard } from "@/components/auth/auth-guard";
 import { MobileNavWrapper } from "@/shared/components/layout/mobile-bottom-nav";
 import { useTheme } from "@/contexts/ThemeContext";
 import { usePerformanceMonitoring } from "@/shared/utils/performance";
@@ -699,12 +699,12 @@ function CustomerNotificationsContent() {
 
 export default function CustomerNotificationsPage() {
   return (
-    <CustomerAuthGuard>
+    <AuthGuard mode="customer">
       <MobileNavWrapper>
         <div className="min-h-screen bg-surface-background">
           <CustomerNotificationsContent />
         </div>
       </MobileNavWrapper>
-    </CustomerAuthGuard>
+    </AuthGuard>
   );
 }

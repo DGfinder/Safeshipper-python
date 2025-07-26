@@ -20,6 +20,7 @@ import {
   useGenerateDGManifest,
   useGenerateBatchDocuments,
 } from "@/shared/hooks/useShipments";
+import { usePermissions } from "@/contexts/PermissionContext";
 // Toast notifications - replace with your preferred toast library
 
 interface DocumentGeneratorProps {
@@ -37,7 +38,7 @@ interface DocumentType {
   description: string;
   icon: React.ComponentType<any>;
   requiresDG: boolean;
-  allowedRoles: string[];
+  requiredPermission: string;
   statusRequirement?: string[];
 }
 
@@ -48,7 +49,7 @@ const documentTypes: DocumentType[] = [
     description: "Comprehensive shipment details and history",
     icon: FileText,
     requiresDG: false,
-    allowedRoles: ["ADMIN", "COMPLIANCE_OFFICER", "DISPATCHER", "CUSTOMER"],
+    requiredPermission: "documents.generate.shipment_report",
   },
   {
     id: "compliance_certificate",
@@ -56,7 +57,7 @@ const documentTypes: DocumentType[] = [
     description: "DG compliance certification document",
     icon: Shield,
     requiresDG: true,
-    allowedRoles: ["ADMIN", "COMPLIANCE_OFFICER"],
+    requiredPermission: "documents.generate.compliance_certificate",
   },
   {
     id: "dg_manifest",
@@ -64,7 +65,7 @@ const documentTypes: DocumentType[] = [
     description: "Dangerous goods transport manifest",
     icon: Package,
     requiresDG: true,
-    allowedRoles: ["ADMIN", "COMPLIANCE_OFFICER", "DISPATCHER"],
+    requiredPermission: "documents.generate.dg_manifest",
   },
 ];
 
@@ -76,7 +77,8 @@ const DocumentGenerator: React.FC<DocumentGeneratorProps> = ({
   const [selectedDocuments, setSelectedDocuments] = useState<string[]>([]);
   const [includeAuditTrail, setIncludeAuditTrail] = useState(true);
 
-  // Document generation hooks
+  // Permission and document generation hooks
+  const { can, canGenerateDocuments } = usePermissions();
   const generateReport = useGenerateShipmentReport();
   const generateCertificate = useGenerateComplianceCertificate();
   const generateManifest = useGenerateDGManifest();
@@ -86,12 +88,27 @@ const DocumentGenerator: React.FC<DocumentGeneratorProps> = ({
   const hasDangerousGoods =
     shipment.items?.some((item) => item.is_dangerous_good) || false;
 
-  // Mock user role - in real app this would come from auth context
-  const userRole = "ADMIN"; // This should come from useAuth() or similar
+  // Early return if user has no document generation permissions
+  if (!canGenerateDocuments) {
+    return (
+      <Card className={className}>
+        <CardContent className="p-6 text-center">
+          <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">Access Restricted</h3>
+          <p className="text-gray-600">
+            You don't have permission to generate documents for this shipment.
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
 
   const canAccessDocument = (docType: DocumentType) => {
+    // Check if dangerous goods are required but not present
     if (docType.requiresDG && !hasDangerousGoods) return false;
-    return docType.allowedRoles.includes(userRole);
+    
+    // Check if user has the required permission
+    return can(docType.requiredPermission as any);
   };
 
   const handleSingleDocumentGeneration = async (documentType: string) => {
@@ -266,20 +283,22 @@ const DocumentGenerator: React.FC<DocumentGeneratorProps> = ({
               <h4 className="text-sm font-medium text-gray-900">
                 Report Options
               </h4>
-              <label className="flex items-center gap-2 text-sm text-gray-600">
-                <input
-                  type="checkbox"
-                  checked={includeAuditTrail}
-                  onChange={(e) => setIncludeAuditTrail(e.target.checked)}
-                  className="rounded"
-                />
-                Include audit trail in shipment report
-              </label>
+              {can("documents.audit.trail") && (
+                <label className="flex items-center gap-2 text-sm text-gray-600">
+                  <input
+                    type="checkbox"
+                    checked={includeAuditTrail}
+                    onChange={(e) => setIncludeAuditTrail(e.target.checked)}
+                    className="rounded"
+                  />
+                  Include audit trail in shipment report
+                </label>
+              )}
             </div>
           )}
 
         {/* Batch Generation */}
-        {selectedDocuments.length > 0 && (
+        {selectedDocuments.length > 0 && can("documents.generate.batch") && (
           <div className="pt-4 border-t">
             <div className="space-y-3">
               <div className="flex items-center justify-between">

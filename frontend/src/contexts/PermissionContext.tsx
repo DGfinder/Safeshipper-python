@@ -99,6 +99,10 @@ type Permission =
   | "sds.bulk.operations"            // Perform bulk SDS operations
   | "sds.version.control"            // Manage SDS versions
   | "sds.compliance.analytics"       // View SDS compliance analytics
+  | "sds.mobile.interface"           // Access mobile SDS interface
+  | "sds.emergency.responder"        // Emergency responder SDS access
+  | "sds.mode.selection"             // Switch between interface modes (admin/manager)
+  | "sds.advanced.search"            // Use advanced SDS search features
   
   // Analytics & Reporting
   | "ai.insights.view"               // View AI-generated insights
@@ -113,6 +117,15 @@ type Permission =
   | "insurance.analytics"            // Insurance analytics
   | "route.optimization"             // Route optimization tools
   | "digital.twin.view"              // View digital twin data
+  
+  // Document Generation & Management
+  | "documents.generate.shipment_report"     // Generate shipment reports
+  | "documents.generate.compliance_certificate" // Generate compliance certificates
+  | "documents.generate.dg_manifest"         // Generate dangerous goods manifests
+  | "documents.generate.batch"               // Generate multiple documents at once
+  | "documents.view.all"                     // View all document types
+  | "documents.download.all"                 // Download any document type
+  | "documents.audit.trail"                  // Include audit trails in documents
   
   // Customer & Portal Management  
   | "customer.portal.admin"          // Administer customer portal
@@ -171,7 +184,8 @@ const rolePermissions: Record<Role, Permission[]> = {
     "sds.library.view",
     "dg.checker.view",
     "track.shipment.view",
-    "users.view"
+    "users.view",
+    "documents.view.all"
   ],
   driver: [
     "dashboard.view",
@@ -190,8 +204,13 @@ const rolePermissions: Record<Role, Permission[]> = {
     "dg.checker.view",
     "track.shipment.view",
     "sds.emergency.info",
+    "sds.mobile.interface",
+    "sds.emergency.responder",
     "customer.portal.tracking",
-    "users.view"
+    "users.view",
+    "documents.view.all",
+    "documents.download.all",
+    "documents.generate.shipment_report"
   ],
   operator: [
     "dashboard.view",
@@ -220,14 +239,21 @@ const rolePermissions: Record<Role, Permission[]> = {
     "customer.portal.admin",
     "sds.upload",
     "sds.emergency.info",
+    "sds.mobile.interface",
+    "sds.emergency.responder",
     "sds.bulk.operations",
+    "sds.advanced.search",
     "analytics.operational",
     "customer.portal.tracking",
     "fleet.management",
     "shipment.creation",
     "shipment.editing",
     "users.view",
-    "users.edit"
+    "users.edit",
+    "documents.view.all",
+    "documents.download.all",
+    "documents.generate.shipment_report",
+    "documents.generate.dg_manifest"
   ],
   manager: [
     "dashboard.view",
@@ -287,16 +313,27 @@ const rolePermissions: Record<Role, Permission[]> = {
     "settings.manage",
     "sds.upload",
     "sds.emergency.info",
+    "sds.mobile.interface",
+    "sds.emergency.responder",
     "sds.bulk.operations",
     "sds.version.control",
     "sds.compliance.analytics",
+    "sds.advanced.search",
+    "sds.mode.selection",
     "analytics.insights",
     "analytics.operational",
     "customer.portal.tracking",
     "fleet.management",
     "shipment.creation",
     "shipment.editing",
-    "audit.logs"
+    "audit.logs",
+    "documents.view.all",
+    "documents.download.all",
+    "documents.generate.shipment_report",
+    "documents.generate.dg_manifest",
+    "documents.generate.compliance_certificate",
+    "documents.generate.batch",
+    "documents.audit.trail"
   ],
   admin: [
     // Admin has all permissions
@@ -359,9 +396,13 @@ const rolePermissions: Record<Role, Permission[]> = {
     "settings.manage",
     "sds.upload",
     "sds.emergency.info",
+    "sds.mobile.interface",
+    "sds.emergency.responder",
     "sds.bulk.operations",
     "sds.version.control",
     "sds.compliance.analytics",
+    "sds.advanced.search",
+    "sds.mode.selection",
     "analytics.full.access",
     "analytics.insights",
     "analytics.operational",
@@ -370,7 +411,14 @@ const rolePermissions: Record<Role, Permission[]> = {
     "shipment.creation",
     "shipment.editing",
     "user.management",
-    "audit.logs"
+    "audit.logs",
+    "documents.view.all",
+    "documents.download.all",
+    "documents.generate.shipment_report",
+    "documents.generate.compliance_certificate",
+    "documents.generate.dg_manifest",
+    "documents.generate.batch",
+    "documents.audit.trail"
   ]
 };
 
@@ -420,6 +468,15 @@ interface PermissionContextType {
   
   /** Can upload SDS documents */
   canUploadSDS: boolean;
+  
+  /** Can generate any document type */
+  canGenerateDocuments: boolean;
+  
+  /** Can generate dangerous goods related documents */
+  canGenerateDGDocuments: boolean;
+  
+  /** Can generate compliance certificates */
+  canGenerateComplianceCertificates: boolean;
 }
 
 const PermissionContext = createContext<PermissionContextType | undefined>(undefined);
@@ -526,6 +583,22 @@ export function PermissionProvider({ children }: { children: ReactNode }) {
   const canManageFleet = useMemo(() => can("fleet.management"), [permissions]);
   const canAccessEmergencyInfo = useMemo(() => can("sds.emergency.info"), [permissions]);
   const canUploadSDS = useMemo(() => can("sds.upload"), [permissions]);
+  const canGenerateDocuments = useMemo(() => 
+    hasAnyPermission([
+      "documents.generate.shipment_report", 
+      "documents.generate.compliance_certificate", 
+      "documents.generate.dg_manifest"
+    ]),
+    [permissions]
+  );
+  const canGenerateDGDocuments = useMemo(() => 
+    hasAnyPermission(["documents.generate.dg_manifest", "documents.generate.compliance_certificate"]),
+    [permissions]
+  );
+  const canGenerateComplianceCertificates = useMemo(() => 
+    can("documents.generate.compliance_certificate"), 
+    [permissions]
+  );
 
   const value: PermissionContextType = {
     can,
@@ -539,7 +612,10 @@ export function PermissionProvider({ children }: { children: ReactNode }) {
     canViewAnalytics,
     canManageFleet,
     canAccessEmergencyInfo,
-    canUploadSDS
+    canUploadSDS,
+    canGenerateDocuments,
+    canGenerateDGDocuments,
+    canGenerateComplianceCertificates
   };
 
   return (

@@ -36,7 +36,7 @@ import {
   Beaker,
   ClipboardCheck
 } from "lucide-react";
-import { CustomerAuthGuard } from "@/shared/components/auth/customer-auth-guard";
+import { AuthGuard } from "@/components/auth/auth-guard";
 import { useCustomerProfile, useCustomerAccess, useCustomerCompliance } from "@/shared/hooks/useCustomerProfile";
 import { useCustomerDocuments } from "@/shared/hooks/useCustomerDocuments";
 import { simulatedDataService } from "@/shared/services/simulatedDataService";
@@ -361,7 +361,7 @@ export default function CustomerPortalPage() {
 
   if (showAdvancedTracking && selectedShipment) {
     return (
-      <CustomerAuthGuard>
+      <AuthGuard mode="customer">
         <MobileNavWrapper>
           <div className="min-h-screen bg-surface-background">
             <AdvancedTracking
@@ -373,12 +373,12 @@ export default function CustomerPortalPage() {
             />
           </div>
         </MobileNavWrapper>
-      </CustomerAuthGuard>
+      </AuthGuard>
     );
   }
 
   return (
-    <CustomerAuthGuard>
+    <AuthGuard mode="customer">
       <MobileNavWrapper 
         showFAB={true} 
         fabVariant="expandable"
@@ -1051,6 +1051,6 @@ export default function CustomerPortalPage() {
           </div>
         </div>
       </MobileNavWrapper>
-    </CustomerAuthGuard>
+    </AuthGuard>
   );
 }

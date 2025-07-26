@@ -38,30 +38,63 @@ export function UserEditForm({ user, onClose, onSuccess }: UserEditFormProps) {
     );
   }
 
-  // Get available role options based on current user's permissions
+  // Dynamic role configuration based on permissions
   const getRoleOptions = () => {
-    const options = [
-      { value: "DRIVER", label: "Driver", description: "Basic driver access" },
-      { value: "COMPLIANCE_OFFICER", label: "Compliance Officer", description: "Compliance oversight" },
-      { value: "CUSTOMER", label: "Customer", description: "Customer portal access" },
+    // Base role configuration mapping frontend roles to backend roles
+    const roleConfigs = [
+      {
+        value: "viewer",
+        backendValue: "VIEWER", 
+        label: "Viewer", 
+        description: "Read-only access to basic features",
+        requiredPermission: null // Everyone can assign viewer role
+      },
+      {
+        value: "driver",
+        backendValue: "DRIVER", 
+        label: "Driver", 
+        description: "Field operations and mobile access",
+        requiredPermission: "users.edit.role"
+      },
+      {
+        value: "operator", 
+        backendValue: "OPERATOR",
+        label: "Operator", 
+        description: "Operational control and fleet management",
+        requiredPermission: "users.edit.role"
+      },
+      {
+        value: "customer",
+        backendValue: "CUSTOMER", 
+        label: "Customer", 
+        description: "Customer portal access",
+        requiredPermission: "users.edit.role"
+      },
+      {
+        value: "manager",
+        backendValue: "MANAGER", 
+        label: "Manager", 
+        description: "Management access and analytics",
+        requiredPermission: "users.assign.manager"
+      },
+      {
+        value: "admin",
+        backendValue: "ADMIN", 
+        label: "Admin", 
+        description: "Full system access",
+        requiredPermission: "users.assign.admin"
+      }
     ];
 
-    // Add operator role if user can assign it
-    if (can('users.edit.role')) {
-      options.push({ value: "DISPATCHER", label: "Dispatcher", description: "Operational control" });
-    }
-
-    // Add manager role if user has manager assignment permission
-    if (can('users.assign.manager')) {
-      options.push({ value: "MANAGER", label: "Manager", description: "Management access" });
-    }
-
-    // Add admin role if user has admin assignment permission  
-    if (can('users.assign.admin')) {
-      options.push({ value: "ADMIN", label: "Admin", description: "Full system access" });
-    }
-
-    return options;
+    // Filter roles based on user permissions
+    return roleConfigs.filter(role => {
+      if (!role.requiredPermission) return true; // No permission required
+      return can(role.requiredPermission as any);
+    }).map(role => ({
+      value: role.backendValue,
+      label: role.label,
+      description: role.description
+    }));
   };
 
   const {

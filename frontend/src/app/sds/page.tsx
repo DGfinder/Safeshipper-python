@@ -287,8 +287,8 @@ export default function UnifiedSDSPage() {
     }
   };
 
-  // Mobile-first interface for drivers
-  if (access.isDriver && interfaceMode === 'mobile') {
+  // Mobile-first interface for users with mobile access
+  if (can('sds.mobile.interface') && interfaceMode === 'mobile') {
     return (
       <AuthGuard>
         <div className="min-h-screen bg-gray-50 p-4">
@@ -303,7 +303,7 @@ export default function UnifiedSDSPage() {
       <DashboardLayout>
         <div className="min-h-screen bg-gray-50">
           {/* Emergency Header - only for emergency responders or emergency mode */}
-          {(access.isEmergencyResponder || interfaceMode === 'emergency') && (
+          {(can('sds.emergency.responder') || interfaceMode === 'emergency') && (
             <Card className="border-red-500 bg-red-600 text-white mb-4">
               <CardHeader className="pb-3">
                 <CardTitle className="flex items-center justify-between">
@@ -365,9 +365,9 @@ export default function UnifiedSDSPage() {
                       Safety Data Sheet Management
                     </h1>
                     <p className="text-gray-600">
-                      {access.isEmergencyResponder 
+                      {can('sds.emergency.responder') 
                         ? "Emergency access to critical safety information"
-                        : access.isDriver
+                        : can('sds.mobile.interface')
                         ? "Mobile SDS lookup and emergency procedures"
                         : "Comprehensive SDS management and compliance tools"
                       }
@@ -391,8 +391,8 @@ export default function UnifiedSDSPage() {
           </div>
 
           <div className="p-6 space-y-6">
-            {/* Mode Selector for admins/managers */}
-            {(access.isAdmin || access.isManager) && (
+            {/* Mode Selector for users with mode selection permission */}
+            {can('sds.mode.selection') && (
               <div className="bg-white rounded-lg shadow-sm p-4">
                 <div className="flex items-center gap-4">
                   <span className="text-sm font-medium text-gray-700">Interface Mode:</span>

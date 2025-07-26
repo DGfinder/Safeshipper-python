@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/shared/components/ui/textarea";
 import { Alert, AlertDescription } from "@/shared/components/ui/alert";
 import { Avatar, AvatarImage, AvatarFallback } from "@/shared/components/ui/avatar";
-import { CustomerAuthGuard } from "@/shared/components/auth/customer-auth-guard";
+import { AuthGuard } from "@/components/auth/auth-guard";
 import { MobileNavWrapper } from "@/shared/components/layout/mobile-bottom-nav";
 import { useTheme } from "@/contexts/ThemeContext";
 import { usePerformanceMonitoring } from "@/shared/utils/performance";
@@ -742,12 +742,12 @@ function CustomerRequestsContent() {
 
 export default function CustomerRequestsPage() {
   return (
-    <CustomerAuthGuard>
+    <AuthGuard mode="customer">
       <MobileNavWrapper>
         <div className="min-h-screen bg-surface-background">
           <CustomerRequestsContent />
         </div>
       </MobileNavWrapper>
-    </CustomerAuthGuard>
+    </AuthGuard>
   );
 }
