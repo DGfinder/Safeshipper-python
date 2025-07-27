@@ -15,7 +15,8 @@ import {
   Eye,
   Download,
   Settings,
-  AlertCircle
+  AlertCircle,
+  BarChart3
 } from "lucide-react";
 import { usePermissions, Can } from "@/contexts/PermissionContext";
 import { useMockFleetStatus } from "@/shared/hooks/useMockAPI";
