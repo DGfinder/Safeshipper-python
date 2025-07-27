@@ -2,6 +2,17 @@
 
 This guide provides comprehensive instructions for obtaining and configuring all external API keys and services required for the SafeShipper platform.
 
+## 📚 Detailed Setup Guides
+
+For comprehensive setup instructions, refer to our detailed guides:
+
+- **[OAuth Setup (Google/Microsoft)](docs/external-services/oauth_setup.md)** - Complete OAuth authentication setup
+- **[Twilio SMS Setup](docs/external-services/twilio_setup.md)** - SMS notifications and emergency alerts
+- **[Stripe Payment Integration](docs/external-services/stripe_setup.md)** - Payment processing and billing
+- **[AWS S3 File Storage](docs/external-services/aws_s3_setup.md)** - Cloud file storage and CDN
+- **[Development Fallbacks](docs/external-services/development_fallbacks.md)** - Working without external services
+- **[Security Best Practices](docs/external-services/security_best_practices.md)** - Security guidelines and compliance
+
 ## 📋 Quick Setup Checklist
 
 ### Required Services (Essential for core functionality)
@@ -11,10 +22,10 @@ This guide provides comprehensive instructions for obtaining and configuring all
 
 ### Optional Services (Enhanced functionality)
 - [ ] Email Service (SendGrid/AWS SES)
-- [ ] SMS Service (Twilio)
-- [ ] File Storage (AWS S3)
-- [ ] Payment Processing (Stripe)
-- [ ] OAuth Authentication (Google/Microsoft)
+- [ ] SMS Service (Twilio) - [Setup Guide](docs/external-services/twilio_setup.md)
+- [ ] File Storage (AWS S3) - [Setup Guide](docs/external-services/aws_s3_setup.md)
+- [ ] Payment Processing (Stripe) - [Setup Guide](docs/external-services/stripe_setup.md)
+- [ ] OAuth Authentication (Google/Microsoft) - [Setup Guide](docs/external-services/oauth_setup.md)
 - [ ] Mapping Services (Google Maps)
 - [ ] AI Services (OpenAI)
 - [ ] Push Notifications (Firebase)

@@ -8,7 +8,7 @@ import { Input } from "@/shared/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/components/ui/select";
 import { Alert, AlertDescription } from "@/shared/components/ui/alert";
-import { AuthGuard } from "@/components/auth/auth-guard";
+import { CustomerAuthGuard } from "@/shared/components/auth/customer-auth-guard";
 import { MobileNavWrapper } from "@/shared/components/layout/mobile-bottom-nav";
 import { LoadingSpinner } from "@/shared/components/ui/loading-spinner";
 import { DemoIndicator } from "@/shared/components/ui/demo-indicator";
@@ -533,10 +533,10 @@ function CustomerDocumentsContent() {
 
 export default function CustomerDocumentsPage() {
   return (
-    <AuthGuard mode="customer">
+    <CustomerAuthGuard>
       <MobileNavWrapper>
         <CustomerDocumentsContent />
       </MobileNavWrapper>
-    </AuthGuard>
+    </CustomerAuthGuard>
   );
 }
