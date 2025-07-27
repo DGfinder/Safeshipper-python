@@ -21,7 +21,7 @@ import {
 import { useFleetStatus } from "@/shared/hooks/useVehicles";
 import { useAuth } from "@/shared/hooks/use-auth";
 import { useRealTimeFleetTracking } from "@/shared/hooks/useRealTimeData";
-import { FleetVehicle } from "@/shared/hooks/useFleetTracking";
+import { Vehicle } from "@/shared/services/vehicleService";
 import { MapDashboardLayout } from "@/shared/components/layout/map-dashboard-layout";
 import { DataFreshnessIndicator } from "@/shared/components/ui/connection-status";
 import { useAuthStore } from "@/shared/stores/auth-store";
@@ -68,7 +68,7 @@ export default function LiveMapPage() {
     refetch();
   };
 
-  const handleVehicleSelect = (vehicle: FleetVehicle) => {
+  const handleVehicleSelect = (vehicle: Vehicle) => {
     setSelectedVehicle(vehicle);
   };
 
@@ -79,10 +79,10 @@ export default function LiveMapPage() {
     const vehicles = fleetData.vehicles;
     return {
       total: vehicles.length,
-      active: vehicles.filter((v) => v.active_shipment).length,
-      online: vehicles.filter((v) => v.location_is_fresh).length,
+      active: vehicles.filter((v) => v.activeShipment).length,
+      online: vehicles.filter((v) => v.locationIsFresh).length,
       inTransit: vehicles.filter(
-        (v) => v.active_shipment?.status === "IN_TRANSIT",
+        (v) => v.activeShipment?.status === "IN_TRANSIT",
       ).length,
     };
   };
