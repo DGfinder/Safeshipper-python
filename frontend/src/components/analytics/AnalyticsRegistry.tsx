@@ -67,22 +67,21 @@ interface AnalyticsRegistryEntry {
 
 // Lazy load analytics components
 const FleetUtilizationWidget = lazy(() => import('./widgets/FleetUtilizationWidget'));
-const ShipmentTrendsWidget = lazy(() => import('./widgets/ShipmentTrendsWidget'));
-const ComplianceMetricsWidget = lazy(() => import('./widgets/ComplianceMetricsWidget'));
-const FinancialPerformanceWidget = lazy(() => import('./widgets/FinancialPerformanceWidget'));
-const OperationalEfficiencyWidget = lazy(() => import('./widgets/OperationalEfficiencyWidget'));
-const RiskAnalyticsWidget = lazy(() => import('./widgets/RiskAnalyticsWidget'));
+// TODO: Create these widget components when needed
+// const ShipmentTrendsWidget = lazy(() => import('./widgets/ShipmentTrendsWidget'));
+// const ComplianceMetricsWidget = lazy(() => import('./widgets/ComplianceMetricsWidget'));
+// const GenericAnalyticsWidget = lazy(() => import('./widgets/GenericAnalyticsWidget'));
+// const OperationalEfficiencyWidget = lazy(() => import('./widgets/OperationalEfficiencyWidget'));
+// const RiskAnalyticsWidget = lazy(() => import('./widgets/RiskAnalyticsWidget'));
 
-// Fallback components for when specific widgets don't exist
-const GenericAnalyticsWidget: ComponentType<AnalyticsComponentProps & { analytics_type: string }> = ({ 
-  analytics_type, 
-  ...props 
-}) => (
-  <UnifiedAnalyticsRenderer
-    analytics_type={analytics_type}
-    {...props}
-  />
-);
+// Factory function to create analytics widgets with specific types
+const createAnalyticsWidget = (analyticsType: string): ComponentType<AnalyticsComponentProps> => 
+  (props) => (
+    <UnifiedAnalyticsRenderer
+      analytics_type={analyticsType}
+      {...props}
+    />
+  );
 
 // Analytics component registry
 const ANALYTICS_REGISTRY: Record<string, AnalyticsRegistryEntry> = {
@@ -111,7 +110,7 @@ const ANALYTICS_REGISTRY: Record<string, AnalyticsRegistryEntry> = {
     description: 'Track shipment volume and performance trends over time',
     category: 'Operations',
     icon: Package,
-    component: ShipmentTrendsWidget,
+    component: createAnalyticsWidget('shipment_trends'),
     analytics_type: 'shipment_trends',
     required_permissions: ['view_shipment_analytics'],
     default_config: {
@@ -130,7 +129,7 @@ const ANALYTICS_REGISTRY: Record<string, AnalyticsRegistryEntry> = {
     description: 'Monitor safety and regulatory compliance status',
     category: 'Compliance',
     icon: Shield,
-    component: ComplianceMetricsWidget,
+    component: createAnalyticsWidget('compliance_metrics'),
     analytics_type: 'compliance_metrics',
     required_permissions: ['view_compliance_analytics'],
     default_config: {
@@ -149,7 +148,7 @@ const ANALYTICS_REGISTRY: Record<string, AnalyticsRegistryEntry> = {
     description: 'Analyze revenue, costs, and profitability metrics',
     category: 'Finance',
     icon: DollarSign,
-    component: FinancialPerformanceWidget,
+    component: createAnalyticsWidget('financial_performance'),
     analytics_type: 'financial_performance',
     required_permissions: ['view_financial_analytics'],
     default_config: {
@@ -168,7 +167,7 @@ const ANALYTICS_REGISTRY: Record<string, AnalyticsRegistryEntry> = {
     description: 'KPI dashboard for operational performance metrics',
     category: 'Operations',
     icon: Activity,
-    component: OperationalEfficiencyWidget,
+    component: createAnalyticsWidget('operational_efficiency'),
     analytics_type: 'operational_efficiency',
     required_permissions: ['view_operations_analytics'],
     default_config: {
@@ -187,7 +186,7 @@ const ANALYTICS_REGISTRY: Record<string, AnalyticsRegistryEntry> = {
     description: 'Advanced risk assessment and predictive analytics',
     category: 'Risk Management',
     icon: AlertTriangle,
-    component: RiskAnalyticsWidget,
+    component: createAnalyticsWidget('risk_analytics'),
     analytics_type: 'risk_analytics',
     required_permissions: ['view_risk_analytics'],
     default_config: {

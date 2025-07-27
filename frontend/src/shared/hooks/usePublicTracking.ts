@@ -70,7 +70,7 @@ export interface PublicShipmentData {
   destination_location: string;
   estimated_pickup_date?: string;
   actual_pickup_date?: string;
-  estimated_delivery_date?: string;
+  estimated_delivery_date: string | null;
   actual_delivery_date?: string;
   created_at: string;
   updated_at: string;

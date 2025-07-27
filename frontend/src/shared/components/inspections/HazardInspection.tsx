@@ -227,9 +227,7 @@ export function HazardInspection({
   const handleCompleteInspection = async () => {
     const items = Object.values(selectedItems).map((item) => ({
       description: item.description,
-      category: item.category,
-      is_mandatory: item.is_mandatory,
-      result: item.result,
+      status: (item.result === "N/A" ? "NOT_APPLICABLE" : item.result) as 'PASS' | 'FAIL' | 'NOT_APPLICABLE',
       notes: item.notes || "",
       photos: item.photos || [],
     }));

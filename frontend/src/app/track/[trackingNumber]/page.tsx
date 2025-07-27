@@ -108,7 +108,7 @@ export default function TrackingPage({ params }: TrackingPageProps) {
     error,
     refetch,
     isRefetching,
-  } = usePublicTracking(trackingNumber);
+  } = usePublicTracking(trackingNumber || undefined);
 
   const handleRefresh = () => {
     refetch();

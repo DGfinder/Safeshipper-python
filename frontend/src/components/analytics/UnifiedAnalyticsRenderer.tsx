@@ -290,7 +290,7 @@ export function UnifiedAnalyticsRenderer({
 
   // Export analytics data
   const handleExport = async (format: string) => {
-    if (!analyticsResult?.permissions.can_export.includes(format)) {
+    if (!analyticsResult?.permissions?.can_export?.includes(format)) {
       setError(`Export format ${format} not permitted for your role`);
       return;
     }
@@ -505,7 +505,7 @@ export function UnifiedAnalyticsRenderer({
               </Button>
 
               {/* Export dropdown */}
-              {export_enabled && analyticsResult?.permissions.can_export.length > 0 && (
+              {export_enabled && analyticsResult?.permissions?.can_export && analyticsResult.permissions.can_export.length > 0 && (
                 <div className="relative">
                   <Button variant="outline" size="sm">
                     <Download className="w-4 h-4 mr-1" />

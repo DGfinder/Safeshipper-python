@@ -15,16 +15,24 @@ import {
 // Mock environment variables for testing
 const mockEnv = (env: Record<string, string>) => {
   Object.keys(env).forEach(key => {
-    process.env[key] = env[key];
+    Object.defineProperty(process.env, key, {
+      value: env[key],
+      writable: true,
+      configurable: true
+    });
   });
 };
 
 describe('Demo Mode Security', () => {
   beforeEach(() => {
-    // Reset environment
-    delete process.env.NODE_ENV;
-    delete process.env.NEXT_PUBLIC_API_MODE;
-    delete process.env.NEXT_PUBLIC_ALLOW_DEMO_IN_PRODUCTION;
+    // Reset environment by redefining properties
+    ['NODE_ENV', 'NEXT_PUBLIC_API_MODE', 'NEXT_PUBLIC_ALLOW_DEMO_IN_PRODUCTION'].forEach(key => {
+      Object.defineProperty(process.env, key, {
+        value: undefined,
+        writable: true,
+        configurable: true
+      });
+    });
     jest.clearAllMocks();
   });
 

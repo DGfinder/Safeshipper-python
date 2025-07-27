@@ -91,7 +91,8 @@
       "Bash(./venv/bin/python -m pip install:*)",
       "Bash(PYTHONPATH=. python3 -c \"import django; print(''Django version:'', django.VERSION)\")",
       "Bash(tree:*)",
-      "Bash(git reset:*)"
+      "Bash(git reset:*)",
+      "Bash(true)"
     ],
     "deny": []
   }

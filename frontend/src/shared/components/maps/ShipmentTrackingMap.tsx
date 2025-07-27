@@ -7,13 +7,13 @@ import { Icon, DivIcon } from "leaflet";
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
 import { Badge } from "@/shared/components/ui/badge";
 import { MapPin, Truck, Clock, Navigation } from "lucide-react";
-import { type PublicShipmentData } from "@/shared/hooks/usePublicTracking";
+import { type PublicTrackingInfo } from "@/shared/services/shipmentService";
 
 // Import Leaflet CSS
 import "leaflet/dist/leaflet.css";
 
 interface ShipmentTrackingMapProps {
-  shipmentData: PublicShipmentData;
+  shipmentData: PublicTrackingInfo;
   className?: string;
 }
 

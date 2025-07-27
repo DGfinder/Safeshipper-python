@@ -164,21 +164,21 @@ export default function UnifiedSDSPage() {
   const getAvailableTabs = () => {
     const tabs = [];
     
-    if (access.hasAccess('sds_emergency_info')) {
+    if (can('sds.emergency.info')) {
       tabs.push({ value: 'emergency', label: 'Emergency Lookup', icon: AlertTriangle });
     }
     
     tabs.push({ value: 'library', label: 'SDS Library', icon: BookOpen });
     
-    if (access.hasAccess('sds_upload')) {
+    if (can('sds.upload')) {
       tabs.push({ value: 'enhanced', label: 'Upload & Process', icon: Upload });
     }
     
-    if (access.hasAccess('sds_version_control')) {
+    if (can('sds.version.control')) {
       tabs.push({ value: 'versions', label: 'Version Control', icon: Clock });
     }
     
-    if (access.hasAccess('sds_compliance_analytics')) {
+    if (can('sds.compliance.analytics')) {
       tabs.push({ value: 'compliance', label: 'Compliance', icon: Shield });
       tabs.push({ value: 'analytics', label: 'Analytics', icon: FileText });
     }
@@ -375,7 +375,7 @@ export default function UnifiedSDSPage() {
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
-                  {access.hasAccess('sds_upload') && (
+                  {can('sds.upload') && (
                     <Button onClick={() => setShowUploadModal(true)}>
                       <Upload className="h-4 w-4" />
                       Upload SDS
@@ -438,7 +438,7 @@ export default function UnifiedSDSPage() {
               </TabsList>
 
               {/* Emergency Tab */}
-              {access.hasAccess('sds_emergency_info') && (
+              {can('sds.emergency.info') && (
                 <TabsContent value="emergency" className="space-y-6">
                   <Card>
                     <CardHeader>
@@ -542,7 +542,7 @@ export default function UnifiedSDSPage() {
                       </CardContent>
                     </Card>
 
-                    {access.hasAccess('sds_compliance_analytics') && (
+                    {can('sds.compliance.analytics') && (
                       <>
                         <Card className="hover:shadow-lg transition-shadow">
                           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -575,7 +575,7 @@ export default function UnifiedSDSPage() {
                 )}
 
                 {/* Advanced Search - only for users with appropriate access */}
-                {access.hasAccess('sds_bulk_operations') && (
+                {can('sds.bulk.operations') && (
                   <div className="bg-white rounded-lg shadow-sm">
                     <div className="p-4 border-b">
                       <h3 className="text-lg font-semibold">Search & Filters</h3>
@@ -603,7 +603,7 @@ export default function UnifiedSDSPage() {
                         <p className="text-gray-500 mt-2">Loading SDS documents...</p>
                       </div>
                     ) : sdsLibraryData?.results && sdsLibraryData.results.length > 0 ? (
-                      access.hasAccess('sds_bulk_operations') ? (
+                      can('sds.bulk.operations') ? (
                         <SDSBulkOperations
                           sdsDocuments={sdsLibraryData.results}
                           selectedIds={selectedSDSIds}
@@ -668,7 +668,7 @@ export default function UnifiedSDSPage() {
               </TabsContent>
 
               {/* Enhanced Processing Tab */}
-              {access.hasAccess('sds_upload') && (
+              {can('sds.upload') && (
                 <TabsContent value="enhanced" className="space-y-6">
                   <Card>
                     <CardHeader>
@@ -736,7 +736,7 @@ export default function UnifiedSDSPage() {
               )}
 
               {/* Version Control Tab */}
-              {access.hasAccess('sds_version_control') && (
+              {can('sds.version.control') && (
                 <TabsContent value="versions" className="space-y-6">
                   <Card>
                     <CardHeader>
@@ -783,7 +783,7 @@ export default function UnifiedSDSPage() {
               )}
 
               {/* Compliance Tab */}
-              {access.hasAccess('sds_compliance_analytics') && (
+              {can('sds.compliance.analytics') && (
                 <TabsContent value="compliance" className="space-y-6">
                   <Card>
                     <CardHeader>
@@ -824,7 +824,7 @@ export default function UnifiedSDSPage() {
               )}
 
               {/* Analytics Tab */}
-              {access.hasAccess('sds_compliance_analytics') && (
+              {can('sds.compliance.analytics') && (
                 <TabsContent value="analytics" className="space-y-6">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {statistics && (
@@ -870,7 +870,7 @@ export default function UnifiedSDSPage() {
             </Tabs>
 
             {/* Upload Modal */}
-            {access.hasAccess('sds_upload') && (
+            {can('sds.upload') && (
               <SDSUploadModal
                 open={showUploadModal}
                 onOpenChange={setShowUploadModal}

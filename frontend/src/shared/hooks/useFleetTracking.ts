@@ -94,7 +94,7 @@ export function useFleetStatus(pollingInterval = 10000) {
     queryKey: ["fleet-status"],
     queryFn: () => {
       const token = getToken(); // Optional token
-      return getFleetStatus(token);
+      return getFleetStatus(token || undefined);
     },
     enabled: true, // Always enabled - backend handles auth
     refetchInterval: pollingInterval,
