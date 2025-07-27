@@ -1,5 +1,5 @@
 # AI-Powered SDS Document Upload and Extraction Service
-# This service handles intelligent SDS document processing with automated data extraction
+# Enhanced with OpenAI integration for superior data extraction
 
 import re
 import json
@@ -19,6 +19,7 @@ from django.utils import timezone
 
 from .models import SafetyDataSheet, SDSDataSource
 from .enhanced_models import EnhancedSafetyDataSheet, SDSQualityCheck
+from .openai_service import enhanced_openai_service
 from dangerous_goods.models import DangerousGood
 from documents.models import Document
 
@@ -217,12 +218,13 @@ class SDSAIExtractor:
             'chemical safety', 'sds authoring', 'chemsafe'
         ]
         
-    def extract_from_pdf(self, pdf_file_path: str) -> ExtractedSDSData:
+    def extract_from_pdf(self, pdf_file_path: str, use_openai: bool = True) -> ExtractedSDSData:
         """
-        Extract comprehensive SDS data from a PDF file
+        Extract comprehensive SDS data from a PDF file with OpenAI enhancement
         
         Args:
             pdf_file_path: Path to the PDF file
+            use_openai: Whether to use OpenAI for enhanced extraction
             
         Returns:
             ExtractedSDSData object with extracted information
@@ -241,10 +243,10 @@ class SDSAIExtractor:
             extracted_data.sds_format = self._detect_sds_format(full_text)
             extracted_data.language_detected = self._detect_language(full_text)
             
-            # Parse SDS sections
+            # Method 1: Traditional rule-based extraction
             sections = self._parse_sds_sections(text_blocks)
             
-            # Extract data from each section
+            # Extract data from each section using traditional methods
             self._extract_product_identification(sections.get(1, ""), extracted_data)
             self._extract_hazard_identification(sections.get(2, ""), extracted_data)
             self._extract_composition_info(sections.get(3, ""), extracted_data)
@@ -262,8 +264,39 @@ class SDSAIExtractor:
             self._extract_regulatory_info(sections.get(15, ""), extracted_data)
             self._extract_other_info(sections.get(16, ""), extracted_data)
             
-            # Calculate overall extraction confidence
-            extracted_data.extraction_confidence = self._calculate_extraction_confidence(extracted_data, full_text)
+            # Calculate traditional extraction confidence
+            traditional_confidence = self._calculate_extraction_confidence(extracted_data, full_text)
+            
+            # Method 2: OpenAI-enhanced extraction (if enabled and available)
+            if use_openai and enhanced_openai_service.client:
+                try:
+                    logger.info("Enhancing extraction with OpenAI")
+                    openai_result = enhanced_openai_service.extract_sds_information(
+                        full_text, 
+                        use_cache=True
+                    )
+                    
+                    # Merge OpenAI results with traditional extraction
+                    if openai_result.get('extracted_data'):
+                        self._merge_openai_extraction(extracted_data, openai_result['extracted_data'])
+                        
+                        # Update confidence based on OpenAI analysis
+                        openai_confidence = openai_result.get('confidence', 0.0)
+                        extracted_data.extraction_confidence = max(
+                            traditional_confidence, 
+                            (traditional_confidence + openai_confidence) / 2
+                        )
+                        
+                        logger.info(f"OpenAI enhancement completed. Traditional: {traditional_confidence:.2f}, "
+                                  f"OpenAI: {openai_confidence:.2f}, Final: {extracted_data.extraction_confidence:.2f}")
+                    else:
+                        extracted_data.extraction_confidence = traditional_confidence
+                        
+                except Exception as e:
+                    logger.warning(f"OpenAI enhancement failed, using traditional extraction: {e}")
+                    extracted_data.extraction_confidence = traditional_confidence
+            else:
+                extracted_data.extraction_confidence = traditional_confidence
             
             logger.info(f"SDS extraction completed with confidence: {extracted_data.extraction_confidence:.2f}")
             return extracted_data
@@ -679,6 +712,93 @@ class SDSAIExtractor:
         total_confidence = sum(score * weight for _, score, weight in confidence_factors)
         
         return round(total_confidence, 3)
+
+    def _merge_openai_extraction(self, traditional_data: ExtractedSDSData, openai_data: Dict[str, Any]):
+        """
+        Merge OpenAI extraction results with traditional extraction
+        OpenAI results take precedence for fields where traditional extraction failed
+        """
+        try:
+            # Product identification
+            if not traditional_data.product_name and openai_data.get('product_name'):
+                traditional_data.product_name = openai_data['product_name']
+            
+            if not traditional_data.manufacturer and openai_data.get('manufacturer'):
+                traditional_data.manufacturer = openai_data['manufacturer']
+            
+            if not traditional_data.cas_number and openai_data.get('cas_number'):
+                traditional_data.cas_number = openai_data['cas_number']
+            
+            # Transport information
+            if not traditional_data.un_number and openai_data.get('un_number'):
+                traditional_data.un_number = openai_data['un_number']
+            
+            if not traditional_data.proper_shipping_name and openai_data.get('transport_information', {}).get('proper_shipping_name'):
+                traditional_data.proper_shipping_name = openai_data['transport_information']['proper_shipping_name']
+            
+            if not traditional_data.hazard_class and openai_data.get('hazard_class'):
+                traditional_data.hazard_class = openai_data['hazard_class']
+            
+            if not traditional_data.packing_group and openai_data.get('packing_group'):
+                traditional_data.packing_group = openai_data['packing_group']
+            
+            # Physical properties
+            if not traditional_data.physical_state and openai_data.get('physical_state'):
+                traditional_data.physical_state = openai_data['physical_state']
+            
+            if not traditional_data.flash_point and openai_data.get('flash_point'):
+                try:
+                    # Extract numeric value from flash point string
+                    flash_point_str = str(openai_data['flash_point'])
+                    flash_point_match = re.search(r'(\d+(?:\.\d+)?)', flash_point_str)
+                    if flash_point_match:
+                        traditional_data.flash_point = float(flash_point_match.group(1))
+                except (ValueError, TypeError):
+                    pass
+            
+            # Hazard information
+            if not traditional_data.hazard_statements and openai_data.get('hazard_statements'):
+                traditional_data.hazard_statements = openai_data['hazard_statements']
+            
+            if not traditional_data.precautionary_statements and openai_data.get('precautionary_statements'):
+                traditional_data.precautionary_statements = openai_data['precautionary_statements']
+            
+            # First aid measures
+            first_aid = openai_data.get('first_aid_measures', {})
+            if isinstance(first_aid, dict):
+                if not traditional_data.first_aid_inhalation and first_aid.get('inhalation'):
+                    traditional_data.first_aid_inhalation = first_aid['inhalation'][:500]
+                
+                if not traditional_data.first_aid_skin and first_aid.get('skin_contact'):
+                    traditional_data.first_aid_skin = first_aid['skin_contact'][:500]
+                
+                if not traditional_data.first_aid_eyes and first_aid.get('eye_contact'):
+                    traditional_data.first_aid_eyes = first_aid['eye_contact'][:500]
+                
+                if not traditional_data.first_aid_ingestion and first_aid.get('ingestion'):
+                    traditional_data.first_aid_ingestion = first_aid['ingestion'][:500]
+            
+            # Other safety information
+            if not traditional_data.extinguishing_media and openai_data.get('fire_fighting_measures'):
+                traditional_data.extinguishing_media = str(openai_data['fire_fighting_measures'])[:300]
+            
+            if not traditional_data.spill_cleanup and openai_data.get('accidental_release_measures'):
+                traditional_data.spill_cleanup = str(openai_data['accidental_release_measures'])[:500]
+            
+            if not traditional_data.handling_precautions and openai_data.get('handling_and_storage'):
+                traditional_data.handling_precautions = str(openai_data['handling_and_storage'])[:400]
+            
+            if not traditional_data.incompatible_materials and openai_data.get('incompatible_materials'):
+                if isinstance(openai_data['incompatible_materials'], list):
+                    traditional_data.incompatible_materials = ', '.join(openai_data['incompatible_materials'])[:300]
+                else:
+                    traditional_data.incompatible_materials = str(openai_data['incompatible_materials'])[:300]
+            
+            logger.info("Successfully merged OpenAI extraction results with traditional extraction")
+            
+        except Exception as e:
+            logger.warning(f"Error merging OpenAI extraction results: {e}")
+            # Continue with traditional extraction only
 
 
 class SDSUploadService:

@@ -93,7 +93,9 @@
       "Bash(tree:*)",
       "Bash(git reset:*)",
       "Bash(true)",
-      "Bash(pkill:*)"
+      "Bash(pkill:*)",
+      "Bash(DJANGO_SETTINGS_MODULE=safeshipper_core.settings_minimal python3 manage.py check)",
+      "Bash(DJANGO_SETTINGS_MODULE=safeshipper_core.settings_minimal python3 manage.py migrate)"
     ],
     "deny": []
   }

@@ -1,5 +1,5 @@
 # Enhanced AI-Powered Dangerous Goods Detection Service
-# Leverages existing spaCy infrastructure and DG database
+# Leverages existing spaCy infrastructure, DG database, and OpenAI integration
 
 import re
 import logging
@@ -187,6 +187,18 @@ class EnhancedDGDetectionService:
         if context_matches:
             processing_methods.append("context_analysis")
         
+        # Method 5: OpenAI-enhanced detection (if available)
+        if advanced_features:
+            try:
+                from sds.openai_service import enhanced_openai_service
+                if enhanced_openai_service.client:
+                    openai_matches = self._enhance_with_openai(text, detected_items)
+                    detected_items.extend(openai_matches)
+                    if openai_matches:
+                        processing_methods.append("openai_enhancement")
+            except ImportError:
+                logger.debug("OpenAI service not available for DG detection enhancement")
+        
         # Deduplicate and merge results
         deduplicated_items = self._deduplicate_results(detected_items)
         
@@ -352,6 +364,83 @@ class EnhancedDGDetectionService:
                     ))
         
         return results
+
+    def _enhance_with_openai(self, text: str, existing_detections: List[DGDetectionResult]) -> List[DGDetectionResult]:
+        """Enhance dangerous goods detection using OpenAI"""
+        try:
+            from sds.openai_service import enhanced_openai_service
+            
+            # Prepare existing detections for OpenAI
+            existing_summary = []
+            for detection in existing_detections[:5]:  # Limit to avoid token overflow
+                existing_summary.append({
+                    'substance': detection.dangerous_good.proper_shipping_name,
+                    'un_number': detection.dangerous_good.un_number,
+                    'confidence': detection.confidence,
+                    'match_type': detection.match_type
+                })
+            
+            # Use OpenAI to enhance detection
+            enhancement_result = enhanced_openai_service.enhance_dangerous_goods_detection(
+                text, 
+                existing_summary,
+                use_cache=True
+            )
+            
+            results = []
+            enhanced_detections = enhancement_result.get('enhanced_detections', {})
+            
+            # Process additional detections
+            for detection_data in enhanced_detections.get('additional_detections', []):
+                try:
+                    # Look up dangerous good by UN number or name
+                    dg = None
+                    if detection_data.get('un_number'):
+                        try:
+                            dg = DangerousGood.objects.get(un_number=detection_data['un_number'])
+                        except DangerousGood.DoesNotExist:
+                            pass
+                    
+                    if not dg and detection_data.get('substance_name'):
+                        dg = match_synonym_to_dg(detection_data['substance_name'])
+                    
+                    if dg:
+                        results.append(DGDetectionResult(
+                            dangerous_good=dg,
+                            matched_term=detection_data.get('substance_name', ''),
+                            confidence=min(0.95, detection_data.get('confidence', 0.8)),  # Cap OpenAI confidence
+                            match_type='openai_enhanced',
+                            context=detection_data.get('evidence', ''),
+                            position=(0, 0),  # OpenAI doesn't provide exact positions
+                            extracted_quantity=None,
+                            extracted_weight=None,
+                            extracted_packaging=None,
+                            nlp_entities=[]
+                        ))
+                except Exception as e:
+                    logger.warning(f"Failed to process OpenAI detection: {e}")
+                    continue
+            
+            # Extract quantities from OpenAI analysis
+            for item in results:
+                quantity_analysis = enhanced_detections.get('quantity_analysis', [])
+                for qty_data in quantity_analysis:
+                    if (qty_data.get('substance', '').lower() in item.matched_term.lower() or
+                        item.matched_term.lower() in qty_data.get('substance', '').lower()):
+                        
+                        if not item.extracted_quantity and qty_data.get('quantity'):
+                            item.extracted_quantity = f"{qty_data['quantity']} {qty_data.get('unit', '')}"
+                        
+                        if not item.extracted_packaging and qty_data.get('packaging'):
+                            item.extracted_packaging = qty_data['packaging']
+                        break
+            
+            logger.info(f"OpenAI enhanced detection found {len(results)} additional items")
+            return results
+            
+        except Exception as e:
+            logger.warning(f"OpenAI enhancement failed: {e}")
+            return []
 
     def _extract_context(self, text: str, matched_term: str, position: Optional[int] = None) -> str:
         """Extract context around a matched term"""
