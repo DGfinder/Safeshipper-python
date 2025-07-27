@@ -21,10 +21,11 @@ import {
 import { useFleetStatus } from "@/shared/hooks/useVehicles";
 import { useAuth } from "@/shared/hooks/use-auth";
 import { useRealTimeFleetTracking } from "@/shared/hooks/useRealTimeData";
-import { Vehicle } from "@/shared/services/vehicleService";
+import { FleetVehicle } from "@/shared/hooks/useFleetTracking";
 import { MapDashboardLayout } from "@/shared/components/layout/map-dashboard-layout";
 import { DataFreshnessIndicator } from "@/shared/components/ui/connection-status";
 import { useAuthStore } from "@/shared/stores/auth-store";
+import { transformVehicleToFleetVehicle } from "@/shared/utils/vehicle-transformers";
 
 // Dynamically import FleetMap to avoid SSR issues
 const FleetMap = dynamic(
@@ -68,7 +69,7 @@ export default function LiveMapPage() {
     refetch();
   };
 
-  const handleVehicleSelect = (vehicle: Vehicle) => {
+  const handleVehicleSelect = (vehicle: FleetVehicle) => {
     setSelectedVehicle(vehicle);
   };
 
@@ -223,7 +224,7 @@ export default function LiveMapPage() {
             ) : (
               <div className="h-full min-h-[500px]">
                 <FleetMap
-                  vehicles={fleetData?.vehicles || []}
+                  vehicles={(fleetData?.vehicles || []).map(transformVehicleToFleetVehicle)}
                   onVehicleSelect={handleVehicleSelect}
                 />
               </div>

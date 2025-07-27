@@ -40,8 +40,8 @@ import {
 } from "lucide-react";
 import { DashboardLayout } from "@/shared/components/layout/dashboard-layout";
 import { useRealTimeFleetTracking } from "@/shared/hooks/useRealTimeData";
-import { useFleetStatus } from "@/shared/hooks/useFleetTracking";
-import { useMockFleetStatus } from "@/shared/hooks/useMockAPI";
+import { useFleetStatus } from "@/shared/hooks/useVehicles";
+import { transformVehiclesToFleetVehicles } from "@/shared/utils/vehicle-transformers";
 import AIInsightsDashboard from "@/shared/components/charts/AIInsightsDashboard";
 import dynamic from "next/dynamic";
 
@@ -104,11 +104,8 @@ export default function OperationsCenterPage() {
 
   // Use real-time data hooks
   useRealTimeFleetTracking(); // Enable real-time updates
-  const { data: fleetData, isLoading: fleetLoading, refetch: refreshFleetData } = useFleetStatus();
-  const { 
-    data: mockData, 
-    isLoading: apiLoading 
-  } = useMockFleetStatus();
+  const { data: fleetData, isLoading: fleetLoading, refetch: refreshFleetData } = useFleetStatus(10000);
+  const apiLoading = false; // Removed mock API usage
   const { 
     data: dangerousGoodsData, 
     isLoading: dgLoading 
@@ -118,8 +115,9 @@ export default function OperationsCenterPage() {
     isLoading: dtLoading 
   } = useDigitalTwinDashboard();
 
-  // Combine data from different sources, preferring real-time when available
-  const vehicles = fleetData?.vehicles || [];
+  // Transform vehicle data from API format to UI format
+  const rawVehicles = fleetData?.vehicles || [];
+  const vehicles = transformVehiclesToFleetVehicles(rawVehicles);
   const shipments: ShipmentStatus[] = [];
   const alerts: OperationalAlert[] = [];
   const metrics: OperationsMetrics = {

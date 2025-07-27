@@ -5,6 +5,7 @@ import { useFleetStatus } from "@/shared/hooks/useVehicles";
 import { useAuth } from "@/shared/hooks/use-auth";
 import { VehicleList } from "@/features/fleet/components";
 import { usePermissions } from "@/contexts/PermissionContext";
+import { transformVehiclesToFleetVehicles } from "@/shared/utils/vehicle-transformers";
 import { Loader2 } from "lucide-react";
 
 export default function VehiclesPage() {
@@ -43,6 +44,7 @@ export default function VehiclesPage() {
   }
 
   const vehicles = fleetData?.vehicles || [];
+  const fleetVehicles = transformVehiclesToFleetVehicles(vehicles);
 
   return (
     <div className="p-6">
@@ -53,7 +55,7 @@ export default function VehiclesPage() {
         </p>
       </div>
       
-      <VehicleList vehicles={vehicles} onRefresh={refetch} />
+      <VehicleList vehicles={fleetVehicles} onRefresh={refetch} />
     </div>
   );
 }

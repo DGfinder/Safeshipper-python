@@ -25,6 +25,7 @@ import { useFleetStatus } from "@/shared/hooks/useVehicles";
 import { useAuth } from "@/shared/hooks/use-auth";
 import { usePermissions, Can } from "@/contexts/PermissionContext";
 import { VehicleList } from "@/features/fleet/components";
+import { transformVehiclesToFleetVehicles } from "@/shared/utils/vehicle-transformers";
 
 // Dynamically import FleetMap to avoid SSR issues
 const FleetMap = dynamic(
@@ -99,7 +100,8 @@ export default function FleetPage() {
     );
   }
 
-  const vehicles = fleetData?.vehicles || [];
+  const rawVehicles = fleetData?.vehicles || [];
+  const vehicles = transformVehiclesToFleetVehicles(rawVehicles);
   const availableVehicles = vehicles.filter((v) => v.status === "AVAILABLE").length;
   const inTransitVehicles = vehicles.filter(
     (v) => v.status === "IN_TRANSIT" || v.status === "DELIVERING"
@@ -222,7 +224,7 @@ export default function FleetPage() {
             </CardHeader>
             <CardContent className="flex-1 p-0">
               <div className="h-full min-h-[500px] rounded-lg border border-t-0">
-                <FleetMap vehicles={fleetData?.vehicles || []} />
+                <FleetMap vehicles={vehicles} />
               </div>
             </CardContent>
           </Card>
