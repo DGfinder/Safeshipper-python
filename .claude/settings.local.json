@@ -90,7 +90,8 @@
       "Bash(mkdir -p \"/mnt/c/Users/Hayden/Desktop/Safeshipper Home/frontend/src/app/fleet/analytics\")",
       "Bash(./venv/bin/python -m pip install:*)",
       "Bash(PYTHONPATH=. python3 -c \"import django; print(''Django version:'', django.VERSION)\")",
-      "Bash(tree:*)"
+      "Bash(tree:*)",
+      "Bash(git reset:*)"
     ],
     "deny": []
   }
