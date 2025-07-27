@@ -112,7 +112,7 @@ urlpatterns = [
         path('gateway/', include('api_gateway.urls')),  # Re-enabled for Phase 7A API gateway & developer platform
         path('erp-integration/', include('erp_integration.urls')),  # Re-enabled for Phase 7B ERP integration framework
         path('mobile/', include('mobile_api.urls')),  # Re-enabled for Phase 8B mobile API foundation
-        # path('communications/', include('communications.urls')),  # Temporarily disabled
+        path('communications/', include('communications.urls')),  # Re-enabled after fixing migrations
         path('manifests/', include('manifests.urls')),  # Re-enabled after fixing documents dependencies
         # Basic search endpoints
         path('search/popular/', PopularSearchesView.as_view(), name='popular-searches'),
@@ -120,11 +120,11 @@ urlpatterns = [
         path('public/tracking/<str:tracking_number>/', 
              public_tracking, name='public_shipment_tracking'),
         # Temporarily disabled apps:
-        # path('locations/', include('locations.urls')),
-        # path('hazard-assessments/', include('hazard_assessments.urls')),
+        path('locations/', include('locations.urls')),  # Re-enabled
+        path('hazard-assessments/', include('hazard_assessments.urls')),  # Re-enabled after migration fix
         path('load-plans/', include('load_plans.urls')),  # Re-enabled for Phase 3B load planning
-        # path('emergency-procedures/', include('emergency_procedures.urls')),
-        # path('handling-unit-types/', include('handling_unit_types.urls')),
+        path('emergency-procedures/', include('emergency_procedures.urls')),  # Re-enabled after migration fix
+        path('handling-unit-types/', include('handling_unit_types.urls')),  # Re-enabled after migration fix
         path('sds/', include('sds.urls')),  # Re-enabled after fixing dangerous_goods dependencies
         path('epg/', include('epg.urls')),  # Re-enabled after fixing shipments dependencies
         path('routes/', include('routes.urls')),  # Re-enabled for Phase 3B route optimization

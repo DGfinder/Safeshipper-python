@@ -398,18 +398,56 @@ ELASTICSEARCH_DSL_SIGNAL_PROCESSOR = config(
     default='django_elasticsearch_dsl.signals.RealTimeSignalProcessor'
 )
 
-# File storage settings
-DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
+# Enhanced File Storage Configuration
+# Intelligent storage backend selection (S3 -> MinIO -> Local)
+DEFAULT_FILE_STORAGE = config('DEFAULT_FILE_STORAGE', default='safeshipper_core.storage_backends.SafeShipperLocalStorage')
+
+# AWS S3 Configuration
 AWS_ACCESS_KEY_ID = config('AWS_ACCESS_KEY_ID', default='')
 AWS_SECRET_ACCESS_KEY = config('AWS_SECRET_ACCESS_KEY', default='')
-AWS_STORAGE_BUCKET_NAME = config('AWS_STORAGE_BUCKET_NAME', default='')
+AWS_STORAGE_BUCKET_NAME = config('AWS_STORAGE_BUCKET_NAME', default='safeshipper-documents')
 AWS_S3_REGION_NAME = config('AWS_S3_REGION_NAME', default='us-east-1')
+AWS_S3_CUSTOM_DOMAIN = config('AWS_S3_CUSTOM_DOMAIN', default=None)
 AWS_DEFAULT_ACL = 'private'
 AWS_S3_OBJECT_PARAMETERS = {
     'CacheControl': 'max-age=86400',
+    'ServerSideEncryption': 'AES256',  # Encrypt at rest
 }
 AWS_S3_FILE_OVERWRITE = False
 AWS_QUERYSTRING_AUTH = True
+AWS_S3_SIGNATURE_VERSION = 's3v4'
+
+# MinIO Configuration (fallback for on-premise)
+MINIO_ACCESS_KEY = config('MINIO_ACCESS_KEY', default='')
+MINIO_SECRET_KEY = config('MINIO_SECRET_KEY', default='')
+MINIO_BUCKET_NAME = config('MINIO_BUCKET_NAME', default='safeshipper')
+MINIO_ENDPOINT = config('MINIO_ENDPOINT', default='')
+MINIO_REGION = config('MINIO_REGION', default='us-east-1')
+MINIO_USE_SSL = config('MINIO_USE_SSL', default=False, cast=bool)
+
+# Local Storage Configuration
+MEDIA_ROOT = config('MEDIA_ROOT', default=os.path.join(BASE_DIR, 'media'))
+MEDIA_URL = config('MEDIA_URL', default='/media/')
+
+# File Upload Settings
+MAX_FILE_UPLOAD_SIZE = config('MAX_FILE_UPLOAD_SIZE', default=100 * 1024 * 1024, cast=int)  # 100MB
+ALLOWED_FILE_EXTENSIONS = config('ALLOWED_FILE_EXTENSIONS', default='.pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png,.gif,.txt,.csv,.zip', cast=Csv())
+
+# Storage Security Settings
+FILE_UPLOAD_PERMISSIONS = 0o644
+FILE_UPLOAD_DIRECTORY_PERMISSIONS = 0o755
+FILE_UPLOAD_TEMP_DIR = config('FILE_UPLOAD_TEMP_DIR', default=os.path.join(BASE_DIR, 'tmp'))
+
+# Document Retention Policies (in days)
+DOCUMENT_RETENTION_POLICIES = {
+    'dangerous_goods_manifest': 2555,  # 7 years
+    'safety_data_sheet': 2555,        # 7 years
+    'vehicle_certificate': 1825,      # 5 years
+    'training_certificate': 1825,     # 5 years
+    'incident_report': 3650,          # 10 years
+    'analytics_report': 365,          # 1 year
+    'temporary': 7,                   # 1 week
+}
 
 # Logging configuration
 LOGGING = {
