@@ -84,7 +84,7 @@ export default function FleetLayout({
               return (
                 <div key={item.href}>
                   <Link
-                    href={item.href}
+                    href={item.href as any}
                     className={cn(
                       "flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-md transition-colors",
                       isActive
@@ -106,7 +106,7 @@ export default function FleetLayout({
                         return (
                           <Link
                             key={child.href}
-                            href={child.href}
+                            href={child.href as any}
                             className={cn(
                               "flex items-center gap-2 px-3 py-1.5 text-sm rounded-md transition-colors",
                               isChildActive
