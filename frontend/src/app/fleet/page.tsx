@@ -26,6 +26,7 @@ import { useAuth } from "@/shared/hooks/use-auth";
 import { usePermissions, Can } from "@/contexts/PermissionContext";
 import { VehicleList } from "@/features/fleet/components";
 import { transformVehiclesToFleetVehicles } from "@/shared/utils/vehicle-transformers";
+import { DashboardLayout } from "@/shared/components/layout/dashboard-layout";
 
 // Dynamically import FleetMap to avoid SSR issues
 const FleetMap = dynamic(
@@ -92,11 +93,11 @@ export default function FleetPage() {
 
   if (isLoading) {
     return (
-      <div className="p-6">
+      <DashboardLayout>
         <div className="flex items-center justify-center h-64">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
         </div>
-      </div>
+      </DashboardLayout>
     );
   }
 
@@ -113,42 +114,44 @@ export default function FleetPage() {
   const offlineVehicles = vehicles.filter((v) => v.status === "OFFLINE").length;
 
   return (
-    <div className="h-screen flex flex-col">
-      {/* Header */}
-      <div className="p-6 pb-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">
-              Fleet Management
-            </h1>
-            <p className="text-gray-600 mt-1">
-              Monitor and manage your vehicle fleet
-            </p>
-          </div>
-          <div className="flex items-center gap-3">
-            <Button
-              onClick={handleRefresh}
-              variant="outline"
-              disabled={refreshing}
-              className="flex items-center gap-2"
-            >
-              <RefreshCw
-                className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`}
-              />
-              Refresh
-            </Button>
-            <Can permission="vehicle.create">
-              <Button className="flex items-center gap-2">
-                <Plus className="h-4 w-4" />
-                Add Vehicle
+    <DashboardLayout>
+      <div className="space-y-6">
+        {/* Header */}
+        <div className="bg-gradient-to-r from-blue-600 to-blue-700 rounded-xl p-6 text-white shadow-lg">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="p-3 bg-white/20 backdrop-blur-sm rounded-lg">
+                <Truck className="h-8 w-8 text-white" />
+              </div>
+              <div>
+                <h1 className="text-3xl font-bold">Fleet Management</h1>
+                <p className="text-blue-100 mt-1">
+                  Monitor and manage your vehicle fleet
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <Button
+                onClick={handleRefresh}
+                variant="outline"
+                disabled={refreshing}
+                className="flex items-center gap-2 bg-white/10 border-white/20 text-white hover:bg-white/20 backdrop-blur-sm"
+              >
+                <RefreshCw
+                  className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`}
+                />
+                Refresh
               </Button>
-            </Can>
+              <Can permission="vehicle.create">
+                <Button className="flex items-center gap-2 bg-white text-blue-600 hover:bg-blue-50 shadow-md">
+                  <Plus className="h-4 w-4" />
+                  Add Vehicle
+                </Button>
+              </Can>
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* Main content area with flex-1 to fill remaining space */}
-      <div className="flex-1 overflow-auto px-6 pb-6">
         {/* Fleet Stats */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
           <Card>
@@ -206,114 +209,114 @@ export default function FleetPage() {
           </Card>
         </div>
 
-        {/* Fleet Tabs - flex-1 to fill remaining height */}
-        <Tabs defaultValue="live-map" className="flex flex-col flex-1">
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="live-map">Live Map</TabsTrigger>
-          <TabsTrigger value="vehicles">Vehicles</TabsTrigger>
-          <TabsTrigger value="analytics">Analytics</TabsTrigger>
-        </TabsList>
+        {/* Fleet Tabs */}
+        <Tabs defaultValue="live-map" className="space-y-6">
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="live-map">Live Map</TabsTrigger>
+            <TabsTrigger value="vehicles">Vehicles</TabsTrigger>
+            <TabsTrigger value="analytics">Analytics</TabsTrigger>
+          </TabsList>
 
-        <TabsContent value="live-map" className="flex-1 flex flex-col">
-          <Card className="flex-1 flex flex-col">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <MapPin className="h-5 w-5" />
-                Fleet Live Tracking
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="flex-1 p-0">
-              <div className="h-full min-h-[500px] rounded-lg border border-t-0">
-                <FleetMap vehicles={vehicles} />
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="vehicles" className="space-y-6">
-          <VehicleList vehicles={vehicles} onRefresh={handleRefresh} />
-        </TabsContent>
-
-        <TabsContent value="analytics" className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <TabsContent value="live-map" className="space-y-6">
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <BarChart3 className="h-5 w-5" />
-                  Utilization Rate
+                  <MapPin className="h-5 w-5" />
+                  Fleet Live Tracking
                 </CardTitle>
               </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm">Active Vehicles</span>
-                    <span className="font-medium">
-                      {(
-                        ((availableVehicles + inTransitVehicles) /
-                          vehicles.length) *
-                        100
-                      ).toFixed(1)}
-                      %
-                    </span>
-                  </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2">
-                    <div
-                      className="bg-blue-600 h-2 rounded-full"
-                      style={{
-                        width: `${((availableVehicles + inTransitVehicles) / vehicles.length) * 100}%`,
-                      }}
-                    ></div>
-                  </div>
+              <CardContent className="p-0">
+                <div className="h-[600px] rounded-lg border border-t-0">
+                  <FleetMap vehicles={vehicles} />
                 </div>
               </CardContent>
             </Card>
+          </TabsContent>
 
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Clock className="h-5 w-5" />
-                  Average Delivery Time
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-3xl font-bold">2.4h</div>
-                <p className="text-sm text-gray-600">-12% from last week</p>
-              </CardContent>
-            </Card>
+          <TabsContent value="vehicles" className="space-y-6">
+            <VehicleList vehicles={vehicles} onRefresh={handleRefresh} />
+          </TabsContent>
 
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Package className="h-5 w-5" />
-                  Deliveries Today
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-3xl font-bold">28</div>
-                <p className="text-sm text-gray-600">+8% from yesterday</p>
-              </CardContent>
-            </Card>
+          <TabsContent value="analytics" className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <BarChart3 className="h-5 w-5" />
+                    Utilization Rate
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm">Active Vehicles</span>
+                      <span className="font-medium">
+                        {(
+                          ((availableVehicles + inTransitVehicles) /
+                            vehicles.length) *
+                          100
+                        ).toFixed(1)}
+                        %
+                      </span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div
+                        className="bg-blue-600 h-2 rounded-full"
+                        style={{
+                          width: `${((availableVehicles + inTransitVehicles) / vehicles.length) * 100}%`,
+                        }}
+                      ></div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
 
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <AlertTriangle className="h-5 w-5" />
-                  Issues Today
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-3xl font-bold text-yellow-600">
-                  {maintenanceVehicles}
-                </div>
-                <p className="text-sm text-gray-600">
-                  Vehicles needing attention
-                </p>
-              </CardContent>
-            </Card>
-          </div>
-        </TabsContent>
-      </Tabs>
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Clock className="h-5 w-5" />
+                    Average Delivery Time
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-3xl font-bold">2.4h</div>
+                  <p className="text-sm text-gray-600">-12% from last week</p>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Package className="h-5 w-5" />
+                    Deliveries Today
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-3xl font-bold">28</div>
+                  <p className="text-sm text-gray-600">+8% from yesterday</p>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <AlertTriangle className="h-5 w-5" />
+                    Issues Today
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-3xl font-bold text-yellow-600">
+                    {maintenanceVehicles}
+                  </div>
+                  <p className="text-sm text-gray-600">
+                    Vehicles needing attention
+                  </p>
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+        </Tabs>
       </div>
-    </div>
+    </DashboardLayout>
   );
 }

@@ -22,6 +22,7 @@ import {
   BarChart3
 } from "lucide-react";
 import { usePermissions, Can } from "@/contexts/PermissionContext";
+import { DashboardLayout } from "@/shared/components/layout/dashboard-layout";
 import { useMockFleetStatus } from "@/shared/hooks/useMockAPI";
 
 export default function VehicleDetailPage() {
@@ -35,13 +36,13 @@ export default function VehicleDetailPage() {
 
   if (!vehicle) {
     return (
-      <div className="p-6">
+      <DashboardLayout>
         <Card>
           <CardContent className="pt-6">
             <p className="text-center text-gray-600">Vehicle not found</p>
           </CardContent>
         </Card>
-      </div>
+      </DashboardLayout>
     );
   }
 
@@ -61,17 +62,18 @@ export default function VehicleDetailPage() {
   };
 
   return (
-    <div className="p-6">
-      {/* Header */}
-      <div className="mb-6">
-        <Button
-          variant="ghost"
-          onClick={() => router.back()}
-          className="mb-4"
-        >
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          Back
-        </Button>
+    <DashboardLayout>
+      <div className="space-y-6">
+        {/* Header */}
+        <div>
+          <Button
+            variant="ghost"
+            onClick={() => router.back()}
+            className="mb-4"
+          >
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back
+          </Button>
         
         <div className="flex items-center justify-between">
           <div>
@@ -371,7 +373,8 @@ export default function VehicleDetailPage() {
             </CardContent>
           </Card>
         </TabsContent>
-      </Tabs>
-    </div>
+        </Tabs>
+      </div>
+    </DashboardLayout>
   );
 }

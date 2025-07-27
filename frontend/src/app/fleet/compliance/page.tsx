@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import { usePermissions, Can } from "@/contexts/PermissionContext";
 import { useMockFleetStatus } from "@/shared/hooks/useMockAPI";
+import { DashboardLayout } from "@/shared/components/layout/dashboard-layout";
 
 export default function CompliancePage() {
   const { can } = usePermissions();
@@ -48,36 +49,41 @@ export default function CompliancePage() {
   };
 
   return (
-    <div className="p-6">
-      <div className="mb-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">
-              DG Compliance Dashboard
-            </h1>
-            <p className="text-gray-600 mt-1">
-              Monitor dangerous goods compliance across your fleet
-            </p>
-          </div>
-          <div className="flex items-center gap-3">
-            <Can permission="fleet.analytics.export">
-              <Button variant="outline">
-                <Download className="h-4 w-4 mr-2" />
-                Export Report
-              </Button>
-            </Can>
-            <Can permission="fleet.compliance.edit">
-              <Button>
-                <Settings className="h-4 w-4 mr-2" />
-                Manage Compliance
-              </Button>
-            </Can>
+    <DashboardLayout>
+      <div className="space-y-6">
+        {/* Header */}
+        <div className="bg-gradient-to-r from-blue-600 to-blue-700 rounded-xl p-6 text-white shadow-lg">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="p-3 bg-white/20 backdrop-blur-sm rounded-lg">
+                <Shield className="h-8 w-8 text-white" />
+              </div>
+              <div>
+                <h1 className="text-3xl font-bold">DG Compliance Dashboard</h1>
+                <p className="text-blue-100 mt-1">
+                  Monitor dangerous goods compliance across your fleet
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <Can permission="fleet.analytics.export">
+                <Button variant="outline" className="bg-white/10 border-white/20 text-white hover:bg-white/20 backdrop-blur-sm">
+                  <Download className="h-4 w-4 mr-2" />
+                  Export Report
+                </Button>
+              </Can>
+              <Can permission="fleet.compliance.edit">
+                <Button className="bg-white text-blue-600 hover:bg-blue-50 shadow-md">
+                  <Settings className="h-4 w-4 mr-2" />
+                  Manage Compliance
+                </Button>
+              </Can>
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* Compliance Overview Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
+        {/* Compliance Overview Stats */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-gray-600">
@@ -155,10 +161,10 @@ export default function CompliancePage() {
             </div>
           </CardContent>
         </Card>
-      </div>
+        </div>
 
-      {/* Compliance Tabs */}
-      <Tabs defaultValue="vehicles" className="space-y-4">
+        {/* Compliance Tabs */}
+        <Tabs defaultValue="vehicles" className="space-y-4">
         <TabsList className="grid grid-cols-3 w-full">
           <TabsTrigger value="vehicles">Vehicle Compliance</TabsTrigger>
           <TabsTrigger value="alerts">Active Alerts</TabsTrigger>
@@ -388,7 +394,8 @@ export default function CompliancePage() {
             </Card>
           </div>
         </TabsContent>
-      </Tabs>
-    </div>
+        </Tabs>
+      </div>
+    </DashboardLayout>
   );
 }

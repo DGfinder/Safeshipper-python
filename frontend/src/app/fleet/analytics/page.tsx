@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import { usePermissions, Can, HasRole } from "@/contexts/PermissionContext";
 import { useMockFleetStatus } from "@/shared/hooks/useMockAPI";
+import { DashboardLayout } from "@/shared/components/layout/dashboard-layout";
 
 export default function AnalyticsPage() {
   const { can, userRole } = usePermissions();
@@ -169,18 +170,22 @@ export default function AnalyticsPage() {
   const complianceMetrics = getComplianceMetrics();
 
   return (
-    <div className="p-6">
-      <div className="mb-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">
-              Fleet Analytics
-            </h1>
-            <p className="text-gray-600 mt-1">
-              {can("fleet.analytics.advanced") 
-                ? "Advanced performance insights and business intelligence"
-                : "Essential fleet performance metrics"
-              }
+    <DashboardLayout>
+      <div className="space-y-6">
+        {/* Header */}
+        <div className="bg-gradient-to-r from-blue-600 to-blue-700 rounded-xl p-6 text-white shadow-lg">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="p-3 bg-white/20 backdrop-blur-sm rounded-lg">
+                <BarChart3 className="h-8 w-8 text-white" />
+              </div>
+              <div>
+                <h1 className="text-3xl font-bold">Fleet Analytics</h1>
+                <p className="text-blue-100 mt-1">
+                  {can("fleet.analytics.advanced") 
+                    ? "Advanced performance insights and business intelligence"
+                    : "Essential fleet performance metrics"
+                  }
             </p>
           </div>
           <div className="flex items-center gap-3">
@@ -559,7 +564,8 @@ export default function AnalyticsPage() {
             </div>
           </HasRole>
         </TabsContent>
-      </Tabs>
-    </div>
+        </Tabs>
+      </div>
+    </DashboardLayout>
   );
 }
