@@ -80,6 +80,8 @@ INSTALLED_APPS = [
     'epg',        # Re-enabled after fixing shipments dependencies
     'capacity_marketplace', # Re-enabled for Phase 3C marketplace
     'routes', # Re-enabled for Phase 3B route optimization
+    'emergency_procedures', # Emergency response procedures system
+    'search', # Unified search API system
 ]
 
 # Middleware

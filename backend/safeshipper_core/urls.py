@@ -129,6 +129,7 @@ urlpatterns = [
         path('epg/', include('epg.urls')),  # Re-enabled after fixing shipments dependencies
         path('routes/', include('routes.urls')),  # Re-enabled for Phase 3B route optimization
         path('capacity-marketplace/', include('capacity_marketplace.urls')),  # Re-enabled for Phase 3C marketplace
+        path('search/', include('search.urls')),  # Unified search API system
         # Compatibility endpoint redirects for mobile app
         # path('compatibility/', include('dangerous_goods.urls')),  # Temporarily disabled due to dangerous_goods app being disabled
     ])),

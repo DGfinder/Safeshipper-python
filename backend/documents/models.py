@@ -179,6 +179,234 @@ class Document(models.Model):
         """Returns True if the document is a PDF"""
         return self.get_file_extension() == 'pdf'
 
+
+class EnhancedDocument(Document):
+    """
+    Enhanced document model with additional fields for file upload system
+    """
+    # Additional file information
+    title = models.CharField(
+        _("Title"),
+        max_length=255,
+        blank=True,
+        help_text=_("Display title for the document")
+    )
+    description = models.TextField(
+        _("Description"),
+        blank=True,
+        help_text=_("Detailed description of the document")
+    )
+    file_path = models.CharField(
+        _("File Path"),
+        max_length=500,
+        blank=True,
+        help_text=_("Storage path for the file")
+    )
+    file_hash = models.CharField(
+        _("File Hash"),
+        max_length=64,
+        blank=True,
+        help_text=_("SHA256 hash of the file content")
+    )
+    content_type = models.CharField(
+        _("Content Type"),
+        max_length=100,
+        blank=True,
+        help_text=_("MIME type of the file")
+    )
+    
+    # Storage and access control
+    storage_backend = models.CharField(
+        _("Storage Backend"),
+        max_length=50,
+        default='local',
+        help_text=_("Storage backend used (s3, minio, local)")
+    )
+    is_public = models.BooleanField(
+        _("Is Public"),
+        default=False,
+        help_text=_("Whether file is publicly accessible")
+    )
+    thumbnail_path = models.CharField(
+        _("Thumbnail Path"),
+        max_length=500,
+        blank=True,
+        help_text=_("Path to generated thumbnail")
+    )
+    
+    # Metadata and tags
+    tags = models.JSONField(
+        _("Tags"),
+        default=list,
+        blank=True,
+        help_text=_("List of tags for categorization")
+    )
+    metadata = models.JSONField(
+        _("Metadata"),
+        default=dict,
+        blank=True,
+        help_text=_("Additional file metadata")
+    )
+    
+    class Meta:
+        verbose_name = _("Enhanced Document")
+        verbose_name_plural = _("Enhanced Documents")
+        indexes = [
+            models.Index(fields=['document_type', 'status']),
+            models.Index(fields=['is_public', 'created_at']),
+            models.Index(fields=['storage_backend', 'document_type']),
+        ]
+        ordering = ['-created_at']
+
+
+class DocumentUpload(models.Model):
+    """
+    Model for tracking file upload progress and status
+    """
+    class UploadStatus(models.TextChoices):
+        PENDING = 'PENDING', _('Pending')
+        IN_PROGRESS = 'IN_PROGRESS', _('In Progress')
+        COMPLETED = 'COMPLETED', _('Completed')
+        FAILED = 'FAILED', _('Failed')
+        CANCELLED = 'CANCELLED', _('Cancelled')
+    
+    # Primary fields
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    document = models.ForeignKey(
+        Document,
+        on_delete=models.CASCADE,
+        related_name='upload_records',
+        verbose_name=_("Document"),
+        null=True,
+        blank=True
+    )
+    
+    # Upload information
+    original_filename = models.CharField(
+        _("Original Filename"),
+        max_length=255
+    )
+    upload_status = models.CharField(
+        _("Upload Status"),
+        max_length=20,
+        choices=UploadStatus.choices,
+        default=UploadStatus.PENDING,
+        db_index=True
+    )
+    
+    # Progress tracking
+    progress_percent = models.PositiveIntegerField(
+        _("Progress Percentage"),
+        default=0,
+        help_text=_("Upload progress as percentage (0-100)")
+    )
+    bytes_uploaded = models.PositiveBigIntegerField(
+        _("Bytes Uploaded"),
+        default=0,
+        help_text=_("Number of bytes uploaded so far")
+    )
+    total_bytes = models.PositiveBigIntegerField(
+        _("Total Bytes"),
+        default=0,
+        help_text=_("Total file size in bytes")
+    )
+    
+    # Storage information
+    storage_backend = models.CharField(
+        _("Storage Backend"),
+        max_length=50,
+        blank=True,
+        help_text=_("Storage backend used for upload")
+    )
+    temporary_path = models.CharField(
+        _("Temporary Path"),
+        max_length=500,
+        blank=True,
+        help_text=_("Temporary storage path during upload")
+    )
+    
+    # Error handling
+    error_message = models.TextField(
+        _("Error Message"),
+        blank=True,
+        help_text=_("Error message if upload failed")
+    )
+    retry_count = models.PositiveIntegerField(
+        _("Retry Count"),
+        default=0,
+        help_text=_("Number of retry attempts")
+    )
+    
+    # User and timing
+    uploaded_by = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='upload_records',
+        verbose_name=_("Uploaded By")
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    completed_at = models.DateTimeField(
+        _("Completed At"),
+        null=True,
+        blank=True
+    )
+    
+    class Meta:
+        verbose_name = _("Document Upload")
+        verbose_name_plural = _("Document Uploads")
+        indexes = [
+            models.Index(fields=['upload_status', 'created_at']),
+            models.Index(fields=['uploaded_by', 'upload_status']),
+            models.Index(fields=['storage_backend', 'upload_status']),
+        ]
+        ordering = ['-created_at']
+    
+    def __str__(self):
+        return f"{self.original_filename} - {self.get_upload_status_display()}"
+    
+    @property
+    def is_complete(self) -> bool:
+        """Check if upload is complete"""
+        return self.upload_status == self.UploadStatus.COMPLETED
+    
+    @property
+    def is_failed(self) -> bool:
+        """Check if upload failed"""
+        return self.upload_status == self.UploadStatus.FAILED
+    
+    @property
+    def can_retry(self) -> bool:
+        """Check if upload can be retried"""
+        return self.is_failed and self.retry_count < 3
+    
+    def mark_completed(self):
+        """Mark upload as completed"""
+        from django.utils import timezone
+        self.upload_status = self.UploadStatus.COMPLETED
+        self.progress_percent = 100
+        self.completed_at = timezone.now()
+        self.save(update_fields=['upload_status', 'progress_percent', 'completed_at', 'updated_at'])
+    
+    def mark_failed(self, error_message: str):
+        """Mark upload as failed with error message"""
+        from django.utils import timezone
+        self.upload_status = self.UploadStatus.FAILED
+        self.error_message = error_message
+        self.completed_at = timezone.now()
+        self.save(update_fields=['upload_status', 'error_message', 'completed_at', 'updated_at'])
+    
+    def update_progress(self, bytes_uploaded: int, total_bytes: int = None):
+        """Update upload progress"""
+        self.bytes_uploaded = bytes_uploaded
+        if total_bytes:
+            self.total_bytes = total_bytes
+        
+        if self.total_bytes > 0:
+            self.progress_percent = min(100, int((self.bytes_uploaded / self.total_bytes) * 100))
+        
+        self.save(update_fields=['bytes_uploaded', 'total_bytes', 'progress_percent', 'updated_at'])
+
 # settings.py example:
 # For local development:
 # MEDIA_URL = '/media/'

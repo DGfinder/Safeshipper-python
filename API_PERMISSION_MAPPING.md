@@ -84,6 +84,49 @@ Every frontend permission must have corresponding backend validation to ensure:
 | `sds.compliance.analytics` | `/api/v1/sds/analytics/` | GET | `view_sds_analytics` |
 | `dg.checker.view` | `/api/v1/dangerous-goods/check/` | POST | `check_dangerous_goods` |
 
+### **Emergency Procedures Management**
+| Frontend Permission | Backend Endpoint | HTTP Method | Backend Permission/Role |
+|-------------------|------------------|-------------|------------------------|
+| `emergency.procedures.view` | `/api/v1/emergency-procedures/api/procedures/` | GET | `view_emergency_procedures` |
+| `emergency.procedures.create` | `/api/v1/emergency-procedures/api/procedures/` | POST | `add_emergency_procedure` |
+| `emergency.procedures.edit` | `/api/v1/emergency-procedures/api/procedures/{id}/` | PUT, PATCH | `change_emergency_procedure` |
+| `emergency.procedures.quick_reference` | `/api/v1/emergency-procedures/api/procedures/quick-reference/` | GET | `view_emergency_procedures` |
+| `emergency.procedures.search` | `/api/v1/emergency-procedures/api/procedures/search-by-criteria/` | GET | `view_emergency_procedures` |
+| `emergency.incidents.view` | `/api/v1/emergency-procedures/api/incidents/` | GET | `view_emergency_incidents` |
+| `emergency.incidents.report` | `/api/v1/emergency-procedures/api/incidents/` | POST | `report_emergency_incident` |
+| `emergency.incidents.respond` | `/api/v1/emergency-procedures/api/incidents/{id}/start-response/` | POST | `manage_emergency_response` |
+| `emergency.incidents.resolve` | `/api/v1/emergency-procedures/api/incidents/{id}/mark-resolved/` | POST | `resolve_emergency_incident` |
+| `emergency.incidents.analytics` | `/api/v1/emergency-procedures/api/incidents/analytics/` | GET | `view_emergency_analytics` |
+| `emergency.contacts.view` | `/api/v1/emergency-procedures/api/contacts/` | GET | `view_emergency_contacts` |
+| `emergency.contacts.search` | `/api/v1/emergency-procedures/api/contacts/search-by-location/` | GET | `view_emergency_contacts` |
+| `emergency.contacts.manage` | `/api/v1/emergency-procedures/api/contacts/` | POST, PUT, PATCH | `manage_emergency_contacts` |
+
+### **Search & Discovery**
+| Frontend Permission | Backend Endpoint | HTTP Method | Backend Permission/Role |
+|-------------------|------------------|-------------|------------------------|
+| `search.unified.access` | `/api/v1/search/api/` | GET | `access_unified_search` |
+| `search.suggestions.view` | `/api/v1/search/api/suggestions/` | GET | `view_search_suggestions` |
+| `search.analytics.view` | `/api/v1/search/api/analytics/` | GET | `view_search_analytics` |
+
+### **File Upload & Document Management**
+| Frontend Permission | Backend Endpoint | HTTP Method | Backend Permission/Role |
+|-------------------|------------------|-------------|------------------------|
+| `documents.upload.single` | `/api/v1/documents/api/files/upload/` | POST | `upload_documents` |
+| `documents.upload.bulk` | `/api/v1/documents/api/files/bulk-upload/` | POST | `bulk_upload_documents` |
+| `documents.download` | `/api/v1/documents/api/files/{id}/download/` | GET | `download_documents` |
+| `documents.view.progress` | `/api/v1/documents/api/files/upload-progress/{session_id}/` | GET | `view_upload_progress` |
+| `documents.view.stats` | `/api/v1/documents/api/files/storage-stats/` | GET | `view_storage_statistics` |
+| `documents.view.list` | `/api/v1/documents/api/files/` | GET | `view_documents` |
+| `documents.processing.status` | `/api/v1/documents/api/files/{id}/processing-status/` | GET | `view_processing_status` |
+
+### **Dangerous Goods Management**
+| Frontend Permission | Backend Endpoint | HTTP Method | Backend Permission/Role |
+|-------------------|------------------|-------------|------------------------|
+| `dangerous_goods.view` | `/api/v1/dangerous-goods/` | GET | `view_dangerous_goods` |
+| `dangerous_goods.details` | `/api/v1/dangerous-goods/{id}/` | GET | `view_dangerous_goods` |
+| `dangerous_goods.lookup` | `/api/v1/dangerous-goods/lookup-by-synonym/` | GET | `lookup_dangerous_goods` |
+| `dangerous_goods.compatibility` | `/api/v1/dangerous-goods/check-compatibility/` | POST | `check_dangerous_goods_compatibility` |
+
 ### **Analytics & Reporting**
 | Frontend Permission | Backend Endpoint | HTTP Method | Backend Permission/Role |
 |-------------------|------------------|-------------|------------------------|
@@ -142,6 +185,10 @@ ROLE_PERMISSIONS = {
         'view_vehicle', 
         'view_sds',
         'view_shipment_tracking',
+        'view_dangerous_goods',
+        'access_unified_search',
+        'view_search_suggestions',
+        'view_documents',
         'authenticated'
     ],
     'driver': [
@@ -149,8 +196,18 @@ ROLE_PERMISSIONS = {
         'view_vehicle',
         'view_own_shipments', 
         'view_emergency_procedures',
+        'view_emergency_incidents',
+        'report_emergency_incident',
+        'view_emergency_contacts',
         'view_emergency_sds',
-        'track_shipments'
+        'track_shipments',
+        'view_dangerous_goods',
+        'lookup_dangerous_goods',
+        'check_dangerous_goods_compatibility',
+        'access_unified_search',
+        'view_search_suggestions',
+        'view_documents',
+        'upload_documents'
     ],
     'operator': [
         'view_user',
@@ -161,7 +218,24 @@ ROLE_PERMISSIONS = {
         'change_shipment',
         'view_operational_analytics',
         'add_sds',
-        'bulk_sds_operations'
+        'bulk_sds_operations',
+        'view_emergency_procedures',
+        'view_emergency_incidents',
+        'report_emergency_incident',
+        'manage_emergency_response',
+        'view_emergency_contacts',
+        'view_dangerous_goods',
+        'lookup_dangerous_goods',
+        'check_dangerous_goods_compatibility',
+        'access_unified_search',
+        'view_search_suggestions',
+        'view_search_analytics',
+        'view_documents',
+        'upload_documents',
+        'bulk_upload_documents',
+        'download_documents',
+        'view_upload_progress',
+        'view_processing_status'
     ],
     'manager': [
         'view_user',
@@ -178,7 +252,18 @@ ROLE_PERMISSIONS = {
         'view_advanced_analytics',
         'manage_sds_versions',
         'view_sds_analytics',
-        'assign_manager_role'
+        'assign_manager_role',
+        'add_emergency_procedure',
+        'change_emergency_procedure',
+        'manage_emergency_response',
+        'resolve_emergency_incident',
+        'view_emergency_analytics',
+        'manage_emergency_contacts',
+        'view_search_analytics',
+        'view_storage_statistics',
+        'all_dangerous_goods_permissions',
+        'all_document_permissions',
+        'all_search_permissions'
     ],
     'admin': [
         # All permissions
