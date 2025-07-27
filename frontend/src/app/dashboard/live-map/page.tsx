@@ -21,6 +21,7 @@ import {
 import { useFleetStatus } from "@/shared/hooks/useVehicles";
 import { useAuth } from "@/shared/hooks/use-auth";
 import { useRealTimeFleetTracking } from "@/shared/hooks/useRealTimeData";
+import { FleetVehicle } from "@/shared/hooks/useFleetTracking";
 import { MapDashboardLayout } from "@/shared/components/layout/map-dashboard-layout";
 import { DataFreshnessIndicator } from "@/shared/components/ui/connection-status";
 import { useAuthStore } from "@/shared/stores/auth-store";
