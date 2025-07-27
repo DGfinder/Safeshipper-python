@@ -51,6 +51,8 @@ import {
   DollarSign,
   Route,
   Monitor,
+  Phone,
+  MessageSquare,
   Shield as ShieldAnalytics,
 } from "lucide-react";
 
@@ -63,123 +65,121 @@ interface NavigationItem {
   requiredPermission?: string;
 }
 
+// Role-based navigation structure - organized by user workflow and permission level
 const navigation: NavigationItem[] = [
+  // Core Dashboard - Universal
   {
     name: "Dashboard",
     icon: Home,
     children: [
       { name: "Overview", href: "/dashboard", icon: Home, requiredPermission: "dashboard.view" },
-      { name: "Operations Center", href: "/operations", icon: MonitorSpeaker, badge: "New", requiredPermission: "operations.center.view" },
+      { name: "Operations Center", href: "/operations", icon: MonitorSpeaker, badge: "Live", requiredPermission: "operations.center.view" },
       { name: "Live Map", href: "/dashboard/live-map", icon: MapPin, requiredPermission: "dashboard.view" },
       { name: "Search", href: "/search", icon: Search, requiredPermission: "search.view" },
     ],
   },
+  // Shipment Operations
   {
     name: "Shipments",
     icon: Package,
     children: [
       { name: "All Shipments", href: "/shipments", icon: Package, requiredPermission: "shipments.view.all" },
-      {
-        name: "My Shipments",
-        href: "/shipments/my-shipments",
-        icon: Package,
-        requiredPermission: "shipments.view.own"
-      },
-      {
-        name: "Manifest Upload",
-        href: "/shipments/manifest-upload",
-        icon: Upload,
-        requiredPermission: "shipments.manifest.upload"
-      },
+      { name: "My Shipments", href: "/shipments", icon: Package, requiredPermission: "shipments.view.own" },
+      { name: "Manifest Upload", href: "/shipments/manifest-upload", icon: Upload, requiredPermission: "shipments.manifest.upload" },
+      { name: "Manifest Search", href: "/manifest-search", icon: Search, requiredPermission: "manifest.search.advanced" },
+      { name: "Exception Management", href: "/exceptions", icon: AlertTriangle, badge: "Live", requiredPermission: "exceptions.proactive.view" },
     ],
   },
+
+  // Communications & Collaboration
   {
-    name: "Enterprise Integration",
-    icon: Layers,
+    name: "Communications",
+    icon: MessageSquare,
     children: [
-      { name: "ERP Integration", href: "/erp-integration", icon: Workflow, badge: "New", requiredPermission: "erp.integration.view" },
-      { name: "API Gateway", href: "/api-gateway", icon: Globe, badge: "New", requiredPermission: "api.gateway.view" },
-      { name: "Developer Portal", href: "/developer", icon: Code2, badge: "New", requiredPermission: "developer.portal.view" },
+      { name: "Real-time Chat", href: "/chat", icon: MessageSquare, badge: "New", requiredPermission: "communications.chat.view" },
+      { name: "Voice Interface", href: "/voice-interface", icon: MonitorSpeaker, badge: "AI", requiredPermission: "voice.interface.view" },
     ],
   },
+  // Fleet & Vehicle Operations
   {
-    name: "Operations",
+    name: "Fleet Operations",
     icon: Truck,
     children: [
       { name: "Fleet Management", href: "/fleet", icon: Truck, requiredPermission: "vehicle.view" },
-      { name: "IoT Monitoring", href: "/iot-monitoring", icon: Activity, requiredPermission: "iot.monitoring.view" },
+      { name: "IoT Monitoring", href: "/iot-monitoring", icon: Activity, badge: "Live", requiredPermission: "iot.monitoring.view" },
+      { name: "Vehicle Inspections", href: "/fleet/inspections", icon: ClipboardCheck, requiredPermission: "driver.vehicle.inspection" },
+      { name: "Route Navigation", href: "/fleet/routes", icon: MapPin, requiredPermission: "driver.route.navigation" },
+      { name: "Proof of Delivery", href: "/fleet/delivery-proof", icon: Package, requiredPermission: "driver.proof.delivery" },
     ],
   },
+  // Safety & Compliance
   {
     name: "Safety & Compliance",
     icon: Shield,
     children: [
       { name: "DG Compliance", href: "/dg-compliance", icon: Shield, requiredPermission: "safety.compliance.view" },
       { name: "Live Compliance", href: "/compliance-live", icon: Activity, badge: "Live", requiredPermission: "safety.compliance.view" },
-      {
-        name: "Emergency Procedures",
-        href: "/emergency-procedures",
-        icon: AlertTriangle,
-        requiredPermission: "emergency.procedures.view"
-      },
+      { name: "Emergency Procedures", href: "/emergency-procedures", icon: AlertTriangle, requiredPermission: "emergency.procedures.view" },
       { name: "Incident Management", href: "/incidents", icon: ClipboardCheck, requiredPermission: "incidents.view" },
       { name: "Training", href: "/training", icon: GraduationCap, requiredPermission: "training.view" },
-      { name: "Inspections", href: "/inspections", icon: ClipboardCheck, badge: "New", requiredPermission: "inspections.view" },
-      { name: "Audits", href: "/audits", icon: FileText, badge: "New", requiredPermission: "audits.view" },
+      { name: "Inspections", href: "/inspections", icon: ClipboardCheck, requiredPermission: "inspections.view" },
+      { name: "Audits", href: "/audits", icon: FileText, requiredPermission: "audits.view" },
     ],
   },
+
+  // SDS & Resources
   {
-    name: "Resources",
+    name: "SDS & Resources",
     icon: Database,
     children: [
       { name: "SDS Library", href: "/sds-library", icon: Database, requiredPermission: "sds.library.view" },
       { name: "SDS Enhanced", href: "/sds-enhanced", icon: BookOpen, requiredPermission: "sds.library.view" },
+      { name: "SDS Emergency", href: "/sds-emergency", icon: AlertTriangle, badge: "Emergency", requiredPermission: "sds.emergency.responder" },
+      { name: "SDS Mobile", href: "/sds-mobile", icon: Phone, badge: "Mobile", requiredPermission: "sds.mobile.interface" },
+      { name: "SDS Unified", href: "/sds", icon: Layers, badge: "New", requiredPermission: "sds.library.view" },
       { name: "DG Checker", href: "/dg-checker", icon: Search, requiredPermission: "dg.checker.view" },
     ],
   },
+  // Analytics & Intelligence (Unified)
   {
-    name: "AI Tools",
-    icon: Brain,
-    children: [
-      { name: "AI Insights", href: "/ai-insights", icon: Brain, requiredPermission: "ai.insights.view" },
-      { name: "Risk Analytics", href: "/risk-analytics", icon: TrendingUp, badge: "New", requiredPermission: "risk.analytics.view" },
-    ],
-  },
-  {
-    name: "Public Services",
-    icon: MapPin,
-    children: [
-      { name: "Track Shipment", href: "/track", icon: Search, requiredPermission: "track.shipment.view" },
-    ],
-  },
-  {
-    name: "Customer Portal",
-    icon: UserCheck,
-    children: [
-      { name: "Portal Dashboard", href: "/customer-portal", icon: UserCheck, badge: "New", requiredPermission: "customer.portal.admin" },
-      { name: "Self-Service", href: "/customer-portal/requests", icon: Users, badge: "New", requiredPermission: "customer.portal.admin" },
-      { name: "Notifications", href: "/customer-portal/notifications", icon: AlertTriangle, badge: "New", requiredPermission: "customer.portal.admin" },
-    ],
-  },
-  {
-    name: "Reports & Analytics",
+    name: "Analytics & Intelligence",
     icon: BarChart3,
     children: [
+      // Core Analytics (All Roles)
       { name: "Reports Dashboard", href: "/reports", icon: BarChart, requiredPermission: "reports.view" },
-      { name: "Advanced Analytics", href: "/analytics", icon: LineChart, badge: "New", requiredPermission: "analytics.advanced.view" },
-      { name: "Business Intelligence", href: "/analytics/insights", icon: Brain, badge: "New", requiredPermission: "analytics.advanced.view" },
+      { name: "Unified Analytics", href: "/analytics-unified", icon: LineChart, badge: "New", requiredPermission: "analytics.unified.view" },
+      
+      // Advanced Analytics (Manager+)
+      { name: "Advanced Analytics", href: "/analytics", icon: TrendingUp, requiredPermission: "analytics.advanced.view" },
+      { name: "Business Intelligence", href: "/analytics/insights", icon: Brain, requiredPermission: "analytics.advanced.view" },
+      { name: "AI Insights", href: "/ai-insights", icon: Brain, badge: "AI", requiredPermission: "ai.insights.view" },
+      
+      // Risk & Predictive Analytics (Manager+)
+      { name: "Risk Analytics", href: "/risk-analytics", icon: AlertTriangle, requiredPermission: "risk.analytics.view" },
+      { name: "Supply Chain Stress", href: "/supply-chain-stress", icon: ShieldAnalytics, badge: "Predictive", requiredPermission: "supply.chain.analytics" },
+      { name: "Cash Flow Prediction", href: "/cash-flow", icon: DollarSign, badge: "Predictive", requiredPermission: "cash.flow.prediction" },
+      
+      // Specialized Analytics (Manager+)
+      { name: "Insurance Pricing", href: "/insurance-pricing", icon: DollarSign, badge: "AI", requiredPermission: "insurance.analytics" },
+      { name: "Route Optimization", href: "/route-optimization", icon: Route, badge: "Optimization", requiredPermission: "route.optimization" },
+      { name: "Digital Twin", href: "/digital-twin", icon: Monitor, badge: "Digital Twin", requiredPermission: "digital.twin.view" },
+      { name: "Sustainability Analytics", href: "/sustainability", icon: Layers, badge: "ESG", requiredPermission: "sustainability.analytics" },
     ],
   },
+
+  // Customer Management
   {
-    name: "Advanced Analytics",
-    icon: TrendingUp,
+    name: "Customer Management",
+    icon: UserCheck,
     children: [
-      { name: "Supply Chain Stress", href: "/supply-chain-stress", icon: ShieldAnalytics, badge: "Analytics", requiredPermission: "supply.chain.analytics" },
-      { name: "Insurance Pricing", href: "/insurance-pricing", icon: DollarSign, badge: "Analytics", requiredPermission: "insurance.analytics" },
-      { name: "Route Optimization", href: "/route-optimization", icon: Route, badge: "Analytics", requiredPermission: "route.optimization" },
-      { name: "Digital Twin", href: "/digital-twin", icon: Monitor, badge: "Analytics", requiredPermission: "digital.twin.view" },
+      { name: "Track Shipment", href: "/track", icon: Search, requiredPermission: "track.shipment.view" },
+      { name: "Customer Accounts", href: "/customer-portal", icon: UserCheck, requiredPermission: "customer.portal.admin" },
+      { name: "Customer Requests", href: "/customer-portal/requests", icon: Users, requiredPermission: "customer.portal.admin" },
+      { name: "Customer Communications", href: "/customer-portal/notifications", icon: AlertTriangle, requiredPermission: "customer.portal.admin" },
+      { name: "Customer Documents", href: "/customer-portal/documents", icon: FileText, requiredPermission: "customer.portal.admin" },
     ],
   },
+  // User & Organization Management
   {
     name: "Management",
     icon: Users,
@@ -187,6 +187,29 @@ const navigation: NavigationItem[] = [
       { name: "Users", href: "/users", icon: Users, requiredPermission: "users.manage" },
       { name: "Customers", href: "/customers", icon: Building2, requiredPermission: "customers.manage" },
       { name: "Settings", href: "/settings", icon: Settings, requiredPermission: "settings.manage" },
+    ],
+  },
+
+  // Platform Administration (Admin Only)
+  {
+    name: "Platform Administration",
+    icon: Settings,
+    children: [
+      { name: "ERP Integration", href: "/erp-integration", icon: Workflow, badge: "Platform", requiredPermission: "erp.integration.view" },
+      { name: "API Gateway", href: "/api-gateway", icon: Globe, badge: "Platform", requiredPermission: "api.gateway.view" },
+      { name: "Developer Portal", href: "/developer", icon: Code2, badge: "Platform", requiredPermission: "developer.portal.view" },
+      { name: "System Security", href: "/security-audit", icon: Shield, badge: "Security", requiredPermission: "system.security.audit" },
+      { name: "Environment Management", href: "/environment", icon: Monitor, badge: "Admin", requiredPermission: "system.environment.management" },
+    ],
+  },
+
+  // Development & Testing (Non-Production Only)
+  {
+    name: "Development Tools",
+    icon: TestTube,
+    children: [
+      { name: "Test Manifest", href: "/test-manifest", icon: Upload, badge: "Dev", requiredPermission: "development.manifest.test" },
+      { name: "Mobile Overflow", href: "/more", icon: Menu, badge: "Mobile", requiredPermission: "mobile.interface.access" },
     ],
   },
 ];

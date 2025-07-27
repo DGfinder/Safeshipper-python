@@ -113,10 +113,13 @@ type Permission =
   | "analytics.full.access"          // Full analytics access
   | "analytics.insights"             // Analytics insights
   | "analytics.operational"          // Operational analytics
+  | "analytics.unified.view"         // Unified analytics interface
   | "supply.chain.analytics"         // Supply chain analytics
   | "insurance.analytics"            // Insurance analytics
   | "route.optimization"             // Route optimization tools
   | "digital.twin.view"              // View digital twin data
+  | "cash.flow.prediction"           // Cash flow prediction analytics
+  | "sustainability.analytics"       // Sustainability and environmental analytics
   
   // Document Generation & Management
   | "documents.generate.shipment_report"     // Generate shipment reports
@@ -127,11 +130,38 @@ type Permission =
   | "documents.download.all"                 // Download any document type
   | "documents.audit.trail"                  // Include audit trails in documents
   
+  // Communications & Collaboration
+  | "communications.chat.view"       // Access real-time chat system
+  | "communications.chat.admin"      // Administer chat channels and settings
+  | "voice.interface.view"           // Access voice AI interface
+  | "voice.interface.emergency"      // Emergency voice commands
+  
+  // Operations & Exception Management
+  | "exceptions.proactive.view"      // View proactive exception management
+  | "exceptions.manage"              // Manage and resolve exceptions
+  | "manifest.search.advanced"       // Advanced manifest search capabilities
+  | "mobile.interface.access"        // Access to mobile-specific interfaces
+  
+  // Development & Testing (Environment-based)
+  | "development.testing.access"     // Access to testing features (dev/staging only)
+  | "development.manifest.test"      // Manifest testing workflows (dev/staging only)
+  
+  // Advanced System Administration (Admin-only)
+  | "system.platform.administration" // Full platform administration access
+  | "system.environment.management"  // Environment and deployment management
+  | "system.security.audit"          // Security auditing and monitoring
+  
   // Customer & Portal Management  
   | "customer.portal.admin"          // Administer customer portal
   | "customer.portal.tracking"       // Track via customer portal
   | "customer.portal.view"           // Access customer portal interface
   | "driver.operations.view"         // Driver operations interface access
+  
+  // Field Operations (Driver-specific)
+  | "driver.proof.delivery"          // Capture and upload proof of delivery
+  | "driver.vehicle.inspection"      // Perform basic vehicle inspections
+  | "driver.route.navigation"        // Access route navigation and GPS
+  | "driver.incident.report"         // Report incidents and emergencies
   
   // System Administration
   | "users.manage"                   // Manage users
@@ -211,6 +241,14 @@ const rolePermissions: Record<Role, Permission[]> = {
     "sds.emergency.responder",
     "customer.portal.tracking",
     "driver.operations.view",
+    "communications.chat.view",
+    "voice.interface.view",
+    "voice.interface.emergency",
+    "mobile.interface.access",
+    "driver.proof.delivery",
+    "driver.vehicle.inspection",
+    "driver.route.navigation",
+    "driver.incident.report",
     "users.view",
     "documents.view.all",
     "documents.download.all",
@@ -252,6 +290,11 @@ const rolePermissions: Record<Role, Permission[]> = {
     "fleet.management",
     "shipment.creation",
     "shipment.editing",
+    "communications.chat.view",
+    "voice.interface.view",
+    "exceptions.proactive.view",
+    "manifest.search.advanced",
+    "mobile.interface.access",
     "users.view",
     "users.edit",
     "documents.view.all",
@@ -282,9 +325,6 @@ const rolePermissions: Record<Role, Permission[]> = {
     "shipments.view.all",
     "shipments.view.own",
     "shipments.manifest.upload",
-    "erp.integration.view",
-    "api.gateway.view",
-    "developer.portal.view",
     "iot.monitoring.view",
     "safety.compliance.view",
     "emergency.procedures.view",
@@ -326,10 +366,20 @@ const rolePermissions: Record<Role, Permission[]> = {
     "sds.mode.selection",
     "analytics.insights",
     "analytics.operational",
+    "analytics.unified.view",
+    "cash.flow.prediction",
+    "sustainability.analytics",
     "customer.portal.tracking",
     "fleet.management",
     "shipment.creation",
     "shipment.editing",
+    "communications.chat.view",
+    "communications.chat.admin",
+    "voice.interface.view",
+    "exceptions.proactive.view",
+    "exceptions.manage",
+    "manifest.search.advanced",
+    "mobile.interface.access",
     "audit.logs",
     "documents.view.all",
     "documents.download.all",
@@ -410,10 +460,33 @@ const rolePermissions: Record<Role, Permission[]> = {
     "analytics.full.access",
     "analytics.insights",
     "analytics.operational",
+    "analytics.unified.view",
+    "cash.flow.prediction",
+    "sustainability.analytics",
     "customer.portal.tracking",
     "fleet.management",
     "shipment.creation",
     "shipment.editing",
+    "communications.chat.view",
+    "communications.chat.admin",
+    "voice.interface.view",
+    "voice.interface.emergency",
+    "exceptions.proactive.view",
+    "exceptions.manage",
+    "manifest.search.advanced",
+    "mobile.interface.access",
+    "development.testing.access",
+    "development.manifest.test",
+    "erp.integration.view",
+    "api.gateway.view",
+    "developer.portal.view",
+    "system.platform.administration",
+    "system.environment.management",
+    "system.security.audit",
+    "driver.proof.delivery",
+    "driver.vehicle.inspection",
+    "driver.route.navigation",
+    "driver.incident.report",
     "user.management",
     "audit.logs",
     "documents.view.all",
@@ -424,6 +497,37 @@ const rolePermissions: Record<Role, Permission[]> = {
     "documents.generate.batch",
     "documents.audit.trail"
   ]
+};
+
+/**
+ * Environment-aware permission checking.
+ * Development and testing features should only be available in non-production environments.
+ */
+const isDevelopmentEnvironment = (): boolean => {
+  if (typeof window === 'undefined') return false;
+  
+  const nodeEnv = process.env.NODE_ENV;
+  const isProduction = nodeEnv === 'production';
+  const hostname = window.location.hostname;
+  
+  // Allow dev features in development, staging, or local environments
+  return !isProduction || 
+         hostname.includes('localhost') || 
+         hostname.includes('staging') || 
+         hostname.includes('dev.');
+};
+
+/**
+ * Check if a permission should be available based on environment restrictions.
+ */
+const isPermissionAvailableInEnvironment = (permission: Permission): boolean => {
+  // Development and testing permissions are only available in non-production
+  if (permission.startsWith('development.')) {
+    return isDevelopmentEnvironment();
+  }
+  
+  // All other permissions are always available
+  return true;
 };
 
 /**
@@ -535,6 +639,12 @@ export function PermissionProvider({ children }: { children: ReactNode }) {
    * @returns true if user has the permission, false otherwise
    */
   const can = (permission: Permission): boolean => {
+    // First check if the permission is available in the current environment
+    if (!isPermissionAvailableInEnvironment(permission)) {
+      return false;
+    }
+    
+    // Then check if the user's role includes this permission
     return permissions.includes(permission);
   };
 
