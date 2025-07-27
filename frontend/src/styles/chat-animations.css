@@ -1,0 +1,361 @@
+/* Modern Chat Widget Animations */
+
+@keyframes scale-in {
+  0% {
+    opacity: 0;
+    transform: scale(0.9) translateY(10px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes slide-up {
+  0% {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes bounce-in {
+  0% {
+    opacity: 0;
+    transform: scale(0.3);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.05);
+  }
+  70% {
+    transform: scale(0.9);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes typing-dots {
+  0%, 60%, 100% {
+    transform: initial;
+  }
+  30% {
+    transform: translateY(-10px);
+  }
+}
+
+@keyframes pulse-ring {
+  0% {
+    transform: scale(0.33);
+  }
+  40%, 50% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.33);
+  }
+}
+
+@keyframes message-appear {
+  0% {
+    opacity: 0;
+    transform: translateY(10px) scale(0.95);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes reaction-pop {
+  0% {
+    opacity: 0;
+    transform: scale(0.5);
+  }
+  50% {
+    transform: scale(1.2);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Chat Widget Specific Styles */
+.animate-scale-in {
+  animation: scale-in 0.3s ease-out;
+}
+
+.animate-slide-up {
+  animation: slide-up 0.2s ease-out;
+}
+
+.animate-bounce-in {
+  animation: bounce-in 0.4s ease-out;
+}
+
+.animate-message-appear {
+  animation: message-appear 0.2s ease-out;
+}
+
+.animate-reaction-pop {
+  animation: reaction-pop 0.3s ease-out;
+}
+
+/* Typing indicator animation */
+.typing-indicator {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 8px 12px;
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: 12px;
+  max-width: fit-content;
+}
+
+.typing-indicator span {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: #9CA3AF;
+  animation: typing-dots 1.4s infinite;
+}
+
+.typing-indicator span:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.typing-indicator span:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+/* Pulse animation for unread indicator */
+.pulse-ring {
+  position: relative;
+}
+
+.pulse-ring::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 100%;
+  height: 100%;
+  border: 2px solid #3B82F6;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  animation: pulse-ring 2s cubic-bezier(0.455, 0.03, 0.515, 0.955) infinite;
+}
+
+/* Message bubble hover effects */
+.message-bubble {
+  transition: all 0.2s ease;
+}
+
+.message-bubble:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+/* Smooth scrolling for messages */
+.messages-container {
+  scroll-behavior: smooth;
+}
+
+/* Modern chat input focus styles */
+.chat-input:focus {
+  outline: none;
+  ring: 2px;
+  ring-color: #3B82F6;
+  ring-opacity: 0.3;
+  border-color: #3B82F6;
+}
+
+/* Voice recording animation */
+.recording-indicator {
+  position: relative;
+  background: #EF4444;
+  border-radius: 50%;
+}
+
+.recording-indicator::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 100%;
+  height: 100%;
+  background: #EF4444;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  animation: pulse-ring 1s ease-out infinite;
+  opacity: 0.6;
+}
+
+/* Emoji picker animation */
+.emoji-picker-enter {
+  opacity: 0;
+  transform: scale(0.9) translateY(10px);
+}
+
+.emoji-picker-enter-active {
+  opacity: 1;
+  transform: scale(1) translateY(0);
+  transition: all 0.2s ease-out;
+}
+
+/* Mobile responsiveness */
+@media (max-width: 768px) {
+  .chat-widget-mobile {
+    width: 100vw !important;
+    height: 100vh !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    border-radius: 0 !important;
+  }
+  
+  .chat-bubble-mobile {
+    bottom: 80px !important; /* Account for mobile navigation */
+  }
+}
+
+/* Dark mode adjustments */
+@media (prefers-color-scheme: dark) {
+  .typing-indicator {
+    background: rgba(255, 255, 255, 0.1);
+  }
+  
+  .typing-indicator span {
+    background: #6B7280;
+  }
+}
+
+/* Accessibility improvements */
+@media (prefers-reduced-motion: reduce) {
+  .animate-scale-in,
+  .animate-slide-up,
+  .animate-bounce-in,
+  .animate-message-appear,
+  .animate-reaction-pop {
+    animation: none;
+  }
+  
+  .typing-indicator span {
+    animation: none;
+  }
+  
+  .pulse-ring::before {
+    animation: none;
+  }
+  
+  .recording-indicator::before {
+    animation: none;
+  }
+}
+
+/* High contrast mode */
+@media (prefers-contrast: high) {
+  .message-bubble {
+    border: 2px solid;
+  }
+  
+  .typing-indicator {
+    border: 1px solid;
+  }
+}
+
+/* Custom scrollbar for messages */
+.messages-scrollbar::-webkit-scrollbar {
+  width: 4px;
+}
+
+.messages-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.messages-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 2px;
+}
+
+.messages-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.3);
+}
+
+/* Message status indicators */
+.message-status {
+  transition: all 0.2s ease;
+}
+
+.message-delivered {
+  color: #6B7280;
+}
+
+.message-read {
+  color: #3B82F6;
+}
+
+/* Channel notification badge */
+.channel-badge {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  min-width: 18px;
+  height: 18px;
+  border-radius: 9px;
+  background: #EF4444;
+  color: white;
+  font-size: 10px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: bounce-in 0.3s ease-out;
+}
+
+/* Sound wave animation for voice messages */
+@keyframes sound-wave {
+  0%, 100% {
+    height: 4px;
+  }
+  50% {
+    height: 16px;
+  }
+}
+
+.sound-wave {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.sound-wave span {
+  width: 2px;
+  background: currentColor;
+  border-radius: 1px;
+  animation: sound-wave 0.8s ease-in-out infinite;
+}
+
+.sound-wave span:nth-child(2) {
+  animation-delay: 0.1s;
+}
+
+.sound-wave span:nth-child(3) {
+  animation-delay: 0.2s;
+}
+
+.sound-wave span:nth-child(4) {
+  animation-delay: 0.3s;
+}
+
+.sound-wave span:nth-child(5) {
+  animation-delay: 0.4s;
+}

@@ -22,6 +22,14 @@ const DynamicAccessibilityProvider = dynamic(
   }
 );
 
+const DynamicGlobalChatProvider = dynamic(
+  () => import("@/shared/components/communications").then(mod => ({ default: mod.GlobalChatProvider })),
+  { 
+    ssr: false,
+    loading: () => <>{/* Chat provider loading... */}</>
+  }
+);
+
 // Import theme provider normally as it's designed to handle SSR
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { PermissionProvider } from "@/contexts/PermissionContext";
@@ -150,8 +158,10 @@ function ProviderWrapper({ children }: { children: React.ReactNode }) {
             <PermissionProvider>
               <DynamicAccessibilityProvider>
                 <DynamicWebSocketProvider>
-                  {children}
-                  <PerformanceMonitor />
+                  <DynamicGlobalChatProvider>
+                    {children}
+                    <PerformanceMonitor />
+                  </DynamicGlobalChatProvider>
                 </DynamicWebSocketProvider>
               </DynamicAccessibilityProvider>
             </PermissionProvider>

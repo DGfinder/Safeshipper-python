@@ -92,7 +92,8 @@
       "Bash(PYTHONPATH=. python3 -c \"import django; print(''Django version:'', django.VERSION)\")",
       "Bash(tree:*)",
       "Bash(git reset:*)",
-      "Bash(true)"
+      "Bash(true)",
+      "Bash(pkill:*)"
     ],
     "deny": []
   }
