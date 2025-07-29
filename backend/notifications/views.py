@@ -5,14 +5,19 @@ Handles device registration, notification preferences, and push token management
 """
 
 import logging
-from rest_framework import status
-from rest_framework.decorators import api_view, permission_classes
+from rest_framework import status, viewsets, permissions
+from rest_framework.decorators import api_view, permission_classes, action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from django.contrib.auth import get_user_model
 from django.utils import timezone
+from django.db import transaction
 from .models import PushNotificationDevice
-from .serializers import PushNotificationDeviceSerializer
+from .notification_preferences import FeedbackNotificationPreference, NotificationDigest
+from .serializers import (
+    PushNotificationDeviceSerializer, FeedbackNotificationPreferenceSerializer,
+    NotificationDigestSerializer, NotificationPreferencesUpdateSerializer
+)
 
 logger = logging.getLogger(__name__)
 User = get_user_model()
@@ -355,3 +360,214 @@ def test_notification(request):
             'success': False,
             'error': 'Failed to send test notification'
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+# ===== FEEDBACK NOTIFICATION PREFERENCE VIEWSETS =====
+
+class FeedbackNotificationPreferenceViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet for managing feedback notification preferences.
+    Provides comprehensive preference management for different notification types.
+    """
+    serializer_class = FeedbackNotificationPreferenceSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    
+    def get_queryset(self):
+        """Return preferences for the authenticated user only."""
+        return FeedbackNotificationPreference.objects.filter(user=self.request.user)
+    
+    def get_object(self):
+        """Get or create preference object for the current user."""
+        preferences, created = FeedbackNotificationPreference.objects.get_or_create(
+            user=self.request.user,
+            defaults={}
+        )
+        return preferences
+    
+    def list(self, request):
+        """Get user's feedback notification preferences."""
+        preferences = self.get_object()
+        serializer = self.get_serializer(preferences)
+        return Response(serializer.data)
+    
+    def retrieve(self, request, pk=None):
+        """Get specific preference (same as list for single user)."""
+        return self.list(request)
+    
+    @transaction.atomic
+    def update(self, request, pk=None):
+        """Update user's notification preferences."""
+        preferences = self.get_object()
+        serializer = self.get_serializer(preferences, data=request.data, partial=True)
+        
+        if serializer.is_valid():
+            serializer.save()
+            
+            logger.info(f"Updated feedback notification preferences for user {request.user.get_full_name()}")
+            
+            return Response({
+                "message": "Notification preferences updated successfully",
+                "preferences": serializer.data
+            }, status=status.HTTP_200_OK)
+        
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    @action(detail=False, methods=['patch'])
+    def bulk_update(self, request):
+        """
+        Bulk update specific notification preferences.
+        Useful for quick toggles without sending all preferences.
+        
+        Expected payload:
+        {
+            "feedback_received_enabled": true,
+            "feedback_received_methods": ["push", "email"],
+            "quiet_hours_enabled": true,
+            "quiet_hours_start": "22:00",
+            "quiet_hours_end": "07:00"
+        }
+        """
+        preferences = self.get_object()
+        serializer = NotificationPreferencesUpdateSerializer(data=request.data)
+        
+        if serializer.is_valid():
+            validated_data = serializer.validated_data
+            
+            # Update preferences with validated data
+            for field, value in validated_data.items():
+                setattr(preferences, field, value)
+            
+            preferences.save()
+            
+            # Return updated preferences
+            response_serializer = FeedbackNotificationPreferenceSerializer(preferences)
+            
+            return Response({
+                "message": "Preferences updated successfully",
+                "updated_fields": list(validated_data.keys()),
+                "preferences": response_serializer.data
+            }, status=status.HTTP_200_OK)
+        
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    @action(detail=False, methods=['post'])
+    def reset_to_defaults(self, request):
+        """Reset user's preferences to role-based defaults."""
+        preferences = self.get_object()
+        
+        # Reset to defaults based on user role
+        default_methods = preferences.default_methods_for_role
+        
+        preferences.feedback_received_enabled = True
+        preferences.feedback_received_methods = default_methods
+        preferences.feedback_received_frequency = 'immediate'
+        preferences.feedback_severity_filter = 'all'
+        preferences.manager_response_enabled = True
+        preferences.manager_response_methods = default_methods
+        preferences.incident_created_enabled = True
+        preferences.incident_created_methods = default_methods
+        preferences.weekly_report_enabled = True
+        preferences.weekly_report_methods = ['email']
+        preferences.driver_feedback_enabled = request.user.role == 'DRIVER'
+        preferences.driver_feedback_methods = ['push'] if request.user.role == 'DRIVER' else []
+        preferences.driver_feedback_positive_only = False
+        preferences.quiet_hours_enabled = False
+        preferences.emergency_override_enabled = True
+        
+        preferences.save()
+        
+        serializer = FeedbackNotificationPreferenceSerializer(preferences)
+        
+        logger.info(f"Reset notification preferences to defaults for user {request.user.get_full_name()}")
+        
+        return Response({
+            "message": "Preferences reset to defaults successfully",
+            "preferences": serializer.data
+        }, status=status.HTTP_200_OK)
+    
+    @action(detail=False, methods=['get'])
+    def test_settings(self, request):
+        """
+        Test current notification settings by showing what notifications
+        the user would receive for different scenarios.
+        """
+        preferences = self.get_object()
+        
+        test_scenarios = [
+            {
+                'scenario': 'Excellent feedback received (95%)',
+                'would_notify': preferences.should_notify('feedback_received', feedback_score=95),
+                'methods': preferences.get_notification_methods('feedback_received') if preferences.should_notify('feedback_received', feedback_score=95) else []
+            },
+            {
+                'scenario': 'Poor feedback received (50%)',
+                'would_notify': preferences.should_notify('feedback_received', feedback_score=50),
+                'methods': preferences.get_notification_methods('feedback_received') if preferences.should_notify('feedback_received', feedback_score=50) else []
+            },
+            {
+                'scenario': 'Critical feedback received (20%)',
+                'would_notify': preferences.should_notify('feedback_received', feedback_score=20),
+                'methods': preferences.get_notification_methods('feedback_received') if preferences.should_notify('feedback_received', feedback_score=20) else []
+            },
+            {
+                'scenario': 'Manager responds to feedback',
+                'would_notify': preferences.should_notify('manager_response'),
+                'methods': preferences.get_notification_methods('manager_response') if preferences.should_notify('manager_response') else []
+            },
+            {
+                'scenario': 'Emergency incident created',
+                'would_notify': preferences.should_notify('incident_created', is_emergency=True),
+                'methods': preferences.get_notification_methods('incident_created') if preferences.should_notify('incident_created', is_emergency=True) else []
+            }
+        ]
+        
+        return Response({
+            'current_preferences': FeedbackNotificationPreferenceSerializer(preferences).data,
+            'test_scenarios': test_scenarios
+        }, status=status.HTTP_200_OK)
+
+
+class NotificationDigestViewSet(viewsets.ReadOnlyModelViewSet):
+    """
+    Read-only ViewSet for viewing notification digests.
+    Users can view their digest history and statistics.
+    """
+    serializer_class = NotificationDigestSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    
+    def get_queryset(self):
+        """Return digests for the authenticated user only."""
+        return NotificationDigest.objects.filter(
+            user=self.request.user
+        ).order_by('-created_at')
+    
+    @action(detail=False, methods=['get'])
+    def recent(self, request):
+        """Get recent digest history with summary statistics."""
+        queryset = self.get_queryset()[:10]  # Last 10 digests
+        serializer = self.get_serializer(queryset, many=True)
+        
+        # Calculate summary stats
+        total_digests = queryset.count()
+        total_notifications = sum(digest.notification_count for digest in queryset)
+        avg_notifications_per_digest = total_notifications / total_digests if total_digests > 0 else 0
+        
+        return Response({
+            'recent_digests': serializer.data,
+            'summary': {
+                'total_digests': total_digests,
+                'total_notifications': total_notifications,
+                'average_per_digest': round(avg_notifications_per_digest, 1)
+            }
+        }, status=status.HTTP_200_OK)
+    
+    @action(detail=False, methods=['get'])
+    def pending(self, request):
+        """Get pending (unsent) digests for the user."""
+        pending_digests = self.get_queryset().filter(sent_at__isnull=True)
+        serializer = self.get_serializer(pending_digests, many=True)
+        
+        return Response({
+            'pending_digests': serializer.data,
+            'count': pending_digests.count()
+        }, status=status.HTTP_200_OK)

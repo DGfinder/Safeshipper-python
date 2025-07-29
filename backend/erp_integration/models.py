@@ -94,6 +94,7 @@ class IntegrationEndpoint(models.Model):
         ('financials', 'Financial Data'),
         ('master_data', 'Master Data'),
         ('documents', 'Document Management'),
+        ('feedback_webhooks', 'Feedback Webhooks'),
     ]
     
     HTTP_METHODS = [

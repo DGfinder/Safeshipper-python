@@ -452,6 +452,20 @@ class ShipmentFeedback(models.Model):
         help_text=_("Manager who responded to this feedback")
     )
     
+    # Data retention and anonymization fields
+    anonymized_at = models.DateTimeField(
+        _("Anonymized At"),
+        null=True,
+        blank=True,
+        help_text=_("When this feedback was anonymized per data retention policy")
+    )
+    anonymization_hash = models.CharField(
+        _("Anonymization Hash"),
+        max_length=64,
+        blank=True,
+        help_text=_("Hash used for consistent anonymization")
+    )
+    
     # Metadata
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

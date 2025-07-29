@@ -29,6 +29,12 @@ from .services import (
     search_shipments
 )
 from .incident_service import create_incident_for_feedback, update_incident_for_feedback_response
+from notifications.feedback_notification_service import (
+    notify_feedback_received, notify_manager_response, notify_incident_created, notify_driver_feedback
+)
+from erp_integration.feedback_webhook_service import (
+    send_feedback_webhook, send_incident_webhook
+)
 from .safety_validation import ShipmentSafetyValidator, ShipmentPreValidationService
 
 
@@ -1763,12 +1769,31 @@ class ShipmentFeedbackViewSet(viewsets.ModelViewSet):
         return queryset
 
     def perform_create(self, serializer):
-        """Handle feedback creation with automatic incident creation"""
+        """Handle feedback creation with automatic incident creation and notifications"""
         feedback = serializer.save()
+        
+        # Send notifications to managers/admins
+        notify_feedback_received(feedback)
+        
+        # Send notification to driver if configured
+        notify_driver_feedback(feedback)
+        
+        # Send ERP webhook for feedback created event
+        try:
+            send_feedback_webhook(feedback, 'created')
+        except Exception as e:
+            logger.error(f"Failed to send ERP webhook for feedback creation: {e}")
         
         # Automatic incident creation for poor feedback (< 67%)
         if feedback.requires_incident:
-            self._create_incident_for_poor_feedback(feedback)
+            incident = self._create_incident_for_poor_feedback(feedback)
+            if incident:
+                notify_incident_created(feedback, incident)
+                # Send ERP webhook for incident created event
+                try:
+                    send_incident_webhook(feedback, incident)
+                except Exception as e:
+                    logger.error(f"Failed to send ERP webhook for incident creation: {e}")
         
         logger.info(f"Feedback created for shipment {feedback.shipment.tracking_number} with score {feedback.delivery_success_score}%")
 
@@ -1813,6 +1838,15 @@ class ShipmentFeedbackViewSet(viewsets.ModelViewSet):
             
             # Update related incident with manager response
             update_incident_for_feedback_response(feedback)
+            
+            # Send notifications about manager response
+            notify_manager_response(feedback)
+            
+            # Send ERP webhook for manager response event
+            try:
+                send_feedback_webhook(feedback, 'manager_response')
+            except Exception as e:
+                logger.error(f"Failed to send ERP webhook for manager response: {e}")
             
             # Return updated feedback
             response_serializer = ShipmentFeedbackSerializer(feedback)
