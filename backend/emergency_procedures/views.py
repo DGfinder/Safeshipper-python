@@ -18,6 +18,7 @@ from .permissions import (
     EmergencyProcedurePermissions, EmergencyIncidentPermissions, 
     EmergencyContactPermissions
 )
+from shared.rate_limiting import EmergencyEndpointRateThrottle
 
 logger = logging.getLogger(__name__)
 
@@ -28,6 +29,7 @@ class EmergencyProcedureViewSet(viewsets.ModelViewSet):
     """
     queryset = EmergencyProcedure.objects.all()
     permission_classes = [EmergencyProcedurePermissions]
+    throttle_classes = [EmergencyEndpointRateThrottle]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['emergency_type', 'status', 'severity_level', 'applicable_hazard_classes']
     search_fields = ['title', 'procedure_code', 'immediate_actions', 'safety_precautions']

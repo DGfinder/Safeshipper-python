@@ -25,6 +25,7 @@ from django.utils import timezone
 from .models import SSOProvider, UserSSOAccount, AuthenticationLog, MFADevice
 from .serializers import SSOProviderSerializer, MFADeviceSerializer
 from .services import MFAService, SSOService
+from shared.rate_limiting import AuthenticationRateThrottle, SensitiveDataRateThrottle
 
 User = get_user_model()
 logger = logging.getLogger(__name__)
@@ -33,6 +34,7 @@ logger = logging.getLogger(__name__)
 class GoogleLogin(APIView):
     """Google OAuth2 login endpoint for API clients"""
     permission_classes = [AllowAny]
+    throttle_classes = [AuthenticationRateThrottle]
     
     def post(self, request, *args, **kwargs):
         """Handle Google OAuth2 login with JWT response"""
@@ -152,6 +154,7 @@ class GoogleLogin(APIView):
 class MicrosoftLogin(APIView):
     """Microsoft OAuth2 login endpoint for API clients"""
     permission_classes = [AllowAny]
+    throttle_classes = [AuthenticationRateThrottle]
     
     def post(self, request, *args, **kwargs):
         """Handle Microsoft OAuth2 login with JWT response"""
@@ -289,6 +292,15 @@ def sso_providers(request):
 @permission_classes([IsAuthenticated])
 def enroll_mfa(request):
     """Enroll user in MFA"""
+    # Apply rate limiting for sensitive operations
+    throttle = SensitiveDataRateThrottle()
+    if not throttle.throttle_success(request, type('MockView', (), {'__class__': type('enroll_mfa', (), {})})):
+        throttle.throttle_failure(request, None)
+        return Response({
+            'error': 'Rate limit exceeded',
+            'message': 'Too many MFA enrollment attempts. Please try again later.'
+        }, status=status.HTTP_429_TOO_MANY_REQUESTS)
+    """Enroll user in MFA"""
     try:
         device_type = request.data.get('device_type', 'totp')
         device_name = request.data.get('device_name', 'My Device')
@@ -332,6 +344,15 @@ def enroll_mfa(request):
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def verify_mfa(request):
+    """Verify MFA device during enrollment"""
+    # Apply rate limiting for sensitive operations
+    throttle = SensitiveDataRateThrottle()
+    if not throttle.throttle_success(request, type('MockView', (), {'__class__': type('verify_mfa', (), {})})):
+        throttle.throttle_failure(request, None)
+        return Response({
+            'error': 'Rate limit exceeded',
+            'message': 'Too many MFA verification attempts. Please try again later.'
+        }, status=status.HTTP_429_TOO_MANY_REQUESTS)
     """Verify MFA device during enrollment"""
     try:
         device_id = request.data.get('device_id')
@@ -409,6 +430,15 @@ def mfa_devices(request):
 @permission_classes([AllowAny])
 def mfa_challenge(request):
     """Challenge user for MFA during login"""
+    # Apply rate limiting manually for function-based views
+    throttle = AuthenticationRateThrottle()
+    if not throttle.throttle_success(request, type('MockView', (), {'__class__': type('mfa_challenge', (), {})})):
+        throttle.throttle_failure(request, None)
+        return Response({
+            'error': 'Rate limit exceeded',
+            'message': 'Too many authentication attempts. Please try again later.'
+        }, status=status.HTTP_429_TOO_MANY_REQUESTS)
+    """Challenge user for MFA during login"""
     try:
         username = request.data.get('username')
         password = request.data.get('password')
@@ -471,6 +501,15 @@ def mfa_challenge(request):
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def mfa_verify(request):
+    """Verify MFA code during login"""
+    # Apply rate limiting manually for function-based views
+    throttle = AuthenticationRateThrottle()
+    if not throttle.throttle_success(request, type('MockView', (), {'__class__': type('mfa_verify', (), {})})):
+        throttle.throttle_failure(request, None)
+        return Response({
+            'error': 'Rate limit exceeded',
+            'message': 'Too many MFA verification attempts. Please try again later.'
+        }, status=status.HTTP_429_TOO_MANY_REQUESTS)
     """Verify MFA code during login"""
     try:
         temp_token = request.data.get('temp_token')

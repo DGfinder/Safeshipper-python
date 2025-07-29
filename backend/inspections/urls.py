@@ -5,7 +5,11 @@ from .api_views import (
     InspectionViewSet,
     InspectionItemViewSet,
     InspectionPhotoViewSet,
-    InspectionTemplateViewSet
+    InspectionTemplateViewSet,
+    CreateInspectionFromTemplateView,
+    UpdateInspectionItemView,
+    CompleteInspectionView,
+    InspectionTemplatesView
 )
 
 # Create a router and register our viewsets
@@ -17,4 +21,17 @@ router.register(r'templates', InspectionTemplateViewSet, basename='inspectiontem
 
 urlpatterns = [
     path('', include(router.urls)),
+    # Enhanced hazard inspection endpoints
+    path('hazard-inspection/create-from-template/', 
+         CreateInspectionFromTemplateView.as_view(), 
+         name='hazard-inspection-create'),
+    path('hazard-inspection/update-item/', 
+         UpdateInspectionItemView.as_view(), 
+         name='hazard-inspection-update-item'),
+    path('hazard-inspection/complete/', 
+         CompleteInspectionView.as_view(), 
+         name='hazard-inspection-complete'),
+    path('hazard-inspection/templates/', 
+         InspectionTemplatesView.as_view(), 
+         name='hazard-inspection-templates'),
 ]

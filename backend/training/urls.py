@@ -5,7 +5,8 @@ from rest_framework.routers import DefaultRouter
 from .api_views import (
     TrainingCategoryViewSet, TrainingProgramViewSet, TrainingRecordViewSet,
     DriverLicenseViewSet, ADGDriverCertificateViewSet, DriverCompetencyProfileViewSet,
-    DriverQualificationValidationView, FleetCompetencyReportView, QualifiedDriversForShipmentView
+    DriverQualificationValidationView, FleetCompetencyReportView, QualifiedDriversForShipmentView,
+    TrainingModuleViewSet, UserTrainingRecordViewSet, UserModuleProgressViewSet
 )
 
 # Create router and register viewsets
@@ -16,6 +17,11 @@ router.register(r'records', TrainingRecordViewSet, basename='training-record')
 router.register(r'driver-licenses', DriverLicenseViewSet, basename='driver-license')
 router.register(r'adg-certificates', ADGDriverCertificateViewSet, basename='adg-certificate')
 router.register(r'competency-profiles', DriverCompetencyProfileViewSet, basename='competency-profile')
+
+# Enhanced Training Management API endpoints
+router.register(r'modules', TrainingModuleViewSet, basename='training-module')
+router.register(r'user-records', UserTrainingRecordViewSet, basename='user-training-record')
+router.register(r'module-progress', UserModuleProgressViewSet, basename='module-progress')
 
 urlpatterns = [
     # ViewSet routes

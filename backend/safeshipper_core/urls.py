@@ -33,7 +33,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny
 from django.utils import timezone
-from tracking.public_views import public_tracking
+# from tracking.public_views import public_tracking  # Temporarily disabled
 
 # Simple health check endpoint
 class HealthCheckView(APIView):
@@ -101,12 +101,12 @@ urlpatterns = [
         path('dangerous-goods/', include('dangerous_goods.urls')),  # Re-enabled after fixing shipments dependencies
         path('companies/', include('companies.urls')),
         path('freight-types/', include('freight_types.urls')),
-        path('vehicles/', include('vehicles.urls')),
-        path('tracking/', include('tracking.urls')),  # Re-enabled for GPS tracking
+        # path('vehicles/', include('vehicles.urls')),  # Temporarily disabled due to GIS
+        # path('tracking/', include('tracking.urls')),  # Temporarily disabled due to GIS
         path('documents/', include('documents.urls')),  # Re-enabled after fixing shipments dependencies
         path('audits/', include('audits.urls')),  # Re-enabled for Phase 5A comprehensive audit system
         path('auth/', include('enterprise_auth.urls')),  # Re-enabled for Phase 3D security
-        path('iot/', include('iot_devices.urls')),  # Re-enabled for IoT device management
+        # path('iot/', include('iot_devices.urls')),  # Temporarily disabled due to GIS
         path('inspections/', include('inspections.urls')),  # Re-enabled for Phase 5B quality management
         path('training/', include('training.urls')),  # Re-enabled for Phase 5C training & certification management
         path('gateway/', include('api_gateway.urls')),  # Re-enabled for Phase 7A API gateway & developer platform
@@ -115,11 +115,12 @@ urlpatterns = [
         path('communications/', include('communications.urls')),  # Re-enabled after fixing migrations
         path('manifests/', include('manifests.urls')),  # Re-enabled after fixing documents dependencies
         path('notifications/', include('notifications.urls')),  # Include notifications app for feedback system
+        path('incidents/', include('incidents.urls')),  # Incident management system
         # Basic search endpoints
         path('search/popular/', PopularSearchesView.as_view(), name='popular-searches'),
-        # Public tracking endpoint (matches frontend expectation)
-        path('public/tracking/<str:tracking_number>/', 
-             public_tracking, name='public_shipment_tracking'),
+        # Public tracking endpoint (matches frontend expectation) - temporarily disabled
+        # path('public/tracking/<str:tracking_number>/', 
+        #      public_tracking, name='public_shipment_tracking'),
         # Temporarily disabled apps:
         path('locations/', include('locations.urls')),  # Re-enabled
         path('hazard-assessments/', include('hazard_assessments.urls')),  # Re-enabled after migration fix

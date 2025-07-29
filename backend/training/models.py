@@ -318,3 +318,435 @@ class ComplianceStatus(models.Model):
         self.status = 'compliant'
         self.save()
         return True
+
+
+class TrainingModule(models.Model):
+    """
+    Modular components within training programs.
+    Allows programs to be broken down into smaller, trackable units.
+    """
+    MODULE_TYPES = [
+        ('lesson', 'Lesson'),
+        ('quiz', 'Quiz'),
+        ('assessment', 'Assessment'),
+        ('practical', 'Practical Exercise'),
+        ('video', 'Video Content'),
+        ('reading', 'Reading Material'),
+        ('simulation', 'Simulation'),
+    ]
+    
+    STATUS_CHOICES = [
+        ('draft', 'Draft'),
+        ('published', 'Published'),
+        ('archived', 'Archived'),
+    ]
+    
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    program = models.ForeignKey(TrainingProgram, on_delete=models.CASCADE, related_name='modules')
+    title = models.CharField(max_length=200)
+    description = models.TextField()
+    module_type = models.CharField(max_length=20, choices=MODULE_TYPES)
+    
+    # Ordering and structure
+    order = models.IntegerField(default=0)  # Order within the program
+    is_mandatory = models.BooleanField(default=True)
+    
+    # Content
+    content = models.TextField(blank=True)  # Rich text content
+    video_url = models.URLField(blank=True)
+    document_url = models.URLField(blank=True)
+    external_link = models.URLField(blank=True)
+    
+    # Assessment details (for quiz/assessment modules)
+    passing_score = models.IntegerField(
+        null=True, blank=True,
+        validators=[MinValueValidator(0), MaxValueValidator(100)]
+    )
+    max_attempts = models.IntegerField(default=3)
+    time_limit_minutes = models.IntegerField(null=True, blank=True)
+    
+    # Completion tracking
+    estimated_duration_minutes = models.IntegerField(default=30)
+    completion_criteria = models.JSONField(default=dict)  # Flexible completion rules
+    
+    # Prerequisites
+    prerequisite_modules = models.ManyToManyField(
+        'self', blank=True, symmetrical=False, related_name='dependent_modules'
+    )
+    
+    # Status and metadata
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='draft')
+    created_by = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, related_name='created_modules'
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['program', 'order', 'title']
+        unique_together = ['program', 'order']
+    
+    def __str__(self):
+        return f"{self.program.name} - {self.title}"
+    
+    @property
+    def completion_rate(self):
+        """Calculate overall completion rate for this module"""
+        total_attempts = self.user_module_progress.count()
+        if total_attempts == 0:
+            return 0
+        completed = self.user_module_progress.filter(status='completed').count()
+        return (completed / total_attempts) * 100
+    
+    def get_next_module(self):
+        """Get the next module in the program sequence"""
+        return TrainingModule.objects.filter(
+            program=self.program,
+            order__gt=self.order,
+            status='published'
+        ).first()
+    
+    def get_previous_module(self):
+        """Get the previous module in the program sequence"""
+        return TrainingModule.objects.filter(
+            program=self.program,
+            order__lt=self.order,
+            status='published'
+        ).last()
+
+
+class UserTrainingRecord(models.Model):
+    """
+    Comprehensive training record for users with detailed progress tracking.
+    This extends beyond the basic TrainingRecord to provide granular tracking.
+    """
+    PROGRESS_STATUS = [
+        ('not_started', 'Not Started'),
+        ('in_progress', 'In Progress'),
+        ('completed', 'Completed'),
+        ('failed', 'Failed'),
+        ('expired', 'Expired'),
+        ('suspended', 'Suspended'),
+    ]
+    
+    COMPLIANCE_STATUS = [
+        ('compliant', 'Compliant'),
+        ('non_compliant', 'Non-Compliant'),
+        ('pending_renewal', 'Pending Renewal'),
+        ('overdue', 'Overdue'),
+        ('exempt', 'Exempt'),
+    ]
+    
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='user_training_records')
+    program = models.ForeignKey(TrainingProgram, on_delete=models.CASCADE, related_name='user_records')
+    enrollment = models.ForeignKey(
+        TrainingEnrollment, on_delete=models.SET_NULL, null=True, blank=True
+    )
+    
+    # Progress tracking
+    progress_status = models.CharField(max_length=20, choices=PROGRESS_STATUS, default='not_started')
+    overall_progress_percentage = models.DecimalField(
+        max_digits=5, decimal_places=2, default=0.00,
+        validators=[MinValueValidator(0), MaxValueValidator(100)]
+    )
+    
+    # Timing
+    started_at = models.DateTimeField(null=True, blank=True)
+    last_accessed_at = models.DateTimeField(null=True, blank=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+    
+    # Assessment results
+    total_attempts = models.IntegerField(default=0)
+    best_score = models.IntegerField(
+        null=True, blank=True,
+        validators=[MinValueValidator(0), MaxValueValidator(100)]
+    )
+    latest_score = models.IntegerField(
+        null=True, blank=True,
+        validators=[MinValueValidator(0), MaxValueValidator(100)]
+    )
+    passed = models.BooleanField(default=False)
+    
+    # Compliance tracking
+    compliance_status = models.CharField(max_length=20, choices=COMPLIANCE_STATUS, default='pending_renewal')
+    is_mandatory_for_role = models.BooleanField(default=False)
+    required_by_date = models.DateField(null=True, blank=True)
+    
+    # Certification details
+    certificate_issued = models.BooleanField(default=False)
+    certificate_number = models.CharField(max_length=100, blank=True)
+    certificate_issued_at = models.DateTimeField(null=True, blank=True)
+    certificate_expires_at = models.DateTimeField(null=True, blank=True)
+    certificate_renewed_count = models.IntegerField(default=0)
+    
+    # Time tracking
+    total_time_spent_minutes = models.IntegerField(default=0)
+    estimated_completion_time_minutes = models.IntegerField(null=True, blank=True)
+    
+    # Engagement metrics
+    modules_completed = models.IntegerField(default=0)
+    total_modules = models.IntegerField(default=0)
+    bookmarks = models.JSONField(default=list)  # Bookmarked content/modules
+    notes = models.TextField(blank=True)  # User's personal notes
+    
+    # Supervisor/Manager tracking
+    assigned_by = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='assigned_training_records'
+    )
+    supervisor_approved = models.BooleanField(default=False)
+    supervisor_approval_date = models.DateTimeField(null=True, blank=True)
+    supervisor_notes = models.TextField(blank=True)
+    
+    # Renewal tracking
+    renewal_due_date = models.DateField(null=True, blank=True)
+    renewal_reminders_sent = models.IntegerField(default=0)
+    last_reminder_sent = models.DateTimeField(null=True, blank=True)
+    
+    # Metadata
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['-created_at']
+        unique_together = ['user', 'program']
+        indexes = [
+            models.Index(fields=['user', 'progress_status']),
+            models.Index(fields=['compliance_status', 'required_by_date']),
+            models.Index(fields=['certificate_expires_at']),
+            models.Index(fields=['renewal_due_date']),
+        ]
+    
+    def __str__(self):
+        return f"{self.user.get_full_name()} - {self.program.name}"
+    
+    def save(self, *args, **kwargs):
+        # Auto-set total modules count
+        if not self.total_modules:
+            self.total_modules = self.program.modules.filter(status='published').count()
+        
+        # Set estimated completion time from program
+        if not self.estimated_completion_time_minutes:
+            total_minutes = self.program.modules.filter(
+                status='published'
+            ).aggregate(
+                total=models.Sum('estimated_duration_minutes')
+            )['total'] or 0
+            self.estimated_completion_time_minutes = total_minutes
+        
+        # Update compliance status based on various factors
+        self._update_compliance_status()
+        
+        super().save(*args, **kwargs)
+    
+    def _update_compliance_status(self):
+        """Update compliance status based on current state"""
+        now = timezone.now()
+        
+        if self.progress_status == 'completed' and self.passed:
+            if self.certificate_expires_at:
+                if self.certificate_expires_at < now:
+                    self.compliance_status = 'non_compliant'
+                elif (self.certificate_expires_at - now).days <= 30:
+                    self.compliance_status = 'pending_renewal'
+                else:
+                    self.compliance_status = 'compliant'
+            else:
+                self.compliance_status = 'compliant'
+        
+        elif self.required_by_date and self.required_by_date < now.date():
+            self.compliance_status = 'overdue'
+        
+        else:
+            self.compliance_status = 'non_compliant'
+    
+    def calculate_progress(self):
+        """Calculate and update progress percentage based on module completion"""
+        if self.total_modules == 0:
+            self.overall_progress_percentage = 0
+            return 0
+        
+        # Get completed modules count
+        completed_modules = UserModuleProgress.objects.filter(
+            user_record=self,
+            status='completed'
+        ).count()
+        
+        self.modules_completed = completed_modules
+        progress = (completed_modules / self.total_modules) * 100
+        self.overall_progress_percentage = round(progress, 2)
+        
+        # Update progress status
+        if progress == 100:
+            self.progress_status = 'completed'
+            if not self.completed_at:
+                self.completed_at = timezone.now()
+        elif progress > 0:
+            self.progress_status = 'in_progress'
+            if not self.started_at:
+                self.started_at = timezone.now()
+        
+        self.save()
+        return self.overall_progress_percentage
+    
+    def is_due_for_renewal(self, days_ahead=30):
+        """Check if training is due for renewal within specified days"""
+        if not self.renewal_due_date:
+            return False
+        
+        cutoff_date = timezone.now().date() + timezone.timedelta(days=days_ahead)
+        return self.renewal_due_date <= cutoff_date
+    
+    def get_time_spent_formatted(self):
+        """Get formatted time spent (e.g., '2h 30m')"""
+        if self.total_time_spent_minutes == 0:
+            return "0m"
+        
+        hours = self.total_time_spent_minutes // 60
+        minutes = self.total_time_spent_minutes % 60
+        
+        if hours > 0:
+            return f"{hours}h {minutes}m" if minutes > 0 else f"{hours}h"
+        return f"{minutes}m"
+    
+    def get_next_module(self):
+        """Get the next incomplete module for this user"""
+        completed_modules = UserModuleProgress.objects.filter(
+            user_record=self,
+            status='completed'
+        ).values_list('module_id', flat=True)
+        
+        return self.program.modules.filter(
+            status='published',
+            is_mandatory=True
+        ).exclude(
+            id__in=completed_modules
+        ).order_by('order').first()
+
+
+class UserModuleProgress(models.Model):
+    """
+    Tracks individual module progress within training programs.
+    Provides granular tracking of each module's completion status.
+    """
+    STATUS_CHOICES = [
+        ('not_started', 'Not Started'),
+        ('in_progress', 'In Progress'),
+        ('completed', 'Completed'),
+        ('failed', 'Failed'),
+        ('skipped', 'Skipped'),
+    ]
+    
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user_record = models.ForeignKey(
+        UserTrainingRecord, on_delete=models.CASCADE, related_name='module_progress'
+    )
+    module = models.ForeignKey(
+        TrainingModule, on_delete=models.CASCADE, related_name='user_module_progress'
+    )
+    
+    # Progress tracking
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='not_started')
+    progress_percentage = models.DecimalField(
+        max_digits=5, decimal_places=2, default=0.00,
+        validators=[MinValueValidator(0), MaxValueValidator(100)]
+    )
+    
+    # Timing
+    started_at = models.DateTimeField(null=True, blank=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+    time_spent_minutes = models.IntegerField(default=0)
+    
+    # Assessment results (for quiz/assessment modules)
+    attempts_count = models.IntegerField(default=0)
+    best_score = models.IntegerField(
+        null=True, blank=True,
+        validators=[MinValueValidator(0), MaxValueValidator(100)]
+    )
+    latest_score = models.IntegerField(
+        null=True, blank=True,
+        validators=[MinValueValidator(0), MaxValueValidator(100)]
+    )
+    passed = models.BooleanField(default=False)
+    
+    # Engagement data
+    last_position = models.JSONField(default=dict)  # Last position in content (page, video time, etc.)
+    bookmarked_positions = models.JSONField(default=list)  # Bookmarked positions
+    interaction_data = models.JSONField(default=dict)  # Clicks, views, etc.
+    
+    # Notes and feedback
+    user_notes = models.TextField(blank=True)
+    completion_feedback = models.TextField(blank=True)
+    
+    # Metadata
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['module__order', '-updated_at']
+        unique_together = ['user_record', 'module']
+        indexes = [
+            models.Index(fields=['user_record', 'status']),
+            models.Index(fields=['module', 'status']),
+            models.Index(fields=['completed_at']),
+        ]
+    
+    def __str__(self):
+        return f"{self.user_record.user.get_full_name()} - {self.module.title}"
+    
+    def save(self, *args, **kwargs):
+        # Auto-set timestamps
+        if self.status == 'in_progress' and not self.started_at:
+            self.started_at = timezone.now()
+        elif self.status == 'completed' and not self.completed_at:
+            self.completed_at = timezone.now()
+            self.progress_percentage = 100.00
+        
+        super().save(*args, **kwargs)
+        
+        # Update parent UserTrainingRecord progress
+        if self.user_record_id:
+            self.user_record.calculate_progress()
+    
+    def mark_completed(self, score=None):
+        """Mark module as completed with optional score"""
+        self.status = 'completed'
+        self.completed_at = timezone.now()
+        self.progress_percentage = 100.00
+        
+        if score is not None:
+            self.latest_score = score
+            if self.best_score is None or score > self.best_score:
+                self.best_score = score
+            
+            # Check if passed based on module's passing score
+            if self.module.passing_score:
+                self.passed = score >= self.module.passing_score
+            else:
+                self.passed = True
+        else:
+            self.passed = True
+        
+        self.save()
+    
+    def add_time_spent(self, minutes):
+        """Add time spent on this module"""
+        self.time_spent_minutes += minutes
+        self.save()
+        
+        # Also update the parent record
+        self.user_record.total_time_spent_minutes += minutes
+        self.user_record.last_accessed_at = timezone.now()
+        self.user_record.save()
+    
+    def update_progress(self, percentage):
+        """Update progress percentage"""
+        self.progress_percentage = min(100.00, max(0.00, percentage))
+        
+        if self.progress_percentage > 0 and self.status == 'not_started':
+            self.status = 'in_progress'
+        elif self.progress_percentage == 100 and self.status != 'completed':
+            self.mark_completed()
+        
+        self.save()

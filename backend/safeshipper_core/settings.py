@@ -32,7 +32,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'django.contrib.sites',
-    'django.contrib.gis',
+    # 'django.contrib.gis',  # Temporarily disabled due to GDAL dependency
     
     # Third-party apps
     'channels',
@@ -49,8 +49,8 @@ INSTALLED_APPS = [
     'django_otp.plugins.otp_totp',
     'django_otp.plugins.otp_static',
     'corsheaders',
-    'django_elasticsearch_dsl',
-    'django_elasticsearch_dsl_drf',
+    # 'django_elasticsearch_dsl',  # Temporarily disabled for migration
+    # 'django_elasticsearch_dsl_drf',  # Temporarily disabled for migration
     
     # Local apps (minimal set for EPG functionality)
     'users',
@@ -59,17 +59,16 @@ INSTALLED_APPS = [
     'shipments',
     'dangerous_goods',  # Re-enabled after fixing shipments dependencies
     'sds',  # Re-enabled after fixing dangerous_goods dependencies
-    'vehicles',
+    # 'vehicles',  # Temporarily disabled due to GIS dependencies
     'freight_types',
     'enterprise_auth',  # Re-enabled for Phase 3D security
-    # 'incidents',
-    # 'training',
-    'iot_devices',  # Re-enabled for GPS tracking and IoT device management
+    'incidents',    # Re-enabled for incident management system
+    'training',     # Re-enabled for training management system
+    # 'iot_devices',  # Temporarily disabled due to GIS dependencies
     'documents',  # Re-enabled after fixing shipments dependencies
     'manifests',  # Re-enabled after fixing documents dependencies
     'audits',     # Re-enabled for Phase 5A comprehensive audit system
     'inspections', # Re-enabled for Phase 5B quality management
-    'training',   # Re-enabled for Phase 5C training & certification management
     'api_gateway', # Re-enabled for Phase 7A API gateway & developer platform
     'erp_integration', # Re-enabled for Phase 7B ERP integration framework
     'customer_portal', # Re-enabled for Phase 8A customer portal & self-service
@@ -80,7 +79,7 @@ INSTALLED_APPS = [
     'epg',        # Re-enabled after fixing shipments dependencies
     'capacity_marketplace', # Re-enabled for Phase 3C marketplace
     'routes', # Re-enabled for Phase 3B route optimization
-    'emergency_procedures', # Emergency response procedures system
+    # 'emergency_procedures', # Temporarily disabled due to GIS dependencies
     'search', # Unified search API system
 ]
 
@@ -128,7 +127,7 @@ ASGI_APPLICATION = 'safeshipper_core.asgi.application'
 # Database
 DATABASES = {
     'default': {
-        'ENGINE': config('DB_ENGINE', default='django.contrib.gis.db.backends.postgis'),
+        'ENGINE': config('DB_ENGINE', default='django.db.backends.postgresql'),
         'NAME': config('DB_NAME', default='safeshipper'),
         'USER': config('DB_USER', default='safeshipper'),
         'PASSWORD': config('DB_PASSWORD', default='safeshipper_dev_password'),

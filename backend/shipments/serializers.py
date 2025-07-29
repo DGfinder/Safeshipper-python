@@ -3,8 +3,9 @@ from rest_framework import serializers
 from django.db import transaction
 from .models import Shipment, ConsignmentItem, ShipmentStatus, ShipmentFeedback  # ProofOfDelivery, ProofOfDeliveryPhoto
 from dangerous_goods.models import DangerousGood  # Re-enabled after dangerous_goods app re-enabled
+from shared.validation_service import SafeShipperValidationMixin
 
-class ConsignmentItemSerializer(serializers.ModelSerializer):
+class ConsignmentItemSerializer(SafeShipperValidationMixin, serializers.ModelSerializer):
     dangerous_good_details = serializers.SerializerMethodField()
     
     class Meta:
@@ -37,11 +38,16 @@ class ConsignmentItemSerializer(serializers.ModelSerializer):
         return None
 
     def validate_weight_kg(self, value):
-        if value is not None and value > 5000:
-            raise serializers.ValidationError("Weight per item must not exceed 5000 kg.")
-        if value is not None and value < 0:
-            raise serializers.ValidationError("Weight must be a positive value.")
-        return value
+        # Use enhanced weight validation with dangerous goods limits
+        return super().validate_weight_kg(value) if value is not None else value
+    
+    def validate_quantity(self, value):
+        """Validate quantity using enhanced validation"""
+        return super().validate_quantity(value)
+    
+    def validate_description(self, value):
+        """Validate item description"""
+        return self.validate_text_content(value, max_length=500)
     
     def validate(self, data):
         """Object-level validation for dangerous goods fields."""
@@ -54,6 +60,18 @@ class ConsignmentItemSerializer(serializers.ModelSerializer):
             })
         
         return data
+    
+    def validate_tracking_number(self, value):
+        """Validate tracking number format"""
+        return super().validate_tracking_number(value) if value else value
+    
+    def validate_reference_number(self, value):
+        """Validate reference number"""
+        return self.validate_text_content(value, max_length=100) if value else value
+    
+    def validate_instructions(self, value):
+        """Validate shipment instructions"""
+        return self.validate_text_content(value, max_length=2000, allow_html=True) if value else value
 
 # class ProofOfDeliveryPhotoSerializer(serializers.ModelSerializer):
 #     class Meta:
@@ -95,7 +113,7 @@ class ConsignmentItemSerializer(serializers.ModelSerializer):
 #             return f"{obj.delivered_by.first_name} {obj.delivered_by.last_name}".strip()
 #         return None
 
-class ShipmentSerializer(serializers.ModelSerializer):
+class ShipmentSerializer(SafeShipperValidationMixin, serializers.ModelSerializer):
     items = ConsignmentItemSerializer(many=True, required=False)
     status = serializers.ChoiceField(choices=ShipmentStatus.choices, required=False)
     customer_name = serializers.SerializerMethodField()
@@ -320,7 +338,7 @@ class ShipmentListSerializer(serializers.ModelSerializer):
 
 # ===== FEEDBACK SERIALIZERS =====
 
-class ShipmentFeedbackSerializer(serializers.ModelSerializer):
+class ShipmentFeedbackSerializer(SafeShipperValidationMixin, serializers.ModelSerializer):
     """
     Comprehensive serializer for shipment feedback with manager response functionality.
     """
@@ -384,10 +402,10 @@ class ShipmentFeedbackSerializer(serializers.ModelSerializer):
         return obj.responded_by.get_full_name() if obj.responded_by else None
     
     def validate_manager_response(self, value):
-        """Validate manager response length and content"""
-        if value and len(value.strip()) < 10:
-            raise serializers.ValidationError("Manager response must be at least 10 characters long.")
-        return value.strip() if value else value
+        """Validate manager response using enhanced text validation"""
+        if not value:
+            return value
+        return self.validate_text_content(value, max_length=2000)
 
 
 class ShipmentFeedbackListSerializer(serializers.ModelSerializer):
@@ -485,3 +503,120 @@ class DeliverySuccessStatsSerializer(serializers.Serializer):
     
     # Recent activity
     recent_feedback = ShipmentFeedbackListSerializer(many=True, read_only=True)
+
+
+# Driver Qualification Serializers
+
+class DriverQualificationValidationSerializer(serializers.Serializer):
+    """
+    Serializer for driver qualification validation results.
+    Used for detailed qualification analysis and validation responses.
+    """
+    validation_type = serializers.CharField(read_only=True)
+    driver_id = serializers.UUIDField(read_only=True)
+    driver_name = serializers.CharField(read_only=True)
+    overall_qualified = serializers.BooleanField(read_only=True)
+    qualification_level = serializers.CharField(read_only=True)
+    dangerous_goods_classes = serializers.ListField(child=serializers.CharField(), read_only=True)
+    compliance_percentage = serializers.FloatField(read_only=True, required=False)
+    overall_status = serializers.CharField(read_only=True, required=False)
+    critical_issues = serializers.ListField(child=serializers.CharField(), read_only=True)
+    warnings = serializers.ListField(child=serializers.CharField(), read_only=True)
+    recommendations = serializers.ListField(child=serializers.CharField(), read_only=True)
+    validation_details = serializers.DictField(read_only=True)
+    
+    # Assignment recommendation (added by validate-driver endpoint)
+    assignment_recommendation = serializers.DictField(read_only=True, required=False)
+
+
+class QualifiedDriverSerializer(serializers.Serializer):
+    """
+    Serializer for qualified driver information.
+    Used when listing drivers qualified for a specific shipment.
+    """
+    driver_id = serializers.UUIDField(read_only=True)
+    driver_name = serializers.CharField(read_only=True)
+    email = serializers.EmailField(read_only=True)
+    phone = serializers.CharField(read_only=True, required=False, allow_null=True)
+    overall_qualified = serializers.BooleanField(read_only=True)
+    compliance_percentage = serializers.FloatField(read_only=True)
+    qualified_classes = serializers.DictField(read_only=True)
+    warnings = serializers.ListField(child=serializers.CharField(), read_only=True)
+    dangerous_goods_classes = serializers.ListField(child=serializers.CharField(), read_only=True)
+
+
+class ShipmentQualifiedDriversResponseSerializer(serializers.Serializer):
+    """
+    Serializer for the qualified drivers API response.
+    """
+    shipment_id = serializers.UUIDField(read_only=True)
+    qualified_drivers = QualifiedDriverSerializer(many=True, read_only=True)
+    total_qualified = serializers.IntegerField(read_only=True)
+    validation_summary = serializers.DictField(read_only=True)
+
+
+class DriverValidationRequestSerializer(serializers.Serializer):
+    """
+    Serializer for driver validation requests.
+    """
+    driver_id = serializers.UUIDField(required=True)
+    
+    def validate_driver_id(self, value):
+        """Validate that driver exists and has driver role"""
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
+        
+        try:
+            user = User.objects.get(id=value)
+            if hasattr(user, 'role') and user.role != 'DRIVER':
+                raise serializers.ValidationError("Selected user is not a driver")
+            return value
+        except User.DoesNotExist:
+            raise serializers.ValidationError("Driver not found")
+
+
+class DriverAssignmentRequestSerializer(serializers.Serializer):
+    """
+    Serializer for driver assignment requests with force option.
+    """
+    driver_id = serializers.UUIDField(required=True)
+    force_assignment = serializers.BooleanField(default=False)
+    
+    def validate_driver_id(self, value):
+        """Validate that driver exists and has driver role"""
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
+        
+        try:
+            user = User.objects.get(id=value)
+            if hasattr(user, 'role') and user.role != 'DRIVER':
+                raise serializers.ValidationError("Selected user is not a driver")
+            return value
+        except User.DoesNotExist:
+            raise serializers.ValidationError("Driver not found")
+
+
+class DriverAssignmentResponseSerializer(serializers.Serializer):
+    """
+    Serializer for driver assignment responses.
+    Includes shipment data plus qualification validation results.
+    """
+    # Shipment fields (subset of ShipmentSerializer)
+    id = serializers.UUIDField(read_only=True)
+    tracking_number = serializers.CharField(read_only=True)
+    reference_number = serializers.CharField(read_only=True, allow_null=True)
+    status = serializers.CharField(read_only=True)
+    assigned_driver = serializers.SerializerMethodField()
+    
+    # Qualification validation results
+    driver_qualification = DriverQualificationValidationSerializer(read_only=True)
+    
+    def get_assigned_driver(self, obj):
+        """Get assigned driver details"""
+        if obj.assigned_driver:
+            return {
+                'id': obj.assigned_driver.id,
+                'name': obj.assigned_driver.get_full_name(),
+                'email': obj.assigned_driver.email
+            }
+        return None

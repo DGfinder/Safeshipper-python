@@ -21,7 +21,7 @@ import {useRoute, useNavigation} from '@react-navigation/native';
 import {useMutation, useQueryClient} from '@tanstack/react-query';
 import Toast from 'react-native-toast-message';
 
-import {apiService} from '../services/api';
+import {apiService, PODSubmissionData, PODResponse} from '../services/api';
 import {cameraService, PhotoResult} from '../services/camera';
 import SignatureCapture from '../components/SignatureCapture';
 import EmergencyButton from '../components/EmergencyButton';
@@ -32,18 +32,7 @@ type RouteParams = {
   customerName?: string;
 };
 
-interface PODData {
-  recipient_name: string;
-  delivery_notes: string;
-  delivery_location: string;
-  signature_file: string;
-  photos_data: Array<{
-    image_url: string;
-    file_name: string;
-    file_size: number;
-    caption: string;
-  }>;
-}
+// Using PODSubmissionData type from API service
 
 const PODCaptureScreen: React.FC = () => {
   const route = useRoute();
@@ -59,20 +48,37 @@ const PODCaptureScreen: React.FC = () => {
   const [photos, setPhotos] = useState<PhotoResult[]>([]);
   const [showSignatureCapture, setShowSignatureCapture] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [validationWarnings, setValidationWarnings] = useState<string[]>([]);
 
-  // Submit POD mutation
+  // Submit POD mutation with enhanced processing
   const submitPODMutation = useMutation({
-    mutationFn: (podData: PODData) => 
-      apiService.updateShipmentStatus(shipmentId, 'DELIVERED', podData),
-    onSuccess: () => {
+    mutationFn: (podData: PODSubmissionData) => 
+      apiService.submitPOD(shipmentId, podData),
+    onSuccess: (response: PODResponse) => {
       queryClient.invalidateQueries({queryKey: ['shipments']});
       queryClient.invalidateQueries({queryKey: ['shipment', shipmentId]});
+      
+      // Show success message with processing details
+      const successMessage = `Delivery confirmed! ${response.photos_processed} photos processed${
+        response.validation_warnings.length > 0 ? ' (warnings noted)' : ''
+      }`;
       
       Toast.show({
         type: 'success',
         text1: 'Delivery Confirmed',
-        text2: 'Proof of delivery has been captured successfully',
+        text2: successMessage,
       });
+      
+      // Show warnings if any
+      if (response.validation_warnings.length > 0) {
+        setTimeout(() => {
+          Alert.alert(
+            'Processing Complete',
+            `POD submitted successfully with ${response.validation_warnings.length} warning(s):\n\n${response.validation_warnings.join('\n')}`,
+            [{text: 'OK'}]
+          );
+        }, 1500);
+      }
       
       // Navigate back to shipment list or detail
       navigation.reset({
@@ -80,13 +86,30 @@ const PODCaptureScreen: React.FC = () => {
         routes: [{name: 'ShipmentList' as never}],
       });
     },
-    onError: (error) => {
+    onError: (error: any) => {
       setIsSubmitting(false);
+      
+      // Enhanced error handling
+      const errorMessage = error?.response?.data?.error || 'Failed to submit proof of delivery';
+      const validationErrors = error?.response?.data?.validation_errors || [];
+      
+      let errorText = errorMessage;
+      if (validationErrors.length > 0) {
+        errorText += `\n\nIssues found:\n${validationErrors.join('\n')}`;
+      }
+      
       Toast.show({
         type: 'error',
         text1: 'Delivery Failed',
-        text2: 'Failed to submit proof of delivery. Please try again.',
+        text2: errorMessage,
       });
+      
+      // Show detailed error if validation issues
+      if (validationErrors.length > 0) {
+        setTimeout(() => {
+          Alert.alert('Validation Errors', errorText, [{text: 'OK'}]);
+        }, 1000);
+      }
     },
   });
 
@@ -164,10 +187,42 @@ const PODCaptureScreen: React.FC = () => {
     submitPOD();
   };
 
+  // Real-time validation check
+  const validateCurrentData = async () => {
+    if (!recipientName.trim()) return; // Don't validate if no recipient name yet
+    
+    const podData: PODSubmissionData = {
+      recipient_name: recipientName.trim(),
+      delivery_notes: deliveryNotes.trim(),
+      delivery_location: deliveryLocation.trim(),
+      signature_file: signatureBase64 || '',
+      photos_data: photos.map(photo => ({
+        image_url: photo.uri,
+        file_name: photo.fileName,
+        file_size: photo.fileSize,
+        caption: '',
+      })),
+    };
+
+    try {
+      const validation = await apiService.validatePODData(shipmentId, podData);
+      setValidationWarnings(validation.data_validation.warnings || []);
+    } catch (error) {
+      // Silently fail for real-time validation
+      console.log('Real-time validation failed:', error);
+    }
+  };
+
+  // Use effect to validate data as user types
+  React.useEffect(() => {
+    const timer = setTimeout(validateCurrentData, 1000); // Debounce validation
+    return () => clearTimeout(timer);
+  }, [recipientName, deliveryNotes, deliveryLocation, signatureBase64, photos]);
+
   const submitPOD = () => {
     setIsSubmitting(true);
 
-    const podData: PODData = {
+    const podData: PODSubmissionData = {
       recipient_name: recipientName.trim(),
       delivery_notes: deliveryNotes.trim(),
       delivery_location: deliveryLocation.trim(),
@@ -334,6 +389,18 @@ const PODCaptureScreen: React.FC = () => {
             </View>
           )}
         </View>
+
+        {/* Validation Warnings */}
+        {validationWarnings.length > 0 && (
+          <View style={styles.warningsContainer}>
+            <Text style={styles.warningsTitle}>⚠️ Recommendations:</Text>
+            {validationWarnings.map((warning, index) => (
+              <Text key={index} style={styles.warningText}>
+                • {warning}
+              </Text>
+            ))}
+          </View>
+        )}
 
         {/* Instructions */}
         <View style={styles.instructions}>
@@ -553,6 +620,26 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#9ca3af',
     textAlign: 'center',
+  },
+  warningsContainer: {
+    margin: 16,
+    padding: 16,
+    backgroundColor: '#fef7cd',
+    borderRadius: 8,
+    borderLeftWidth: 4,
+    borderLeftColor: '#f59e0b',
+  },
+  warningsTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#b45309',
+    marginBottom: 8,
+  },
+  warningText: {
+    fontSize: 14,
+    color: '#b45309',
+    lineHeight: 20,
+    marginBottom: 4,
   },
   instructions: {
     margin: 16,

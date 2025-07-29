@@ -101,6 +101,98 @@ export interface LocationUpdateResponse {
   };
 }
 
+// Enhanced POD Types
+export interface PODSubmissionData {
+  recipient_name: string;
+  signature_file: string;
+  delivery_notes?: string;
+  delivery_location?: string;
+  photos_data?: Array<{
+    image_url: string;
+    file_name: string;
+    file_size: number;
+    caption?: string;
+  }>;
+}
+
+export interface PODResponse {
+  id: string;
+  shipment_id: string;
+  shipment_tracking: string;
+  status: string;
+  delivered_at: string;
+  driver: {
+    name: string;
+    id: string;
+  };
+  recipient: string;
+  photos_processed: number;
+  signature_processed: boolean;
+  delivery_location?: string;
+  validation_warnings: string[];
+  processing_summary: {
+    total_photos: number;
+    signature_captured: boolean;
+    shipment_status_updated: boolean;
+    notifications_triggered: boolean;
+  };
+}
+
+export interface PODValidationResponse {
+  can_submit_pod: boolean;
+  shipment_validation: {
+    can_submit: boolean;
+    reason: string;
+    issues: string[];
+  };
+  data_validation: {
+    is_valid: boolean;
+    errors: string[];
+    warnings: string[];
+  };
+  overall_valid: boolean;
+  recommendations: {
+    required_fields: string[];
+    recommended_fields: string[];
+    max_photos: number;
+    supported_signature_formats: string[];
+  };
+}
+
+export interface PODDetailsResponse {
+  has_pod: boolean;
+  message?: string;
+  pod_details?: {
+    id: string;
+    shipment: {
+      id: string;
+      tracking_number: string;
+      customer_name: string;
+      status: string;
+    };
+    delivered_by: {
+      id: string;
+      name: string;
+      email: string;
+    };
+    recipient_name: string;
+    recipient_signature_url: string;
+    delivery_notes: string;
+    delivery_location: string;
+    delivered_at: string;
+    photos: Array<{
+      id: string;
+      image_url: string;
+      thumbnail_url?: string;
+      file_name: string;
+      file_size_mb?: number;
+      caption: string;
+      taken_at: string;
+    }>;
+    photo_count: number;
+  };
+}
+
 class ApiService {
   private baseURL: string;
 
@@ -193,19 +285,70 @@ class ApiService {
     });
   }
 
-  // Inspection Management
+  // Enhanced POD Methods
+  async submitPOD(shipmentId: string, podData: PODSubmissionData): Promise<PODResponse> {
+    return this.makeRequest<PODResponse>(`/shipments/${shipmentId}/submit-pod/`, {
+      method: 'POST',
+      body: JSON.stringify(podData),
+    });
+  }
+
+  async validatePODData(shipmentId: string, podData: PODSubmissionData): Promise<PODValidationResponse> {
+    return this.makeRequest<PODValidationResponse>(`/shipments/${shipmentId}/validate-pod-data/`, {
+      method: 'POST',
+      body: JSON.stringify(podData),
+    });
+  }
+
+  async getPODDetails(shipmentId: string): Promise<PODDetailsResponse> {
+    return this.makeRequest<PODDetailsResponse>(`/shipments/${shipmentId}/pod-details/`);
+  }
+
+  // Enhanced Inspection Management
   async getInspectionTemplates(inspectionType?: string): Promise<any[]> {
     let url = '/inspections/templates/';
     if (inspectionType) {
       url += `?inspection_type=${inspectionType}`;
     }
-    return this.makeRequest<any[]>(url);
+    const response = await this.makeRequest<{success: boolean; templates: any[]}>(url);
+    return response.templates || [];
   }
 
   async getShipmentInspections(shipmentId: string): Promise<any[]> {
     return this.makeRequest<any[]>(`/inspections/?shipment=${shipmentId}`);
   }
 
+  async createInspectionFromTemplate(templateId: string, shipmentId: string): Promise<any> {
+    return this.makeRequest<any>('/inspections/hazard-inspection/create-from-template/', {
+      method: 'POST',
+      body: JSON.stringify({
+        template_id: templateId,
+        shipment_id: shipmentId
+      }),
+    });
+  }
+
+  async updateInspectionItem(itemId: string, itemData: any): Promise<any> {
+    return this.makeRequest<any>('/inspections/hazard-inspection/update-item/', {
+      method: 'POST',
+      body: JSON.stringify({
+        item_id: itemId,
+        item_data: itemData
+      }),
+    });
+  }
+
+  async completeInspection(inspectionId: string, completionData: any): Promise<any> {
+    return this.makeRequest<any>('/inspections/hazard-inspection/complete/', {
+      method: 'POST',
+      body: JSON.stringify({
+        inspection_id: inspectionId,
+        completion_data: completionData
+      }),
+    });
+  }
+
+  // Legacy inspection methods for backward compatibility
   async createInspection(data: any): Promise<any> {
     return this.makeRequest<any>('/inspections/', {
       method: 'POST',
@@ -217,12 +360,6 @@ class ApiService {
     return this.makeRequest<any>(`/inspections/${inspectionId}/`, {
       method: 'PATCH',
       body: JSON.stringify(data),
-    });
-  }
-
-  async completeInspection(inspectionId: string): Promise<any> {
-    return this.makeRequest<any>(`/inspections/${inspectionId}/complete/`, {
-      method: 'POST',
     });
   }
 

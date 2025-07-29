@@ -1,1 +1,1 @@
-// services exports - empty for now
+export { fleetComplianceService, type VehicleSafetyEquipment, type FleetComplianceStats, type EquipmentFilter } from "./fleetComplianceService";

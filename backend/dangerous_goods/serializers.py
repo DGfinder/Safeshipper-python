@@ -1,8 +1,9 @@
 # dangerous_goods/serializers.py
 from rest_framework import serializers
 from .models import DangerousGood, DGProductSynonym, SegregationGroup, SegregationRule, PackingGroup
+from shared.validation_service import SafeShipperValidationMixin
 
-class DangerousGoodSerializer(serializers.ModelSerializer):
+class DangerousGoodSerializer(SafeShipperValidationMixin, serializers.ModelSerializer):
     packing_group_display = serializers.CharField(source='get_packing_group_display', read_only=True)
     # If you want to show synonyms directly in the DG list/detail:
     # synonyms = DGProductSynonymSerializer(many=True, read_only=True) # See DGProductSynonymSerializer below
@@ -33,6 +34,26 @@ class DangerousGoodSerializer(serializers.ModelSerializer):
             'updated_at',
         ]
         read_only_fields = ('id', 'created_at', 'updated_at', 'packing_group_display')
+    
+    def validate_un_number(self, value):
+        """Validate UN number format using enhanced validation"""
+        return super().validate_un_number(value)
+    
+    def validate_hazard_class(self, value):
+        """Validate hazard class using enhanced validation"""
+        return super().validate_hazard_class(value)
+    
+    def validate_packing_group(self, value):
+        """Validate packing group using enhanced validation"""
+        return super().validate_packing_group(value) if value else value
+    
+    def validate_proper_shipping_name(self, value):
+        """Validate proper shipping name"""
+        return self.validate_text_content(value, max_length=500)
+    
+    def validate_description_notes(self, value):
+        """Validate description notes"""
+        return self.validate_text_content(value, max_length=2000, allow_html=True) if value else value
 
 class DGProductSynonymSerializer(serializers.ModelSerializer):
     # To avoid sending the full DangerousGood object when listing/retrieving synonyms,
@@ -55,12 +76,8 @@ class DGProductSynonymSerializer(serializers.ModelSerializer):
         read_only_fields = ('id', 'created_at', 'updated_at', 'dangerous_good_un_number', 'source_display')
 
     def validate_synonym(self, value):
-        # Example: ensure synonym isn't excessively long or empty
-        if not value.strip():
-            raise serializers.ValidationError("Synonym cannot be empty.")
-        if len(value) > 255:
-            raise serializers.ValidationError("Synonym is too long.")
-        return value
+        # Use enhanced text validation
+        return self.validate_text_content(value, max_length=255)
 
 class SegregationGroupSerializer(serializers.ModelSerializer):
     # For ManyToManyField 'dangerous_goods', DRF handles it by expecting a list of PKs on write.

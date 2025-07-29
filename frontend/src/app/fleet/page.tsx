@@ -20,11 +20,20 @@ import {
   BarChart3,
   Settings,
   Plus,
+  Shield,
+  Bell,
+  CheckCircle,
+  FileText,
+  Calendar,
+  Download,
 } from "lucide-react";
 import { useFleetStatus } from "@/shared/hooks/useVehicles";
 import { useAuth } from "@/shared/hooks/use-auth";
 import { usePermissions, Can } from "@/contexts/PermissionContext";
-import { VehicleList } from "@/features/fleet/components";
+import { 
+  VehicleList, 
+  FleetComplianceDashboard 
+} from "@/features/fleet/components";
 import { transformVehiclesToFleetVehicles } from "@/shared/utils/vehicle-transformers";
 import { DashboardLayout } from "@/shared/components/layout/dashboard-layout";
 
@@ -211,9 +220,10 @@ export default function FleetPage() {
 
         {/* Fleet Tabs */}
         <Tabs defaultValue="live-map" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="live-map">Live Map</TabsTrigger>
             <TabsTrigger value="vehicles">Vehicles</TabsTrigger>
+            <TabsTrigger value="compliance">Compliance</TabsTrigger>
             <TabsTrigger value="analytics">Analytics</TabsTrigger>
           </TabsList>
 
@@ -235,6 +245,10 @@ export default function FleetPage() {
 
           <TabsContent value="vehicles" className="space-y-6">
             <VehicleList vehicles={vehicles} onRefresh={handleRefresh} />
+          </TabsContent>
+
+          <TabsContent value="compliance" className="space-y-6">
+            <FleetComplianceDashboard />
           </TabsContent>
 
           <TabsContent value="analytics" className="space-y-6">

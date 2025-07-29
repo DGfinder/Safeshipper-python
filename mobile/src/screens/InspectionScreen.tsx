@@ -22,6 +22,8 @@ import Toast from 'react-native-toast-message';
 
 import {apiService} from '../services/api';
 import {cameraService, PhotoResult} from '../services/camera';
+import Toast from 'react-native-toast-message';
+import {useFocusEffect} from '@react-navigation/native';
 
 type RouteParams = {
   shipmentId: string;
@@ -36,17 +38,41 @@ interface InspectionItem {
   result?: 'PASS' | 'FAIL' | 'N/A';
   notes?: string;
   corrective_action?: string;
-  photos?: any[];
+  photos?: PhotoResult[];
+  checked_at?: string;
+  has_photos?: boolean;
+  photos_count?: number;
+}
+
+interface SafetyRecommendation {
+  type: string;
+  message: string;
+  severity: 'LOW' | 'MEDIUM' | 'HIGH';
+}
+
+interface DangerousGoodsAnalysis {
+  has_dangerous_goods: boolean;
+  total_dg_items: number;
+  hazard_classes: string[];
+  special_requirements: string[];
 }
 
 interface Inspection {
   id: string;
-  shipment: string;
+  shipment_id: string;
+  shipment_tracking: string;
   inspection_type: string;
+  inspection_type_display: string;
   status: string;
   overall_result?: string;
+  started_at: string;
+  completed_at?: string;
   notes: string;
   items: InspectionItem[];
+  items_count: number;
+  mandatory_items_count: number;
+  completed_items_count: number;
+  failed_items_count: number;
 }
 
 const InspectionScreen: React.FC = () => {
@@ -59,6 +85,9 @@ const InspectionScreen: React.FC = () => {
   const [inspectionItems, setInspectionItems] = useState<InspectionItem[]>([]);
   const [currentItemIndex, setCurrentItemIndex] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [safetyRecommendations, setSafetyRecommendations] = useState<SafetyRecommendation[]>([]);
+  const [dangerousGoodsInfo, setDangerousGoodsInfo] = useState<DangerousGoodsAnalysis | null>(null);
+  const [isProcessingPhoto, setIsProcessingPhoto] = useState(false);
 
   // Fetch inspection template
   const {data: templates, isLoading: templatesLoading} = useQuery({
@@ -72,7 +101,7 @@ const InspectionScreen: React.FC = () => {
     queryFn: () => apiService.getShipmentInspections(shipmentId),
   });
 
-  // Initialize inspection
+  // Initialize inspection from template
   useEffect(() => {
     if (templates && templates.length > 0 && !currentInspection) {
       const template = templates[0];
@@ -85,47 +114,143 @@ const InspectionScreen: React.FC = () => {
         notes: '',
         corrective_action: '',
         photos: [],
+        photos_count: 0,
+        has_photos: false
       }));
       
       setInspectionItems(items);
+      
+      // Set dangerous goods info if available in template
+      if (template.dangerous_goods_analysis) {
+        setDangerousGoodsInfo(template.dangerous_goods_analysis);
+      }
     }
   }, [templates, currentInspection]);
 
+  // Auto-save current item when switching items
+  useFocusEffect(
+    React.useCallback(() => {
+      return () => {
+        if (currentInspection && inspectionItems[currentItemIndex]?.result) {
+          autoSaveCurrentItem();
+        }
+      };
+    }, [currentInspection, currentItemIndex, inspectionItems])
+  );
+
   const createInspectionMutation = useMutation({
-    mutationFn: (data: any) => apiService.createInspection(data),
-    onSuccess: (inspection) => {
-      setCurrentInspection(inspection);
-      Toast.show({
-        type: 'success',
-        text1: 'Inspection Created',
-        text2: 'Starting inspection checklist',
-      });
+    mutationFn: (data: {template_id: string; shipment_id: string}) => 
+      apiService.createInspectionFromTemplate(data.template_id, data.shipment_id),
+    onSuccess: (response) => {
+      if (response.success) {
+        setCurrentInspection(response.inspection);
+        setInspectionItems(response.inspection.items);
+        
+        // Set dangerous goods info if provided
+        if (response.dangerous_goods_items > 0) {
+          Toast.show({
+            type: 'info',
+            text1: 'Dangerous Goods Detected',
+            text2: `${response.dangerous_goods_items} specialized items added`,
+            visibilityTime: 4000,
+          });
+        }
+        
+        Toast.show({
+          type: 'success',
+          text1: 'Inspection Started',
+          text2: `${response.items_count} items to check`,
+        });
+      } else {
+        throw new Error(response.error || 'Failed to create inspection');
+      }
     },
-    onError: (error) => {
+    onError: (error: any) => {
       Toast.show({
         type: 'error',
         text1: 'Error',
-        text2: 'Failed to create inspection',
+        text2: error.message || 'Failed to create inspection',
       });
     },
   });
 
-  const updateInspectionMutation = useMutation({
-    mutationFn: ({id, data}: {id: string; data: any}) => apiService.updateInspection(id, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({queryKey: ['shipmentInspections', shipmentId]});
-      Toast.show({
-        type: 'success',
-        text1: 'Inspection Updated',
-        text2: 'Inspection completed successfully',
-      });
-      navigation.goBack();
+  const updateItemMutation = useMutation({
+    mutationFn: ({item_id, item_data}: {item_id: string; item_data: any}) => 
+      apiService.updateInspectionItem(item_id, item_data),
+    onSuccess: (response) => {
+      if (response.success) {
+        // Update local state with response data
+        const updatedItems = [...inspectionItems];
+        const itemIndex = updatedItems.findIndex(item => item.id === response.item_id);
+        if (itemIndex !== -1) {
+          updatedItems[itemIndex] = {
+            ...updatedItems[itemIndex],
+            ...response.item_data
+          };
+          setInspectionItems(updatedItems);
+        }
+        
+        // Show safety recommendations if any
+        if (response.safety_recommendations?.length > 0) {
+          setSafetyRecommendations(response.safety_recommendations.map(rec => ({
+            type: 'SAFETY_ALERT',
+            message: rec,
+            severity: 'HIGH' as const
+          })));
+        }
+        
+        if (response.photos_processed > 0) {
+          Toast.show({
+            type: 'success',
+            text1: 'Item Updated',
+            text2: `${response.photos_processed} photos processed`,
+          });
+        }
+      }
     },
-    onError: (error) => {
+    onError: (error: any) => {
       Toast.show({
         type: 'error',
         text1: 'Error',
-        text2: 'Failed to save inspection',
+        text2: error.message || 'Failed to update item',
+      });
+    },
+  });
+
+  const completeInspectionMutation = useMutation({
+    mutationFn: (completion_data: any) => 
+      apiService.completeInspection(currentInspection!.id, completion_data),
+    onSuccess: (response) => {
+      if (response.success) {
+        queryClient.invalidateQueries({queryKey: ['shipmentInspections', shipmentId]});
+        
+        const summary = response.completion_summary;
+        Toast.show({
+          type: response.overall_result === 'PASS' ? 'success' : 'error',
+          text1: `Inspection ${response.overall_result}`,
+          text2: `${summary.passed_items}/${summary.total_items} items passed`,
+          visibilityTime: 4000,
+        });
+        
+        // Show safety alerts if any
+        if (response.safety_alerts?.length > 0) {
+          Alert.alert(
+            'Safety Alert',
+            `${response.safety_alerts.length} safety issues detected. Review required.`,
+            [{text: 'OK'}]
+          );
+        }
+        
+        navigation.goBack();
+      } else {
+        throw new Error(response.error || 'Failed to complete inspection');
+      }
+    },
+    onError: (error: any) => {
+      Toast.show({
+        type: 'error',
+        text1: 'Error',
+        text2: error.message || 'Failed to complete inspection',
       });
     },
   });
@@ -137,18 +262,33 @@ const InspectionScreen: React.FC = () => {
     }
 
     const template = templates[0];
-    const inspectionData = {
-      shipment: shipmentId,
-      inspection_type: inspectionType,
-      notes: `Created from template: ${template.name}`,
-      items_data: inspectionItems.map(item => ({
-        description: item.description,
-        category: item.category,
-        is_mandatory: item.is_mandatory,
-      })),
-    };
+    createInspectionMutation.mutate({
+      template_id: template.id,
+      shipment_id: shipmentId
+    });
+  };
 
-    createInspectionMutation.mutate(inspectionData);
+  const autoSaveCurrentItem = async () => {
+    if (!currentInspection || currentItemIndex >= inspectionItems.length) return;
+    
+    const currentItem = inspectionItems[currentItemIndex];
+    if (!currentItem.result) return;
+    
+    const itemData = {
+      result: currentItem.result,
+      notes: currentItem.notes || '',
+      corrective_action: currentItem.corrective_action || '',
+      photos_data: currentItem.photos?.map(photo => ({
+        image_data: photo.base64 || '',
+        file_name: photo.fileName || `photo_${Date.now()}.jpg`,
+        caption: ''
+      })) || []
+    };
+    
+    updateItemMutation.mutate({
+      item_id: currentItem.id,
+      item_data: itemData
+    });
   };
 
   const updateItemResult = (result: 'PASS' | 'FAIL' | 'N/A') => {
@@ -156,8 +296,15 @@ const InspectionScreen: React.FC = () => {
     updatedItems[currentItemIndex] = {
       ...updatedItems[currentItemIndex],
       result,
+      checked_at: new Date().toISOString()
     };
     setInspectionItems(updatedItems);
+    
+    // Clear previous safety recommendations
+    setSafetyRecommendations([]);
+    
+    // Auto-save the item result immediately
+    setTimeout(() => autoSaveCurrentItem(), 500);
   };
 
   const updateItemNotes = (notes: string) => {
@@ -168,27 +315,71 @@ const InspectionScreen: React.FC = () => {
     };
     setInspectionItems(updatedItems);
   };
+  
+  const updateItemCorrectiveAction = (corrective_action: string) => {
+    const updatedItems = [...inspectionItems];
+    updatedItems[currentItemIndex] = {
+      ...updatedItems[currentItemIndex],
+      corrective_action,
+    };
+    setInspectionItems(updatedItems);
+  };
 
   const takePhoto = async () => {
-    const photo = await cameraService.takePhoto({
-      quality: 0.8,
-      maxWidth: 1920,
-      maxHeight: 1080,
-    });
-
-    if (photo) {
-      const updatedItems = [...inspectionItems];
-      updatedItems[currentItemIndex] = {
-        ...updatedItems[currentItemIndex],
-        photos: [...(updatedItems[currentItemIndex].photos || []), photo],
-      };
-      setInspectionItems(updatedItems);
-      
-      Toast.show({
-        type: 'success',
-        text1: 'Photo Added',
-        text2: 'Photo captured successfully',
+    setIsProcessingPhoto(true);
+    
+    try {
+      const photo = await cameraService.takePhoto({
+        quality: 0.85,
+        maxWidth: 1920,
+        maxHeight: 1080,
       });
+
+      if (photo) {
+        const updatedItems = [...inspectionItems];
+        const currentItem = updatedItems[currentItemIndex];
+        
+        updatedItems[currentItemIndex] = {
+          ...currentItem,
+          photos: [...(currentItem.photos || []), photo],
+          photos_count: (currentItem.photos_count || 0) + 1,
+          has_photos: true
+        };
+        setInspectionItems(updatedItems);
+        
+        // If item has result, auto-save with new photo
+        if (currentItem.result) {
+          const itemData = {
+            result: currentItem.result,
+            notes: currentItem.notes || '',
+            corrective_action: currentItem.corrective_action || '',
+            photos_data: updatedItems[currentItemIndex].photos?.map(p => ({
+              image_data: p.base64 || '',
+              file_name: p.fileName || `photo_${Date.now()}.jpg`,
+              caption: ''
+            })) || []
+          };
+          
+          updateItemMutation.mutate({
+            item_id: currentItem.id,
+            item_data: itemData
+          });
+        } else {
+          Toast.show({
+            type: 'success',
+            text1: 'Photo Captured',
+            text2: 'Photo saved locally - will upload when item is completed',
+          });
+        }
+      }
+    } catch (error) {
+      Toast.show({
+        type: 'error',
+        text1: 'Camera Error',
+        text2: 'Failed to capture photo',
+      });
+    } finally {
+      setIsProcessingPhoto(false);
     }
   };
 
@@ -200,14 +391,28 @@ const InspectionScreen: React.FC = () => {
   };
 
   const nextItem = () => {
+    // Auto-save current item before moving
+    if (inspectionItems[currentItemIndex]?.result) {
+      autoSaveCurrentItem();
+    }
+    
     if (currentItemIndex < inspectionItems.length - 1) {
       setCurrentItemIndex(currentItemIndex + 1);
+      // Clear safety recommendations when switching items
+      setSafetyRecommendations([]);
     }
   };
 
   const previousItem = () => {
+    // Auto-save current item before moving
+    if (inspectionItems[currentItemIndex]?.result) {
+      autoSaveCurrentItem();
+    }
+    
     if (currentItemIndex > 0) {
       setCurrentItemIndex(currentItemIndex - 1);
+      // Clear safety recommendations when switching items
+      setSafetyRecommendations([]);
     }
   };
 
@@ -215,6 +420,11 @@ const InspectionScreen: React.FC = () => {
     if (!currentInspection) {
       Alert.alert('Error', 'No active inspection');
       return;
+    }
+
+    // Auto-save current item first
+    if (inspectionItems[currentItemIndex]?.result) {
+      autoSaveCurrentItem();
     }
 
     // Check if all mandatory items have results
@@ -227,30 +437,31 @@ const InspectionScreen: React.FC = () => {
         'Incomplete Inspection',
         `Please complete all mandatory items (${incompleteMandatory.length} remaining)`,
         [{text: 'OK'}]
-      );
+      )
       return;
     }
 
     const failedItems = inspectionItems.filter(item => item.result === 'FAIL');
-    const overallResult = failedItems.length > 0 ? 'FAIL' : 'PASS';
-
-    const updateData = {
-      status: 'COMPLETED',
-      overall_result: overallResult,
-      items: inspectionItems.map(item => ({
-        id: item.id,
-        result: item.result,
-        notes: item.notes,
-        corrective_action: item.corrective_action,
-        checked_at: new Date().toISOString(),
-      })),
+    const passedItems = inspectionItems.filter(item => item.result === 'PASS');
+    
+    const completionData = {
+      final_notes: `Inspection completed: ${passedItems.length} passed, ${failedItems.length} failed`
     };
 
-    setIsSubmitting(true);
-    updateInspectionMutation.mutate({
-      id: currentInspection.id,
-      data: updateData,
-    });
+    Alert.alert(
+      'Complete Inspection',
+      `${passedItems.length} items passed, ${failedItems.length} failed.\n\nProceed to complete?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { 
+          text: 'Complete', 
+          onPress: () => {
+            setIsSubmitting(true);
+            completeInspectionMutation.mutate(completionData);
+          }
+        }
+      ]
+    );
   };
 
   if (templatesLoading || inspectionLoading) {
@@ -274,15 +485,33 @@ const InspectionScreen: React.FC = () => {
           </Text>
           <Text style={styles.description}>
             This inspection includes {inspectionItems.length} checklist items.
-            You'll be able to mark each item as pass/fail and attach photos for any issues.
+            {dangerousGoodsInfo?.has_dangerous_goods && (
+              <Text style={styles.dangerousGoodsNotice}>
+                \n\nDangerous goods detected - additional safety checks will be included.
+              </Text>
+            )}
           </Text>
+          
+          {dangerousGoodsInfo?.has_dangerous_goods && (
+            <View style={styles.dangerousGoodsInfo}>
+              <Text style={styles.dangerousGoodsTitle}>Dangerous Goods Information</Text>
+              <Text style={styles.dangerousGoodsText}>
+                Hazard Classes: {dangerousGoodsInfo.hazard_classes.join(', ')}
+              </Text>
+              <Text style={styles.dangerousGoodsText}>
+                Items: {dangerousGoodsInfo.total_dg_items}
+              </Text>
+            </View>
+          )}
           <TouchableOpacity
             style={styles.startButton}
             onPress={startInspection}
             disabled={createInspectionMutation.isPending}>
-            <Text style={styles.startButtonText}>
-              {createInspectionMutation.isPending ? 'Starting...' : 'Start Inspection'}
-            </Text>
+            {createInspectionMutation.isPending ? (
+              <ActivityIndicator color="#ffffff" size="small" />
+            ) : (
+              <Text style={styles.startButtonText}>Start Inspection</Text>
+            )}
           </TouchableOpacity>
         </View>
       </SafeAreaView>
@@ -333,6 +562,22 @@ const InspectionScreen: React.FC = () => {
           </View>
           
           <Text style={styles.itemDescription}>{currentItem.description}</Text>
+          
+          {/* Safety Recommendations */}
+          {safetyRecommendations.length > 0 && (
+            <View style={styles.safetyRecommendations}>
+              <Text style={styles.safetyTitle}>⚠️ Safety Recommendations</Text>
+              {safetyRecommendations.map((rec, index) => (
+                <Text key={index} style={[
+                  styles.safetyText,
+                  rec.severity === 'HIGH' && styles.safetyHigh,
+                  rec.severity === 'MEDIUM' && styles.safetyMedium
+                ]}>
+                  • {rec.message}
+                </Text>
+              ))}
+            </View>
+          )}
 
           {/* Result Buttons */}
           <View style={styles.resultContainer}>
@@ -365,8 +610,15 @@ const InspectionScreen: React.FC = () => {
           <View style={styles.photoSection}>
             <View style={styles.photoHeader}>
               <Text style={styles.photoLabel}>Photos ({currentItem.photos?.length || 0})</Text>
-              <TouchableOpacity style={styles.photoButton} onPress={takePhoto}>
-                <Text style={styles.photoButtonText}>+ Add Photo</Text>
+              <TouchableOpacity 
+                style={[styles.photoButton, isProcessingPhoto && styles.photoButtonDisabled]} 
+                onPress={takePhoto}
+                disabled={isProcessingPhoto}>
+                {isProcessingPhoto ? (
+                  <ActivityIndicator size="small" color="#374151" />
+                ) : (
+                  <Text style={styles.photoButtonText}>+ Add Photo</Text>
+                )}
               </TouchableOpacity>
             </View>
             
@@ -408,9 +660,11 @@ const InspectionScreen: React.FC = () => {
             style={[styles.navButton, styles.completeButton]}
             onPress={completeInspection}
             disabled={isSubmitting}>
-            <Text style={styles.completeButtonText}>
-              {isSubmitting ? 'Saving...' : 'Complete Inspection'}
-            </Text>
+            {isSubmitting ? (
+              <ActivityIndicator color="#ffffff" size="small" />
+            ) : (
+              <Text style={styles.completeButtonText}>Complete Inspection</Text>
+            )}
           </TouchableOpacity>
         ) : (
           <TouchableOpacity
@@ -691,6 +945,58 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontSize: 16,
     fontWeight: '600',
+  },
+  dangerousGoodsNotice: {
+    color: '#dc2626',
+    fontWeight: '600',
+  },
+  dangerousGoodsInfo: {
+    backgroundColor: '#fef3c7',
+    padding: 16,
+    borderRadius: 8,
+    marginTop: 16,
+    borderLeftWidth: 4,
+    borderLeftColor: '#f59e0b',
+  },
+  dangerousGoodsTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#92400e',
+    marginBottom: 8,
+  },
+  dangerousGoodsText: {
+    fontSize: 14,
+    color: '#92400e',
+    marginBottom: 4,
+  },
+  safetyRecommendations: {
+    backgroundColor: '#fef2f2',
+    padding: 16,
+    borderRadius: 8,
+    marginTop: 16,
+    borderLeftWidth: 4,
+    borderLeftColor: '#ef4444',
+  },
+  safetyTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#dc2626',
+    marginBottom: 12,
+  },
+  safetyText: {
+    fontSize: 14,
+    color: '#7f1d1d',
+    marginBottom: 6,
+    lineHeight: 20,
+  },
+  safetyHigh: {
+    fontWeight: '600',
+  },
+  safetyMedium: {
+    fontWeight: '500',
+  },
+  photoButtonDisabled: {
+    opacity: 0.6,
   },
 });
 

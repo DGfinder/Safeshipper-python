@@ -2,6 +2,7 @@ from rest_framework import serializers
 from django.utils.translation import gettext_lazy as _
 from .models import SafetyDataSheet, SDSRequest, SDSAccessLog, SDSStatus, SDSLanguage
 from dangerous_goods.models import DangerousGood
+from shared.validation_service import SafeShipperValidationMixin
 # from documents.models import Document  # Temporarily disabled
 # from users.serializers import UserBasicSerializer  # Temporarily disabled
 
@@ -70,7 +71,7 @@ class SafetyDataSheetSerializer(serializers.ModelSerializer):
             'has_ph_data', 'ph_value', 'is_corrosive_class_8', 'ph_classification', 'ph_source_display'
         ]
 
-class SafetyDataSheetCreateSerializer(serializers.ModelSerializer):
+class SafetyDataSheetCreateSerializer(SafeShipperValidationMixin, serializers.ModelSerializer):
     """Serializer for creating new SDS records"""
     dangerous_good_id = serializers.UUIDField(write_only=True)
     document_id = serializers.UUIDField(write_only=True)
@@ -86,6 +87,26 @@ class SafetyDataSheetCreateSerializer(serializers.ModelSerializer):
             'fire_fighting_measures', 'spill_cleanup_procedures', 'storage_requirements',
             'handling_precautions', 'disposal_methods'
         ]
+    
+    def validate_product_name(self, value):
+        """Validate product name"""
+        return self.validate_text_content(value, max_length=500)
+    
+    def validate_manufacturer(self, value):
+        """Validate manufacturer name"""
+        return self.validate_text_content(value, max_length=255) if value else value
+    
+    def validate_emergency_contacts(self, value):
+        """Validate emergency contacts information"""
+        return self.validate_text_content(value, max_length=1000, allow_html=True) if value else value
+    
+    def validate_flash_point_celsius(self, value):
+        """Validate flash point temperature"""
+        return super().validate_temperature_celsius(value) if value is not None else value
+    
+    def validate_auto_ignition_temp_celsius(self, value):
+        """Validate auto ignition temperature"""
+        return super().validate_temperature_celsius(value) if value is not None else value
     
     def validate_dangerous_good_id(self, value):
         """Validate dangerous good exists"""
@@ -138,7 +159,7 @@ class SafetyDataSheetListSerializer(serializers.ModelSerializer):
             'days_until_expiration', 'created_at'
         ]
 
-class SDSLookupSerializer(serializers.Serializer):
+class SDSLookupSerializer(SafeShipperValidationMixin, serializers.Serializer):
     """Serializer for quick SDS lookup by dangerous good"""
     dangerous_good_id = serializers.UUIDField(help_text=_("Dangerous good UUID"))
     language = serializers.ChoiceField(choices=SDSLanguage.choices, default=SDSLanguage.EN, help_text=_("Preferred language"))
@@ -151,6 +172,12 @@ class SDSLookupSerializer(serializers.Serializer):
             return value
         except DangerousGood.DoesNotExist:
             raise serializers.ValidationError(_("Dangerous good not found"))
+    
+    def validate_country_code(self, value):
+        """Validate country code format"""
+        if value and len(value) != 2:
+            raise serializers.ValidationError(_("Country code must be exactly 2 characters"))
+        return value.upper() if value else value
 
 
 class SDSPhDataSerializer(serializers.ModelSerializer):

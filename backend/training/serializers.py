@@ -5,7 +5,8 @@ from django.contrib.auth import get_user_model
 
 from .models import (
     TrainingCategory, TrainingProgram, TrainingSession, 
-    TrainingEnrollment, TrainingRecord, ComplianceRequirement, ComplianceStatus
+    TrainingEnrollment, TrainingRecord, ComplianceRequirement, ComplianceStatus,
+    TrainingModule, UserTrainingRecord, UserModuleProgress
 )
 from .adg_driver_qualifications import (
     DriverLicense, ADGDriverCertificate, DriverCompetencyProfile
@@ -342,3 +343,245 @@ class DriverProfileSerializer(serializers.ModelSerializer):
         data['active_certificates'] = ADGDriverCertificateSerializer(active_certificates, many=True).data
         
         return data
+
+
+# Enhanced Training Management Serializers (TrainingModule and UserTrainingRecord)
+
+class TrainingModuleSerializer(serializers.ModelSerializer):
+    """Serializer for training modules within programs"""
+    
+    program_name = serializers.CharField(source='program.name', read_only=True)
+    created_by_name = serializers.CharField(source='created_by.get_full_name', read_only=True)
+    completion_rate = serializers.FloatField(read_only=True)
+    next_module = serializers.SerializerMethodField()
+    previous_module = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = TrainingModule
+        fields = [
+            'id', 'program', 'program_name', 'title', 'description', 'module_type',
+            'order', 'is_mandatory', 'content', 'video_url', 'document_url', 'external_link',
+            'passing_score', 'max_attempts', 'time_limit_minutes', 'estimated_duration_minutes',
+            'completion_criteria', 'status', 'created_by', 'created_by_name', 'completion_rate',
+            'next_module', 'previous_module', 'created_at', 'updated_at'
+        ]
+        read_only_fields = ['id', 'completion_rate', 'created_at', 'updated_at']
+    
+    def get_next_module(self, obj):
+        next_module = obj.get_next_module()
+        if next_module:
+            return {'id': next_module.id, 'title': next_module.title, 'order': next_module.order}
+        return None
+    
+    def get_previous_module(self, obj):
+        previous_module = obj.get_previous_module()
+        if previous_module:
+            return {'id': previous_module.id, 'title': previous_module.title, 'order': previous_module.order}
+        return None
+
+
+class TrainingModuleLightSerializer(serializers.ModelSerializer):
+    """Lightweight serializer for training modules in lists"""
+    
+    class Meta:
+        model = TrainingModule
+        fields = [
+            'id', 'title', 'module_type', 'order', 'is_mandatory',
+            'estimated_duration_minutes', 'status'
+        ]
+
+
+class UserModuleProgressSerializer(serializers.ModelSerializer):
+    """Serializer for user progress on individual modules"""
+    
+    module_details = TrainingModuleLightSerializer(source='module', read_only=True)
+    user_name = serializers.CharField(source='user_record.user.get_full_name', read_only=True)
+    time_spent_formatted = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = UserModuleProgress
+        fields = [
+            'id', 'user_record', 'module', 'module_details', 'user_name',
+            'status', 'progress_percentage', 'started_at', 'completed_at',
+            'time_spent_minutes', 'time_spent_formatted', 'attempts_count',
+            'best_score', 'latest_score', 'passed', 'last_position',
+            'bookmarked_positions', 'interaction_data', 'user_notes',
+            'completion_feedback', 'created_at', 'updated_at'
+        ]
+        read_only_fields = ['id', 'time_spent_formatted', 'created_at', 'updated_at']
+    
+    def get_time_spent_formatted(self, obj):
+        if obj.time_spent_minutes == 0:
+            return "0m"
+        
+        hours = obj.time_spent_minutes // 60
+        minutes = obj.time_spent_minutes % 60
+        
+        if hours > 0:
+            return f"{hours}h {minutes}m" if minutes > 0 else f"{hours}h"
+        return f"{minutes}m"
+
+
+class UserTrainingRecordSerializer(serializers.ModelSerializer):
+    """Comprehensive serializer for user training records with expiration tracking"""
+    
+    user_details = serializers.SerializerMethodField()
+    program_details = TrainingProgramSerializer(source='program', read_only=True)
+    enrollment_details = TrainingEnrollmentSerializer(source='enrollment', read_only=True)
+    assigned_by_name = serializers.CharField(source='assigned_by.get_full_name', read_only=True)
+    module_progress = UserModuleProgressSerializer(many=True, read_only=True)
+    
+    # Progress and time calculations
+    time_spent_formatted = serializers.SerializerMethodField()
+    estimated_time_formatted = serializers.SerializerMethodField()
+    days_until_expiry = serializers.SerializerMethodField()
+    days_until_renewal = serializers.SerializerMethodField()
+    is_due_for_renewal = serializers.SerializerMethodField()
+    next_incomplete_module = serializers.SerializerMethodField()
+    
+    # Status indicators
+    is_overdue = serializers.SerializerMethodField()
+    completion_percentage_display = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = UserTrainingRecord
+        fields = [
+            'id', 'user', 'user_details', 'program', 'program_details', 'enrollment', 'enrollment_details',
+            'progress_status', 'overall_progress_percentage', 'completion_percentage_display',
+            'started_at', 'last_accessed_at', 'completed_at', 'total_attempts', 'best_score', 'latest_score', 'passed',
+            'compliance_status', 'is_mandatory_for_role', 'required_by_date', 'is_overdue',
+            'certificate_issued', 'certificate_number', 'certificate_issued_at', 'certificate_expires_at', 
+            'certificate_renewed_count', 'days_until_expiry',
+            'total_time_spent_minutes', 'time_spent_formatted', 'estimated_completion_time_minutes', 'estimated_time_formatted',
+            'modules_completed', 'total_modules', 'bookmarks', 'notes', 'next_incomplete_module',
+            'assigned_by', 'assigned_by_name', 'supervisor_approved', 'supervisor_approval_date', 'supervisor_notes',
+            'renewal_due_date', 'days_until_renewal', 'is_due_for_renewal', 'renewal_reminders_sent', 'last_reminder_sent',
+            'module_progress', 'created_at', 'updated_at'
+        ]
+        read_only_fields = [
+            'id', 'overall_progress_percentage', 'modules_completed', 'total_modules',
+            'time_spent_formatted', 'estimated_time_formatted', 'days_until_expiry', 
+            'days_until_renewal', 'is_due_for_renewal', 'is_overdue', 'completion_percentage_display',
+            'next_incomplete_module', 'created_at', 'updated_at'
+        ]
+    
+    def get_user_details(self, obj):
+        return {
+            'id': obj.user.id,
+            'username': obj.user.username,
+            'full_name': obj.user.get_full_name(),
+            'email': obj.user.email,
+            'role': getattr(obj.user, 'role', None)
+        }
+    
+    def get_time_spent_formatted(self, obj):
+        return obj.get_time_spent_formatted()
+    
+    def get_estimated_time_formatted(self, obj):
+        if not obj.estimated_completion_time_minutes:
+            return "Unknown"
+        
+        hours = obj.estimated_completion_time_minutes // 60
+        minutes = obj.estimated_completion_time_minutes % 60
+        
+        if hours > 0:
+            return f"{hours}h {minutes}m" if minutes > 0 else f"{hours}h"
+        return f"{minutes}m"
+    
+    def get_days_until_expiry(self, obj):
+        if not obj.certificate_expires_at:
+            return None
+        
+        from django.utils import timezone
+        days = (obj.certificate_expires_at.date() - timezone.now().date()).days
+        return max(0, days)
+    
+    def get_days_until_renewal(self, obj):
+        if not obj.renewal_due_date:
+            return None
+        
+        from django.utils import timezone
+        days = (obj.renewal_due_date - timezone.now().date()).days
+        return max(0, days)
+    
+    def get_is_due_for_renewal(self, obj):
+        return obj.is_due_for_renewal()
+    
+    def get_is_overdue(self, obj):
+        if not obj.required_by_date:
+            return False
+        
+        from django.utils import timezone
+        return obj.required_by_date < timezone.now().date() and obj.progress_status != 'completed'
+    
+    def get_completion_percentage_display(self, obj):
+        return f"{obj.overall_progress_percentage:.1f}%"
+    
+    def get_next_incomplete_module(self, obj):
+        next_module = obj.get_next_module()
+        if next_module:
+            return {
+                'id': next_module.id,
+                'title': next_module.title,
+                'module_type': next_module.module_type,
+                'estimated_duration_minutes': next_module.estimated_duration_minutes
+            }
+        return None
+
+
+class UserTrainingRecordListSerializer(serializers.ModelSerializer):
+    """Lightweight serializer for training record lists"""
+    
+    user_name = serializers.CharField(source='user.get_full_name', read_only=True)
+    program_name = serializers.CharField(source='program.name', read_only=True)
+    time_spent_formatted = serializers.CharField(source='get_time_spent_formatted', read_only=True)
+    days_until_expiry = serializers.SerializerMethodField()
+    is_overdue = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = UserTrainingRecord
+        fields = [
+            'id', 'user', 'user_name', 'program', 'program_name',
+            'progress_status', 'overall_progress_percentage', 'compliance_status',
+            'completed_at', 'certificate_expires_at', 'days_until_expiry',
+            'is_mandatory_for_role', 'required_by_date', 'is_overdue',
+            'time_spent_formatted', 'renewal_due_date'
+        ]
+    
+    def get_days_until_expiry(self, obj):
+        if not obj.certificate_expires_at:
+            return None
+        
+        from django.utils import timezone
+        days = (obj.certificate_expires_at.date() - timezone.now().date()).days
+        return max(0, days)
+    
+    def get_is_overdue(self, obj):
+        if not obj.required_by_date:
+            return False
+        
+        from django.utils import timezone
+        return obj.required_by_date < timezone.now().date() and obj.progress_status != 'completed'
+
+
+class TrainingExpirationReportSerializer(serializers.Serializer):
+    """Serializer for training expiration reports"""
+    
+    expiring_soon = UserTrainingRecordListSerializer(many=True, read_only=True)
+    expired = UserTrainingRecordListSerializer(many=True, read_only=True)
+    overdue = UserTrainingRecordListSerializer(many=True, read_only=True)
+    summary = serializers.DictField(read_only=True)
+    
+    def to_representation(self, instance):
+        return {
+            'expiring_soon': instance.get('expiring_soon', []),
+            'expired': instance.get('expired', []),
+            'overdue': instance.get('overdue', []),
+            'summary': {
+                'total_records': instance.get('total_records', 0),
+                'expiring_soon_count': len(instance.get('expiring_soon', [])),
+                'expired_count': len(instance.get('expired', [])),
+                'overdue_count': len(instance.get('overdue', [])),
+                'compliance_percentage': instance.get('compliance_percentage', 0)
+            }
+        }

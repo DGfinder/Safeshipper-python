@@ -36,6 +36,7 @@ from erp_integration.feedback_webhook_service import (
     send_feedback_webhook, send_incident_webhook
 )
 from .safety_validation import ShipmentSafetyValidator, ShipmentPreValidationService
+from shared.rate_limiting import ShipmentCreationRateThrottle, DangerousGoodsRateThrottle
 
 
 class ShipmentViewSet(viewsets.ModelViewSet):
@@ -44,6 +45,7 @@ class ShipmentViewSet(viewsets.ModelViewSet):
     Enhanced for Phase 2 with improved filtering and permissions.
     """
     permission_classes = [permissions.IsAuthenticated, CanModifyShipment]
+    throttle_classes = [ShipmentCreationRateThrottle]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     
     filterset_fields = {
@@ -90,8 +92,10 @@ class ShipmentViewSet(viewsets.ModelViewSet):
         )
 
     def perform_create(self, serializer):
-        """Enhanced shipment creation with role-based validation."""
+        """Enhanced shipment creation with role-based and DG compatibility validation."""
         try:
+            from .vehicle_compatibility_service import VehicleDGCompatibilityService
+            
             # Auto-assign fields based on user context
             extra_fields = {}
             
@@ -105,6 +109,36 @@ class ShipmentViewSet(viewsets.ModelViewSet):
                     raise serializers.ValidationError({
                         "customer": "You can only create shipments for your own company."
                     })
+            
+            # Enhanced pre-creation validation for dangerous goods
+            items_data = self.request.data.get('items', [])
+            if items_data:
+                dangerous_items = [item for item in items_data if item.get('is_dangerous_good', False)]
+                
+                if dangerous_items:
+                    # Validate dangerous goods compatibility before creation
+                    shipment_data = dict(serializer.validated_data)
+                    pre_validation = VehicleDGCompatibilityService.validate_shipment_before_creation(
+                        shipment_data, items_data
+                    )
+                    
+                    # Check for critical dangerous goods issues
+                    if not pre_validation['can_create']:
+                        critical_issues = pre_validation.get('critical_issues', [])
+                        dg_issues = pre_validation.get('dangerous_goods_issues', [])
+                        all_issues = critical_issues + dg_issues
+                        
+                        raise serializers.ValidationError({
+                            "dangerous_goods": f"Dangerous goods validation failed: {'; '.join(all_issues[:3])}"  # First 3 issues
+                        })
+                    
+                    # Add validation metadata to extra fields for audit purposes
+                    extra_fields['validation_metadata'] = {
+                        'dg_validation_passed': pre_validation['can_create'],
+                        'dg_count': len(dangerous_items),
+                        'equipment_requirements': len(pre_validation.get('equipment_requirements', [])),
+                        'compatible_vehicles_found': len(pre_validation.get('recommended_vehicles', []))
+                    }
             
             serializer.save(**extra_fields)
         except ValidationError as e:
@@ -360,53 +394,142 @@ class ShipmentViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=['post'], url_path='submit-pod')
     def submit_pod(self, request, pk=None):
-        """Submit proof of delivery - matches frontend mock API structure."""
+        """Enhanced proof of delivery submission with comprehensive processing."""
         shipment = self.get_object()
         
-        signature = request.data.get('signature')
-        photos = request.data.get('photos', [])
-        recipient = request.data.get('recipient')
+        # Import POD service
+        from .pod_capture_service import PODCaptureService
         
-        if not signature:
-            return Response(
-                {'error': 'signature is required'}, 
-                status=status.HTTP_400_BAD_REQUEST
-            )
-        
-        if not recipient:
-            return Response(
-                {'error': 'recipient is required'}, 
-                status=status.HTTP_400_BAD_REQUEST
-            )
-        
-        # Create POD data
+        # Extract POD data from request
         pod_data = {
-            'id': f"pod-{timezone.now().timestamp()}",
+            'recipient_name': request.data.get('recipient_name') or request.data.get('recipient', ''),
+            'signature_file': request.data.get('signature_file') or request.data.get('signature', ''),
+            'delivery_notes': request.data.get('delivery_notes', ''),
+            'delivery_location': request.data.get('delivery_location', ''),
+            'photos_data': request.data.get('photos_data', request.data.get('photos', []))
+        }
+        
+        # Validate POD data
+        validation_result = PODCaptureService.validate_mobile_pod_data(pod_data)
+        if not validation_result['is_valid']:
+            return Response({
+                'error': 'Invalid POD data',
+                'validation_errors': validation_result['errors'],
+                'validation_warnings': validation_result.get('warnings', [])
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Process POD submission
+        result = PODCaptureService.submit_proof_of_delivery(
+            shipment_id=str(shipment.id),
+            driver_user=request.user,
+            pod_data=pod_data
+        )
+        
+        if not result['success']:
+            return Response({
+                'error': result['error'],
+                'details': result.get('validation_details', {})
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Return enhanced POD response
+        response_data = {
+            'id': result['pod_id'],
             'shipment_id': str(shipment.id),
-            'signature': signature,
-            'photos': photos,
-            'recipient': recipient,
-            'timestamp': timezone.now().isoformat(),
+            'shipment_tracking': shipment.tracking_number,
+            'status': 'COMPLETED',
+            'delivered_at': result['delivered_at'],
             'driver': {
                 'name': f"{request.user.first_name} {request.user.last_name}".strip(),
                 'id': str(request.user.id)
+            },
+            'recipient': result['pod_summary']['recipient_name'],
+            'photos_processed': result['photos_processed'],
+            'signature_processed': result['signature_processed'],
+            'delivery_location': result['pod_summary']['delivery_location'],
+            'validation_warnings': validation_result.get('warnings', []),
+            'processing_summary': {
+                'total_photos': result['photos_processed'],
+                'signature_captured': result['signature_processed'],
+                'shipment_status_updated': True,
+                'notifications_triggered': True
             }
         }
         
-        # Update shipment status to DELIVERED
-        shipment.status = 'DELIVERED'
-        shipment.actual_delivery_date = timezone.now()
+        return Response(response_data, status=status.HTTP_201_CREATED)
+    
+    @action(detail=True, methods=['get'], url_path='pod-details')
+    def get_pod_details(self, request, pk=None):
+        """Get detailed POD information for a shipment."""
+        shipment = self.get_object()
         
-        # Store POD data in shipment notes (simplified for now)
-        pod_note = f"[POD] Delivered to {recipient} at {timezone.now().strftime('%Y-%m-%d %H:%M')}"
-        if not shipment.notes:
-            shipment.notes = pod_note
-        else:
-            shipment.notes = f"{shipment.notes}\n\n{pod_note}"
+        try:
+            from .pod_capture_service import PODCaptureService
+            
+            if not hasattr(shipment, 'proof_of_delivery'):
+                return Response({
+                    'has_pod': False,
+                    'message': 'No proof of delivery found for this shipment'
+                }, status=status.HTTP_404_NOT_FOUND)
+            
+            pod_result = PODCaptureService.get_pod_summary(str(shipment.proof_of_delivery.id))
+            
+            if not pod_result['success']:
+                return Response({
+                    'error': pod_result['error']
+                }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            
+            return Response({
+                'has_pod': True,
+                'pod_details': pod_result['pod']
+            })
+            
+        except Exception as e:
+            logger.error(f"Error getting POD details for shipment {shipment.id}: {str(e)}")
+            return Response({
+                'error': 'Failed to retrieve POD details'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    
+    @action(detail=True, methods=['post'], url_path='validate-pod-data')
+    def validate_pod_data(self, request, pk=None):
+        """Validate POD data before submission (mobile app pre-validation)."""
+        shipment = self.get_object()
         
-        shipment.save(update_fields=['status', 'actual_delivery_date', 'notes', 'updated_at'])
-        
-        return Response(pod_data, status=status.HTTP_201_CREATED)
+        try:
+            from .pod_capture_service import PODCaptureService
+            
+            # Extract POD data for validation
+            pod_data = {
+                'recipient_name': request.data.get('recipient_name', ''),
+                'signature_file': request.data.get('signature_file', ''),
+                'delivery_notes': request.data.get('delivery_notes', ''),
+                'delivery_location': request.data.get('delivery_location', ''),
+                'photos_data': request.data.get('photos_data', [])
+            }
+            
+            # Validate shipment can accept POD
+            shipment_validation = PODCaptureService._validate_pod_submission(shipment, request.user)
+            
+            # Validate POD data structure
+            data_validation = PODCaptureService.validate_mobile_pod_data(pod_data)
+            
+            return Response({
+                'can_submit_pod': shipment_validation['can_submit'],
+                'shipment_validation': shipment_validation,
+                'data_validation': data_validation,
+                'overall_valid': shipment_validation['can_submit'] and data_validation['is_valid'],
+                'recommendations': {
+                    'required_fields': ['recipient_name', 'signature_file'],
+                    'recommended_fields': ['delivery_location', 'photos_data'],
+                    'max_photos': 10,
+                    'supported_signature_formats': ['base64', 'data:image/png', 'data:image/jpeg']
+                }
+            })
+            
+        except Exception as e:
+            logger.error(f"Error validating POD data for shipment {shipment.id}: {str(e)}")
+            return Response({
+                'error': 'POD validation failed'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     @action(detail=True, methods=['patch'], url_path='update-status')
     def update_status(self, request, pk=None):
@@ -464,7 +587,127 @@ class ShipmentViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=['post'], url_path='assign-driver')
     def assign_driver(self, request, pk=None):
-        """Assign a driver to the shipment - matches frontend API structure."""
+        """
+        Enhanced driver assignment with qualification validation.
+        Validates driver qualifications for dangerous goods before assignment.
+        """
+        shipment = self.get_object()
+        driver_id = request.data.get('driver_id')
+        force_assignment = request.data.get('force_assignment', False)  # Allow override for warnings
+        
+        if not driver_id:
+            return Response(
+                {'error': 'driver_id is required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        try:
+            from django.contrib.auth import get_user_model
+            from .driver_qualification_service import ShipmentDriverQualificationService
+            
+            User = get_user_model()
+            driver = User.objects.get(id=driver_id)
+            
+            # Validate driver role if available
+            if hasattr(driver, 'role') and driver.role != 'DRIVER':
+                return Response(
+                    {'error': 'Selected user is not a driver'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            # Perform comprehensive driver qualification validation
+            validation_result = ShipmentDriverQualificationService.validate_driver_for_shipment(
+                driver, shipment
+            )
+            
+            # Check if driver can be assigned based on validation results
+            if not validation_result['overall_qualified']:
+                return Response({
+                    'error': 'Driver is not qualified for this shipment',
+                    'qualification_validation': validation_result,
+                    'can_force_assign': False,
+                    'blocking_issues': validation_result['critical_issues']
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            # If driver has warnings but is qualified, check force assignment
+            if validation_result['warnings'] and not force_assignment:
+                return Response({
+                    'error': 'Driver has qualification warnings',
+                    'qualification_validation': validation_result,
+                    'can_force_assign': True,
+                    'warnings': validation_result['warnings'],
+                    'message': 'Driver is qualified but has warnings. Use force_assignment=true to proceed.'
+                }, status=status.HTTP_409_CONFLICT)
+            
+            # Driver is qualified - proceed with assignment
+            shipment.assigned_driver = driver
+            shipment.save(update_fields=['assigned_driver', 'updated_at'])
+            
+            # Log successful assignment with qualification details
+            logger.info(
+                f"Driver {driver.get_full_name()} (ID: {driver.id}) assigned to shipment {shipment.id}. "
+                f"Qualification level: {validation_result.get('qualification_level', 'UNKNOWN')}"
+            )
+            
+            # Return updated shipment with qualification details
+            serializer = self.get_serializer(shipment)
+            response_data = serializer.data
+            response_data['driver_qualification'] = validation_result
+            
+            return Response(response_data)
+            
+        except User.DoesNotExist:
+            return Response(
+                {'error': 'Driver not found'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        except Exception as e:
+            logger.error(f"Error assigning driver to shipment {shipment.id}: {str(e)}")
+            return Response(
+                {'error': 'An error occurred while assigning the driver'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+    
+    @action(detail=True, methods=['get'], url_path='qualified-drivers')
+    def get_qualified_drivers(self, request, pk=None):
+        """
+        Get list of drivers qualified for this specific shipment.
+        Analyzes dangerous goods and returns drivers with appropriate qualifications.
+        """
+        shipment = self.get_object()
+        
+        try:
+            from .driver_qualification_service import ShipmentDriverQualificationService
+            
+            qualified_drivers = ShipmentDriverQualificationService.get_qualified_drivers_for_shipment(shipment)
+            
+            return Response({
+                'shipment_id': shipment.id,
+                'qualified_drivers': qualified_drivers,
+                'total_qualified': len(qualified_drivers),
+                'validation_summary': {
+                    'has_dangerous_goods': shipment.items.filter(is_dangerous_good=True).exists(),
+                    'dangerous_goods_classes': [
+                        item.dangerous_good_entry.hazard_class.split('.')[0]
+                        for item in shipment.items.filter(is_dangerous_good=True)
+                        if item.dangerous_good_entry and item.dangerous_good_entry.hazard_class
+                    ]
+                }
+            })
+            
+        except Exception as e:
+            logger.error(f"Error getting qualified drivers for shipment {shipment.id}: {str(e)}")
+            return Response(
+                {'error': 'Unable to retrieve qualified drivers'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+    
+    @action(detail=True, methods=['post'], url_path='validate-driver')
+    def validate_driver_qualification(self, request, pk=None):
+        """
+        Validate if a specific driver is qualified for this shipment.
+        Returns detailed qualification analysis without assignment.
+        """
         shipment = self.get_object()
         driver_id = request.data.get('driver_id')
         
@@ -476,23 +719,39 @@ class ShipmentViewSet(viewsets.ModelViewSet):
         
         try:
             from django.contrib.auth import get_user_model
+            from .driver_qualification_service import ShipmentDriverQualificationService
+            
             User = get_user_model()
             driver = User.objects.get(id=driver_id)
             
-            # Validate driver role if available
+            # Validate driver role
             if hasattr(driver, 'role') and driver.role != 'DRIVER':
                 return Response(
                     {'error': 'Selected user is not a driver'},
                     status=status.HTTP_400_BAD_REQUEST
                 )
             
-            # Assign driver to shipment
-            shipment.assigned_driver = driver
-            shipment.save(update_fields=['assigned_driver', 'updated_at'])
+            # Perform qualification validation
+            validation_result = ShipmentDriverQualificationService.validate_driver_for_shipment(
+                driver, shipment
+            )
             
-            # Return updated shipment
-            serializer = self.get_serializer(shipment)
-            return Response(serializer.data)
+            # Add assignment recommendation
+            can_assign, blocking_issues = ShipmentDriverQualificationService.can_driver_be_assigned(
+                driver, shipment, strict_mode=False
+            )
+            
+            validation_result['assignment_recommendation'] = {
+                'can_assign': can_assign,
+                'blocking_issues': blocking_issues,
+                'recommended_action': 'ASSIGN' if can_assign else 'DO_NOT_ASSIGN'
+            }
+            
+            return Response({
+                'shipment_id': shipment.id,
+                'driver_id': driver.id,
+                'validation_result': validation_result
+            })
             
         except User.DoesNotExist:
             return Response(
@@ -500,9 +759,9 @@ class ShipmentViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_404_NOT_FOUND
             )
         except Exception as e:
-            logger.error(f"Error assigning driver to shipment {shipment.id}: {str(e)}")
+            logger.error(f"Error validating driver {driver_id} for shipment {shipment.id}: {str(e)}")
             return Response(
-                {'error': 'An error occurred while assigning the driver'},
+                {'error': 'Unable to validate driver qualification'},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
     
@@ -909,6 +1168,69 @@ class ShipmentViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
+    @action(detail=True, methods=['get'], url_path='generate-consolidated-report')
+    def generate_consolidated_report(self, request, pk=None):
+        """
+        Generate consolidated PDF report combining manifest, compliance certificate, 
+        compatibility report, SDS, and emergency procedures into a single document
+        """
+        from django.http import HttpResponse
+        from documents.services import generate_consolidated_report
+        from audits.signals import log_custom_action
+        from audits.models import AuditActionType
+        
+        shipment = self.get_object()
+        
+        # Check if user has permission to generate reports
+        if request.user.role not in ['ADMIN', 'COMPLIANCE_OFFICER', 'DISPATCHER']:
+            # Regular users can only generate reports for their own shipments
+            if (shipment.requested_by != request.user and 
+                shipment.assigned_driver != request.user):
+                return Response(
+                    {"detail": "You don't have permission to generate consolidated reports for this shipment."},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+        
+        try:
+            # Check which sections to include (optional query parameters)
+            include_sections = {
+                'shipment_report': request.query_params.get('include_shipment_report', 'true').lower() == 'true',
+                'manifest': request.query_params.get('include_manifest', 'true').lower() == 'true',
+                'compliance_certificate': request.query_params.get('include_compliance', 'true').lower() == 'true',
+                'compatibility_report': request.query_params.get('include_compatibility', 'true').lower() == 'true',
+                'sds_documents': request.query_params.get('include_sds', 'true').lower() == 'true',
+                'emergency_procedures': request.query_params.get('include_epg', 'true').lower() == 'true',
+            }
+            
+            # Generate consolidated PDF
+            pdf_bytes = generate_consolidated_report(shipment, include_sections)
+            
+            # Log the report generation
+            log_custom_action(
+                action_type=AuditActionType.EXPORT,
+                description=f"Generated consolidated transport report for {shipment.tracking_number}",
+                content_object=shipment,
+                request=request,
+                metadata={
+                    'report_type': 'consolidated',
+                    'sections_included': [k for k, v in include_sections.items() if v]
+                }
+            )
+            
+            # Create HTTP response with PDF
+            response = HttpResponse(pdf_bytes, content_type='application/pdf')
+            response['Content-Disposition'] = f'attachment; filename="consolidated_report_{shipment.tracking_number}.pdf"'
+            response['Content-Length'] = len(pdf_bytes)
+            
+            return response
+            
+        except Exception as e:
+            logger.error(f"Error generating consolidated report for {shipment.id}: {str(e)}")
+            return Response(
+                {"detail": "An error occurred while generating the consolidated report."},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
     @action(detail=True, methods=['post'], url_path='generate-batch-documents')
     def generate_batch_documents(self, request, pk=None):
         """
@@ -1042,27 +1364,59 @@ class ShipmentViewSet(viewsets.ModelViewSet):
         
         try:
             from vehicles.models import Vehicle
+            from .vehicle_compatibility_service import VehicleDGCompatibilityService
             
             # Get available vehicles with optional filtering
-            vehicles_qs = Vehicle.objects.all()
+            vehicles_qs = Vehicle.objects.select_related('owning_company').prefetch_related(
+                'safety_equipment__equipment_type'
+            )
             
-            vehicle_status = request.query_params.get('status', 'AVAILABLE')
-            vehicles_qs = vehicles_qs.filter(status=vehicle_status)
+            vehicle_status = request.query_params.get('status', ['AVAILABLE', 'MAINTENANCE'])
+            if isinstance(vehicle_status, str):
+                vehicle_status = [vehicle_status]
+            vehicles_qs = vehicles_qs.filter(status__in=vehicle_status)
             
             depot = request.query_params.get('depot')
             if depot:
                 vehicles_qs = vehicles_qs.filter(assigned_depot=depot)
             
-            compliant_vehicles = ShipmentSafetyValidator.get_compliant_vehicles_for_shipment(
+            # Query parameters for compatibility checking
+            include_warnings = request.query_params.get('include_warnings', 'true').lower() == 'true'
+            sort_by_score = request.query_params.get('sort_by_score', 'true').lower() == 'true'
+            
+            # Enhanced compatibility checking with new service
+            compatible_vehicles = VehicleDGCompatibilityService.get_compatible_vehicles_for_shipment(
+                shipment, vehicles_qs, include_warnings=include_warnings
+            )
+            
+            # Legacy compatibility check for comparison
+            legacy_compliant = ShipmentSafetyValidator.get_compliant_vehicles_for_shipment(
                 shipment, vehicles_qs
             )
             
+            # Add dangerous goods analysis for context
+            dangerous_items = shipment.items.filter(is_dangerous_good=True)
+            dg_analysis = {}
+            if dangerous_items.exists():
+                dg_analysis = VehicleDGCompatibilityService._analyze_dangerous_goods(dangerous_items)
+            
             return Response({
-                'shipment_id': shipment.id,
+                'shipment_id': str(shipment.id),
                 'tracking_number': shipment.tracking_number,
-                'compliant_vehicles': compliant_vehicles,
-                'total_vehicles_checked': vehicles_qs.count(),
-                'compliant_count': len(compliant_vehicles)
+                'dangerous_goods_analysis': dg_analysis,
+                'compatibility_results': {
+                    'enhanced_compatible_vehicles': compatible_vehicles,
+                    'legacy_compliant_vehicles': legacy_compliant,
+                    'total_vehicles_checked': vehicles_qs.count(),
+                    'enhanced_compatible_count': len(compatible_vehicles),
+                    'legacy_compliant_count': len(legacy_compliant)
+                },
+                'query_parameters': {
+                    'status_filter': vehicle_status,
+                    'depot_filter': depot,
+                    'include_warnings': include_warnings,
+                    'sort_by_score': sort_by_score
+                }
             })
             
         except Exception as e:
@@ -1095,30 +1449,52 @@ class ShipmentViewSet(viewsets.ModelViewSet):
         
         try:
             from vehicles.models import Vehicle
+            from .vehicle_compatibility_service import VehicleDGCompatibilityService
+            
             vehicle = Vehicle.objects.get(id=vehicle_id)
             
-            # Validate vehicle assignment
-            validation_result = ShipmentSafetyValidator.validate_vehicle_assignment(
+            # Enhanced validation with new VehicleDGCompatibilityService
+            compatibility_result = VehicleDGCompatibilityService.validate_vehicle_for_shipment(
+                vehicle, shipment, strict_mode=not override_warnings
+            )
+            
+            # Legacy validation as backup (maintain existing behavior)
+            legacy_validation = ShipmentSafetyValidator.validate_vehicle_assignment(
                 shipment, vehicle
             )
             
-            if not validation_result['can_assign']:
+            # Combine validation results for comprehensive response
+            combined_validation = {
+                'enhanced_compatibility': compatibility_result,
+                'legacy_validation': legacy_validation,
+                'can_assign': compatibility_result['is_compatible'] and legacy_validation['can_assign'],
+                'compatibility_level': compatibility_result['compatibility_level'],
+                'validation_type': compatibility_result['validation_type']
+            }
+            
+            # Check if vehicle cannot be assigned due to critical issues
+            if not compatibility_result['is_compatible']:
                 return Response({
-                    "error": "Vehicle cannot be assigned to this shipment",
-                    "reason": validation_result['reason'],
-                    "validation_details": validation_result
+                    "error": "Vehicle is not compatible with this shipment",
+                    "compatibility_level": compatibility_result['compatibility_level'],
+                    "critical_issues": compatibility_result['critical_issues'],
+                    "missing_equipment": compatibility_result['missing_equipment'],
+                    "expired_equipment": compatibility_result['expired_equipment'],
+                    "recommendations": compatibility_result['recommendations'],
+                    "validation_details": combined_validation
                 }, status=status.HTTP_400_BAD_REQUEST)
             
-            # Check for warnings
-            vehicle_compliance = validation_result.get('vehicle_compliance', {})
-            warnings = vehicle_compliance.get('warnings', [])
-            
-            if warnings and not override_warnings:
+            # Check for warnings that may require override
+            if compatibility_result['warnings'] and not override_warnings:
                 return Response({
-                    "warning": "Vehicle has warnings but can be assigned",
-                    "warnings": warnings,
+                    "warning": "Vehicle is compatible but has warnings",
+                    "compatibility_level": compatibility_result['compatibility_level'],
+                    "warnings": compatibility_result['warnings'],
+                    "dangerous_goods_analysis": compatibility_result.get('dangerous_goods_analysis', {}),
+                    "equipment_status": compatibility_result.get('equipment_status', {}),
+                    "recommendations": compatibility_result['recommendations'],
                     "can_override": True,
-                    "message": "Set override_warnings=true to proceed with assignment"
+                    "message": "Set override_warnings=true to proceed with assignment despite warnings"
                 }, status=status.HTTP_200_OK)
             
             # Assign vehicle to shipment
@@ -1137,8 +1513,10 @@ class ShipmentViewSet(viewsets.ModelViewSet):
                 metadata={
                     'vehicle_id': str(vehicle.id),
                     'vehicle_registration': vehicle.registration_number,
-                    'validation_passed': validation_result['can_assign'],
-                    'warnings_overridden': override_warnings and len(warnings) > 0
+                    'compatibility_level': compatibility_result['compatibility_level'],
+                    'validation_type': compatibility_result['validation_type'],
+                    'warnings_overridden': override_warnings and len(compatibility_result['warnings']) > 0,
+                    'equipment_compliance_percentage': compatibility_result.get('equipment_status', {}).get('compliance_percentage', 0)
                 }
             )
             
@@ -1146,7 +1524,14 @@ class ShipmentViewSet(viewsets.ModelViewSet):
             return Response({
                 "message": f"Vehicle {vehicle.registration_number} successfully assigned to shipment",
                 "shipment": serializer.data,
-                "validation_result": validation_result
+                "assignment_success": True,
+                "compatibility_summary": {
+                    "level": compatibility_result['compatibility_level'],
+                    "validation_type": compatibility_result['validation_type'],
+                    "warnings_count": len(compatibility_result['warnings']),
+                    "recommendations": compatibility_result['recommendations'][:3]  # Top 3 recommendations
+                },
+                "validation_details": combined_validation
             })
             
         except Vehicle.DoesNotExist:
@@ -1190,16 +1575,120 @@ class ShipmentViewSet(viewsets.ModelViewSet):
             )
         
         try:
-            validation_result = ShipmentPreValidationService.validate_shipment_creation(
+            from .vehicle_compatibility_service import VehicleDGCompatibilityService
+            
+            # Enhanced pre-validation with new compatibility service
+            enhanced_validation = VehicleDGCompatibilityService.validate_shipment_before_creation(
+                shipment_data, items_data
+            )
+            
+            # Legacy validation for comparison
+            legacy_validation = ShipmentPreValidationService.validate_shipment_creation(
                 shipment_data, items_data, vehicle_id
             )
             
-            return Response(validation_result)
+            # Combine both validation results
+            combined_result = {
+                'enhanced_validation': enhanced_validation,
+                'legacy_validation': legacy_validation,
+                'overall_can_create': enhanced_validation['can_create'] and legacy_validation['can_create'],
+                'validation_summary': {
+                    'dangerous_goods_count': len([item for item in items_data if item.get('is_dangerous_good', False)]),
+                    'total_items': len(items_data),
+                    'has_compatibility_issues': bool(enhanced_validation['dangerous_goods_issues']),
+                    'has_vehicle_recommendations': bool(enhanced_validation['recommended_vehicles']),
+                    'equipment_requirements_count': len(enhanced_validation['equipment_requirements'])
+                },
+                'recommendations': {
+                    'compatible_vehicles': enhanced_validation['recommended_vehicles'][:3],  # Top 3
+                    'required_equipment': enhanced_validation['equipment_requirements'],
+                    'capacity_warnings': enhanced_validation['capacity_warnings']
+                }
+            }
+            
+            return Response(combined_result)
             
         except Exception as e:
             logger.error(f"Error pre-validating shipment: {str(e)}")
             return Response(
                 {"error": "An error occurred during pre-validation"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+    
+    @action(detail=True, methods=['post'], url_path='validate-vehicle-compatibility')
+    def validate_vehicle_compatibility(self, request, pk=None):
+        """
+        Detailed vehicle compatibility validation for a specific vehicle and shipment.
+        
+        Expected payload:
+        {
+            "vehicle_id": "uuid",
+            "strict_mode": false,
+            "include_recommendations": true
+        }
+        """
+        shipment = self.get_object()
+        vehicle_id = request.data.get('vehicle_id')
+        strict_mode = request.data.get('strict_mode', False)
+        include_recommendations = request.data.get('include_recommendations', True)
+
+        if not vehicle_id:
+            return Response(
+                {"error": "vehicle_id is required"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            from vehicles.models import Vehicle
+            from .vehicle_compatibility_service import VehicleDGCompatibilityService
+
+            vehicle = Vehicle.objects.select_related('owning_company').prefetch_related(
+                'safety_equipment__equipment_type'
+            ).get(id=vehicle_id)
+
+            # Comprehensive compatibility validation
+            compatibility_result = VehicleDGCompatibilityService.validate_vehicle_for_shipment(
+                vehicle, shipment, strict_mode=strict_mode
+            )
+
+            # Calculate compatibility score for ranking
+            compatibility_score = VehicleDGCompatibilityService._calculate_compatibility_score(compatibility_result)
+
+            # Response structure
+            response_data = {
+                'shipment_id': str(shipment.id),
+                'vehicle_id': str(vehicle.id),
+                'vehicle_registration': vehicle.registration_number,
+                'compatibility_analysis': compatibility_result,
+                'compatibility_score': compatibility_score,
+                'assignment_recommendation': {
+                    'can_assign': compatibility_result['is_compatible'],
+                    'confidence_level': 'HIGH' if compatibility_score >= 90 else 'MEDIUM' if compatibility_score >= 70 else 'LOW',
+                    'risk_level': 'LOW' if not compatibility_result['critical_issues'] else 'HIGH',
+                    'action': 'ASSIGN' if compatibility_result['is_compatible'] else 'DO_NOT_ASSIGN'
+                }
+            }
+
+            # Add additional analysis if requested
+            if include_recommendations:
+                response_data['detailed_analysis'] = {
+                    'dangerous_goods_summary': compatibility_result.get('dangerous_goods_analysis', {}),
+                    'equipment_compliance_breakdown': compatibility_result.get('equipment_status', {}),
+                    'capacity_utilization': compatibility_result.get('capacity_analysis', {}),
+                    'improvement_recommendations': compatibility_result.get('recommendations', [])
+                }
+
+            return Response(response_data)
+
+        except Vehicle.DoesNotExist:
+            return Response(
+                {"error": "Vehicle not found"},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        except Exception as e:
+            logger.error(f"Error validating vehicle compatibility for shipment {shipment.id}, vehicle {vehicle_id}: {str(e)}")
+            return Response(
+                {"error": "An error occurred during vehicle compatibility validation"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 

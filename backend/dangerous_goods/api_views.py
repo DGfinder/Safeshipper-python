@@ -29,6 +29,8 @@ from .services import (
 from .placard_calculator import ADGPlacardCalculator
 from .placard_generator import ADGPlacardGenerator
 from .emergency_info_panel import EIPGenerator
+from shared.rate_limiting import DangerousGoodsRateThrottle
+from shared.caching_service import DangerousGoodsCacheService
 # from sds.models import SafetyDataSheet
 # from sds.services import SDSDocumentProcessor
 
@@ -40,6 +42,7 @@ class DangerousGoodViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = DangerousGood.objects.all().order_by('un_number')
     serializer_class = DangerousGoodSerializer
     permission_classes = [permissions.IsAuthenticated]
+    throttle_classes = [DangerousGoodsRateThrottle]
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     filterset_fields = {
         'un_number': ['exact', 'icontains', 'startswith'],
@@ -51,19 +54,86 @@ class DangerousGoodViewSet(viewsets.ReadOnlyModelViewSet):
     }
     search_fields = ['un_number', 'proper_shipping_name', 'simplified_name']
     ordering_fields = ['un_number', 'proper_shipping_name', 'hazard_class']
+    
+    def list(self, request, *args, **kwargs):
+        """List dangerous goods with caching for filtered queries."""
+        # Build filter parameters for cache key
+        filter_params = {}
+        for key, value in request.query_params.items():
+            if key not in ['page', 'page_size']:  # Exclude pagination params from cache
+                filter_params[key] = value
+        
+        # Check cache for this specific filter combination
+        cached_list = DangerousGoodsCacheService.get_dangerous_goods_list(filter_params)
+        if cached_list:
+            # Return cached data with pagination if needed
+            page = self.paginate_queryset(cached_list)
+            if page is not None:
+                return self.get_paginated_response(page)
+            return Response(cached_list)
+        
+        # Fall back to normal queryset processing
+        response = super().list(request, *args, **kwargs)
+        
+        # Cache the results for future requests
+        if response.status_code == 200:
+            data_to_cache = response.data
+            if isinstance(data_to_cache, dict) and 'results' in data_to_cache:
+                # Paginated response - cache the results
+                DangerousGoodsCacheService.cache_dangerous_goods_list(filter_params, data_to_cache['results'])
+            else:
+                # Non-paginated response
+                DangerousGoodsCacheService.cache_dangerous_goods_list(filter_params, data_to_cache)
+        
+        return response
+    
+    def retrieve(self, request, *args, **kwargs):
+        """Retrieve single dangerous good with caching."""
+        instance = self.get_object()
+        
+        # Check cache by UN number if available
+        if hasattr(instance, 'un_number'):
+            cached_dg = DangerousGoodsCacheService.get_dangerous_good_by_un(instance.un_number)
+            if cached_dg:
+                return Response(cached_dg)
+        
+        # Fall back to normal serialization
+        serializer = self.get_serializer(instance)
+        result_data = serializer.data
+        
+        # Cache the result by UN number
+        if hasattr(instance, 'un_number'):
+            DangerousGoodsCacheService.cache_dangerous_good_by_un(instance.un_number, result_data)
+        
+        return Response(result_data)
 
     @action(detail=False, methods=['get'], url_path='lookup-by-synonym')
     def lookup_by_synonym(self, request):
-        """Look up dangerous good by synonym or alternative name."""
+        """Look up dangerous good by synonym or alternative name with caching."""
         query = request.query_params.get('query', None)
         if not query:
             return Response({'error': 'Query parameter "query" is required.'}, status=status.HTTP_400_BAD_REQUEST)
 
+        # Check cache first
+        cached_result = DangerousGoodsCacheService.get_synonym_match(query)
+        if cached_result:
+            return Response(cached_result)
+
         dg = match_synonym_to_dg(query)
         if dg:
             serializer = self.get_serializer(dg)
-            return Response(serializer.data)
-        return Response({'message': 'No matching dangerous good found for the synonym.'}, status=status.HTTP_404_NOT_FOUND)
+            result_data = serializer.data
+            
+            # Cache the result
+            DangerousGoodsCacheService.cache_synonym_match(query, result_data)
+            
+            return Response(result_data)
+        
+        # Cache negative result to prevent repeated lookups
+        negative_result = {'message': 'No matching dangerous good found for the synonym.'}
+        DangerousGoodsCacheService.cache_synonym_match(query, negative_result)
+        
+        return Response(negative_result, status=status.HTTP_404_NOT_FOUND)
 
 
 class DGCompatibilityCheckView(views.APIView):
@@ -72,10 +142,11 @@ class DGCompatibilityCheckView(views.APIView):
     Accepts a POST request with a list of UN numbers and returns compatibility results.
     """
     permission_classes = [permissions.IsAuthenticated]
+    throttle_classes = [DangerousGoodsRateThrottle]
 
     def post(self, request):
         """
-        Check compatibility between a list of UN numbers.
+        Check compatibility between a list of UN numbers with caching.
         
         Expected payload:
         {
@@ -115,8 +186,17 @@ class DGCompatibilityCheckView(views.APIView):
             )
 
         try:
+            # Check cache first
+            cached_result = DangerousGoodsCacheService.get_compatibility_result(un_numbers)
+            if cached_result:
+                return Response(cached_result, status=status.HTTP_200_OK)
+            
             # Use the service function to check compatibility
             result = check_list_compatibility(un_numbers)
+            
+            # Cache the result
+            DangerousGoodsCacheService.cache_compatibility_result(un_numbers, result)
+            
             return Response(result, status=status.HTTP_200_OK)
         
         except Exception as e:
@@ -182,15 +262,43 @@ class SegregationRuleViewSet(viewsets.ModelViewSet):
         if not un_number1 or not un_number2:
             return Response({"error": "Both 'un_number1' and 'un_number2' are required."}, status=status.HTTP_400_BAD_REQUEST)
 
-        dg1 = get_dangerous_good_by_un_number(un_number1)
-        dg2 = get_dangerous_good_by_un_number(un_number2)
+        # Check cache for individual DG lookups
+        cached_dg1 = DangerousGoodsCacheService.get_dangerous_good_by_un(un_number1)
+        cached_dg2 = DangerousGoodsCacheService.get_dangerous_good_by_un(un_number2)
+        
+        if cached_dg1:
+            dg1 = cached_dg1
+        else:
+            dg1 = get_dangerous_good_by_un_number(un_number1)
+            if dg1:
+                # Cache the dangerous good data
+                serializer = DangerousGoodSerializer(dg1)
+                DangerousGoodsCacheService.cache_dangerous_good_by_un(un_number1, serializer.data)
+        
+        if cached_dg2:
+            dg2 = cached_dg2
+        else:
+            dg2 = get_dangerous_good_by_un_number(un_number2)
+            if dg2:
+                # Cache the dangerous good data
+                serializer = DangerousGoodSerializer(dg2)
+                DangerousGoodsCacheService.cache_dangerous_good_by_un(un_number2, serializer.data)
 
         if not dg1:
             return Response({"error": f"UN Number '{un_number1}' not found."}, status=status.HTTP_404_NOT_FOUND)
         if not dg2:
             return Response({"error": f"UN Number '{un_number2}' not found."}, status=status.HTTP_404_NOT_FOUND)
 
+        # Check if we have cached compatibility result
+        cached_compatibility = DangerousGoodsCacheService.get_compatibility_result([un_number1, un_number2])
+        if cached_compatibility:
+            return Response(cached_compatibility)
+        
         compatibility_result = check_dg_compatibility(dg1, dg2)
+        
+        # Cache the compatibility result
+        DangerousGoodsCacheService.cache_compatibility_result([un_number1, un_number2], compatibility_result)
+        
         return Response(compatibility_result)
 
 

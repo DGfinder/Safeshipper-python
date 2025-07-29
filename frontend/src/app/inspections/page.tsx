@@ -68,10 +68,11 @@ import {
   Database,
   Code,
   Terminal,
-  HelpCircle
+  HelpCircle,
+  AlertCircle
 } from "lucide-react";
 
-// Mock data for inspections
+// Mock data for inspections (including mobile-captured data)
 const mockInspections = [
   {
     id: "1",
@@ -152,6 +153,94 @@ const mockInspections = [
       passed: 0,
       failed: 0
     }
+  },
+  // Mobile-captured inspections
+  {
+    id: "5",
+    title: "Pre-Trip DG Vehicle Inspection",
+    type: "mobile_inspection",
+    status: "completed",
+    priority: "high",
+    inspector: "Mike Johnson",
+    facility: "Vehicle Fleet - Truck HZ-456",
+    scheduledDate: "2024-01-16",
+    completedDate: "2024-01-16",
+    score: 96,
+    findings: 1,
+    photos: 8,
+    mobile_data: {
+      captured_via_mobile: true,
+      device_info: "SafeShipper Mobile v2.1.0",
+      gps_location: "-37.8136, 144.9631",
+      dangerous_goods_detected: true,
+      hazard_classes: ["3", "8"],
+      safety_alerts: ["Flammable liquid detected - ensure proper ventilation"]
+    },
+    checklist: {
+      total: 18,
+      completed: 18,
+      passed: 17,
+      failed: 1
+    }
+  },
+  {
+    id: "6",
+    title: "Hazard Inspection - Loading Area",
+    type: "mobile_inspection",
+    status: "completed",
+    priority: "medium",
+    inspector: "Emma Davis",
+    facility: "Warehouse C - Loading Bay 3",
+    scheduledDate: "2024-01-15",
+    completedDate: "2024-01-15",
+    score: 89,
+    findings: 3,
+    photos: 12,
+    mobile_data: {
+      captured_via_mobile: true,
+      device_info: "SafeShipper Mobile v2.1.0",
+      gps_location: "-37.8234, 144.9542",
+      dangerous_goods_detected: true,
+      hazard_classes: ["2.1", "4.3"],
+      safety_alerts: [
+        "Gas leak detection required",
+        "Water-reactive materials present - check storage conditions"
+      ]
+    },
+    checklist: {
+      total: 22,
+      completed: 22,
+      passed: 19,
+      failed: 3
+    }
+  },
+  {
+    id: "7",
+    title: "Post-Trip Safety Check",
+    type: "mobile_inspection",
+    status: "in_progress",
+    priority: "medium",
+    inspector: "John Smith",
+    facility: "Vehicle Fleet - Truck AB-123",
+    scheduledDate: "2024-01-16",
+    completedDate: null,
+    score: null,
+    findings: 0,
+    photos: 5,
+    mobile_data: {
+      captured_via_mobile: true,
+      device_info: "SafeShipper Mobile v2.1.0",
+      gps_location: "-37.8456, 144.9123",
+      dangerous_goods_detected: false,
+      hazard_classes: [],
+      safety_alerts: []
+    },
+    checklist: {
+      total: 15,
+      completed: 8,
+      passed: 7,
+      failed: 1
+    }
   }
 ];
 
@@ -190,6 +279,7 @@ const mockTemplates = [
   }
 ];
 
+// Enhanced checklist items including mobile-specific data
 const mockChecklistItems = [
   {
     id: "1",
@@ -226,6 +316,49 @@ const mockChecklistItems = [
     status: "pending",
     notes: "Inventory in progress",
     photos: []
+  },
+  // Mobile inspection items with enhanced data
+  {
+    id: "5",
+    title: "Verify dangerous goods placards are visible and secure",
+    category: "Dangerous Goods",
+    required: true,
+    status: "passed",
+    notes: "All Class 3 and Class 8 placards properly displayed",
+    photos: ["placard_front.jpg", "placard_rear.jpg"],
+    mobile_metadata: {
+      captured_at: "2024-01-16T08:15:00Z",
+      gps_coordinates: "-37.8136, 144.9631",
+      hazard_analysis: "Flammable liquids and corrosive substances detected"
+    }
+  },
+  {
+    id: "6",
+    title: "Check emergency equipment accessibility",
+    category: "Safety Equipment",
+    required: true,
+    status: "failed",
+    notes: "Fire extinguisher bracket loose - requires immediate repair",
+    photos: ["extinguisher_bracket.jpg", "safety_kit.jpg"],
+    mobile_metadata: {
+      captured_at: "2024-01-16T08:20:00Z",
+      gps_coordinates: "-37.8136, 144.9631",
+      safety_alert: "Critical safety equipment issue identified"
+    }
+  },
+  {
+    id: "7",
+    title: "Inspect DG segregation in loading area",
+    category: "Compliance",
+    required: true,
+    status: "passed",
+    notes: "Proper segregation maintained between incompatible classes",
+    photos: ["segregation_area1.jpg", "segregation_area2.jpg", "compatibility_chart.jpg"],
+    mobile_metadata: {
+      captured_at: "2024-01-15T14:30:00Z",
+      gps_coordinates: "-37.8234, 144.9542",
+      compatibility_check: "Class 2.1 and 4.3 properly separated"
+    }
   }
 ];
 
@@ -294,6 +427,8 @@ export default function InspectionsPage() {
         return <ClipboardCheck className="h-4 w-4" />;
       case "equipment":
         return <Settings className="h-4 w-4" />;
+      case "mobile_inspection":
+        return <Monitor className="h-4 w-4 text-blue-600" />;
       default:
         return <FileText className="h-4 w-4" />;
     }
@@ -346,15 +481,26 @@ export default function InspectionsPage() {
           </div>
 
           {/* Quick Stats */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
             <Card>
               <CardContent className="p-4">
                 <div className="flex items-center gap-2">
                   <ClipboardCheck className="h-4 w-4 text-blue-600" />
                   <div className="text-sm text-gray-600">Total Inspections</div>
                 </div>
-                <div className="text-2xl font-bold text-gray-900">127</div>
-                <div className="text-sm text-green-600">+5 this week</div>
+                <div className="text-2xl font-bold text-gray-900">130</div>
+                <div className="text-sm text-green-600">+8 this week</div>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center gap-2">
+                  <Monitor className="h-4 w-4 text-blue-600" />
+                  <div className="text-sm text-gray-600">Mobile Captured</div>
+                </div>
+                <div className="text-2xl font-bold text-gray-900">25</div>
+                <div className="text-sm text-blue-600">Real-time data</div>
               </CardContent>
             </Card>
             
@@ -386,8 +532,19 @@ export default function InspectionsPage() {
                   <Star className="h-4 w-4 text-yellow-600" />
                   <div className="text-sm text-gray-600">Avg Score</div>
                 </div>
-                <div className="text-2xl font-bold text-gray-900">91.5</div>
-                <div className="text-sm text-green-600">+2.3 from last month</div>
+                <div className="text-2xl font-bold text-gray-900">92.1</div>
+                <div className="text-sm text-green-600">+2.9 from last month</div>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center gap-2">
+                  <AlertTriangle className="h-4 w-4 text-orange-600" />
+                  <div className="text-sm text-gray-600">DG Inspections</div>
+                </div>
+                <div className="text-2xl font-bold text-gray-900">18</div>
+                <div className="text-sm text-orange-600">Safety critical</div>
               </CardContent>
             </Card>
           </div>
@@ -445,6 +602,7 @@ export default function InspectionsPage() {
                     <SelectItem value="safety">Safety</SelectItem>
                     <SelectItem value="compliance">Compliance</SelectItem>
                     <SelectItem value="equipment">Equipment</SelectItem>
+                    <SelectItem value="mobile_inspection">Mobile Inspections</SelectItem>
                   </SelectContent>
                 </Select>
                 
@@ -470,10 +628,24 @@ export default function InspectionsPage() {
                         <div className="flex items-center gap-3">
                           {getTypeIcon(inspection.type)}
                           <div>
-                            <div className="font-semibold">{inspection.title}</div>
+                            <div className="flex items-center gap-2">
+                              <div className="font-semibold">{inspection.title}</div>
+                              {inspection.mobile_data?.captured_via_mobile && (
+                                <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                                  <Monitor className="h-3 w-3 mr-1" />
+                                  Mobile
+                                </Badge>
+                              )}
+                            </div>
                             <div className="text-sm text-gray-600">
                               {inspection.facility} • {inspection.inspector}
                             </div>
+                            {inspection.mobile_data?.dangerous_goods_detected && (
+                              <div className="text-xs text-orange-600 mt-1 flex items-center gap-1">
+                                <AlertTriangle className="h-3 w-3" />
+                                Dangerous Goods: {inspection.mobile_data.hazard_classes.join(", ")}
+                              </div>
+                            )}
                           </div>
                         </div>
                         <div className="flex items-center gap-2">
@@ -569,12 +741,42 @@ export default function InspectionsPage() {
                               {item.notes && (
                                 <div className="text-sm text-gray-600 mt-1">{item.notes}</div>
                               )}
+                              {item.mobile_metadata && (
+                                <div className="text-xs text-blue-600 mt-2 space-y-1">
+                                  <div className="flex items-center gap-1">
+                                    <MapPin className="h-3 w-3" />
+                                    GPS: {item.mobile_metadata.gps_coordinates}
+                                  </div>
+                                  <div className="flex items-center gap-1">
+                                    <Clock className="h-3 w-3" />
+                                    {new Date(item.mobile_metadata.captured_at).toLocaleString()}
+                                  </div>
+                                  {item.mobile_metadata.hazard_analysis && (
+                                    <div className="flex items-start gap-1">
+                                      <AlertTriangle className="h-3 w-3 mt-0.5" />
+                                      <span>{item.mobile_metadata.hazard_analysis}</span>
+                                    </div>
+                                  )}
+                                  {item.mobile_metadata.safety_alert && (
+                                    <div className="flex items-start gap-1 text-red-600">
+                                      <AlertCircle className="h-3 w-3 mt-0.5" />
+                                      <span>{item.mobile_metadata.safety_alert}</span>
+                                    </div>
+                                  )}
+                                </div>
+                              )}
                             </div>
                             <div className="flex items-center gap-2">
-                              {item.photos.length > 0 && (
+                              {item.photos && item.photos.length > 0 && (
                                 <Badge variant="outline">
                                   <Camera className="h-3 w-3 mr-1" />
                                   {item.photos.length}
+                                </Badge>
+                              )}
+                              {item.mobile_metadata && (
+                                <Badge variant="outline" className="bg-blue-50 text-blue-700">
+                                  <Monitor className="h-3 w-3 mr-1" />
+                                  Mobile
                                 </Badge>
                               )}
                               <Button variant="ghost" size="sm">
@@ -584,6 +786,59 @@ export default function InspectionsPage() {
                           </div>
                         ))}
                       </div>
+                      
+                      {/* Mobile Inspection Metadata */}
+                      {selectedInspection.mobile_data && (
+                        <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                          <h4 className="font-semibold text-blue-900 mb-3 flex items-center gap-2">
+                            <Monitor className="h-4 w-4" />
+                            Mobile Inspection Data
+                          </h4>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                            <div>
+                              <span className="font-medium text-blue-800">Device:</span>
+                              <div className="text-blue-700">{selectedInspection.mobile_data.device_info}</div>
+                            </div>
+                            <div>
+                              <span className="font-medium text-blue-800">Location:</span>
+                              <div className="text-blue-700 flex items-center gap-1">
+                                <MapPin className="h-3 w-3" />
+                                {selectedInspection.mobile_data.gps_location}
+                              </div>
+                            </div>
+                            {selectedInspection.mobile_data.dangerous_goods_detected && (
+                              <>
+                                <div>
+                                  <span className="font-medium text-blue-800">Hazard Classes:</span>
+                                  <div className="text-blue-700">
+                                    {selectedInspection.mobile_data.hazard_classes.join(", ")}
+                                  </div>
+                                </div>
+                                <div>
+                                  <span className="font-medium text-blue-800">Safety Status:</span>
+                                  <div className="text-orange-700 flex items-center gap-1">
+                                    <AlertTriangle className="h-3 w-3" />
+                                    DG Detected
+                                  </div>
+                                </div>
+                              </>
+                            )}
+                          </div>
+                          {selectedInspection.mobile_data.safety_alerts && selectedInspection.mobile_data.safety_alerts.length > 0 && (
+                            <div className="mt-4">
+                              <span className="font-medium text-blue-800">Safety Alerts:</span>
+                              <ul className="mt-2 space-y-1">
+                                {selectedInspection.mobile_data.safety_alerts.map((alert, index) => (
+                                  <li key={index} className="text-red-700 text-sm flex items-start gap-2">
+                                    <AlertCircle className="h-3 w-3 mt-0.5 flex-shrink-0" />
+                                    {alert}
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </CardContent>
                 </Card>

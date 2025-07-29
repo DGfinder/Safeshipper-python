@@ -3,6 +3,7 @@ from rest_framework import serializers
 from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError as DjangoValidationError
+from shared.validation_service import SafeShipperValidationMixin
 
 User = get_user_model()
 
@@ -28,8 +29,16 @@ class UserSerializer(serializers.ModelSerializer):
             # Do not include 'password' here for general GET requests for security
         ]
         read_only_fields = ['last_login', 'date_joined', 'is_superuser'] # is_superuser usually managed by specific commands/admin
+    
+    def validate_first_name(self, value):
+        """Validate first name"""
+        return self.validate_text_content(value, max_length=150) if value else value
+    
+    def validate_last_name(self, value):
+        """Validate last name"""
+        return self.validate_text_content(value, max_length=150) if value else value
 
-class UserCreateSerializer(serializers.ModelSerializer):
+class UserCreateSerializer(SafeShipperValidationMixin, serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, required=True, validators=[validate_password])
     password2 = serializers.CharField(write_only=True, required=True, label="Confirm password")
 
@@ -55,10 +64,21 @@ class UserCreateSerializer(serializers.ModelSerializer):
         }
 
     def validate_email(self, value):
+        # Use enhanced email validation
+        validated_email = self.validate_email_address(value)
+        
         # Ensure email is unique
-        if User.objects.filter(email=value).exists():
+        if User.objects.filter(email=validated_email).exists():
             raise serializers.ValidationError("A user with that email already exists.")
-        return value
+        return validated_email
+    
+    def validate_first_name(self, value):
+        """Validate first name"""
+        return self.validate_text_content(value, max_length=150) if value else value
+    
+    def validate_last_name(self, value):
+        """Validate last name"""
+        return self.validate_text_content(value, max_length=150) if value else value
 
     def validate(self, attrs):
         if attrs['password'] != attrs['password2']:
@@ -80,7 +100,7 @@ class UserCreateSerializer(serializers.ModelSerializer):
         )
         return user
 
-class UserUpdateSerializer(serializers.ModelSerializer):
+class UserUpdateSerializer(SafeShipperValidationMixin, serializers.ModelSerializer):
     """
     Serializer for user updates - excludes password changes for security.
     Password changes should be handled by a separate dedicated endpoint.
@@ -104,10 +124,21 @@ class UserUpdateSerializer(serializers.ModelSerializer):
         }
 
     def validate_email(self, value):
+        # Use enhanced email validation
+        validated_email = self.validate_email_address(value)
+        
         user = self.instance
-        if user and User.objects.filter(email=value).exclude(pk=user.pk).exists():
+        if user and User.objects.filter(email=validated_email).exclude(pk=user.pk).exists():
             raise serializers.ValidationError("A user with that email already exists.")
-        return value
+        return validated_email
+    
+    def validate_first_name(self, value):
+        """Validate first name"""
+        return self.validate_text_content(value, max_length=150) if value else value
+    
+    def validate_last_name(self, value):
+        """Validate last name"""
+        return self.validate_text_content(value, max_length=150) if value else value
 
     def update(self, instance, validated_data):
         # Update only the fields that are provided

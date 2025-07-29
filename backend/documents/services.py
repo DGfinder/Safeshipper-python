@@ -11,6 +11,12 @@ from django.core.exceptions import ObjectDoesNotExist
 
 from dangerous_goods.models import DangerousGood, DGProductSynonym
 from dangerous_goods.services import match_synonym_to_dg, get_dangerous_good_by_un_number, find_dgs_by_text_search
+from .pdf_generators import ShipmentReportGenerator, ComplianceCertificateGenerator, ManifestGenerator, PDFGenerator
+from django.template.loader import render_to_string
+from django.utils import timezone
+from weasyprint import HTML, CSS
+from io import BytesIO
+import fitz  # PyMuPDF for PDF merging
 
 logger = logging.getLogger(__name__)
 
@@ -264,6 +270,382 @@ class ManifestAnalyzer:
             formatted_dgs.append(formatted_dg)
         
         return formatted_dgs
+
+
+class ConsolidatedReportGenerator(PDFGenerator):
+    """
+    Generator for consolidated shipment reports that combine multiple document types
+    into a single PDF: manifest, compliance certificate, compatibility report, SDS, and EPGs.
+    """
+    
+    def __init__(self):
+        super().__init__()
+        self.shipment_generator = ShipmentReportGenerator()
+        self.manifest_generator = ManifestGenerator()
+        self.compliance_generator = ComplianceCertificateGenerator()
+    
+    def generate_consolidated_report(self, shipment, include_sections: Dict = None) -> bytes:
+        """
+        Generate consolidated PDF report for a shipment including all critical documents.
+        
+        Args:
+            shipment: Shipment instance
+            include_sections: Dict specifying which sections to include
+                {
+                    'shipment_report': True,
+                    'manifest': True,
+                    'compliance_certificate': True,
+                    'compatibility_report': True,
+                    'sds_documents': True,
+                    'emergency_procedures': True
+                }
+        
+        Returns:
+            PDF content as bytes
+        """
+        if include_sections is None:
+            include_sections = {
+                'shipment_report': True,
+                'manifest': True,
+                'compliance_certificate': True,
+                'compatibility_report': True,
+                'sds_documents': True,
+                'emergency_procedures': True
+            }
+        
+        logger.info(f"Generating consolidated report for shipment {shipment.tracking_number}")
+        
+        # Prepare consolidated context
+        context = self._prepare_consolidated_context(shipment, include_sections)
+        
+        # Render consolidated HTML template
+        html_content = render_to_string('documents/pdf/consolidated_report.html', context)
+        
+        # Add consolidated-specific CSS
+        consolidated_css = self._get_consolidated_css()
+        
+        # Generate PDF
+        pdf_bytes = self.generate_pdf(html_content, consolidated_css)
+        
+        logger.info(f"Generated consolidated report for shipment {shipment.tracking_number}: {len(pdf_bytes)} bytes")
+        
+        return pdf_bytes
+    
+    def _prepare_consolidated_context(self, shipment, include_sections: Dict) -> Dict:
+        """Prepare context data for consolidated report"""
+        from inspections.models import Inspection
+        from emergency_procedures.models import EmergencyProcedure
+        
+        context = {
+            'shipment': shipment,
+            'generation_date': timezone.now(),
+            'report_title': f'Consolidated Transport Report - {shipment.tracking_number}',
+            'include_sections': include_sections,
+        }
+        
+        # Get dangerous goods items
+        dangerous_items = shipment.items.filter(is_dangerous_good=True)
+        context['dangerous_items'] = dangerous_items
+        
+        # Shipment Report Section
+        if include_sections.get('shipment_report', True):
+            context['shipment_data'] = self.shipment_generator._prepare_shipment_context(shipment, True)
+        
+        # Manifest Section  
+        if include_sections.get('manifest', True):
+            context['manifest_data'] = self.manifest_generator._prepare_manifest_context(shipment)
+        
+        # Compliance Certificate Section
+        if include_sections.get('compliance_certificate', True):
+            context['compliance_data'] = self.compliance_generator._prepare_compliance_context(shipment)
+        
+        # Compatibility Report Section
+        if include_sections.get('compatibility_report', True):
+            context['compatibility_data'] = self._prepare_compatibility_context(shipment, dangerous_items)
+        
+        # SDS Documents Section
+        if include_sections.get('sds_documents', True):
+            context['sds_data'] = self._prepare_sds_context(dangerous_items)
+        
+        # Emergency Procedures Section
+        if include_sections.get('emergency_procedures', True):
+            context['epg_data'] = self._prepare_epg_context(dangerous_items)
+        
+        return context
+    
+    def _prepare_compatibility_context(self, shipment, dangerous_items) -> Dict:
+        """Prepare compatibility analysis context"""
+        compatibility_results = []
+        compatibility_status = 'COMPATIBLE'
+        issues = []
+        warnings = []
+        
+        # Group dangerous items by hazard class
+        hazard_classes = {}
+        for item in dangerous_items:
+            if item.dangerous_good_entry:
+                hazard_class = item.dangerous_good_entry.hazard_class
+                if hazard_class not in hazard_classes:
+                    hazard_classes[hazard_class] = []
+                hazard_classes[hazard_class].append(item)
+        
+        # Check compatibility between different hazard classes
+        incompatible_combinations = {
+            ('1', '3'): 'Explosives (Class 1) incompatible with Flammable Liquids (Class 3)',
+            ('1', '8'): 'Explosives (Class 1) incompatible with Corrosives (Class 8)',
+            ('3', '5.1'): 'Flammable Liquids (Class 3) incompatible with Oxidizers (Class 5.1)',
+            ('6.1', '8'): 'Toxic substances (Class 6.1) may be incompatible with Corrosives (Class 8)',
+        }
+        
+        hazard_class_list = list(hazard_classes.keys())
+        for i, class1 in enumerate(hazard_class_list):
+            for class2 in hazard_class_list[i+1:]:
+                combination = tuple(sorted([class1, class2]))
+                if combination in incompatible_combinations:
+                    compatibility_status = 'INCOMPATIBLE'
+                    issues.append(incompatible_combinations[combination])
+        
+        # Check for segregation requirements
+        if len(hazard_classes) > 1:
+            warnings.append('Multiple hazard classes present - verify segregation requirements')
+        
+        return {
+            'compatibility_status': compatibility_status,
+            'hazard_classes': hazard_classes,
+            'issues': issues,
+            'warnings': warnings,
+            'analysis_date': timezone.now(),
+        }
+    
+    def _prepare_sds_context(self, dangerous_items) -> Dict:
+        """Prepare Safety Data Sheets context"""
+        sds_data = []
+        
+        for item in dangerous_items:
+            if item.dangerous_good_entry:
+                dg = item.dangerous_good_entry
+                
+                # Check if SDS documents exist for this dangerous good
+                sds_documents = item.shipment.documents.filter(
+                    document_type='SDS',
+                    dangerous_good_entries__un_number=dg.un_number
+                ).distinct()
+                
+                sds_info = {
+                    'dangerous_good': dg,
+                    'item': item,
+                    'sds_available': sds_documents.exists(),
+                    'sds_documents': sds_documents,
+                    'key_safety_info': {
+                        'proper_shipping_name': dg.proper_shipping_name,
+                        'hazard_class': dg.hazard_class,
+                        'packing_group': dg.packing_group,
+                        'special_provisions': dg.special_provisions or 'None specified',
+                        'emergency_contact': 'Emergency Response Hotline: 1-800-CHEMTREC',
+                    }
+                }
+                sds_data.append(sds_info)
+        
+        return {
+            'sds_items': sds_data,
+            'total_sds_required': len(dangerous_items),
+            'sds_available_count': sum(1 for item in sds_data if item['sds_available']),
+        }
+    
+    def _prepare_epg_context(self, dangerous_items) -> Dict:
+        """Prepare Emergency Procedure Guidelines context"""
+        epg_data = []
+        
+        for item in dangerous_items:
+            if item.dangerous_good_entry:
+                dg = item.dangerous_good_entry
+                
+                # Get emergency procedures for this hazard class
+                try:
+                    from emergency_procedures.models import EmergencyProcedure
+                    procedures = EmergencyProcedure.objects.filter(
+                        applicable_hazard_classes__contains=[dg.hazard_class],
+                        company=item.shipment.company
+                    )
+                except Exception:
+                    procedures = []
+                
+                epg_info = {
+                    'dangerous_good': dg,
+                    'item': item,
+                    'procedures': procedures,
+                    'general_guidance': self._get_general_emergency_guidance(dg.hazard_class),
+                }
+                epg_data.append(epg_info)
+        
+        return {
+            'epg_items': epg_data,
+            'emergency_contact': '1-800-CHEMTREC (1-800-424-9300)',
+            'general_spill_procedures': [
+                'Isolate the area and deny entry to unnecessary personnel',
+                'Eliminate all ignition sources if safe to do so',
+                'Notify emergency services immediately',
+                'Begin containment procedures if trained and safe',
+                'Evacuate area if vapors are present',
+            ],
+        }
+    
+    def _get_general_emergency_guidance(self, hazard_class: str) -> List[str]:
+        """Get general emergency guidance based on hazard class"""
+        guidance_map = {
+            '1': [
+                'EXPLOSIVES: Keep at safe distance',
+                'Do not use water on burning explosives',
+                'Evacuate 500m radius minimum',
+                'Contact bomb disposal experts'
+            ],
+            '2': [
+                'GASES: Ventilate area thoroughly',
+                'Check for gas leaks with soapy water',
+                'Do not smoke or use ignition sources',
+                'Use appropriate breathing apparatus'
+            ],
+            '3': [
+                'FLAMMABLE LIQUIDS: Eliminate ignition sources',
+                'Use foam or dry chemical extinguisher',
+                'Contain spills with absorbent material',
+                'Ventilate confined spaces'
+            ],
+            '4': [
+                'FLAMMABLE SOLIDS: Keep dry',
+                'Do not use water unless specifically indicated',
+                'Use sand or dry chemical extinguisher',
+                'Prevent contact with incompatible materials'
+            ],
+            '5': [
+                'OXIDIZERS: Separate from combustible materials',
+                'Use large amounts of water for fires',
+                'Do not use dry chemical extinguishers',
+                'Wash contaminated clothing thoroughly'
+            ],
+            '6': [
+                'TOXIC SUBSTANCES: Use full protective equipment',
+                'Provide fresh air immediately',
+                'Seek medical attention for any exposure',
+                'Decontaminate affected areas thoroughly'
+            ],
+            '7': [
+                'RADIOACTIVE: Minimize exposure time',
+                'Maximize distance from source',
+                'Contact radiation safety officer immediately',
+                'Monitor for contamination'
+            ],
+            '8': [
+                'CORROSIVES: Flush with large amounts of water',
+                'Do not neutralize unless trained',
+                'Use acid-resistant equipment',
+                'Ensure adequate ventilation'
+            ],
+            '9': [
+                'MISCELLANEOUS: Follow specific SDS guidance',
+                'Use general hazmat procedures',
+                'Consult with technical experts',
+                'Monitor environmental conditions'
+            ],
+        }
+        
+        return guidance_map.get(hazard_class, [
+            'Follow standard hazardous materials procedures',
+            'Consult Safety Data Sheet for specific guidance',
+            'Contact emergency response professionals',
+            'Evacuate area if in doubt about safety'
+        ])
+    
+    def _get_consolidated_css(self) -> str:
+        """Get CSS specific to consolidated reports"""
+        return """
+        .consolidated-header {
+            text-align: center;
+            background-color: #1e40af;
+            color: white;
+            padding: 20px;
+            margin-bottom: 30px;
+            border-radius: 8px;
+        }
+        
+        .section-divider {
+            page-break-before: always;
+            border-top: 3px solid #2563eb;
+            margin: 40px 0 30px 0;
+            padding-top: 20px;
+        }
+        
+        .toc-section {
+            background-color: #f8fafc;
+            padding: 20px;
+            border-radius: 6px;
+            margin-bottom: 30px;
+        }
+        
+        .toc-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 5px 0;
+            border-bottom: 1px dotted #cbd5e1;
+        }
+        
+        .compatibility-warning {
+            background-color: #fef3c7;
+            border-left: 4px solid #f59e0b;
+            padding: 15px;
+            margin: 15px 0;
+        }
+        
+        .compatibility-error {
+            background-color: #fee2e2;
+            border-left: 4px solid #dc2626;
+            padding: 15px;
+            margin: 15px 0;
+        }
+        
+        .sds-item {
+            border: 1px solid #d1d5db;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 6px;
+            background-color: #f9fafb;
+        }
+        
+        .epg-procedure {
+            background-color: #fef7f0;
+            border: 1px solid #fed7aa;
+            padding: 12px;
+            margin: 8px 0;
+            border-radius: 4px;
+        }
+        
+        .emergency-contact {
+            background-color: #dc2626;
+            color: white;
+            text-align: center;
+            padding: 15px;
+            font-weight: bold;
+            font-size: 14pt;
+            margin: 20px 0;
+            border-radius: 6px;
+        }
+        """
+
+
+def generate_consolidated_report(shipment, include_sections: Dict = None) -> bytes:
+    """
+    Generate consolidated PDF report for a shipment.
+    
+    Args:
+        shipment: Shipment instance
+        include_sections: Dict specifying which sections to include
+        
+    Returns:
+        PDF content as bytes
+    """
+    generator = ConsolidatedReportGenerator()
+    return generator.generate_consolidated_report(shipment, include_sections)
+
 
 def analyze_manifest(document) -> Dict:
     """

@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Consolidated Transport Report - {{ shipment.tracking_number }}</title>
+</head>
+<body>
+    <!-- Consolidated Header Section -->
+    <div class="consolidated-header">
+        <div class="company-logo">SafeShipper</div>
+        <div class="document-title">{{ report_title }}</div>
+        <div class="document-subtitle">
+            Generated: {{ generation_date|date:"F d, Y - g:i A" }} | 
+            Shipment Status: {{ shipment.get_status_display }}
+        </div>
+    </div>
+
+    <!-- Table of Contents -->
+    <div class="toc-section">
+        <h2 class="section-title">Table of Contents</h2>
+        {% if include_sections.shipment_report %}
+        <div class="toc-item">
+            <span>1. Shipment Report</span>
+            <span>Page 2</span>
+        </div>
+        {% endif %}
+        {% if include_sections.manifest %}
+        <div class="toc-item">
+            <span>2. Dangerous Goods Manifest</span>
+            <span>Page 4</span>
+        </div>
+        {% endif %}
+        {% if include_sections.compliance_certificate %}
+        <div class="toc-item">
+            <span>3. Compliance Certificate</span>
+            <span>Page 6</span>
+        </div>
+        {% endif %}
+        {% if include_sections.compatibility_report %}
+        <div class="toc-item">
+            <span>4. Compatibility Analysis Report</span>
+            <span>Page 7</span>
+        </div>
+        {% endif %}
+        {% if include_sections.sds_documents %}
+        <div class="toc-item">
+            <span>5. Safety Data Sheets Summary</span>
+            <span>Page 8</span>
+        </div>
+        {% endif %}
+        {% if include_sections.emergency_procedures %}
+        <div class="toc-item">
+            <span>6. Emergency Procedure Guidelines</span>
+            <span>Page 10</span>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Emergency Contact Information -->
+    <div class="emergency-contact">
+        🚨 EMERGENCY CONTACT: 1-800-CHEMTREC (1-800-424-9300) 🚨
+    </div>
+
+    <!-- Section 1: Shipment Report -->
+    {% if include_sections.shipment_report and shipment_data %}
+    <div class="section-divider">
+        <h1 class="section-title">1. Shipment Report</h1>
+    </div>
+
+    <div class="section">
+        <h2 class="section-title">Shipment Overview</h2>
+        <div class="info-grid">
+            <div>
+                <div class="info-item">
+                    <span class="info-label">Tracking Number:</span>
+                    <span class="info-value">{{ shipment.tracking_number }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Reference Number:</span>
+                    <span class="info-value">{{ shipment.reference_number|default:"N/A" }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Current Status:</span>
+                    <span class="info-value status-badge status-{{ shipment.status|lower }}">
+                        {{ shipment.get_status_display }}
+                    </span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Customer:</span>
+                    <span class="info-value">{{ shipment.customer.name }}</span>
+                </div>
+            </div>
+            <div>
+                <div class="info-item">
+                    <span class="info-label">Origin:</span>
+                    <span class="info-value">{{ shipment.origin_location }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Destination:</span>
+                    <span class="info-value">{{ shipment.destination_location }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Total Weight:</span>
+                    <span class="info-value">{{ shipment_data.total_weight|floatformat:2 }} kg</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Total Items:</span>
+                    <span class="info-value">{{ shipment_data.total_items }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="section">
+        <h2 class="section-title">Assignment Information</h2>
+        <div class="info-grid">
+            <div>
+                {% if shipment.assigned_driver %}
+                <div class="info-item">
+                    <span class="info-label">Assigned Driver:</span>
+                    <span class="info-value">{{ shipment.assigned_driver.get_full_name }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Driver License:</span>
+                    <span class="info-value">{{ shipment.assigned_driver.license_number|default:"N/A" }}</span>
+                </div>
+                {% endif %}
+            </div>
+            <div>
+                {% if shipment.assigned_vehicle %}
+                <div class="info-item">
+                    <span class="info-label">Vehicle Registration:</span>
+                    <span class="info-value">{{ shipment.assigned_vehicle.registration_number }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Vehicle Type:</span>
+                    <span class="info-value">{{ shipment.assigned_vehicle.vehicle_type }}</span>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Section 2: Dangerous Goods Manifest -->
+    {% if include_sections.manifest and manifest_data %}
+    <div class="section-divider">
+        <h1 class="section-title">2. Dangerous Goods Manifest</h1>
+    </div>
+
+    <div class="manifest-header">
+        <div class="manifest-title">DANGEROUS GOODS MANIFEST</div>
+        <div>Manifest Number: {{ manifest_data.manifest_number }}</div>
+        <div>Issue Date: {{ manifest_data.issue_date|date:"F d, Y" }}</div>
+    </div>
+
+    {% if dangerous_items %}
+    {% for item in dangerous_items %}
+    <div class="dg-item">
+        {% if item.dangerous_good_entry %}
+        <div class="info-grid">
+            <div>
+                <div class="info-item">
+                    <span class="info-label">UN Number:</span>
+                    <span class="info-value un-number">{{ item.dangerous_good_entry.un_number }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Proper Shipping Name:</span>
+                    <span class="info-value">{{ item.dangerous_good_entry.proper_shipping_name }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Hazard Class:</span>
+                    <span class="info-value hazard-class hazard-class-{{ item.dangerous_good_entry.hazard_class }}">
+                        {{ item.dangerous_good_entry.hazard_class }}
+                    </span>
+                </div>
+            </div>
+            <div>
+                <div class="info-item">
+                    <span class="info-label">Packing Group:</span>
+                    <span class="info-value">{{ item.dangerous_good_entry.packing_group|default:"N/A" }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Quantity:</span>
+                    <span class="info-value">{{ item.quantity }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Weight:</span>
+                    <span class="info-value">{{ item.weight_kg|default:"N/A" }} kg</span>
+                </div>
+            </div>
+        </div>
+        {% else %}
+        <div class="warning-box">
+            <strong>Warning:</strong> Item "{{ item.description }}" marked as dangerous goods but lacks proper classification.
+        </div>
+        {% endif %}
+    </div>
+    {% endfor %}
+    {% else %}
+    <p>No dangerous goods items in this shipment.</p>
+    {% endif %}
+    {% endif %}
+
+    <!-- Section 3: Compliance Certificate -->
+    {% if include_sections.compliance_certificate and compliance_data %}
+    <div class="section-divider">
+        <h1 class="section-title">3. Compliance Certificate</h1>
+    </div>
+
+    <div class="compliance-section">
+        <h2>DANGEROUS GOODS TRANSPORT COMPLIANCE CERTIFICATE</h2>
+        <div class="info-grid">
+            <div>
+                <div class="info-item">
+                    <span class="info-label">Certificate Number:</span>
+                    <span class="info-value">{{ compliance_data.certificate_number }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Issue Date:</span>
+                    <span class="info-value">{{ compliance_data.issue_date|date:"F d, Y" }}</span>
+                </div>
+            </div>
+            <div>
+                <div class="info-item">
+                    <span class="info-label">Valid Until:</span>
+                    <span class="info-value">{{ compliance_data.valid_until|date:"F d, Y" }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Compliance Status:</span>
+                    <span class="info-value status-badge {% if compliance_data.compliance_status.is_compliant %}status-delivered{% else %}status-exception{% endif %}">
+                        {% if compliance_data.compliance_status.is_compliant %}COMPLIANT{% else %}NON-COMPLIANT{% endif %}
+                    </span>
+                </div>
+            </div>
+        </div>
+
+        {% if compliance_data.compliance_status.issues %}
+        <div class="warning-box">
+            <strong>Compliance Issues:</strong>
+            <ul>
+                {% for issue in compliance_data.compliance_status.issues %}
+                <li>{{ issue }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+
+        {% if compliance_data.compliance_status.warnings %}
+        <div class="warning-box">
+            <strong>Warnings:</strong>
+            <ul>
+                {% for warning in compliance_data.compliance_status.warnings %}
+                <li>{{ warning }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    <!-- Section 4: Compatibility Analysis Report -->
+    {% if include_sections.compatibility_report and compatibility_data %}
+    <div class="section-divider">
+        <h1 class="section-title">4. Compatibility Analysis Report</h1>
+    </div>
+
+    <div class="section">
+        <h2 class="section-title">Dangerous Goods Compatibility Assessment</h2>
+        
+        <div class="info-item">
+            <span class="info-label">Overall Status:</span>
+            <span class="info-value status-badge {% if compatibility_data.compatibility_status == 'COMPATIBLE' %}status-delivered{% else %}status-exception{% endif %}">
+                {{ compatibility_data.compatibility_status }}
+            </span>
+        </div>
+        
+        <div class="info-item">
+            <span class="info-label">Analysis Date:</span>
+            <span class="info-value">{{ compatibility_data.analysis_date|date:"F d, Y - g:i A" }}</span>
+        </div>
+
+        <h3 class="section-title">Hazard Classes Present</h3>
+        {% for hazard_class, items in compatibility_data.hazard_classes.items %}
+        <div class="sds-item">
+            <strong>Class {{ hazard_class }}:</strong>
+            <ul>
+                {% for item in items %}
+                <li>{{ item.dangerous_good_entry.proper_shipping_name }} ({{ item.dangerous_good_entry.un_number }})</li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endfor %}
+
+        {% if compatibility_data.issues %}
+        <div class="compatibility-error">
+            <strong>Compatibility Issues:</strong>
+            <ul>
+                {% for issue in compatibility_data.issues %}
+                <li>{{ issue }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+
+        {% if compatibility_data.warnings %}
+        <div class="compatibility-warning">
+            <strong>Warnings:</strong>
+            <ul>
+                {% for warning in compatibility_data.warnings %}
+                <li>{{ warning }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    <!-- Section 5: Safety Data Sheets Summary -->
+    {% if include_sections.sds_documents and sds_data %}
+    <div class="section-divider">
+        <h1 class="section-title">5. Safety Data Sheets Summary</h1>
+    </div>
+
+    <div class="section">
+        <h2 class="section-title">SDS Availability Status</h2>
+        <div class="info-grid">
+            <div>
+                <div class="info-item">
+                    <span class="info-label">Total DG Items:</span>
+                    <span class="info-value">{{ sds_data.total_sds_required }}</span>
+                </div>
+            </div>
+            <div>
+                <div class="info-item">
+                    <span class="info-label">SDS Available:</span>
+                    <span class="info-value status-badge {% if sds_data.sds_available_count == sds_data.total_sds_required %}status-delivered{% else %}status-exception{% endif %}">
+                        {{ sds_data.sds_available_count }} / {{ sds_data.total_sds_required }}
+                    </span>
+                </div>
+            </div>
+        </div>
+
+        {% for sds_item in sds_data.sds_items %}
+        <div class="sds-item">
+            <h3>{{ sds_item.dangerous_good.proper_shipping_name }} ({{ sds_item.dangerous_good.un_number }})</h3>
+            
+            <div class="info-grid">
+                <div>
+                    <div class="info-item">
+                        <span class="info-label">Hazard Class:</span>
+                        <span class="info-value hazard-class hazard-class-{{ sds_item.dangerous_good.hazard_class }}">
+                            {{ sds_item.dangerous_good.hazard_class }}
+                        </span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Packing Group:</span>
+                        <span class="info-value">{{ sds_item.dangerous_good.packing_group|default:"N/A" }}</span>
+                    </div>
+                </div>
+                <div>
+                    <div class="info-item">
+                        <span class="info-label">SDS Available:</span>
+                        <span class="info-value status-badge {% if sds_item.sds_available %}status-delivered{% else %}status-exception{% endif %}">
+                            {% if sds_item.sds_available %}YES{% else %}NO{% endif %}
+                        </span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Special Provisions:</span>
+                        <span class="info-value">{{ sds_item.key_safety_info.special_provisions }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="info-item">
+                <span class="info-label">Emergency Contact:</span>
+                <span class="info-value">{{ sds_item.key_safety_info.emergency_contact }}</span>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- Section 6: Emergency Procedure Guidelines -->
+    {% if include_sections.emergency_procedures and epg_data %}
+    <div class="section-divider">
+        <h1 class="section-title">6. Emergency Procedure Guidelines</h1>
+    </div>
+
+    <div class="emergency-contact">
+        EMERGENCY RESPONSE: {{ epg_data.emergency_contact }}
+    </div>
+
+    <div class="section">
+        <h2 class="section-title">General Spill/Incident Procedures</h2>
+        <div class="epg-procedure">
+            <ol>
+                {% for procedure in epg_data.general_spill_procedures %}
+                <li>{{ procedure }}</li>
+                {% endfor %}
+            </ol>
+        </div>
+    </div>
+
+    {% for epg_item in epg_data.epg_items %}
+    <div class="section">
+        <h2 class="section-title">{{ epg_item.dangerous_good.proper_shipping_name }} ({{ epg_item.dangerous_good.un_number }})</h2>
+        
+        <div class="epg-procedure">
+            <h3>Hazard Class {{ epg_item.dangerous_good.hazard_class }} Emergency Guidance:</h3>
+            <ul>
+                {% for guidance in epg_item.general_guidance %}
+                <li>{{ guidance }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+
+        {% if epg_item.procedures %}
+        <div class="epg-procedure">
+            <h3>Company-Specific Emergency Procedures:</h3>
+            {% for procedure in epg_item.procedures %}
+            <div class="compliance-section">
+                <strong>{{ procedure.title }}</strong>
+                <p>{{ procedure.description|truncatewords:50 }}</p>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="warning-box">
+            <strong>Note:</strong> No company-specific emergency procedures found for this hazard class. 
+            Follow general emergency guidance above and consult Safety Data Sheet.
+        </div>
+        {% endif %}
+    </div>
+    {% endfor %}
+    {% endif %}
+
+    <!-- Footer -->
+    <div class="footer">
+        <p>
+            This consolidated transport report was generated by the SafeShipper platform on {{ generation_date|date:"F d, Y \a\t g:i A" }}. 
+            This document combines all critical transport documentation for shipment {{ shipment.tracking_number }}.
+        </p>
+        <p>
+            <strong>Regulatory Compliance:</strong> This document satisfies dangerous goods transport documentation requirements 
+            under applicable ADG, IATA, and IMDG regulations.
+        </p>
+        <p>
+            <strong>Confidentiality Notice:</strong> This document contains confidential and proprietary information. 
+            Distribution is restricted to authorized personnel only.
+        </p>
+        <div class="emergency-contact">
+            🚨 EMERGENCY: 1-800-CHEMTREC (1-800-424-9300) 🚨
+        </div>
+    </div>
+</body>
+</html>

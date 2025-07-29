@@ -3,6 +3,7 @@ import logging
 from rest_framework import viewsets, permissions, status, filters
 from rest_framework.response import Response
 from rest_framework.decorators import action
+from rest_framework.views import APIView
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from django_filters.rest_framework import DjangoFilterBackend
 from django.utils import timezone
@@ -26,6 +27,7 @@ from .serializers import (
     InspectionTemplateSerializer,
     InspectionTemplateItemSerializer
 )
+from .hazard_inspection_service import HazardInspectionService
 from shipments.models import Shipment
 
 
@@ -361,6 +363,18 @@ class InspectionTemplateViewSet(viewsets.ReadOnlyModelViewSet):
     
     filterset_fields = ['inspection_type']
     ordering = ['inspection_type', 'name']
+    
+    def list(self, request, *args, **kwargs):
+        """Override list to use enhanced service for dangerous goods analysis."""
+        inspection_type = request.query_params.get('inspection_type')
+        
+        try:
+            result = HazardInspectionService.get_inspection_templates(inspection_type)
+            return Response(result, status=status.HTTP_200_OK)
+        except Exception as e:
+            logger.error(f"Error getting templates via service: {str(e)}")
+            # Fallback to standard queryset
+            return super().list(request, *args, **kwargs)
 
     @action(detail=True, methods=['post'])
     def create_inspection(self, request, pk=None):
@@ -401,5 +415,131 @@ class InspectionTemplateViewSet(viewsets.ReadOnlyModelViewSet):
         
         logger.info(f"Inspection created from template {template.name} by {request.user}")
         
+        # Try to use enhanced service for dangerous goods analysis
+        try:
+            enhanced_result = HazardInspectionService.create_inspection_from_template(
+                template_id=str(template.id),
+                shipment_id=str(shipment.id),
+                inspector_user=request.user
+            )
+            
+            if enhanced_result['success']:
+                return Response(enhanced_result, status=status.HTTP_201_CREATED)
+        except Exception as e:
+            logger.warning(f"Enhanced service failed, using fallback: {str(e)}")
+        
+        # Fallback to standard response
         serializer = InspectionSerializer(inspection)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+
+class CreateInspectionFromTemplateView(APIView):
+    """Create inspection from template with dangerous goods analysis."""
+    permission_classes = [permissions.IsAuthenticated]
+    
+    def post(self, request):
+        template_id = request.data.get('template_id')
+        shipment_id = request.data.get('shipment_id')
+        
+        if not template_id or not shipment_id:
+            return Response(
+                {'success': False, 'error': 'template_id and shipment_id are required'}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        try:
+            result = HazardInspectionService.create_inspection_from_template(
+                template_id=template_id,
+                shipment_id=shipment_id,
+                inspector_user=request.user
+            )
+            
+            return Response(result, status=status.HTTP_201_CREATED if result['success'] else status.HTTP_400_BAD_REQUEST)
+            
+        except Exception as e:
+            logger.error(f"Error creating inspection from template: {str(e)}")
+            return Response(
+                {'success': False, 'error': str(e)}, 
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+
+class UpdateInspectionItemView(APIView):
+    """Update inspection item with result, notes, and photos."""
+    permission_classes = [permissions.IsAuthenticated]
+    
+    def post(self, request):
+        item_id = request.data.get('item_id')
+        item_data = request.data.get('item_data', {})
+        
+        if not item_id:
+            return Response(
+                {'success': False, 'error': 'item_id is required'}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        try:
+            result = HazardInspectionService.update_inspection_item(
+                item_id=item_id,
+                inspector_user=request.user,
+                item_data=item_data
+            )
+            
+            return Response(result, status=status.HTTP_200_OK if result['success'] else status.HTTP_400_BAD_REQUEST)
+            
+        except Exception as e:
+            logger.error(f"Error updating inspection item: {str(e)}")
+            return Response(
+                {'success': False, 'error': str(e)}, 
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+
+class CompleteInspectionView(APIView):
+    """Complete inspection with comprehensive validation and reporting."""
+    permission_classes = [permissions.IsAuthenticated]
+    
+    def post(self, request):
+        inspection_id = request.data.get('inspection_id')
+        completion_data = request.data.get('completion_data', {})
+        
+        if not inspection_id:
+            return Response(
+                {'success': False, 'error': 'inspection_id is required'}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        try:
+            result = HazardInspectionService.complete_inspection(
+                inspection_id=inspection_id,
+                inspector_user=request.user,
+                completion_data=completion_data
+            )
+            
+            return Response(result, status=status.HTTP_200_OK if result['success'] else status.HTTP_400_BAD_REQUEST)
+            
+        except Exception as e:
+            logger.error(f"Error completing inspection: {str(e)}")
+            return Response(
+                {'success': False, 'error': str(e)}, 
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+
+class InspectionTemplatesView(APIView):
+    """Get available inspection templates with dangerous goods analysis."""
+    permission_classes = [permissions.IsAuthenticated]
+    
+    def get(self, request):
+        inspection_type = request.query_params.get('inspection_type')
+        
+        try:
+            result = HazardInspectionService.get_inspection_templates(inspection_type)
+            return Response(result, status=status.HTTP_200_OK)
+            
+        except Exception as e:
+            logger.error(f"Error getting inspection templates: {str(e)}")
+            return Response(
+                {'success': False, 'error': str(e)}, 
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
