@@ -10,6 +10,7 @@ import UnifiedSearchBar from "@/shared/components/search/UnifiedSearchBar";
 import { ConnectionStatus } from "@/shared/components/ui/connection-status";
 import { ThemeToggle } from "@/shared/components/ui/theme-toggle";
 import { useTheme } from "@/contexts/ThemeContext";
+import { usePermissions } from "@/contexts/PermissionContext";
 import {
   Home,
   Users,
@@ -55,6 +56,7 @@ interface NavigationItem {
   icon: any;
   children?: NavigationItem[];
   badge?: string;
+  requiredPermission?: string;
 }
 
 const navigation: NavigationItem[] = [
@@ -111,6 +113,8 @@ const navigation: NavigationItem[] = [
       { name: "Training", href: "/training", icon: GraduationCap },
       { name: "Inspections", href: "/inspections", icon: ClipboardCheck, badge: "New" },
       { name: "Audits", href: "/audits", icon: FileText, badge: "New" },
+      { name: "Hazard Assessments", href: "/hazard-assessments", icon: ClipboardCheck, badge: "New", requiredPermission: "hazard.assessment.view" },
+      { name: "Assessment Templates", href: "/assessment-templates", icon: FileText, requiredPermission: "hazard.template.view" },
     ],
   },
   {
@@ -185,6 +189,7 @@ export function Sidebar({
   const pathname = usePathname();
   const { user } = useAuthStore();
   const { isDark } = useTheme();
+  const { can } = usePermissions();
   const [expandedSections, setExpandedSections] = useState<string[]>([
     "Dashboard",
     "Shipments",
@@ -212,6 +217,35 @@ export function Sidebar({
   const isActive = (href: string) => pathname === href;
   const isChildActive = (children: NavigationItem[]) =>
     children.some((child) => child.href && pathname === child.href);
+
+  // Permission filtering helpers
+  const hasPermissionForItem = (item: NavigationItem): boolean => {
+    // If no permission is required, show the item
+    if (!item.requiredPermission) return true;
+    // Check if user has the required permission
+    return can(item.requiredPermission as any);
+  };
+
+  const filterNavigationByPermissions = (items: NavigationItem[]): NavigationItem[] => {
+    return items
+      .map(item => {
+        // If item has children, filter them recursively
+        if (item.children) {
+          const filteredChildren = item.children.filter(hasPermissionForItem);
+          // Only show parent if it has visible children or no permission requirement
+          if (filteredChildren.length > 0 || !item.requiredPermission) {
+            return { ...item, children: filteredChildren };
+          }
+          return null;
+        }
+        // For items without children, check permission directly
+        return hasPermissionForItem(item) ? item : null;
+      })
+      .filter((item): item is NavigationItem => item !== null);
+  };
+
+  // Filter navigation based on user permissions
+  const filteredNavigation = filterNavigationByPermissions(navigation);
 
   const NavigationSection = ({ item }: { item: NavigationItem }) => {
     const isExpanded = expandedSections.includes(item.name);
@@ -415,7 +449,7 @@ export function Sidebar({
         aria-label="Main navigation"
         role="navigation"
       >
-        {navigation.map((item) => (
+        {filteredNavigation.map((item) => (
           <NavigationSection key={item.name} item={item} />
         ))}
       </nav>

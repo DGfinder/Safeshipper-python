@@ -80,6 +80,10 @@ type Permission =
   | "shipments.view.all"             // View all shipments
   | "shipments.view.own"             // View own shipments only
   | "shipments.manifest.upload"     // Upload shipment manifests
+  | "shipments.analytics.view"       // View shipment analytics and feedback metrics
+  | "shipments.analytics.export"     // Export shipment analytics data
+  | "shipments.feedback.view"        // View customer feedback data
+  | "shipments.feedback.manage"      // Manage feedback responses and alerts
   | "erp.integration.view"           // Access ERP integration
   | "api.gateway.view"               // Access API gateway
   | "developer.portal.view"          // Access developer portal
@@ -156,6 +160,21 @@ type Permission =
   | "customer.portal.tracking"       // Track via customer portal
   | "customer.portal.view"           // Access customer portal interface
   | "driver.operations.view"         // Driver operations interface access
+  
+  // Hazard Assessment System
+  | "hazard.assessment.view"        // View hazard assessments
+  | "hazard.assessment.create"      // Create new assessments (mobile/field)
+  | "hazard.assessment.complete"    // Complete assessments in the field
+  | "hazard.assessment.review"      // Review completed assessments
+  | "hazard.assessment.override.request"  // Request override for missing photos/comments
+  | "hazard.assessment.override.approve"  // Approve/deny override requests
+  | "hazard.template.view"          // View assessment templates
+  | "hazard.template.create"        // Create new assessment templates
+  | "hazard.template.edit"          // Edit existing assessment templates
+  | "hazard.template.delete"        // Delete assessment templates
+  | "hazard.template.assign"        // Assign templates to shipments/rules
+  | "hazard.analytics.view"         // View assessment analytics and reports
+  | "hazard.audit.view"             // View detailed audit trails for assessments
   
   // Field Operations (Driver-specific)
   | "driver.proof.delivery"          // Capture and upload proof of delivery
@@ -249,6 +268,10 @@ const rolePermissions: Record<Role, Permission[]> = {
     "driver.vehicle.inspection",
     "driver.route.navigation",
     "driver.incident.report",
+    "hazard.assessment.view",
+    "hazard.assessment.create",
+    "hazard.assessment.complete",
+    "hazard.assessment.override.request",
     "users.view",
     "documents.view.all",
     "documents.download.all",
@@ -297,6 +320,12 @@ const rolePermissions: Record<Role, Permission[]> = {
     "mobile.interface.access",
     "users.view",
     "users.edit",
+    "hazard.assessment.view",
+    "hazard.assessment.create",
+    "hazard.assessment.complete",
+    "hazard.assessment.review",
+    "hazard.assessment.override.request",
+    "hazard.template.view",
     "documents.view.all",
     "documents.download.all",
     "documents.generate.shipment_report",
@@ -325,6 +354,10 @@ const rolePermissions: Record<Role, Permission[]> = {
     "shipments.view.all",
     "shipments.view.own",
     "shipments.manifest.upload",
+    "shipments.analytics.view",
+    "shipments.analytics.export",
+    "shipments.feedback.view",
+    "shipments.feedback.manage",
     "iot.monitoring.view",
     "safety.compliance.view",
     "emergency.procedures.view",
@@ -381,6 +414,18 @@ const rolePermissions: Record<Role, Permission[]> = {
     "manifest.search.advanced",
     "mobile.interface.access",
     "audit.logs",
+    "hazard.assessment.view",
+    "hazard.assessment.create",
+    "hazard.assessment.complete",
+    "hazard.assessment.review",
+    "hazard.assessment.override.request",
+    "hazard.assessment.override.approve",
+    "hazard.template.view",
+    "hazard.template.create",
+    "hazard.template.edit",
+    "hazard.template.assign",
+    "hazard.analytics.view",
+    "hazard.audit.view",
     "documents.view.all",
     "documents.download.all",
     "documents.generate.shipment_report",
@@ -413,6 +458,10 @@ const rolePermissions: Record<Role, Permission[]> = {
     "shipments.view.all",
     "shipments.view.own",
     "shipments.manifest.upload",
+    "shipments.analytics.view",
+    "shipments.analytics.export",
+    "shipments.feedback.view",
+    "shipments.feedback.manage",
     "erp.integration.view",
     "api.gateway.view",
     "developer.portal.view",
@@ -489,6 +538,19 @@ const rolePermissions: Record<Role, Permission[]> = {
     "driver.incident.report",
     "user.management",
     "audit.logs",
+    "hazard.assessment.view",
+    "hazard.assessment.create",
+    "hazard.assessment.complete",
+    "hazard.assessment.review",
+    "hazard.assessment.override.request",
+    "hazard.assessment.override.approve",
+    "hazard.template.view",
+    "hazard.template.create",
+    "hazard.template.edit",
+    "hazard.template.delete",
+    "hazard.template.assign",
+    "hazard.analytics.view",
+    "hazard.audit.view",
     "documents.view.all",
     "documents.download.all",
     "documents.generate.shipment_report",

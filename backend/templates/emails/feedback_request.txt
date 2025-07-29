@@ -1,0 +1,28 @@
+SafeShipper - How was your delivery experience?
+
+Hi there!
+
+Your shipment {{ tracking_number }} was recently delivered{% if customer_company %} to {{ customer_company }}{% endif %}. We hope everything arrived safely and on time!
+
+DELIVERY COMPLETED ✓
+------------------------
+Tracking Number: {{ tracking_number }}
+{% if delivery_date %}Delivered: {{ delivery_date|date:"F j, Y g:i A" }}{% endif %}
+{% if pod_info.recipient_name %}Received by: {{ pod_info.recipient_name }}{% endif %}
+{% if pod_info.delivered_by %}Delivered by: {{ pod_info.delivered_by }}{% endif %}
+
+We'd love to hear about your experience! Your feedback helps us improve our service and ensures we continue to meet the high standards expected for dangerous goods transportation.
+
+QUICK 3-QUESTION SURVEY (takes less than 1 minute):
+1. Was your shipment delivered on time?
+2. Did your shipment arrive complete and undamaged?
+3. Was the driver professional and courteous?
+
+Share your feedback here: {{ feedback_url }}
+
+This survey is optional but greatly appreciated. Your responses help us maintain the highest standards in dangerous goods logistics.
+
+Thank you for choosing {{ company_name }} for your dangerous goods transportation needs.
+
+© {{ current_year }} SafeShipper. All rights reserved.
+This email was sent regarding shipment {{ tracking_number }}. If you have any concerns, please contact our support team.

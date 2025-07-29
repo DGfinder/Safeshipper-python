@@ -429,6 +429,20 @@ class ChatConsumer(AsyncWebsocketConsumer):
             'notification': event['notification']
         })
 
+    async def feedback_update(self, event):
+        """Send feedback update to WebSocket"""
+        await self.send_json({
+            'type': 'feedback_update',
+            'data': event['data']
+        })
+
+    async def dashboard_update(self, event):
+        """Send dashboard update to WebSocket"""
+        await self.send_json({
+            'type': 'dashboard_update',
+            'data': event['data']
+        })
+
     # Utility methods
     async def send_json(self, content):
         """Send JSON data to WebSocket"""

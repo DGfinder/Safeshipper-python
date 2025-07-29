@@ -1,0 +1,47 @@
+SafeShipper - {% if is_critical %}🚨 CRITICAL: Poor Customer Feedback Alert{% else %}⚠️ Poor Customer Feedback Alert{% endif %}
+
+{% if is_critical %}🚨 CRITICAL ALERT - IMMEDIATE ACTION REQUIRED{% else %}⚠️ ATTENTION REQUIRED - REVIEW NEEDED{% endif %}
+
+Hello {{ manager_name }},
+
+A customer has submitted feedback for shipment {{ tracking_number }} that indicates significant service issues requiring your immediate attention.
+
+DELIVERY SUCCESS SCORE: {{ score|floatformat:0 }}% - {% if is_critical %}CRITICAL (Below 50%){% else %}POOR (Below 70%){% endif %}
+
+SHIPMENT DETAILS:
+------------------
+Tracking Number: {{ tracking_number }}
+Customer: {{ customer_company }}
+Carrier: {{ carrier_company }}
+Feedback Submitted: {{ submission_time|date:"F j, Y \a\t g:i A" }}
+
+CUSTOMER FEEDBACK BREAKDOWN:
+----------------------------
+Was the delivery on time? {% if feedback.was_on_time %}✓ Yes{% else %}✗ No{% endif %}
+Did it arrive complete and undamaged? {% if feedback.was_complete_and_undamaged %}✓ Yes{% else %}✗ No{% endif %}
+Was the driver professional? {% if feedback.was_driver_professional %}✓ Yes{% else %}✗ No{% endif %}
+
+{% if feedback.feedback_notes %}CUSTOMER COMMENTS: "{{ feedback.feedback_notes }}"{% endif %}
+
+RECOMMENDED ACTIONS:
+--------------------
+{% if not feedback.was_on_time %}• Review delivery scheduling and route optimization
+• Investigate delays and address operational bottlenecks{% endif %}
+{% if not feedback.was_complete_and_undamaged %}• Examine packaging and handling procedures
+• Review dangerous goods safety protocols{% endif %}
+{% if not feedback.was_driver_professional %}• Provide additional customer service training to driver
+• Review driver performance and conduct standards{% endif %}
+• Contact customer directly to address concerns
+• Document corrective actions taken
+
+QUICK ACTIONS:
+--------------
+View Shipment Details: {{ shipment_url }}
+Go to Dashboard: {{ dashboard_url }}
+
+This alert was generated automatically because the customer feedback score fell below the {{ threshold }}% threshold. 
+{% if is_critical %}Scores below 50% require urgent management attention and immediate corrective action.{% else %}Please review this feedback promptly and implement appropriate improvements.{% endif %}
+
+SafeShipper Quality Management System
+© {{ current_year }} SafeShipper. All rights reserved.
+This alert was sent to {{ manager.email }} regarding shipment {{ tracking_number }}.

@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Thank you for your feedback - SafeShipper</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f4f4f4;
+        }
+        .container {
+            background-color: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .header {
+            text-align: center;
+            border-bottom: 2px solid #007bff;
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+        }
+        .logo {
+            font-size: 28px;
+            font-weight: bold;
+            color: #007bff;
+            margin-bottom: 10px;
+        }
+        .tagline {
+            color: #666;
+            font-size: 14px;
+        }
+        .content {
+            margin-bottom: 30px;
+        }
+        .feedback-summary {
+            background-color: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            border-left: 4px solid #28a745;
+        }
+        .score-display {
+            text-align: center;
+            background-color: #28a745;
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        .score-number {
+            font-size: 36px;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        .score-label {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+        .feedback-item {
+            margin: 10px 0;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .feedback-question {
+            flex: 1;
+            color: #666;
+        }
+        .feedback-answer {
+            font-weight: bold;
+            color: #28a745;
+        }
+        .feedback-answer.negative {
+            color: #dc3545;
+        }
+        .comments-section {
+            background-color: #fff3cd;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 15px 0;
+            border-left: 4px solid #ffc107;
+        }
+        .footer {
+            text-align: center;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+            font-size: 12px;
+            color: #666;
+        }
+        .tracking-number {
+            font-family: 'Courier New', monospace;
+            background-color: #f8f9fa;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-weight: bold;
+        }
+        .thank-you-icon {
+            font-size: 48px;
+            text-align: center;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo">SafeShipper</div>
+            <div class="tagline">Secure Logistics & Dangerous Goods Management</div>
+        </div>
+        
+        <div class="content">
+            <div class="thank-you-icon">🙏</div>
+            <h2 style="text-align: center;">Thank you for your feedback!</h2>
+            
+            <p>We greatly appreciate you taking the time to share your experience with shipment <span class="tracking-number">{{ tracking_number }}</span>{% if customer_company %} delivered to {{ customer_company }}{% endif %}.</p>
+            
+            <div class="score-display">
+                <div class="score-number">{{ success_score|floatformat:0 }}%</div>
+                <div class="score-label">Delivery Success Score</div>
+                <div style="font-size: 16px; margin-top: 10px; font-weight: bold;">{{ feedback_summary }}</div>
+            </div>
+            
+            <div class="feedback-summary">
+                <h3 style="margin-top: 0; color: #28a745;">Your Feedback Summary</h3>
+                
+                <div class="feedback-item">
+                    <span class="feedback-question">Was your shipment delivered on time?</span>
+                    <span class="feedback-answer{% if not feedback.was_on_time %} negative{% endif %}">
+                        {% if feedback.was_on_time %}Yes ✓{% else %}No ✗{% endif %}
+                    </span>
+                </div>
+                
+                <div class="feedback-item">
+                    <span class="feedback-question">Did it arrive complete and undamaged?</span>
+                    <span class="feedback-answer{% if not feedback.was_complete_and_undamaged %} negative{% endif %}">
+                        {% if feedback.was_complete_and_undamaged %}Yes ✓{% else %}No ✗{% endif %}
+                    </span>
+                </div>
+                
+                <div class="feedback-item">
+                    <span class="feedback-question">Was the driver professional?</span>
+                    <span class="feedback-answer{% if not feedback.was_driver_professional %} negative{% endif %}">
+                        {% if feedback.was_driver_professional %}Yes ✓{% else %}No ✗{% endif %}
+                    </span>
+                </div>
+                
+                {% if feedback.feedback_notes %}
+                <div class="comments-section">
+                    <strong>Your Comments:</strong>
+                    <p style="margin: 10px 0 0 0; font-style: italic;">"{{ feedback.feedback_notes }}"</p>
+                </div>
+                {% endif %}
+            </div>
+            
+            <p><strong>Your feedback matters!</strong> We use this information to continuously improve our dangerous goods transportation services and ensure we maintain the highest safety and service standards.</p>
+            
+            {% if success_score < 80 %}
+            <div style="background-color: #fff3cd; padding: 15px; border-radius: 5px; border-left: 4px solid #ffc107;">
+                <p><strong>We're sorry your experience wasn't perfect.</strong> Our team will review your feedback and work to address any issues. If you have specific concerns that need immediate attention, please don't hesitate to contact our support team.</p>
+            </div>
+            {% endif %}
+            
+            <p style="text-align: center; font-size: 14px; color: #666;">
+                <em>Submitted on {{ feedback.submitted_at|date:"F j, Y \a\t g:i A" }}</em>
+            </p>
+        </div>
+        
+        <div class="footer">
+            <p>Thank you for choosing {{ company_name }} for your dangerous goods transportation needs.</p>
+            <p>&copy; {{ current_year }} SafeShipper. All rights reserved.</p>
+            <p>This confirmation was sent regarding feedback for shipment {{ tracking_number }}.</p>
+        </div>
+    </div>
+</body>
+</html>

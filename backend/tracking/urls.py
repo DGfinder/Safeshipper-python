@@ -4,7 +4,7 @@ from .api_views import (
     invalidate_map_cache, map_performance_stats
 )
 from .public_views import (
-    update_location, public_tracking
+    update_location, public_tracking, submit_feedback
 )
 
 urlpatterns = [
@@ -13,6 +13,7 @@ urlpatterns = [
     
     # Public tracking endpoints - matches frontend API calls
     path('public/<str:tracking_number>/', public_tracking, name='public_tracking'),
+    path('public/<str:tracking_number>/feedback/', submit_feedback, name='submit_feedback'),
     
     # Fleet map data endpoints
     path('fleet/map-data/', fleet_map_data, name='fleet_map_data'),

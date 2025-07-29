@@ -516,3 +516,183 @@ def _generate_emergency_response_plan(shipment):
         'filename': f'emergency_plan_{shipment.tracking_number}.pdf',
         'generated_at': timezone.now().isoformat()
     }
+
+
+@shared_task(bind=True, max_retries=2, default_retry_delay=60)
+def update_company_dashboard_metrics(self, company_id: str):
+    """
+    Update dashboard metrics for a company after feedback submission.
+    This triggers real-time dashboard updates via WebSocket.
+    
+    Args:
+        company_id: UUID of the company to update metrics for
+    """
+    try:
+        from companies.models import Company
+        from .models import ShipmentFeedback
+        from .realtime_feedback_service import FeedbackWebSocketEventService
+        from datetime import timedelta
+        from django.db.models import Avg, Count
+        
+        company = Company.objects.get(id=company_id)
+        
+        # Calculate recent metrics (last 30 days)
+        thirty_days_ago = timezone.now() - timedelta(days=30)
+        
+        recent_feedback = ShipmentFeedback.objects.filter(
+            shipment__carrier=company,
+            submitted_at__gte=thirty_days_ago
+        )
+        
+        if recent_feedback.exists():
+            # Calculate key metrics
+            total_count = recent_feedback.count()
+            avg_score = recent_feedback.aggregate(
+                avg_score=Avg('delivery_success_score')
+            )['avg_score'] or 0
+            
+            # Individual question metrics
+            on_time_count = recent_feedback.filter(was_on_time=True).count()
+            complete_count = recent_feedback.filter(was_complete_and_undamaged=True).count()
+            professional_count = recent_feedback.filter(was_driver_professional=True).count()
+            
+            # Poor feedback count (score < 70%)
+            poor_feedback_count = sum(
+                1 for feedback in recent_feedback 
+                if feedback.delivery_success_score < 70
+            )
+            
+            updated_metrics = {
+                'delivery_success_score': round(avg_score, 1),
+                'total_feedback_count': total_count,
+                'on_time_rate': round((on_time_count / total_count) * 100, 1) if total_count > 0 else 0,
+                'complete_rate': round((complete_count / total_count) * 100, 1) if total_count > 0 else 0,
+                'professional_rate': round((professional_count / total_count) * 100, 1) if total_count > 0 else 0,
+                'poor_feedback_count': poor_feedback_count,
+                'poor_feedback_rate': round((poor_feedback_count / total_count) * 100, 1) if total_count > 0 else 0,
+                'last_updated': timezone.now().isoformat(),
+                'period': '30_days'
+            }
+        else:
+            # No recent feedback
+            updated_metrics = {
+                'delivery_success_score': 0,
+                'total_feedback_count': 0,
+                'on_time_rate': 0,
+                'complete_rate': 0,
+                'professional_rate': 0,
+                'poor_feedback_count': 0,
+                'poor_feedback_rate': 0,
+                'last_updated': timezone.now().isoformat(),
+                'period': '30_days',
+                'message': 'No recent feedback data available'
+            }
+        
+        # Broadcast the updated metrics via WebSocket
+        FeedbackWebSocketEventService.broadcast_dashboard_metric_update(company, updated_metrics)
+        
+        logger.info(f"Updated dashboard metrics for company {company.name}: score={updated_metrics['delivery_success_score']}%, count={updated_metrics['total_feedback_count']}")
+        
+        return {
+            'company_id': company_id,
+            'company_name': company.name,
+            'status': 'success',
+            'metrics': updated_metrics
+        }
+        
+    except Company.DoesNotExist:
+        logger.error(f"Company {company_id} not found for dashboard metrics update")
+        return {
+            'company_id': company_id,
+            'status': 'error',
+            'error': 'Company not found'
+        }
+    except Exception as exc:
+        logger.error(f"Failed to update dashboard metrics for company {company_id}: {str(exc)}")
+        if self.request.retries < self.max_retries:
+            raise self.retry(exc=exc)
+        else:
+            return {
+                'company_id': company_id,
+                'status': 'error',
+                'error': str(exc)
+            }
+
+
+@shared_task(bind=True, max_retries=3, default_retry_delay=30)
+def process_feedback_batch_notifications(self, feedback_ids: List[str]):
+    """
+    Process real-time notifications for multiple feedback submissions in batch.
+    Useful for handling bulk feedback processing or delayed notification sending.
+    
+    Args:
+        feedback_ids: List of ShipmentFeedback UUIDs to process
+    """
+    try:
+        from .models import ShipmentFeedback
+        from .realtime_feedback_service import RealtimeFeedbackNotificationService
+        
+        realtime_service = RealtimeFeedbackNotificationService()
+        
+        results = {
+            'total_processed': 0,
+            'successful_notifications': 0,
+            'failed_notifications': 0,
+            'feedback_details': [],
+            'errors': []
+        }
+        
+        for feedback_id in feedback_ids:
+            try:
+                feedback = ShipmentFeedback.objects.select_related(
+                    'shipment__customer',
+                    'shipment__carrier'
+                ).get(id=feedback_id)
+                
+                # Process real-time notifications
+                notification_result = realtime_service.process_feedback_realtime_notifications(feedback)
+                
+                results['total_processed'] += 1
+                results['successful_notifications'] += notification_result.get('notifications_sent', 0)
+                results['failed_notifications'] += notification_result.get('notifications_failed', 0)
+                
+                if notification_result.get('errors'):
+                    results['errors'].extend(notification_result['errors'])
+                
+                results['feedback_details'].append({
+                    'feedback_id': feedback_id,
+                    'tracking_number': feedback.shipment.tracking_number,
+                    'score': feedback.delivery_success_score,
+                    'notifications_sent': notification_result.get('notifications_sent', 0),
+                    'notifications_failed': notification_result.get('notifications_failed', 0)
+                })
+                
+                logger.info(f"Processed batch notification for feedback {feedback_id} - {notification_result.get('notifications_sent', 0)} sent")
+                
+            except ShipmentFeedback.DoesNotExist:
+                error_msg = f"Feedback {feedback_id} not found"
+                logger.error(error_msg)
+                results['errors'].append(error_msg)
+                continue
+            except Exception as e:
+                error_msg = f"Error processing feedback {feedback_id}: {str(e)}"
+                logger.error(error_msg)
+                results['errors'].append(error_msg)
+                continue
+        
+        logger.info(f"Completed batch notification processing: {results['total_processed']} processed, "
+                   f"{results['successful_notifications']} notifications sent, "
+                   f"{results['failed_notifications']} failed")
+        
+        return results
+        
+    except Exception as exc:
+        logger.error(f"Batch feedback notification processing failed: {str(exc)}")
+        if self.request.retries < self.max_retries:
+            raise self.retry(exc=exc)
+        else:
+            return {
+                'status': 'error',
+                'error': str(exc),
+                'feedback_ids': feedback_ids
+            }

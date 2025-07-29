@@ -308,6 +308,43 @@ class ApiService {
   async getEmergencyStatus(emergencyId: string): Promise<any> {
     return this.makeRequest<any>(`/compliance/emergency/status/${emergencyId}/`);
   }
+
+  // Push Notification Management
+  async registerPushToken(token: string, deviceInfo: {
+    platform: string;
+    app_version: string;
+    device_id: string;
+  }): Promise<{success: boolean; message: string}> {
+    return this.makeRequest<{success: boolean; message: string}>('/notifications/register-push-token/', {
+      method: 'POST',
+      body: JSON.stringify({
+        expo_push_token: token,
+        device_platform: deviceInfo.platform,
+        app_version: deviceInfo.app_version,
+        device_identifier: deviceInfo.device_id
+      }),
+    });
+  }
+
+  async unregisterPushToken(token: string): Promise<{success: boolean; message: string}> {
+    return this.makeRequest<{success: boolean; message: string}>('/notifications/unregister-push-token/', {
+      method: 'DELETE',
+      body: JSON.stringify({
+        expo_push_token: token
+      }),
+    });
+  }
+
+  async updatePushTokenPreferences(preferences: {
+    feedback_notifications: boolean;
+    shipment_updates: boolean;
+    emergency_alerts: boolean;
+  }): Promise<{success: boolean; message: string}> {
+    return this.makeRequest<{success: boolean; message: string}>('/notifications/push-preferences/', {
+      method: 'PATCH',
+      body: JSON.stringify(preferences),
+    });
+  }
 }
 
 export const apiService = new ApiService();

@@ -168,18 +168,46 @@ def public_tracking(request, tracking_number):
         
         # Add proof of delivery if delivered
         if shipment.status == 'DELIVERED':
-            # This would come from actual POD records in production
-            tracking_data['proof_of_delivery'] = {
-                'delivery_date': (shipment.actual_delivery_date or timezone.now()).isoformat(),
-                'recipient_name': 'Customer Representative',
-                'recipient_signature_url': 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
-                'delivery_photos': [
-                    'https://via.placeholder.com/400x300/4CAF50/FFFFFF?text=POD+Photo+1',
-                    'https://via.placeholder.com/400x300/2196F3/FFFFFF?text=POD+Photo+2'
-                ],
-                'delivery_notes': 'Package delivered to front door',
-                'delivered_by': tracking_data['driver_name']
-            }
+            # Check for actual POD record first
+            if hasattr(shipment, 'proof_of_delivery'):
+                pod = shipment.proof_of_delivery
+                tracking_data['proof_of_delivery'] = {
+                    'delivery_date': pod.delivered_at.isoformat(),
+                    'recipient_name': pod.recipient_name,
+                    'recipient_signature_url': pod.recipient_signature_url,
+                    'delivery_photos': [photo.image_url for photo in pod.photos.all()],
+                    'delivery_notes': pod.delivery_notes,
+                    'delivered_by': f"{pod.delivered_by.first_name} {pod.delivered_by.last_name}".strip() if pod.delivered_by else tracking_data['driver_name']
+                }
+            else:
+                # Fallback to mock data for demo
+                tracking_data['proof_of_delivery'] = {
+                    'delivery_date': (shipment.actual_delivery_date or timezone.now()).isoformat(),
+                    'recipient_name': 'Customer Representative',
+                    'recipient_signature_url': 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
+                    'delivery_photos': [
+                        'https://via.placeholder.com/400x300/4CAF50/FFFFFF?text=POD+Photo+1',
+                        'https://via.placeholder.com/400x300/2196F3/FFFFFF?text=POD+Photo+2'
+                    ],
+                    'delivery_notes': 'Package delivered to front door',
+                    'delivered_by': tracking_data['driver_name']
+                }
+            
+            # Add customer feedback data if available
+            if hasattr(shipment, 'customer_feedback'):
+                feedback = shipment.customer_feedback
+                tracking_data['customer_feedback'] = {
+                    'feedback_id': str(feedback.id),
+                    'submitted_at': feedback.submitted_at.isoformat(),
+                    'was_on_time': feedback.was_on_time,
+                    'was_complete_and_undamaged': feedback.was_complete_and_undamaged,
+                    'was_driver_professional': feedback.was_driver_professional,
+                    'feedback_notes': feedback.feedback_notes,
+                    'delivery_success_score': feedback.delivery_success_score,
+                    'feedback_summary': feedback.get_feedback_summary()
+                }
+            else:
+                tracking_data['customer_feedback'] = None
         
         return Response(tracking_data, status=status.HTTP_200_OK)
         
@@ -291,5 +319,117 @@ def update_location(request):
         logger.error(f"Error updating location: {str(e)}")
         return Response(
             {'error': 'An error occurred while updating location'},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def submit_feedback(request, tracking_number):
+    """
+    Submit customer feedback for a delivered shipment.
+    Allows unauthenticated customers to provide delivery satisfaction feedback.
+    """
+    try:
+        # Get shipment by tracking number
+        shipment = get_object_or_404(
+            Shipment,
+            tracking_number=tracking_number
+        )
+        
+        # Validate shipment is delivered
+        if shipment.status != 'DELIVERED':
+            return Response(
+                {
+                    'error': 'Feedback can only be submitted for delivered shipments',
+                    'current_status': shipment.get_status_display()
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Check if feedback already exists
+        from shipments.models import ShipmentFeedback
+        if hasattr(shipment, 'customer_feedback'):
+            return Response(
+                {
+                    'error': 'Feedback has already been submitted for this shipment',
+                    'submitted_at': shipment.customer_feedback.submitted_at.isoformat()
+                },
+                status=status.HTTP_409_CONFLICT
+            )
+        
+        # Validate required fields
+        data = request.data
+        required_fields = ['was_on_time', 'was_complete_and_undamaged', 'was_driver_professional']
+        missing_fields = [field for field in required_fields if field not in data]
+        
+        if missing_fields:
+            return Response(
+                {'error': f'Missing required fields: {missing_fields}'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Validate boolean values
+        for field in required_fields:
+            if not isinstance(data[field], bool):
+                return Response(
+                    {'error': f'Field {field} must be a boolean value'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+        
+        # Validate optional feedback notes
+        feedback_notes = data.get('feedback_notes', '').strip()
+        if len(feedback_notes) > 1000:
+            return Response(
+                {'error': 'Feedback notes cannot exceed 1000 characters'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Get customer IP address
+        def get_client_ip(request):
+            x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+            if x_forwarded_for:
+                ip = x_forwarded_for.split(',')[0]
+            else:
+                ip = request.META.get('REMOTE_ADDR')
+            return ip
+        
+        customer_ip = get_client_ip(request)
+        
+        # Create feedback record
+        feedback = ShipmentFeedback.objects.create(
+            shipment=shipment,
+            was_on_time=data['was_on_time'],
+            was_complete_and_undamaged=data['was_complete_and_undamaged'],
+            was_driver_professional=data['was_driver_professional'],
+            feedback_notes=feedback_notes,
+            customer_ip=customer_ip
+        )
+        
+        # Return success response with feedback summary
+        return Response({
+            'message': 'Thank you for your feedback!',
+            'feedback_id': str(feedback.id),
+            'submitted_at': feedback.submitted_at.isoformat(),
+            'delivery_success_score': feedback.delivery_success_score,
+            'feedback_summary': feedback.get_feedback_summary(),
+            'tracking_number': tracking_number
+        }, status=status.HTTP_201_CREATED)
+        
+    except Shipment.DoesNotExist:
+        return Response(
+            {
+                'error': 'Tracking number not found',
+                'tracking_number': tracking_number
+            },
+            status=status.HTTP_404_NOT_FOUND
+        )
+    except Exception as e:
+        logger.error(f"Error submitting feedback for {tracking_number}: {str(e)}")
+        return Response(
+            {
+                'error': 'An error occurred while submitting feedback',
+                'tracking_number': tracking_number
+            },
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )

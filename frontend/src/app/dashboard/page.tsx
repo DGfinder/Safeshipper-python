@@ -37,6 +37,7 @@ import {
   usePODStats, 
   useRecentShipments 
 } from "@/shared/hooks/useDashboard";
+import DeliverySuccessWidget from "@/components/analytics/widgets/DeliverySuccessWidget";
 
 // Types for our data (keeping for future use)
 // interface StatCard {
@@ -336,6 +337,9 @@ export default function Dashboard() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Delivery Success Score Widget */}
+        <DeliverySuccessWidget className="mb-6" />
 
         {/* Analytics Row */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

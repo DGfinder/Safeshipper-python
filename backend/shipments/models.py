@@ -380,3 +380,168 @@ class ProofOfDeliveryPhoto(models.Model):
         if self.file_size:
             return round(self.file_size / (1024 * 1024), 2)
         return None
+
+
+class ShipmentFeedback(models.Model):
+    """
+    Customer feedback collected after delivery completion.
+    Three-question survey for customer satisfaction and service quality measurement.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    shipment = models.OneToOneField(
+        Shipment,
+        on_delete=models.CASCADE,
+        related_name='customer_feedback'
+    )
+    
+    # Three core feedback questions
+    was_on_time = models.BooleanField(
+        _("Was the delivery on time?"),
+        help_text=_("Customer feedback: Was the shipment delivered on time?")
+    )
+    was_complete_and_undamaged = models.BooleanField(
+        _("Was the shipment complete and undamaged?"),
+        help_text=_("Customer feedback: Did the shipment arrive complete and without damage?")
+    )
+    was_driver_professional = models.BooleanField(
+        _("Was the driver professional?"),
+        help_text=_("Customer feedback: Was the delivery driver professional and courteous?")
+    )
+    
+    # Additional feedback and metadata
+    feedback_notes = models.TextField(
+        _("Additional Comments"),
+        blank=True,
+        max_length=1000,
+        help_text=_("Optional customer comments about the delivery experience")
+    )
+    
+    # Submission tracking
+    submitted_at = models.DateTimeField(
+        _("Submitted At"),
+        auto_now_add=True,
+        help_text=_("When the feedback was submitted")
+    )
+    customer_ip = models.GenericIPAddressField(
+        _("Customer IP Address"),
+        null=True,
+        blank=True,
+        help_text=_("IP address of the customer submitting feedback")
+    )
+    
+    # Manager response functionality (new fields for production)
+    manager_response = models.TextField(
+        _("Manager Response"),
+        blank=True,
+        max_length=2000,
+        help_text=_("Internal response from manager regarding this feedback (not sent to customer)")
+    )
+    responded_at = models.DateTimeField(
+        _("Response Date"),
+        null=True,
+        blank=True,
+        help_text=_("When the manager responded to this feedback")
+    )
+    responded_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='feedback_responses',
+        limit_choices_to={'role__in': ['MANAGER', 'ADMIN']},
+        help_text=_("Manager who responded to this feedback")
+    )
+    
+    # Metadata
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-submitted_at']
+        verbose_name = _("Shipment Feedback")
+        verbose_name_plural = _("Shipment Feedback")
+        indexes = [
+            models.Index(fields=['submitted_at']),
+            models.Index(fields=['shipment']),
+        ]
+
+    def __str__(self):
+        return f"Feedback for {self.shipment.tracking_number}"
+
+    @property
+    def delivery_success_score(self):
+        """
+        Calculate delivery success score as percentage.
+        Average of the three boolean questions converted to percentage.
+        """
+        score_sum = sum([
+            1 if self.was_on_time else 0,
+            1 if self.was_complete_and_undamaged else 0,
+            1 if self.was_driver_professional else 0
+        ])
+        return round((score_sum / 3) * 100, 1)
+    
+    @property
+    def company(self):
+        """Get company for multi-tenant filtering"""
+        return self.shipment.customer
+    
+    def get_feedback_summary(self):
+        """Get human-readable feedback summary"""
+        positive_count = sum([
+            1 if self.was_on_time else 0,
+            1 if self.was_complete_and_undamaged else 0,
+            1 if self.was_driver_professional else 0
+        ])
+        
+        if positive_count == 3:
+            return "Excellent"
+        elif positive_count == 2:
+            return "Good"  
+        elif positive_count == 1:
+            return "Fair"
+        else:
+            return "Poor"
+    
+    @property
+    def difot_score(self):
+        """
+        DIFOT (Delivered In-Full, On-Time) calculation.
+        Key logistics KPI based on first two feedback questions.
+        """
+        return self.was_on_time and self.was_complete_and_undamaged
+    
+    @property
+    def requires_incident(self):
+        """Check if feedback score requires automatic incident creation (< 67%)"""
+        return self.delivery_success_score < 67
+    
+    @property
+    def has_manager_response(self):
+        """Check if manager has responded to this feedback"""
+        return bool(self.manager_response and self.responded_at and self.responded_by)
+    
+    @property
+    def performance_category(self):
+        """Get performance category based on configurable thresholds"""
+        score = self.delivery_success_score
+        if score > 95:
+            return "EXCELLENT"
+        elif score >= 85:
+            return "GOOD" 
+        elif score >= 70:
+            return "NEEDS_IMPROVEMENT"
+        else:
+            return "POOR"
+    
+    def add_manager_response(self, response_text, manager_user):
+        """Add manager response with proper validation"""
+        from django.utils import timezone
+        
+        if not manager_user.role in ['MANAGER', 'ADMIN']:
+            raise ValueError("Only managers and admins can respond to feedback")
+        
+        self.manager_response = response_text
+        self.responded_at = timezone.now()
+        self.responded_by = manager_user
+        self.save(update_fields=['manager_response', 'responded_at', 'responded_by', 'updated_at'])

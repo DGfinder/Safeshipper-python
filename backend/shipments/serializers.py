@@ -1,7 +1,7 @@
 # shipments/serializers.py
 from rest_framework import serializers
 from django.db import transaction
-from .models import Shipment, ConsignmentItem, ShipmentStatus  # ProofOfDelivery, ProofOfDeliveryPhoto
+from .models import Shipment, ConsignmentItem, ShipmentStatus, ShipmentFeedback  # ProofOfDelivery, ProofOfDeliveryPhoto
 from dangerous_goods.models import DangerousGood  # Re-enabled after dangerous_goods app re-enabled
 
 class ConsignmentItemSerializer(serializers.ModelSerializer):
@@ -316,3 +316,172 @@ class ShipmentListSerializer(serializers.ModelSerializer):
 #             ProofOfDeliveryPhoto.objects.create(**photo_data)
 #         
 #         return pod
+
+
+# ===== FEEDBACK SERIALIZERS =====
+
+class ShipmentFeedbackSerializer(serializers.ModelSerializer):
+    """
+    Comprehensive serializer for shipment feedback with manager response functionality.
+    """
+    delivery_success_score = serializers.ReadOnlyField()
+    feedback_summary = serializers.ReadOnlyField(source='get_feedback_summary')
+    difot_score = serializers.ReadOnlyField()
+    performance_category = serializers.ReadOnlyField()
+    has_manager_response = serializers.ReadOnlyField()
+    requires_incident = serializers.ReadOnlyField()
+    
+    # Shipment details for context
+    shipment_details = serializers.SerializerMethodField()
+    
+    # Manager response fields with validation
+    responded_by_name = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = ShipmentFeedback
+        fields = [
+            'id',
+            'shipment',
+            'shipment_details',
+            'was_on_time',
+            'was_complete_and_undamaged',
+            'was_driver_professional',
+            'feedback_notes',
+            'delivery_success_score',
+            'feedback_summary',
+            'difot_score',
+            'performance_category',
+            'submitted_at',
+            'customer_ip',
+            'manager_response',
+            'responded_at',
+            'responded_by',
+            'responded_by_name',
+            'has_manager_response',
+            'requires_incident',
+            'created_at',
+            'updated_at',
+        ]
+        read_only_fields = [
+            'id', 'submitted_at', 'customer_ip', 'delivery_success_score',
+            'feedback_summary', 'difot_score', 'performance_category',
+            'has_manager_response', 'requires_incident', 'created_at', 'updated_at'
+        ]
+    
+    def get_shipment_details(self, obj):
+        """Get essential shipment details for context"""
+        return {
+            'tracking_number': obj.shipment.tracking_number,
+            'customer_name': obj.shipment.customer.name,
+            'carrier_name': obj.shipment.carrier.name,
+            'status': obj.shipment.status,
+            'actual_delivery_date': obj.shipment.actual_delivery_date,
+            'assigned_driver': obj.shipment.assigned_driver.get_full_name() if obj.shipment.assigned_driver else None,
+        }
+    
+    def get_responded_by_name(self, obj):
+        """Get manager name who responded"""
+        return obj.responded_by.get_full_name() if obj.responded_by else None
+    
+    def validate_manager_response(self, value):
+        """Validate manager response length and content"""
+        if value and len(value.strip()) < 10:
+            raise serializers.ValidationError("Manager response must be at least 10 characters long.")
+        return value.strip() if value else value
+
+
+class ShipmentFeedbackListSerializer(serializers.ModelSerializer):
+    """
+    Lightweight serializer for feedback list views with essential information.
+    """
+    delivery_success_score = serializers.ReadOnlyField()
+    performance_category = serializers.ReadOnlyField()
+    has_manager_response = serializers.ReadOnlyField()
+    tracking_number = serializers.CharField(source='shipment.tracking_number', read_only=True)
+    customer_name = serializers.CharField(source='shipment.customer.name', read_only=True)
+    
+    class Meta:
+        model = ShipmentFeedback
+        fields = [
+            'id',
+            'tracking_number',
+            'customer_name',
+            'delivery_success_score',
+            'performance_category',
+            'submitted_at',
+            'has_manager_response',
+            'responded_at',
+        ]
+
+
+class ManagerResponseSerializer(serializers.Serializer):
+    """
+    Serializer for adding manager responses to feedback.
+    """
+    response_text = serializers.CharField(
+        min_length=10,
+        max_length=2000,
+        help_text="Manager's internal response to the feedback"
+    )
+    
+    def validate_response_text(self, value):
+        """Validate response text"""
+        if not value.strip():
+            raise serializers.ValidationError("Response cannot be empty.")
+        return value.strip()
+
+
+class FeedbackAnalyticsSerializer(serializers.Serializer):
+    """
+    Serializer for feedback analytics data with filtering and aggregation.
+    """
+    # Time period filters
+    period = serializers.ChoiceField(
+        choices=[('7d', '7 Days'), ('30d', '30 Days'), ('90d', '90 Days'), ('qtd', 'Quarter to Date')],
+        default='30d'
+    )
+    
+    # Filter options
+    driver_id = serializers.UUIDField(required=False)
+    customer_id = serializers.UUIDField(required=False)
+    route_origin = serializers.CharField(max_length=255, required=False)
+    route_destination = serializers.CharField(max_length=255, required=False)
+    freight_type_id = serializers.UUIDField(required=False)
+    
+    # Analytics output fields (read-only)
+    total_feedback_count = serializers.IntegerField(read_only=True)
+    average_delivery_score = serializers.FloatField(read_only=True)
+    difot_rate = serializers.FloatField(read_only=True)
+    on_time_rate = serializers.FloatField(read_only=True)
+    complete_rate = serializers.FloatField(read_only=True)
+    professional_rate = serializers.FloatField(read_only=True)
+    
+    # Performance categories breakdown
+    excellent_count = serializers.IntegerField(read_only=True)
+    good_count = serializers.IntegerField(read_only=True)
+    needs_improvement_count = serializers.IntegerField(read_only=True)
+    poor_count = serializers.IntegerField(read_only=True)
+    
+    # Trend data
+    trend_data = serializers.ListField(child=serializers.DictField(), read_only=True)
+
+
+class DeliverySuccessStatsSerializer(serializers.Serializer):
+    """
+    Serializer for dashboard delivery success statistics.
+    """
+    current_period_score = serializers.FloatField()
+    previous_period_score = serializers.FloatField()
+    score_change = serializers.FloatField()
+    trend_direction = serializers.CharField()  # 'up', 'down', 'stable'
+    
+    total_feedback_count = serializers.IntegerField()
+    poor_feedback_count = serializers.IntegerField()
+    requires_attention_count = serializers.IntegerField()
+    
+    # Quick stats
+    difot_rate = serializers.FloatField()
+    customer_satisfaction_rate = serializers.FloatField()
+    
+    # Recent activity
+    recent_feedback = ShipmentFeedbackListSerializer(many=True, read_only=True)

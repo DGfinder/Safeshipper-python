@@ -202,3 +202,261 @@ class ShipmentAPITests(APITestCase): # Using APITestCase
         payload = {"status": ShipmentStatus.DELIVERED}
         response = self.client.patch(url, payload, format='json')
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND) # Filtered by get_queryset before permission check
+
+
+class ShipmentFeedbackTestCase(TestCase):
+    """Test cases for ShipmentFeedback model and related functionality."""
+    
+    def setUp(self):
+        User = get_user_model()
+        self.user = User.objects.create_user(
+            email='test@example.com',
+            password='testpass123',
+            first_name='Test',
+            last_name='User'
+        )
+        
+        # Create a test shipment
+        from companies.models import Company
+        from freight_types.models import FreightType
+        
+        self.company = Company.objects.create(
+            name='Test Company',
+            company_type='CUSTOMER'
+        )
+        
+        self.freight_type = FreightType.objects.create(
+            name='Standard Freight'
+        )
+        
+        self.shipment = Shipment.objects.create(
+            customer=self.company,
+            carrier=self.company,
+            freight_type=self.freight_type,
+            origin_location='Origin City',
+            destination_location='Destination City',
+            status=ShipmentStatus.DELIVERED,
+            requested_by=self.user
+        )
+    
+    def test_create_shipment_feedback(self):
+        """Test creating a ShipmentFeedback record."""
+        from .models import ShipmentFeedback
+        
+        feedback = ShipmentFeedback.objects.create(
+            shipment=self.shipment,
+            was_on_time=True,
+            was_complete_and_undamaged=True,
+            was_driver_professional=True,
+            feedback_notes='Excellent service!',
+            customer_ip='192.168.1.1'
+        )
+        
+        self.assertEqual(feedback.shipment, self.shipment)
+        self.assertTrue(feedback.was_on_time)
+        self.assertTrue(feedback.was_complete_and_undamaged)
+        self.assertTrue(feedback.was_driver_professional)
+        self.assertEqual(feedback.feedback_notes, 'Excellent service!')
+        self.assertEqual(feedback.customer_ip, '192.168.1.1')
+        self.assertIsNotNone(feedback.submitted_at)
+    
+    def test_delivery_success_score_calculation(self):
+        """Test delivery success score calculation."""
+        from .models import ShipmentFeedback
+        
+        # Test perfect score (all True)
+        feedback = ShipmentFeedback.objects.create(
+            shipment=self.shipment,
+            was_on_time=True,
+            was_complete_and_undamaged=True,
+            was_driver_professional=True
+        )
+        self.assertEqual(feedback.delivery_success_score, 100.0)
+        
+        # Test partial score (2 out of 3)
+        feedback.was_on_time = False
+        self.assertEqual(feedback.delivery_success_score, 66.7)
+        
+        # Test zero score (all False)
+        feedback.was_complete_and_undamaged = False
+        feedback.was_driver_professional = False
+        self.assertEqual(feedback.delivery_success_score, 0.0)
+    
+    def test_feedback_summary_generation(self):
+        """Test feedback summary generation."""
+        from .models import ShipmentFeedback
+        
+        feedback = ShipmentFeedback.objects.create(
+            shipment=self.shipment,
+            was_on_time=True,
+            was_complete_and_undamaged=True,
+            was_driver_professional=True
+        )
+        
+        # Test all positive = Excellent
+        self.assertEqual(feedback.get_feedback_summary(), 'Excellent')
+        
+        # Test 2 positive = Good
+        feedback.was_on_time = False
+        self.assertEqual(feedback.get_feedback_summary(), 'Good')
+        
+        # Test 1 positive = Fair
+        feedback.was_complete_and_undamaged = False
+        self.assertEqual(feedback.get_feedback_summary(), 'Fair')
+        
+        # Test 0 positive = Poor
+        feedback.was_driver_professional = False
+        self.assertEqual(feedback.get_feedback_summary(), 'Poor')
+    
+    def test_one_to_one_relationship(self):
+        """Test that ShipmentFeedback has OneToOne relationship with Shipment."""
+        from .models import ShipmentFeedback
+        from django.db import IntegrityError
+        
+        # Create first feedback
+        feedback1 = ShipmentFeedback.objects.create(
+            shipment=self.shipment,
+            was_on_time=True,
+            was_complete_and_undamaged=True,
+            was_driver_professional=True
+        )
+        
+        # Try to create second feedback for same shipment - should fail
+        with self.assertRaises(IntegrityError):
+            ShipmentFeedback.objects.create(
+                shipment=self.shipment,
+                was_on_time=False,
+                was_complete_and_undamaged=False,
+                was_driver_professional=False
+            )
+    
+    def test_company_property(self):
+        """Test company property returns shipment's customer."""
+        from .models import ShipmentFeedback
+        
+        feedback = ShipmentFeedback.objects.create(
+            shipment=self.shipment,
+            was_on_time=True,
+            was_complete_and_undamaged=True,
+            was_driver_professional=True
+        )
+        
+        self.assertEqual(feedback.company, self.shipment.customer)
+
+
+class ShipmentFeedbackAPITestCase(APITestCase):
+    """Test cases for ShipmentFeedback API endpoints."""
+    
+    def setUp(self):
+        User = get_user_model()
+        self.user = User.objects.create_user(
+            email='api@example.com',
+            password='testpass123',
+            first_name='API',
+            last_name='User'
+        )
+        
+        # Create test data
+        from companies.models import Company
+        from freight_types.models import FreightType
+        
+        self.company = Company.objects.create(
+            name='API Test Company',
+            company_type='CUSTOMER'
+        )
+        
+        self.freight_type = FreightType.objects.create(
+            name='API Test Freight'
+        )
+        
+        self.shipment = Shipment.objects.create(
+            customer=self.company,
+            carrier=self.company,
+            freight_type=self.freight_type,
+            origin_location='API Origin',
+            destination_location='API Destination',
+            status=ShipmentStatus.DELIVERED,
+            requested_by=self.user
+        )
+    
+    def test_submit_feedback_success(self):
+        """Test successful feedback submission via API."""
+        url = f'/api/v1/tracking/public/{self.shipment.tracking_number}/feedback/'
+        data = {
+            'was_on_time': True,
+            'was_complete_and_undamaged': True,
+            'was_driver_professional': True,
+            'feedback_notes': 'Great service through API!'
+        }
+        
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        
+        # Check response data
+        self.assertIn('message', response.data)
+        self.assertIn('feedback_id', response.data)
+        self.assertIn('delivery_success_score', response.data)
+        self.assertEqual(response.data['delivery_success_score'], 100.0)
+        
+        # Verify database record
+        from .models import ShipmentFeedback
+        feedback = ShipmentFeedback.objects.get(shipment=self.shipment)
+        self.assertTrue(feedback.was_on_time)
+        self.assertTrue(feedback.was_complete_and_undamaged)
+        self.assertTrue(feedback.was_driver_professional)
+        self.assertEqual(feedback.feedback_notes, 'Great service through API!')
+    
+    def test_submit_feedback_duplicate_prevention(self):
+        """Test prevention of duplicate feedback submissions."""
+        from .models import ShipmentFeedback
+        
+        # Create existing feedback
+        ShipmentFeedback.objects.create(
+            shipment=self.shipment,
+            was_on_time=True,
+            was_complete_and_undamaged=True,
+            was_driver_professional=True
+        )
+        
+        url = f'/api/v1/tracking/public/{self.shipment.tracking_number}/feedback/'
+        data = {
+            'was_on_time': False,
+            'was_complete_and_undamaged': False,
+            'was_driver_professional': False
+        }
+        
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_409_CONFLICT)
+        self.assertIn('already been submitted', response.data['error'])
+    
+    def test_submit_feedback_invalid_status(self):
+        """Test feedback submission fails for non-delivered shipments."""
+        # Change shipment status to non-delivered
+        self.shipment.status = ShipmentStatus.IN_TRANSIT
+        self.shipment.save()
+        
+        url = f'/api/v1/tracking/public/{self.shipment.tracking_number}/feedback/'
+        data = {
+            'was_on_time': True,
+            'was_complete_and_undamaged': True,
+            'was_driver_professional': True
+        }
+        
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('delivered shipments', response.data['error'])
+    
+    def test_feedback_analytics_permission_required(self):
+        """Test that feedback analytics requires proper permissions."""
+        url = '/api/v1/shipments/feedback-analytics/'
+        
+        # Test without authentication
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        
+        # Test with regular user (no manager role)
+        self.user.role = 'CUSTOMER'
+        self.user.save()
+        self.client.force_authenticate(user=self.user)
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)

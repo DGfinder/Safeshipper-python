@@ -114,6 +114,7 @@ urlpatterns = [
         path('mobile/', include('mobile_api.urls')),  # Re-enabled for Phase 8B mobile API foundation
         path('communications/', include('communications.urls')),  # Re-enabled after fixing migrations
         path('manifests/', include('manifests.urls')),  # Re-enabled after fixing documents dependencies
+        path('notifications/', include('notifications.urls')),  # Include notifications app for feedback system
         # Basic search endpoints
         path('search/popular/', PopularSearchesView.as_view(), name='popular-searches'),
         # Public tracking endpoint (matches frontend expectation)

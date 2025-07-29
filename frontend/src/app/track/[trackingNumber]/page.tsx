@@ -30,6 +30,7 @@ import {
   Box,
 } from "lucide-react";
 import { usePublicTracking } from "@/shared/hooks/useShipmentsReal";
+import CustomerFeedbackForm from "@/components/feedback/CustomerFeedbackForm";
 
 // Dynamically import map component to avoid SSR issues
 const ShipmentTrackingMap = dynamic(
@@ -635,6 +636,18 @@ export default function TrackingPage({ params }: TrackingPageProps) {
               </CardContent>
             </Card>
           )}
+
+        {/* Customer Feedback - Only show for delivered shipments */}
+        {shipmentData.status === "DELIVERED" && (
+          <CustomerFeedbackForm 
+            trackingNumber={trackingNumber || ""} 
+            existingFeedback={shipmentData.customer_feedback}
+            onFeedbackSubmitted={(feedback) => {
+              // Optional: Handle feedback submission callback - could trigger refetch
+              console.log("Feedback submitted:", feedback);
+            }}
+          />
+        )}
 
         {/* Customer Support */}
         <Card>

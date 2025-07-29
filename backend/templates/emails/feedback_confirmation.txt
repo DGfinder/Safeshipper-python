@@ -1,0 +1,26 @@
+SafeShipper - Thank you for your feedback!
+
+Thank you for your feedback!
+
+We greatly appreciate you taking the time to share your experience with shipment {{ tracking_number }}{% if customer_company %} delivered to {{ customer_company }}{% endif %}.
+
+DELIVERY SUCCESS SCORE: {{ success_score|floatformat:0 }}% - {{ feedback_summary }}
+
+YOUR FEEDBACK SUMMARY:
+------------------------
+Was your shipment delivered on time? {% if feedback.was_on_time %}Yes ✓{% else %}No ✗{% endif %}
+Did it arrive complete and undamaged? {% if feedback.was_complete_and_undamaged %}Yes ✓{% else %}No ✗{% endif %}
+Was the driver professional? {% if feedback.was_driver_professional %}Yes ✓{% else %}No ✗{% endif %}
+
+{% if feedback.feedback_notes %}Your Comments: "{{ feedback.feedback_notes }}"{% endif %}
+
+Your feedback matters! We use this information to continuously improve our dangerous goods transportation services and ensure we maintain the highest safety and service standards.
+
+{% if success_score < 80 %}We're sorry your experience wasn't perfect. Our team will review your feedback and work to address any issues. If you have specific concerns that need immediate attention, please don't hesitate to contact our support team.{% endif %}
+
+Submitted on {{ feedback.submitted_at|date:"F j, Y \a\t g:i A" }}
+
+Thank you for choosing {{ company_name }} for your dangerous goods transportation needs.
+
+© {{ current_year }} SafeShipper. All rights reserved.
+This confirmation was sent regarding feedback for shipment {{ tracking_number }}.
