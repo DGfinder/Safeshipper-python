@@ -262,6 +262,120 @@ class VehicleViewSet(viewsets.ModelViewSet):
             'vehicles': vehicles_data,
             'timestamp': timezone.now().isoformat(),
         })
+
+    @action(detail=False, methods=['get'], url_path='fleet-compliance-stats')
+    def fleet_compliance_stats(self, request):
+        """Get fleet-wide compliance statistics for dashboard"""
+        from django.db.models import Count, Q
+        
+        # Apply role-based filtering 
+        user_role = getattr(request.user, 'role', 'USER')
+        queryset = Vehicle.objects.select_related('owning_company')
+        
+        if user_role == 'DRIVER':
+            queryset = queryset.filter(assigned_driver=request.user)
+        elif hasattr(request.user, 'company') and request.user.company:
+            queryset = queryset.filter(owning_company=request.user.company)
+        
+        total_vehicles = queryset.count()
+        
+        # Get vehicles with safety equipment status
+        vehicles_with_equipment = queryset.prefetch_related('safety_equipment')
+        compliant_count = 0
+        vehicles_without_equipment = 0
+        equipment_expiring_30_days = 0
+        inspections_overdue = 0
+        
+        from datetime import timedelta
+        today = timezone.now().date()
+        expiry_cutoff = today + timedelta(days=30)
+        
+        for vehicle in vehicles_with_equipment:
+            equipment = vehicle.safety_equipment.filter(status='ACTIVE')
+            
+            if not equipment.exists():
+                vehicles_without_equipment += 1
+                continue
+            
+            vehicle_compliant = True
+            
+            for equip in equipment:
+                # Check for expiring equipment
+                if equip.expiry_date and equip.expiry_date <= expiry_cutoff:
+                    equipment_expiring_30_days += 1
+                    vehicle_compliant = False
+                
+                # Check for overdue inspections
+                if equip.next_inspection_date and equip.next_inspection_date < today:
+                    inspections_overdue += 1
+                    vehicle_compliant = False
+            
+            if vehicle_compliant:
+                compliant_count += 1
+        
+        # Get certifications expiring within 60 days
+        cert_cutoff = today + timedelta(days=60)
+        certifications_expiring = SafetyEquipmentCertification.objects.filter(
+            expiry_date__lte=cert_cutoff,
+            expiry_date__gte=today
+        ).count()
+        
+        compliance_percentage = round((compliant_count / max(total_vehicles, 1)) * 100, 1) if total_vehicles > 0 else 0
+        
+        return Response({
+            'total_vehicles': total_vehicles,
+            'compliant_vehicles': compliant_count,
+            'non_compliant_vehicles': total_vehicles - compliant_count,
+            'compliance_percentage': compliance_percentage,
+            'equipment_expiring_30_days': equipment_expiring_30_days,
+            'certifications_expiring_60_days': certifications_expiring,
+            'inspections_overdue': inspections_overdue,
+            'vehicles_without_equipment': vehicles_without_equipment,
+        })
+
+    @action(detail=False, methods=['get'], url_path='maintenance-schedule')
+    def maintenance_schedule(self, request):
+        """Get maintenance schedule for fleet vehicles"""
+        from datetime import timedelta
+        
+        # Apply role-based filtering
+        user_role = getattr(request.user, 'role', 'USER')
+        queryset = Vehicle.objects.select_related('owning_company', 'assigned_driver')
+        
+        if user_role == 'DRIVER':
+            queryset = queryset.filter(assigned_driver=request.user)
+        elif hasattr(request.user, 'company') and request.user.company:
+            queryset = queryset.filter(owning_company=request.user.company)
+        
+        # Get vehicles with upcoming service dates
+        today = timezone.now().date()
+        next_30_days = today + timedelta(days=30)
+        
+        vehicles_needing_service = queryset.filter(
+            next_service_date__lte=next_30_days,
+            next_service_date__gte=today
+        ).values(
+            'id', 'registration_number', 'next_service_date', 
+            'odometer_km', 'assigned_driver__first_name', 'assigned_driver__last_name'
+        )
+        
+        # Get safety equipment needing inspection
+        equipment_needing_inspection = VehicleSafetyEquipment.objects.filter(
+            vehicle__in=queryset,
+            status='ACTIVE',
+            next_inspection_date__lte=next_30_days,
+            next_inspection_date__gte=today
+        ).select_related('vehicle', 'equipment_type').values(
+            'vehicle__registration_number', 'equipment_type__name',
+            'next_inspection_date', 'location_on_vehicle'
+        )
+        
+        return Response({
+            'vehicles_needing_service': list(vehicles_needing_service),
+            'equipment_needing_inspection': list(equipment_needing_inspection),
+            'period_start': today.isoformat(),
+            'period_end': next_30_days.isoformat(),
+        })
     
     def get_serializer_class(self):
         """Use detailed serializer for retrieve action"""

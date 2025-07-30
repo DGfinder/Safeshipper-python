@@ -66,15 +66,15 @@ class IncidentViewSet(CompanyFilterMixin, viewsets.ModelViewSet):
     def get_queryset(self):
         """Get filtered queryset with optimized queries"""
         queryset = Incident.objects.select_related(
-            'incident_type', 'reporter', 'assigned_to', 'shipment', 'vehicle'
+            'incident_type', 'reporter', 'assigned_to', 'shipment', 'vehicle', 'company'
         ).prefetch_related(
-            'witnesses', 'documents', 'updates', 'corrective_actions'
+            'witnesses', 'documents', 'updates', 'corrective_actions',
+            'investigators', 'dangerous_goods_involved', 
+            'incidentdangerousgood_set__dangerous_good'
         )
         
-        # Apply company filtering and role-based access
-        queryset = super().get_queryset()
-        
-        return queryset
+        # Apply company filtering and role-based access from CompanyFilterMixin
+        return super().get_queryset()
     
     def get_serializer_class(self):
         """Return appropriate serializer based on action"""
@@ -102,13 +102,30 @@ class IncidentViewSet(CompanyFilterMixin, viewsets.ModelViewSet):
             ).order_by('?')  # Random order to distribute load
             
             if safety_officers.exists():
-                serializer.save(assigned_to=safety_officers.first())
+                instance = serializer.save(
+                    company=self.request.user.company,
+                    assigned_to=safety_officers.first()
+                )
             else:
-                serializer.save()
+                instance = serializer.save(company=self.request.user.company)
         else:
-            serializer.save()
+            instance = serializer.save(company=self.request.user.company)
         
-        logger.info(f"Incident {serializer.instance.incident_number} created by {self.request.user.email}")
+        # Set audit context for signals
+        instance._audit_user = self.request.user
+        instance._audit_ip = self.get_client_ip()
+        instance.save()  # Trigger signals with audit context
+        
+        logger.info(f"Incident {instance.incident_number} created by {self.request.user.email}")
+    
+    def get_client_ip(self):
+        """Get client IP address for audit logging"""
+        x_forwarded_for = self.request.META.get('HTTP_X_FORWARDED_FOR')
+        if x_forwarded_for:
+            ip = x_forwarded_for.split(',')[0]
+        else:
+            ip = self.request.META.get('REMOTE_ADDR')
+        return ip
     
     def perform_update(self, serializer):
         """Handle incident updates with status change validation"""
@@ -118,12 +135,18 @@ class IncidentViewSet(CompanyFilterMixin, viewsets.ModelViewSet):
         # Validate status transitions
         new_status = serializer.validated_data.get('status', old_status)
         if not self._is_valid_status_transition(old_status, new_status):
-            raise serializers.ValidationError({
+            from rest_framework import serializers as drf_serializers
+            raise drf_serializers.ValidationError({
                 'status': f'Invalid status transition from {old_status} to {new_status}'
             })
         
-        serializer.save()
-        logger.info(f"Incident {serializer.instance.incident_number} updated by {self.request.user.email}")
+        # Set audit context before saving
+        instance = serializer.save()
+        instance._audit_user = self.request.user
+        instance._audit_ip = self.get_client_ip()
+        instance.save()  # Trigger signals with audit context
+        
+        logger.info(f"Incident {instance.incident_number} updated by {self.request.user.email}")
     
     def _is_valid_status_transition(self, old_status, new_status):
         """Validate status transitions"""
@@ -389,6 +412,131 @@ class IncidentViewSet(CompanyFilterMixin, viewsets.ModelViewSet):
             reported_at__lt=cutoff_time,
             status__in=['reported', 'investigating']
         )
+        
+        serializer = IncidentListSerializer(queryset, many=True, context={'request': request})
+        return Response(serializer.data)
+    
+    @action(detail=True, methods=['post'])
+    def add_dangerous_good(self, request, pk=None):
+        """Add a dangerous good to an incident"""
+        incident = self.get_object()
+        
+        dangerous_good_id = request.data.get('dangerous_good_id')
+        quantity_involved = request.data.get('quantity_involved', 0)
+        quantity_unit = request.data.get('quantity_unit', 'kg')
+        packaging_type = request.data.get('packaging_type', '')
+        release_amount = request.data.get('release_amount')
+        containment_status = request.data.get('containment_status', 'unknown')
+        
+        try:
+            from dangerous_goods.models import DangerousGood
+            from .models import IncidentDangerousGood
+            
+            dangerous_good = DangerousGood.objects.get(id=dangerous_good_id)
+            
+            # Create or update the relationship
+            incident_dg, created = IncidentDangerousGood.objects.get_or_create(
+                incident=incident,
+                dangerous_good=dangerous_good,
+                defaults={
+                    'quantity_involved': quantity_involved,
+                    'quantity_unit': quantity_unit,
+                    'packaging_type': packaging_type,
+                    'release_amount': release_amount,
+                    'containment_status': containment_status,
+                }
+            )
+            
+            if not created:
+                # Update existing record
+                incident_dg.quantity_involved = quantity_involved
+                incident_dg.quantity_unit = quantity_unit
+                incident_dg.packaging_type = packaging_type
+                incident_dg.release_amount = release_amount
+                incident_dg.containment_status = containment_status
+                incident_dg.save()
+            
+            # Create incident update
+            IncidentUpdate.objects.create(
+                incident=incident,
+                update_type='other',
+                description=f'Dangerous good added: {dangerous_good.un_number} - {dangerous_good.proper_shipping_name}',
+                created_by=request.user,
+                metadata={
+                    'dangerous_good_id': str(dangerous_good.id),
+                    'quantity_involved': str(quantity_involved),
+                    'containment_status': containment_status
+                }
+            )
+            
+            return Response({
+                'message': 'Dangerous good added to incident successfully',
+                'dangerous_good': {
+                    'id': dangerous_good.id,
+                    'un_number': dangerous_good.un_number,
+                    'proper_shipping_name': dangerous_good.proper_shipping_name,
+                    'quantity_involved': quantity_involved,
+                    'containment_status': containment_status
+                }
+            })
+            
+        except DangerousGood.DoesNotExist:
+            return Response(
+                {'error': 'Dangerous good not found'}, 
+                status=status.HTTP_404_NOT_FOUND
+            )
+        except Exception as e:
+            logger.error(f"Error adding dangerous good to incident {pk}: {str(e)}")
+            return Response(
+                {'error': 'Failed to add dangerous good to incident'}, 
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+    
+    @action(detail=False, methods=['get'])
+    def by_hazard_class(self, request):
+        """Get incidents filtered by dangerous goods hazard class"""
+        hazard_class = request.query_params.get('hazard_class')
+        
+        if not hazard_class:
+            return Response(
+                {'error': 'hazard_class parameter is required'}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        queryset = self.get_queryset().filter(
+            dangerous_goods_involved__hazard_class=hazard_class
+        ).distinct()
+        
+        # Apply standard filtering
+        queryset = self.filter_queryset(queryset)
+        
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            serializer = IncidentListSerializer(page, many=True, context={'request': request})
+            return self.get_paginated_response(serializer.data)
+        
+        serializer = IncidentListSerializer(queryset, many=True, context={'request': request})
+        return Response(serializer.data)
+    
+    @action(detail=False, methods=['get'])
+    def regulatory_required(self, request):
+        """Get incidents that require regulatory notification"""
+        queryset = self.get_queryset()
+        
+        # Filter for incidents requiring regulatory notification
+        regulatory_incidents = []
+        for incident in queryset:
+            if incident.requires_regulatory_notification():
+                regulatory_incidents.append(incident)
+        
+        # Convert back to queryset for pagination
+        incident_ids = [incident.id for incident in regulatory_incidents]
+        queryset = queryset.filter(id__in=incident_ids)
+        
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            serializer = IncidentListSerializer(page, many=True, context={'request': request})
+            return self.get_paginated_response(serializer.data)
         
         serializer = IncidentListSerializer(queryset, many=True, context={'request': request})
         return Response(serializer.data)

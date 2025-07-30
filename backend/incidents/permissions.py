@@ -1,6 +1,7 @@
 # incidents/permissions.py
 from rest_framework import permissions
 from rest_framework.permissions import BasePermission
+from django.db import models
 
 
 class IncidentPermissions(BasePermission):
@@ -244,7 +245,7 @@ class CompanyFilterMixin:
         
         # Filter by company for multi-tenant isolation
         if hasattr(self.request.user, 'company') and self.request.user.company:
-            queryset = queryset.filter(reporter__company=self.request.user.company)
+            queryset = queryset.filter(company=self.request.user.company)
         
         # Additional role-based filtering
         user_role = getattr(self.request.user, 'role', None)

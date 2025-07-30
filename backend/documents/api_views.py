@@ -7,10 +7,14 @@ from rest_framework.parsers import MultiPartParser, FormParser
 from django.shortcuts import get_object_or_404
 from django.core.exceptions import ValidationError as DjangoValidationError
 from django.utils import timezone
+from django.http import HttpResponse
+from rest_framework import serializers
 
 from .models import Document, DocumentType, DocumentStatus
 from .serializers import DocumentSerializer, DocumentUploadSerializer, DocumentStatusSerializer
 from .tasks import process_manifest_validation
+from .services import generate_consolidated_report
+from .permissions import CanGeneratePDFReports
 # from manifests.services import create_manifest_from_document  # Temporarily disabled - manifests app not enabled
 # from manifests.models import ManifestType  # Temporarily disabled - manifests app not enabled
 from shipments.models import Shipment
@@ -259,3 +263,250 @@ class DocumentViewSet(viewsets.ModelViewSet):
         
         # Check if user is the one who requested the shipment
         return shipment.requested_by == user
+
+
+class PDFReportSerializer(serializers.Serializer):
+    """
+    Serializer for PDF report generation requests
+    """
+    shipment_id = serializers.UUIDField(required=True, help_text="UUID of the shipment")
+    include_sections = serializers.DictField(
+        required=False,
+        default=dict,
+        help_text="Dict specifying which sections to include in the report",
+        child=serializers.BooleanField()
+    )
+    
+    def validate_include_sections(self, sections):
+        """Validate that only allowed report sections are specified"""
+        allowed_sections = {
+            'shipment_report',
+            'manifest', 
+            'compliance_certificate',
+            'compatibility_report',
+            'sds_documents',
+            'emergency_procedures'
+        }
+        
+        if sections:
+            invalid_sections = set(sections.keys()) - allowed_sections
+            if invalid_sections:
+                raise serializers.ValidationError(
+                    f"Invalid sections: {', '.join(invalid_sections)}. "
+                    f"Allowed sections: {', '.join(allowed_sections)}"
+                )
+        
+        return sections or {
+            'shipment_report': True,
+            'manifest': True,
+            'compliance_certificate': True,
+            'compatibility_report': True,
+            'sds_documents': True,
+            'emergency_procedures': True
+        }
+
+
+class PDFReportViewSet(viewsets.ViewSet):
+    """
+    ViewSet for generating PDF reports for shipments.
+    Provides consolidated reports combining manifest, compliance, SDS, and emergency procedures.
+    """
+    permission_classes = [permissions.IsAuthenticated, CanGeneratePDFReports]
+    serializer_class = PDFReportSerializer
+    
+    def get_queryset(self):
+        """Filter shipments based on user permissions"""
+        user = self.request.user
+        
+        # Admin users can access all shipments
+        if user.is_staff or (hasattr(user, 'role') and user.role == getattr(user.Role, 'ADMIN', None)):
+            return Shipment.objects.all()
+        
+        # Filter by user's company for multi-tenant access
+        if hasattr(user, 'company') and user.company:
+            return Shipment.objects.filter(company=user.company)
+        
+        # Filter by user's depot if available
+        if hasattr(user, 'depot') and user.depot:
+            return Shipment.objects.filter(assigned_depot=user.depot)
+        
+        # Fallback to shipments created by the user
+        return Shipment.objects.filter(requested_by=user)
+    
+    @action(detail=False, methods=['post'], url_path='generate-consolidated-report')
+    def generate_consolidated_report(self, request):
+        """
+        Generate consolidated PDF report for a shipment including:
+        - Shipment details and manifest
+        - Compliance certificate
+        - Dangerous goods compatibility report
+        - Safety Data Sheets (SDS) information
+        - Emergency Procedure Guidelines (EPG)
+        
+        Expected payload:
+        {
+            "shipment_id": "uuid-string",
+            "include_sections": {
+                "shipment_report": true,
+                "manifest": true,
+                "compliance_certificate": true,
+                "compatibility_report": true,
+                "sds_documents": true,
+                "emergency_procedures": true
+            }
+        }
+        """
+        try:
+            # Validate request data
+            serializer = self.serializer_class(data=request.data)
+            serializer.is_valid(raise_exception=True)
+            
+            # Get validated data
+            shipment_id = serializer.validated_data['shipment_id']
+            include_sections = serializer.validated_data['include_sections']
+            
+            # Get shipment with permission check
+            shipment = get_object_or_404(self.get_queryset(), id=shipment_id)
+            
+            # Additional business logic validation
+            if not self._validate_shipment_for_report(shipment):
+                return Response(
+                    {
+                        'error': 'Shipment validation failed',
+                        'details': 'Shipment must have at least one dangerous goods item to generate a report'
+                    },
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            logger.info(
+                f"Generating consolidated PDF report for shipment {shipment.tracking_number} "
+                f"requested by user {request.user.id}"
+            )
+            
+            # Generate PDF using the existing service
+            pdf_bytes = generate_consolidated_report(shipment, include_sections)
+            
+            if not pdf_bytes:
+                logger.error(f"PDF generation returned empty result for shipment {shipment_id}")
+                return Response(
+                    {'error': 'PDF generation failed - empty result'},
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                )
+            
+            # Prepare filename
+            filename = f"consolidated_report_{shipment.tracking_number}_{timezone.now().strftime('%Y%m%d_%H%M%S')}.pdf"
+            
+            # Create HTTP response with PDF
+            response = HttpResponse(
+                pdf_bytes,
+                content_type='application/pdf'
+            )
+            response['Content-Disposition'] = f'attachment; filename="{filename}"'
+            response['Content-Length'] = len(pdf_bytes)
+            response['X-Shipment-ID'] = str(shipment.id)
+            response['X-Report-Generated'] = timezone.now().isoformat()
+            
+            logger.info(
+                f"Successfully generated PDF report for shipment {shipment.tracking_number}: "
+                f"{len(pdf_bytes)} bytes, filename: {filename}"
+            )
+            
+            return response
+            
+        except Shipment.DoesNotExist:
+            logger.warning(f"Shipment {shipment_id} not found or access denied for user {request.user.id}")
+            return Response(
+                {'error': 'Shipment not found or access denied'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        except serializers.ValidationError as e:
+            logger.warning(f"Validation error in PDF generation: {e.detail}")
+            return Response(
+                {'error': 'Validation error', 'details': e.detail},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        except Exception as e:
+            logger.error(f"Unexpected error generating PDF report for shipment {shipment_id}: {str(e)}")
+            return Response(
+                {
+                    'error': 'PDF generation failed',
+                    'details': 'An unexpected error occurred during report generation'
+                },
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+    
+    @action(detail=False, methods=['get'], url_path='report-sections')
+    def get_available_report_sections(self, request):
+        """
+        Get list of available report sections that can be included in consolidated reports.
+        """
+        sections = {
+            'shipment_report': {
+                'name': 'Shipment Report',
+                'description': 'Detailed shipment information and summary',
+                'required': False,
+                'default': True
+            },
+            'manifest': {
+                'name': 'Dangerous Goods Manifest',
+                'description': 'Official dangerous goods manifest and declarations',
+                'required': False,
+                'default': True
+            },
+            'compliance_certificate': {
+                'name': 'Compliance Certificate',
+                'description': 'Transport compliance certification and approvals',
+                'required': False,
+                'default': True
+            },
+            'compatibility_report': {
+                'name': 'Compatibility Analysis',
+                'description': 'Dangerous goods compatibility and segregation analysis',
+                'required': False,
+                'default': True
+            },
+            'sds_documents': {
+                'name': 'Safety Data Sheets',
+                'description': 'Safety information and handling instructions for dangerous goods',
+                'required': False,
+                'default': True
+            },
+            'emergency_procedures': {
+                'name': 'Emergency Procedures',
+                'description': 'Emergency response procedures and contact information',
+                'required': False,
+                'default': True
+            }
+        }
+        
+        return Response({
+            'available_sections': sections,
+            'total_sections': len(sections),
+            'note': 'All sections are optional and can be customized per report request'
+        })
+    
+    def _validate_shipment_for_report(self, shipment) -> bool:
+        """
+        Validate that shipment is suitable for report generation.
+        
+        Args:
+            shipment: Shipment instance
+            
+        Returns:
+            bool: True if shipment can have reports generated
+        """
+        # Check if shipment has dangerous goods items
+        if not hasattr(shipment, 'items'):
+            return False
+            
+        dangerous_items = shipment.items.filter(is_dangerous_good=True)
+        if not dangerous_items.exists():
+            logger.warning(f"Shipment {shipment.id} has no dangerous goods items for report generation")
+            return False
+        
+        # Check shipment status - must not be in draft/pending state
+        if shipment.status in [shipment.ShipmentStatus.DRAFT, shipment.ShipmentStatus.PENDING]:
+            logger.warning(f"Shipment {shipment.id} in {shipment.status} status - not ready for reports")
+            return False
+        
+        return True

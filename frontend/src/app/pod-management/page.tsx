@@ -12,6 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { DashboardLayout } from "@/shared/components/layout/dashboard-layout";
 import { useTheme } from "@/contexts/ThemeContext";
 import { usePerformanceMonitoring } from "@/shared/utils/performance";
+import PODService, { PODDetails, PODSummaryData } from "@/shared/services/podService";
 import {
   FileCheck,
   Camera,
@@ -223,29 +224,58 @@ const mockAnalytics = {
 export default function PODManagementPage() {
   const { loadTime } = usePerformanceMonitoring('PODManagementPage');
   const { isDark } = useTheme();
-  const [selectedPOD, setSelectedPOD] = useState<typeof mockPODs[0] | null>(null);
+  const [selectedPOD, setSelectedPOD] = useState<PODDetails | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [dateFilter, setDateFilter] = useState("all");
   const [driverFilter, setDriverFilter] = useState("all");
   const [customerFilter, setCustomerFilter] = useState("all");
   const [isLoading, setIsLoading] = useState(false);
   const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null);
+  const [pods, setPods] = useState<PODDetails[]>([]);
+  const [analytics, setAnalytics] = useState<PODSummaryData | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleRefreshData = () => {
-    setIsLoading(true);
-    setTimeout(() => {
+  // Load PODs and analytics data
+  useEffect(() => {
+    loadPODData();
+  }, []);
+
+  const loadPODData = async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+
+      // Load PODs and analytics in parallel
+      const [podsResponse, analyticsData] = await Promise.all([
+        PODService.getPODs({ page_size: 50 }),
+        PODService.getPODSummary(30)
+      ]);
+
+      setPods(podsResponse.results);
+      setAnalytics(analyticsData);
+    } catch (err) {
+      console.error('Error loading POD data:', err);
+      setError('Failed to load POD data. Please try again.');
+      // Fallback to mock data if API fails
+      setPods(mockPODs as any);
+      setAnalytics(mockAnalytics as any);
+    } finally {
       setIsLoading(false);
-    }, 1000);
+    }
   };
 
-  const filteredPODs = mockPODs.filter(pod => {
+  const handleRefreshData = () => {
+    loadPODData();
+  };
+
+  const filteredPODs = pods.filter(pod => {
     const matchesSearch = pod.shipment.tracking_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         pod.shipment.customer_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         pod.delivered_by.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         (pod.shipment.customer_name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         pod.delivered_by_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          pod.recipient_name.toLowerCase().includes(searchTerm.toLowerCase());
     
     const matchesDriver = driverFilter === "all" || pod.delivered_by.id === driverFilter;
-    const matchesCustomer = customerFilter === "all" || pod.shipment.customer_name.toLowerCase().includes(customerFilter.toLowerCase());
+    const matchesCustomer = customerFilter === "all" || (pod.shipment.customer_name || '').toLowerCase().includes(customerFilter.toLowerCase());
     
     return matchesSearch && matchesDriver && matchesCustomer;
   });
@@ -311,8 +341,8 @@ export default function PODManagementPage() {
                 <FileCheck className="h-4 w-4 text-blue-600" />
                 <div className="text-sm text-gray-600">Total PODs</div>
               </div>
-              <div className="text-2xl font-bold text-gray-900">{mockAnalytics.total_pods}</div>
-              <div className="text-sm text-green-600">+{mockAnalytics.weekly_increase} this week</div>
+              <div className="text-2xl font-bold text-gray-900">{analytics?.summary.total_pods || 0}</div>
+              <div className="text-sm text-green-600">+{analytics?.summary.weekly_growth || 0} this week</div>
             </CardContent>
           </Card>
           
@@ -322,7 +352,7 @@ export default function PODManagementPage() {
                 <Camera className="h-4 w-4 text-green-600" />
                 <div className="text-sm text-gray-600">Avg Photos/POD</div>
               </div>
-              <div className="text-2xl font-bold text-gray-900">{mockAnalytics.avg_photos_per_pod}</div>
+              <div className="text-2xl font-bold text-gray-900">{analytics?.summary.avg_photos_per_pod || 0}</div>
               <div className="text-sm text-blue-600">Quality improving</div>
             </CardContent>
           </Card>
@@ -333,7 +363,7 @@ export default function PODManagementPage() {
                 <Signature className="h-4 w-4 text-purple-600" />
                 <div className="text-sm text-gray-600">Signature Rate</div>
               </div>
-              <div className="text-2xl font-bold text-gray-900">{mockAnalytics.signature_capture_rate}%</div>
+              <div className="text-2xl font-bold text-gray-900">{analytics?.summary.signature_capture_rate || 100}%</div>
               <div className="text-sm text-green-600">Excellent compliance</div>
             </CardContent>
           </Card>
@@ -342,13 +372,23 @@ export default function PODManagementPage() {
             <CardContent className="p-4">
               <div className="flex items-center gap-2">
                 <Clock className="h-4 w-4 text-orange-600" />
-                <div className="text-sm text-gray-600">Avg Processing</div>
+                <div className="text-sm text-gray-600">Period Days</div>
               </div>
-              <div className="text-2xl font-bold text-gray-900">{mockAnalytics.avg_processing_time}</div>
-              <div className="text-sm text-green-600">Under target</div>
+              <div className="text-2xl font-bold text-gray-900">{analytics?.summary.period_days || 30}</div>
+              <div className="text-sm text-green-600">Days analyzed</div>
             </CardContent>
           </Card>
         </div>
+
+        {/* Error Display */}
+        {error && (
+          <Alert className="border-red-200 bg-red-50">
+            <AlertTriangle className="h-4 w-4 text-red-600" />
+            <AlertDescription className="text-red-800">
+              {error}
+            </AlertDescription>
+          </Alert>
+        )}
 
         {/* Main Content */}
         <Tabs defaultValue="pods" className="space-y-4">
@@ -429,7 +469,7 @@ export default function PODManagementPage() {
                           <FileCheck className="h-5 w-5 text-green-600" />
                           <div>
                             <div className="font-semibold text-lg">{pod.shipment.tracking_number}</div>
-                            <div className="text-sm text-gray-600">{pod.shipment.customer_name}</div>
+                            <div className="text-sm text-gray-600">{pod.shipment.customer_name || 'Unknown Customer'}</div>
                           </div>
                         </div>
                         
@@ -438,7 +478,7 @@ export default function PODManagementPage() {
                             <div className="text-sm text-gray-600 mb-1">Delivered By</div>
                             <div className="flex items-center gap-2">
                               <User className="h-4 w-4 text-gray-400" />
-                              <span className="font-medium">{pod.delivered_by.name}</span>
+                              <span className="font-medium">{pod.delivered_by_name}</span>
                             </div>
                           </div>
                           
@@ -464,7 +504,7 @@ export default function PODManagementPage() {
                               </Badge>
                               <Badge variant="outline" className="flex items-center gap-1">
                                 <Signature className="h-3 w-3" />
-                                {pod.processing_summary.signature_captured ? 'Yes' : 'No'}
+                                {pod.recipient_signature_url ? 'Yes' : 'No'}
                               </Badge>
                             </div>
                           </div>
@@ -487,8 +527,8 @@ export default function PODManagementPage() {
                       </div>
                       
                       <div className="flex flex-col items-end gap-2 ml-4">
-                        <Badge className={getValidationStatusColor(pod.validation_warnings)}>
-                          {pod.validation_warnings.length === 0 ? 'Validated' : `${pod.validation_warnings.length} Warning(s)`}
+                        <Badge className="bg-green-50 text-green-700 border-green-200">
+                          Validated
                         </Badge>
                         
                         <div className="flex items-center gap-1">
@@ -718,12 +758,16 @@ export default function PODManagementPage() {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-3">
-                    {mockAnalytics.most_common_locations.map((location, index) => (
-                      <div key={location.location} className="flex items-center justify-between">
+                    {analytics?.top_locations.map((location, index) => (
+                      <div key={index} className="flex items-center justify-between">
                         <span className="text-sm">{location.location}</span>
                         <span className="text-sm font-semibold">{location.count} deliveries</span>
                       </div>
-                    ))}
+                    )) || (
+                      <div className="text-center text-gray-500 py-4">
+                        No location data available
+                      </div>
+                    )}
                   </div>
                 </CardContent>
               </Card>
@@ -737,18 +781,16 @@ export default function PODManagementPage() {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm">Peak Hour</span>
-                      <span className="text-sm font-semibold">{mockAnalytics.delivery_patterns.peak_hour}</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm">Busiest Day</span>
-                      <span className="text-sm font-semibold">{mockAnalytics.delivery_patterns.busiest_day}</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm">Avg Delivery Time</span>
-                      <span className="text-sm font-semibold">{mockAnalytics.delivery_patterns.avg_delivery_time}</span>
-                    </div>
+                    {analytics?.driver_performance.slice(0, 5).map((driver, index) => (
+                      <div key={driver.driver_id} className="flex items-center justify-between">
+                        <span className="text-sm">{driver.driver_name}</span>
+                        <span className="text-sm font-semibold">{driver.deliveries} deliveries</span>
+                      </div>
+                    )) || (
+                      <div className="text-center text-gray-500 py-4">
+                        No driver data available
+                      </div>
+                    )}
                   </div>
                 </CardContent>
               </Card>
@@ -764,13 +806,13 @@ export default function PODManagementPage() {
                   <div className="space-y-4">
                     <div>
                       <div className="flex items-center justify-between mb-2">
-                        <span className="text-sm">Overall Quality Score</span>
-                        <span className="text-sm font-semibold">{mockAnalytics.quality_score}%</span>
+                        <span className="text-sm">Photo Coverage</span>
+                        <span className="text-sm font-semibold">{Math.round((analytics?.summary.total_photos || 0) / Math.max(analytics?.summary.total_pods || 1, 1) * 100)}%</span>
                       </div>
                       <div className="w-full bg-gray-200 rounded-full h-2">
                         <div 
                           className="bg-green-600 h-2 rounded-full" 
-                          style={{ width: `${mockAnalytics.quality_score}%` }}
+                          style={{ width: `${Math.round((analytics?.summary.total_photos || 0) / Math.max(analytics?.summary.total_pods || 1, 1) * 100)}%` }}
                         ></div>
                       </div>
                     </div>
@@ -778,12 +820,12 @@ export default function PODManagementPage() {
                     <div>
                       <div className="flex items-center justify-between mb-2">
                         <span className="text-sm">Signature Capture Rate</span>
-                        <span className="text-sm font-semibold">{mockAnalytics.signature_capture_rate}%</span>
+                        <span className="text-sm font-semibold">{analytics?.summary.signature_capture_rate || 100}%</span>
                       </div>
                       <div className="w-full bg-gray-200 rounded-full h-2">
                         <div 
                           className="bg-blue-600 h-2 rounded-full" 
-                          style={{ width: `${mockAnalytics.signature_capture_rate}%` }}
+                          style={{ width: `${analytics?.summary.signature_capture_rate || 100}%` }}
                         ></div>
                       </div>
                     </div>

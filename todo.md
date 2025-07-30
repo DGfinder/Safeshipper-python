@@ -1,88 +1,60 @@
-# Task: Fix Vercel Build Error - Permission System Refactoring
+# Task: Comprehensive Frontend Components for Enhanced Driver Training System
 
 ## Plan
 
-### Analytics Unified Page Permission Refactoring
-- [x] **Step 1:** Add missing permissions to PermissionContext (customer.portal.view, driver.operations.view)
-- [x] **Step 2:** Update role mappings to include new permissions  
-- [x] **Step 3:** Convert analytics-unified page from access.* to can() permission checks
-- [x] **Step 4:** Commit the permission system refactoring
-- [x] **Step 5:** Push to repository (pending authentication)
+### Phase 1: Core TypeScript Interfaces & Services
+- [ ] **Step 1:** Create comprehensive TypeScript interfaces for training system data structures
+- [ ] **Step 2:** Implement training API service layer with TanStack Query integration
+- [ ] **Step 3:** Create custom hooks for training data fetching and state management
+- [ ] **Step 4:** Add training-specific permission definitions to permission system
 
----
-## Security Review
+### Phase 2: Enhanced Training Dashboard
+- [ ] **Step 5:** Create comprehensive training dashboard with real-time progress tracking
+- [ ] **Step 6:** Implement interactive charts for completion rates and compliance status
+- [ ] **Step 7:** Add compliance status indicators with visual alerts and countdown timers
+- [ ] **Step 8:** Build achievement badges and certificates display section
+- [ ] **Step 9:** Create upcoming training calendar with scheduling capabilities
+- [ ] **Step 10:** Add quick actions for starting/resuming training with progress validation
 
-- **Input Validation:** ✅ Not Applicable - Permission string validation through TypeScript
-- **Permissions Check:** ✅ Enhanced - Granular permissions replace broad role checks
-- **Data Exposure:** ✅ Improved - Permission-based conditional rendering prevents unauthorized access
-- **New Dependencies:** ✅ None - Uses existing PermissionContext infrastructure
+### Phase 3: Training Module Catalog & Search
+- [ ] **Step 11:** Build advanced training module catalog with sophisticated filtering
+- [ ] **Step 12:** Implement search functionality with auto-complete for UN numbers and hazard classes
+- [ ] **Step 13:** Create module cards with progress indicators and prerequisite tracking
+- [ ] **Step 14:** Add recommended training based on role and dangerous goods handling
+- [ ] **Step 15:** Implement learning path visualization with prerequisite validation
+- [ ] **Step 16:** Add difficulty level indicators and estimated completion times
 
----
-## Review Summary
+### Phase 4: Training Content Delivery System
+- [ ] **Step 17:** Create training module viewer with video player controls and speed settings
+- [ ] **Step 18:** Implement document viewer for PDFs and interactive presentations
+- [ ] **Step 19:** Add progress tracking with automatic bookmarking and resume functionality
+- [ ] **Step 20:** Build navigation system between sections/chapters with breadcrumbs
+- [ ] **Step 21:** Create note-taking capabilities with local storage and sync
+- [ ] **Step 22:** Add subtitles and accessibility features for video content
 
-Successfully resolved the Vercel build error by completing the permission system refactoring for the analytics-unified page that was causing TypeScript compilation failures.
+### Phase 5: Assessment & Testing Interface
+- [ ] **Step 23:** Create comprehensive assessment interface with multiple question formats
+- [ ] **Step 24:** Implement timer functionality with warnings and automatic submission
+- [ ] **Step 25:** Add progress indicator through assessment with question navigation
+- [ ] **Step 26:** Build immediate feedback system with detailed explanations
+- [ ] **Step 27:** Create review mode for incorrect answers with learning resources
+- [ ] **Step 28:** Implement score summary with detailed breakdown and improvement suggestions
 
-### Root Cause Discovery:
-The build failed because:
-1. ❌ **TypeScript Error**: `Cannot find name 'access'` at line 339 in analytics-unified page
-2. ❌ **Architectural Violation**: Page still used old role-based access patterns
-3. ✅ **Permission Context Ready**: PermissionContext was fully implemented and available
-4. ✅ **Migration Pattern Established**: Other pages already successfully migrated
+### Phase 6: Certificate Management & Verification
+- [ ] **Step 29:** Build certificate gallery with digital verification system
+- [ ] **Step 30:** Implement download functionality for certificates in PDF format
+- [ ] **Step 31:** Add sharing capabilities with verification links and QR codes
+- [ ] **Step 32:** Create expiration tracking with renewal alerts and scheduling
+- [ ] **Step 33:** Build achievement badges display with gamification elements
+- [ ] **Step 34:** Add certificate history and renewal tracking
 
-### Files Modified:
-
-**Permission System Enhancement:**
-- `frontend/src/contexts/PermissionContext.tsx` - **ENHANCED** with missing permissions:
-  - Added `customer.portal.view` permission for customer portal interface access
-  - Added `driver.operations.view` permission for driver operations interface access
-  - Updated role mappings to include new permissions in viewer and driver roles
-
-**Analytics Page Migration:**
-- `frontend/src/app/analytics-unified/page.tsx` - **REFACTORED** from role-based to permission-based:
-  - Replaced all `access.*` references with `can()` permission checks
-  - Converted 23 instances including dashboard titles, tab visibility, and feature access
-  - Maintained exact same functionality with granular permission control
-
-### Technical Resolution:
-- ✅ **TypeScript Compilation**: All `access.*` references replaced with typed permission checks
-- ✅ **Permission Mapping**: Role-based logic converted to granular permissions
-- ✅ **Architectural Consistency**: Page now follows "Build Once, Render for Permissions" pattern
-- ✅ **Zero Functional Changes**: Same UI behavior with improved access control
-
-### Key Conversions:
-```typescript
-// Before: Role-based access checks
-access.isCustomer → can('customer.portal.view')
-access.isDriver → can('driver.operations.view')  
-access.isAuditor → can('audits.view')
-access.hasMinimumRole('SUPERVISOR') → can('analytics.operational')
-access.hasMinimumRole('MANAGER') → can('analytics.advanced.view')
-access.hasAccess('analytics_full_access') → can('analytics.full.access')
-```
-
-### Git Commit Status:
-- ✅ **Committed**: `ca7538a` - "Enhance Unified Analytics Page and Permissions Context"
-- ✅ **Staged**: Permission system changes successfully committed
-- ⏳ **Push Pending**: Requires git authentication configuration
-
-### Result:
-The Vercel build error is resolved because:
-1. **No TypeScript Errors**: All `access.*` references eliminated
-2. **Permission System Complete**: Unified PermissionContext handles all access control
-3. **Type Safety**: All permission strings validated at compile time
-4. **Architectural Compliance**: Page follows established permission patterns
-
-### Next Steps:
-The commit `ca7538a` contains all necessary changes to resolve the Vercel build error. Once pushed to the repository, the build will succeed with:
-- Zero TypeScript compilation errors
-- Consistent permission-based architecture
-- Enhanced granular access control
-- Maintained user experience across all roles
+### Phase 7: Mobile & Offline Capabilities
+- [ ] **Step 35:** Implement mobile-responsive design optimized for field access
+- [ ] **Step 36:** Add offline capability planning for training content synchronization
+- [ ] **Step 37:** Create progressive web app features for mobile installation
+- [ ] **Step 38:** Build offline progress tracking with sync when connected
+- [ ] **Step 39:** Add touch-friendly navigation and gestures for mobile devices
 
 ---
 
-## 🎉 **Implementation Success**
-
-The SafeShipper analytics-unified page has been successfully migrated from legacy role-based access control to the unified permission system, completing the final piece of the permission system refactoring and resolving the Vercel build error.
-
-**The commit is ready for deployment and will immediately fix the production build failure.** ✨
+*Implementation will begin after plan approval*

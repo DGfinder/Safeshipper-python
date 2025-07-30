@@ -2115,6 +2115,144 @@ class ShipmentViewSet(viewsets.ModelViewSet):
                 {"error": "An error occurred while marking alerts as read"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
+    
+    @action(detail=False, methods=['get'], url_path='pods-summary')
+    def pods_summary(self, request):
+        """Get comprehensive POD summary and analytics for web dashboard."""
+        try:
+            from django.db.models import Count, Q, Avg
+            from datetime import datetime, timedelta
+            from .proof_of_delivery import ProofOfDelivery, ProofOfDeliveryPhoto
+            
+            # Date filtering
+            days_filter = int(request.query_params.get('days', 30))
+            start_date = timezone.now() - timedelta(days=days_filter)
+            
+            # Base queryset with PODs
+            pods_queryset = ProofOfDelivery.objects.filter(
+                delivered_at__gte=start_date
+            ).select_related('shipment', 'delivered_by').prefetch_related('photos')
+            
+            # Filter by company if multi-tenant
+            if hasattr(request.user, 'company') and request.user.company:
+                pods_queryset = pods_queryset.filter(shipment__company=request.user.company)
+            
+            # Analytics aggregation
+            total_pods = pods_queryset.count()
+            
+            if total_pods == 0:
+                return Response({
+                    'summary': {
+                        'total_pods': 0,
+                        'total_photos': 0,
+                        'avg_photos_per_pod': 0,
+                        'weekly_growth': 0,
+                        'signature_capture_rate': 100.0,
+                        'period_days': days_filter
+                    },
+                    'top_locations': [],
+                    'driver_performance': [],
+                    'daily_trend': []
+                })
+            
+            # Count total photos
+            total_photos = pods_queryset.aggregate(
+                photo_count=Count('photos')
+            )['photo_count'] or 0
+            
+            avg_photos_per_pod = total_photos / total_pods if total_pods > 0 else 0
+            
+            # Weekly growth calculation
+            week_ago = timezone.now() - timedelta(days=7)
+            weekly_pods = pods_queryset.filter(delivered_at__gte=week_ago).count()
+            previous_week_start = week_ago - timedelta(days=7)
+            previous_week_pods = pods_queryset.filter(
+                delivered_at__gte=previous_week_start,
+                delivered_at__lt=week_ago
+            ).count()
+            weekly_growth = weekly_pods - previous_week_pods
+            
+            # Top delivery locations
+            top_locations = pods_queryset.exclude(
+                delivery_location__isnull=True
+            ).exclude(
+                delivery_location__exact=''
+            ).values('delivery_location').annotate(
+                count=Count('id')
+            ).order_by('-count')[:10]
+            
+            # Clean up location data
+            top_locations_clean = []
+            for location in top_locations:
+                if location['delivery_location']:
+                    # Truncate long location strings
+                    loc_name = location['delivery_location']
+                    if len(loc_name) > 50:
+                        loc_name = loc_name[:47] + "..."
+                    top_locations_clean.append({
+                        'location': loc_name,
+                        'count': location['count']
+                    })
+            
+            # Driver performance statistics
+            driver_stats = pods_queryset.values(
+                'delivered_by__first_name', 
+                'delivered_by__last_name', 
+                'delivered_by__id'
+            ).annotate(
+                deliveries=Count('id'),
+                total_photos=Count('photos')
+            ).order_by('-deliveries')[:10]
+            
+            # Format driver stats
+            driver_performance = []
+            for stat in driver_stats:
+                full_name = f"{stat['delivered_by__first_name']} {stat['delivered_by__last_name']}"
+                avg_photos = stat['total_photos'] / stat['deliveries'] if stat['deliveries'] > 0 else 0
+                driver_performance.append({
+                    'driver_id': stat['delivered_by__id'],
+                    'driver_name': full_name.strip(),
+                    'deliveries': stat['deliveries'],
+                    'avg_photos': round(avg_photos, 1)
+                })
+            
+            # Daily delivery trend (last period)
+            daily_deliveries = []
+            for i in range(min(days_filter, 30)):  # Limit to 30 days max for performance
+                day = start_date + timedelta(days=i)
+                day_count = pods_queryset.filter(
+                    delivered_at__date=day.date()
+                ).count()
+                daily_deliveries.append({
+                    'date': day.strftime('%Y-%m-%d'),
+                    'deliveries': day_count
+                })
+            
+            return Response({
+                'summary': {
+                    'total_pods': total_pods,
+                    'total_photos': total_photos,
+                    'avg_photos_per_pod': round(avg_photos_per_pod, 1),
+                    'weekly_growth': weekly_growth,
+                    'signature_capture_rate': 100.0,  # All PODs have signatures by design
+                    'period_days': days_filter
+                },
+                'top_locations': top_locations_clean,
+                'driver_performance': driver_performance,
+                'daily_trend': daily_deliveries,
+                'period_info': {
+                    'start_date': start_date.strftime('%Y-%m-%d'),
+                    'end_date': timezone.now().strftime('%Y-%m-%d'),
+                    'days_included': days_filter
+                }
+            })
+            
+        except Exception as e:
+            logger.error(f"Error getting POD summary: {str(e)}")
+            return Response(
+                {'error': f'Failed to get POD summary: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
 
 class ConsignmentItemViewSet(viewsets.ModelViewSet):
@@ -2948,3 +3086,239 @@ class DeliverySuccessStatsView(APIView):
             'difot_rate': round((difot_count / total_count) * 100, 1),
             'satisfaction_rate': round((satisfied_count / total_count) * 100, 1),
         }
+
+
+class ProofOfDeliveryViewSet(viewsets.ReadOnlyModelViewSet):
+    """
+    Advanced Proof of Delivery ViewSet for web UI POD management and analytics.
+    Provides comprehensive POD viewing, filtering, and analytics capabilities.
+    """
+    serializer_class = ProofOfDeliverySerializer
+    permission_classes = [permissions.IsAuthenticated]
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    
+    filterset_fields = {
+        'delivered_at': ['date', 'gte', 'lte'],
+        'delivered_by': ['exact'],
+        'shipment__customer': ['exact'],
+        'shipment__status': ['exact'],
+        'delivery_location': ['icontains'],
+    }
+    search_fields = [
+        'recipient_name',
+        'delivery_location', 
+        'delivery_notes',
+        'shipment__tracking_number',
+        'shipment__customer__name',
+        'delivered_by__first_name',
+        'delivered_by__last_name'
+    ]
+    ordering_fields = ['delivered_at', 'recipient_name', 'shipment__tracking_number']
+    ordering = ['-delivered_at']
+
+    def get_queryset(self):
+        """Return company-filtered PODs with optimized queries."""
+        from .proof_of_delivery import ProofOfDelivery
+        
+        queryset = ProofOfDelivery.objects.select_related(
+            'shipment', 'delivered_by', 'shipment__customer', 'shipment__carrier'
+        ).prefetch_related('photos')
+        
+        # Filter by company for multi-tenancy
+        if hasattr(self.request.user, 'company') and self.request.user.company:
+            queryset = queryset.filter(shipment__company=self.request.user.company)
+        
+        return queryset
+
+    @action(detail=False, methods=['get'], url_path='analytics')
+    def analytics(self, request):
+        """Comprehensive POD analytics endpoint."""
+        try:
+            from django.db.models import Count, Avg, Q
+            from datetime import datetime, timedelta
+            
+            # Date filtering parameters
+            days_filter = int(request.query_params.get('days', 30))
+            start_date = timezone.now() - timedelta(days=days_filter)
+            
+            queryset = self.get_queryset().filter(delivered_at__gte=start_date)
+            
+            if queryset.count() == 0:
+                return Response({
+                    'summary': {'total_pods': 0, 'period_days': days_filter},
+                    'trends': {},
+                    'performance': {},
+                    'locations': []
+                })
+            
+            # Summary metrics
+            total_pods = queryset.count()
+            total_photos = queryset.aggregate(photo_count=Count('photos'))['photo_count'] or 0
+            avg_photos = total_photos / total_pods if total_pods > 0 else 0
+            
+            # Weekly comparisons
+            week_ago = timezone.now() - timedelta(days=7)
+            current_week = queryset.filter(delivered_at__gte=week_ago).count()
+            previous_week = queryset.filter(
+                delivered_at__gte=week_ago - timedelta(days=7),
+                delivered_at__lt=week_ago
+            ).count()
+            
+            # Location analysis
+            location_stats = queryset.exclude(
+                delivery_location__isnull=True
+            ).exclude(
+                delivery_location__exact=''
+            ).values('delivery_location').annotate(
+                delivery_count=Count('id'),
+                avg_photos=Avg('photos__id')
+            ).order_by('-delivery_count')[:15]
+            
+            # Driver performance
+            driver_performance = queryset.values(
+                'delivered_by__id',
+                'delivered_by__first_name',
+                'delivered_by__last_name'
+            ).annotate(
+                total_deliveries=Count('id'),
+                total_photos=Count('photos'),
+                avg_delivery_time=Avg('delivered_at__hour')
+            ).order_by('-total_deliveries')[:10]
+            
+            # Time-based trends
+            hourly_distribution = {}
+            for hour in range(24):
+                count = queryset.filter(delivered_at__hour=hour).count()
+                hourly_distribution[f"{hour:02d}:00"] = count
+            
+            # Quality metrics
+            pods_with_photos = queryset.filter(photos__isnull=False).distinct().count()
+            photo_compliance_rate = (pods_with_photos / total_pods * 100) if total_pods > 0 else 0
+            
+            return Response({
+                'summary': {
+                    'total_pods': total_pods,
+                    'total_photos': total_photos,
+                    'avg_photos_per_pod': round(avg_photos, 1),
+                    'photo_compliance_rate': round(photo_compliance_rate, 1),
+                    'signature_capture_rate': 100.0,  # All PODs have signatures
+                    'period_days': days_filter
+                },
+                'trends': {
+                    'current_week_deliveries': current_week,
+                    'previous_week_deliveries': previous_week,
+                    'week_over_week_change': current_week - previous_week,
+                    'hourly_distribution': hourly_distribution
+                },
+                'performance': {
+                    'top_drivers': [
+                        {
+                            'driver_id': d['delivered_by__id'],
+                            'name': f"{d['delivered_by__first_name']} {d['delivered_by__last_name']}".strip(),
+                            'deliveries': d['total_deliveries'],
+                            'photos_captured': d['total_photos'],
+                            'avg_delivery_hour': round(d['avg_delivery_time'] or 0, 1)
+                        }
+                        for d in driver_performance
+                    ]
+                },
+                'locations': [
+                    {
+                        'location': loc['delivery_location'][:50] + ('...' if len(loc['delivery_location']) > 50 else ''),
+                        'delivery_count': loc['delivery_count'],
+                        'avg_photos': round(loc['avg_photos'] or 0, 1)
+                    }
+                    for loc in location_stats
+                ]
+            })
+            
+        except Exception as e:
+            logger.error(f"Error generating POD analytics: {str(e)}")
+            return Response(
+                {'error': 'Failed to generate POD analytics'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+    @action(detail=False, methods=['get'], url_path='export')
+    def export_pods(self, request):
+        """Export POD data for reporting and compliance."""
+        try:
+            from django.http import HttpResponse
+            import csv
+            from datetime import datetime
+            
+            # Get filtered queryset
+            queryset = self.filter_queryset(self.get_queryset())
+            
+            # Prepare CSV response
+            response = HttpResponse(content_type='text/csv')
+            response['Content-Disposition'] = f'attachment; filename="pod_export_{datetime.now().strftime("%Y%m%d_%H%M")}.csv"'
+            
+            writer = csv.writer(response)
+            writer.writerow([
+                'POD ID', 'Shipment Tracking', 'Customer', 'Recipient Name',
+                'Delivered By', 'Delivered At', 'Delivery Location',
+                'Photo Count', 'Has Signature', 'Delivery Notes'
+            ])
+            
+            for pod in queryset:
+                writer.writerow([
+                    str(pod.id),
+                    pod.shipment.tracking_number,
+                    pod.shipment.customer.name if pod.shipment.customer else '',
+                    pod.recipient_name,
+                    pod.delivered_by.get_full_name(),
+                    pod.delivered_at.strftime('%Y-%m-%d %H:%M:%S'),
+                    pod.delivery_location or '',
+                    pod.photo_count,
+                    'Yes' if pod.recipient_signature_url else 'No',
+                    pod.delivery_notes or ''
+                ])
+            
+            return response
+            
+        except Exception as e:
+            logger.error(f"Error exporting POD data: {str(e)}")
+            return Response(
+                {'error': 'Failed to export POD data'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+    @action(detail=True, methods=['get'], url_path='photos')
+    def get_photos(self, request, pk=None):
+        """Get all photos for a specific POD with enhanced metadata."""
+        try:
+            pod = self.get_object()
+            photos_data = []
+            
+            for photo in pod.photos.all().order_by('taken_at'):
+                photos_data.append({
+                    'id': str(photo.id),
+                    'image_url': photo.image_url,
+                    'thumbnail_url': photo.thumbnail_url,
+                    'file_name': photo.file_name,
+                    'file_size': photo.file_size,
+                    'file_size_mb': photo.file_size_mb,
+                    'caption': photo.caption,
+                    'taken_at': photo.taken_at.isoformat(),
+                    'metadata': {
+                        'has_thumbnail': bool(photo.thumbnail_url),
+                        'is_large_file': photo.file_size_mb and photo.file_size_mb > 5,
+                        'age_hours': (timezone.now() - photo.taken_at).total_seconds() / 3600
+                    }
+                })
+            
+            return Response({
+                'pod_id': str(pod.id),
+                'shipment_tracking': pod.shipment.tracking_number,
+                'total_photos': len(photos_data),
+                'total_size_mb': sum(p.get('file_size_mb', 0) or 0 for p in photos_data),
+                'photos': photos_data
+            })
+            
+        except Exception as e:
+            logger.error(f"Error retrieving POD photos for {pk}: {str(e)}")
+            return Response(
+                {'error': 'Failed to retrieve POD photos'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )

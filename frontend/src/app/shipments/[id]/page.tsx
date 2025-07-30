@@ -40,6 +40,7 @@ import { ProofOfDelivery } from "@/shared/components/delivery/ProofOfDelivery";
 import DocumentGenerator from "@/shared/components/documents/DocumentGenerator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/components/ui/tabs";
 import { ShipmentEmergencyPlanViewer } from "@/shared/components/epg/ShipmentEmergencyPlanViewer";
+import { ConsolidatedReportGenerator } from "@/components/reports/ConsolidatedReportGenerator";
 import { simulatedDataService } from "@/shared/services/simulatedDataService";
 import Link from "next/link";
 
@@ -133,7 +134,6 @@ export default function ShipmentDetailPage({
   const [shipment, setShipment] = useState<any>(null);
   const [activeTab, setActiveTab] = useState("info");
   const [notFound, setNotFound] = useState(false);
-  const [isDownloadingReport, setIsDownloadingReport] = useState(false);
 
   useEffect(() => {
     params.then((p) => {
@@ -157,41 +157,6 @@ export default function ShipmentDetailPage({
     });
   }, [params]);
 
-  const handleDownloadConsolidatedReport = async () => {
-    if (!shipmentId) return;
-    
-    setIsDownloadingReport(true);
-    try {
-      // Mock API call - in real implementation, this would call the actual API
-      // const response = await fetch(`/api/shipments/${shipmentId}/generate-consolidated-report/`, {
-      //   method: 'GET',
-      //   headers: {
-      //     'Authorization': `Bearer ${getAuthToken()}`,
-      //     'Content-Type': 'application/json',
-      //   },
-      // });
-      
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      // Mock successful download
-      const element = document.createElement('a');
-      element.href = '#'; // In real implementation: URL.createObjectURL(blob)
-      element.download = `consolidated_report_${shipmentId}.pdf`;
-      document.body.appendChild(element);
-      element.click();
-      document.body.removeChild(element);
-      
-      // Show success message (you might want to add a toast notification here)
-      console.log('Consolidated report downloaded successfully');
-      
-    } catch (error) {
-      console.error('Error downloading consolidated report:', error);
-      // Handle error (show error message to user)
-    } finally {
-      setIsDownloadingReport(false);
-    }
-  };
 
   if (!shipmentId) {
     return (
@@ -284,15 +249,11 @@ export default function ShipmentDetailPage({
             >
               {shipment.status.replace("_", " ")}
             </Badge>
-            <Button 
-              variant="outline" 
-              onClick={handleDownloadConsolidatedReport}
-              disabled={isDownloadingReport}
-              className="flex items-center gap-2"
-            >
-              <Download className="h-4 w-4" />
-              {isDownloadingReport ? 'Generating...' : 'Download Report'}
-            </Button>
+            <ConsolidatedReportGenerator
+              shipmentId={shipmentId}
+              trackingNumber={shipment.tracking_number}
+              size="md"
+            />
             <Button className="bg-[#153F9F] hover:bg-[#153F9F]/90">
               Start trip
             </Button>

@@ -1,16 +1,63 @@
 # incidents/serializers.py
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
-from .models import Incident, IncidentType, IncidentDocument, IncidentUpdate, CorrectiveAction
+from django.utils import timezone
+from .models import (
+    Incident, IncidentType, IncidentDocument, IncidentUpdate, 
+    CorrectiveAction, IncidentDangerousGood
+)
 
 User = get_user_model()
 
 
 class UserBasicSerializer(serializers.ModelSerializer):
     """Basic user information for nested serialization"""
+    full_name = serializers.SerializerMethodField()
+    
     class Meta:
         model = User
-        fields = ['id', 'email', 'first_name', 'last_name', 'role']
+        fields = ['id', 'email', 'first_name', 'last_name', 'role', 'full_name']
+    
+    def get_full_name(self, obj):
+        return obj.get_full_name()
+
+
+class DangerousGoodBasicSerializer(serializers.Serializer):
+    """Basic dangerous good information for incident serialization"""
+    id = serializers.UUIDField()
+    un_number = serializers.CharField()
+    proper_shipping_name = serializers.CharField()
+    hazard_class = serializers.CharField()
+    packing_group = serializers.CharField()
+
+
+class IncidentDangerousGoodSerializer(serializers.ModelSerializer):
+    """Serializer for dangerous goods involved in incidents"""
+    dangerous_good = DangerousGoodBasicSerializer(read_only=True)
+    dangerous_good_id = serializers.UUIDField(write_only=True)
+    
+    class Meta:
+        model = IncidentDangerousGood
+        fields = [
+            'id', 'dangerous_good', 'dangerous_good_id',
+            'quantity_involved', 'quantity_unit', 'packaging_type',
+            'release_amount', 'containment_status'
+        ]
+    
+    def validate_dangerous_good_id(self, value):
+        try:
+            from dangerous_goods.models import DangerousGood
+            DangerousGood.objects.get(id=value)
+            return value
+        except DangerousGood.DoesNotExist:
+            raise serializers.ValidationError("Dangerous good not found")
+
+
+class CompanyBasicSerializer(serializers.Serializer):
+    """Basic company information for incident serialization"""
+    id = serializers.UUIDField()
+    name = serializers.CharField()
+    company_type = serializers.CharField()
 
 
 class IncidentTypeSerializer(serializers.ModelSerializer):
@@ -98,16 +145,24 @@ class IncidentListSerializer(serializers.ModelSerializer):
     incident_type = IncidentTypeSerializer(read_only=True)
     reporter = UserBasicSerializer(read_only=True)
     assigned_to = UserBasicSerializer(read_only=True)
+    company = CompanyBasicSerializer(read_only=True)
     updates_count = serializers.SerializerMethodField()
     documents_count = serializers.SerializerMethodField()
+    dangerous_goods_count = serializers.SerializerMethodField()
+    severity_display = serializers.SerializerMethodField()
+    is_overdue = serializers.SerializerMethodField()
+    requires_regulatory_notification = serializers.SerializerMethodField()
     
     class Meta:
         model = Incident
         fields = [
-            'id', 'incident_number', 'title', 'incident_type', 'location',
-            'occurred_at', 'reported_at', 'reporter', 'assigned_to',
+            'id', 'incident_number', 'title', 'incident_type', 'location', 'address',
+            'occurred_at', 'reported_at', 'reporter', 'assigned_to', 'company',
             'status', 'priority', 'injuries_count', 'environmental_impact',
-            'updates_count', 'documents_count', 'created_at'
+            'authority_notified', 'emergency_services_called', 'quality_impact',
+            'updates_count', 'documents_count', 'dangerous_goods_count',
+            'severity_display', 'is_overdue', 'requires_regulatory_notification',
+            'created_at'
         ]
     
     def get_updates_count(self, obj):
@@ -115,6 +170,18 @@ class IncidentListSerializer(serializers.ModelSerializer):
     
     def get_documents_count(self, obj):
         return obj.documents.count()
+    
+    def get_dangerous_goods_count(self, obj):
+        return obj.dangerous_goods_involved.count()
+    
+    def get_severity_display(self, obj):
+        return obj.get_severity_display()
+    
+    def get_is_overdue(self, obj):
+        return obj.is_overdue()
+    
+    def get_requires_regulatory_notification(self, obj):
+        return obj.requires_regulatory_notification()
 
 
 class IncidentDetailSerializer(serializers.ModelSerializer):
@@ -122,6 +189,7 @@ class IncidentDetailSerializer(serializers.ModelSerializer):
     incident_type = IncidentTypeSerializer(read_only=True)
     incident_type_id = serializers.UUIDField(write_only=True, required=True)
     
+    company = CompanyBasicSerializer(read_only=True)
     reporter = UserBasicSerializer(read_only=True)
     assigned_to = UserBasicSerializer(read_only=True)
     assigned_to_id = serializers.UUIDField(write_only=True, required=False, allow_null=True)
@@ -134,9 +202,27 @@ class IncidentDetailSerializer(serializers.ModelSerializer):
         allow_empty=True
     )
     
+    investigators = UserBasicSerializer(many=True, read_only=True)
+    investigator_ids = serializers.ListField(
+        child=serializers.UUIDField(),
+        write_only=True,
+        required=False,
+        allow_empty=True
+    )
+    
+    # Dangerous goods information
+    dangerous_goods_details = serializers.SerializerMethodField()
+    dangerous_goods_involved = DangerousGoodBasicSerializer(many=True, read_only=True)
+    
     documents = IncidentDocumentSerializer(many=True, read_only=True)
     updates = IncidentUpdateSerializer(many=True, read_only=True)
     corrective_actions = CorrectiveActionSerializer(many=True, read_only=True)
+    
+    # Computed fields
+    severity_display = serializers.SerializerMethodField()
+    duration_open = serializers.SerializerMethodField()
+    is_overdue = serializers.SerializerMethodField()
+    requires_regulatory_notification = serializers.SerializerMethodField()
     
     # Related entities
     shipment_info = serializers.SerializerMethodField()
@@ -146,19 +232,26 @@ class IncidentDetailSerializer(serializers.ModelSerializer):
         model = Incident
         fields = [
             'id', 'incident_number', 'title', 'description',
-            'incident_type', 'incident_type_id',
-            'location', 'coordinates', 'occurred_at', 'reported_at',
+            'incident_type', 'incident_type_id', 'company',
+            'location', 'address', 'coordinates', 'location_point',
+            'occurred_at', 'reported_at',
             'reporter', 'assigned_to', 'assigned_to_id',
-            'witnesses', 'witness_ids',
+            'witnesses', 'witness_ids', 'investigators', 'investigator_ids',
             'status', 'priority',
             'injuries_count', 'property_damage_estimate', 'environmental_impact',
+            'authority_notified', 'authority_reference', 'regulatory_deadline',
+            'root_cause', 'contributing_factors',
+            'emergency_services_called', 'emergency_response_time',
+            'safety_officer_notified', 'quality_impact', 'weather_conditions',
             'resolution_notes', 'resolved_at', 'closed_at',
+            'dangerous_goods_involved', 'dangerous_goods_details',
+            'severity_display', 'duration_open', 'is_overdue', 'requires_regulatory_notification',
             'shipment', 'vehicle', 'shipment_info', 'vehicle_info',
             'metadata', 'created_at', 'updated_at',
             'documents', 'updates', 'corrective_actions'
         ]
         read_only_fields = [
-            'incident_number', 'reporter', 'reported_at', 
+            'incident_number', 'reporter', 'reported_at', 'company',
             'created_at', 'updated_at'
         ]
     
@@ -181,6 +274,44 @@ class IncidentDetailSerializer(serializers.ModelSerializer):
                 'driver': obj.vehicle.driver.get_full_name() if obj.vehicle.driver else None
             }
         return None
+    
+    def get_dangerous_goods_details(self, obj):
+        """Get detailed dangerous goods information with quantities"""
+        details = []
+        for incident_dg in IncidentDangerousGood.objects.filter(incident=obj).select_related('dangerous_good'):
+            details.append({
+                'id': incident_dg.id,
+                'dangerous_good': {
+                    'id': incident_dg.dangerous_good.id,
+                    'un_number': incident_dg.dangerous_good.un_number,
+                    'proper_shipping_name': incident_dg.dangerous_good.proper_shipping_name,
+                    'hazard_class': incident_dg.dangerous_good.hazard_class,
+                    'packing_group': getattr(incident_dg.dangerous_good, 'packing_group', None),
+                },
+                'quantity_involved': incident_dg.quantity_involved,
+                'quantity_unit': incident_dg.quantity_unit,
+                'packaging_type': incident_dg.packaging_type,
+                'release_amount': incident_dg.release_amount,
+                'containment_status': incident_dg.containment_status,
+            })
+        return details
+    
+    def get_severity_display(self, obj):
+        return obj.get_severity_display()
+    
+    def get_duration_open(self, obj):
+        duration = obj.get_duration_open()
+        return {
+            'days': duration.days,
+            'hours': duration.seconds // 3600,
+            'total_hours': int(duration.total_seconds() // 3600)
+        }
+    
+    def get_is_overdue(self, obj):
+        return obj.is_overdue()
+    
+    def get_requires_regulatory_notification(self, obj):
+        return obj.requires_regulatory_notification()
     
     def validate_incident_type_id(self, value):
         try:
@@ -236,10 +367,11 @@ class IncidentDetailSerializer(serializers.ModelSerializer):
     
     def create(self, validated_data):
         witness_ids = validated_data.pop('witness_ids', [])
+        investigator_ids = validated_data.pop('investigator_ids', [])
         incident_type_id = validated_data.pop('incident_type_id')
         assigned_to_id = validated_data.pop('assigned_to_id', None)
         
-        # Set reporter to current user
+        # Set reporter to current user and company (will be set by view)
         validated_data['reporter'] = self.context['request'].user
         validated_data['incident_type_id'] = incident_type_id
         
@@ -248,9 +380,12 @@ class IncidentDetailSerializer(serializers.ModelSerializer):
         
         incident = Incident.objects.create(**validated_data)
         
-        # Set witnesses
+        # Set witnesses and investigators
         if witness_ids:
             incident.witnesses.set(witness_ids)
+            
+        if investigator_ids:
+            incident.investigators.set(investigator_ids)
         
         # Create initial update
         IncidentUpdate.objects.create(
@@ -265,6 +400,7 @@ class IncidentDetailSerializer(serializers.ModelSerializer):
     
     def update(self, instance, validated_data):
         witness_ids = validated_data.pop('witness_ids', None)
+        investigator_ids = validated_data.pop('investigator_ids', None)
         incident_type_id = validated_data.pop('incident_type_id', None)
         assigned_to_id = validated_data.pop('assigned_to_id', None)
         
@@ -283,9 +419,12 @@ class IncidentDetailSerializer(serializers.ModelSerializer):
             setattr(instance, attr, value)
         instance.save()
         
-        # Update witnesses
+        # Update witnesses and investigators
         if witness_ids is not None:
             instance.witnesses.set(witness_ids)
+            
+        if investigator_ids is not None:
+            instance.investigators.set(investigator_ids)
         
         # Create update records for significant changes
         current_user = self.context['request'].user

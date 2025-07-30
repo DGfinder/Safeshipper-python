@@ -448,3 +448,303 @@ class EmergencyIncidentViewSet(viewsets.ModelViewSet):
             .values_list('response_effectiveness', 'count')
         )
         return Response(effectiveness_stats)
+
+
+# Additional ViewSets for EPG Management Dashboard
+
+class EPGComplianceViewSet(viewsets.ViewSet):
+    """
+    ViewSet for EPG compliance management and oversight.
+    Designed for compliance officers to monitor and manage EPG coverage.
+    """
+    permission_classes = [permissions.IsAuthenticated]
+    
+    @action(detail=False, methods=['get'], url_path='coverage-gaps')
+    def coverage_gaps(self, request):
+        """Identify dangerous goods with missing or inadequate EPG coverage"""
+        from dangerous_goods.models import DangerousGood
+        from django.db.models import Q, Count, Case, When, IntegerField
+        
+        # Get all dangerous goods
+        dangerous_goods = DangerousGood.objects.all()
+        
+        coverage_gaps = []
+        
+        for dg in dangerous_goods:
+            # Check for EPG coverage
+            epgs = EmergencyProcedureGuide.objects.filter(
+                Q(dangerous_good=dg) | 
+                Q(dangerous_good__isnull=True, hazard_class=dg.hazard_class),
+                status='ACTIVE'
+            )
+            
+            # Determine gap type and severity
+            gap_type = None
+            severity = 'LOW'
+            shipments_affected = 0
+            
+            if not epgs.exists():
+                gap_type = 'MISSING_EPG'
+                severity = 'CRITICAL' if dg.hazard_class in ['1', '2', '6', '7'] else 'HIGH'
+            else:
+                # Check if EPGs are outdated
+                outdated_epgs = epgs.filter(
+                    review_date__lt=timezone.now().date() - timedelta(days=90)
+                )
+                if outdated_epgs.exists():
+                    gap_type = 'OUTDATED_EPG'
+                    severity = 'MEDIUM'
+                
+                # Check for incomplete EPGs (missing critical sections)
+                incomplete_epgs = epgs.filter(
+                    Q(immediate_actions='') | 
+                    Q(notification_requirements='') |
+                    Q(personal_protection='')
+                )
+                if incomplete_epgs.exists() and not gap_type:
+                    gap_type = 'INCOMPLETE_EPG'
+                    severity = 'LOW'
+            
+            # Count affected shipments (mock calculation)
+            try:
+                from shipments.models import Shipment
+                from manifests.models import ConsignmentItem
+                shipments_affected = ConsignmentItem.objects.filter(
+                    dangerous_good=dg,
+                    shipment__status__in=['PENDING', 'IN_TRANSIT', 'OUT_FOR_DELIVERY']
+                ).count()
+            except:
+                shipments_affected = 0
+            
+            # Only include if there's a gap
+            if gap_type:
+                coverage_gaps.append({
+                    'id': f"gap_{dg.id}",
+                    'dangerous_good_id': str(dg.id),
+                    'un_number': dg.un_number,
+                    'proper_shipping_name': dg.proper_shipping_name,
+                    'hazard_class': dg.hazard_class,
+                    'gap_type': gap_type,
+                    'severity': severity,
+                    'identified_date': timezone.now().isoformat(),
+                    'shipments_affected': shipments_affected,
+                    'regulatory_requirements': [
+                        'ADG Code 7.9',
+                        'UN Recommendations',
+                        'IATA DGR' if dg.hazard_class in ['1', '2', '7'] else 'ADG Code'
+                    ]
+                })
+        
+        return Response(coverage_gaps)
+    
+    @action(detail=False, methods=['get'], url_path='usage-analytics')
+    def usage_analytics(self, request):
+        """Get EPG usage analytics and effectiveness metrics"""
+        from django.db.models import Count, Avg
+        
+        # Get EPG usage data
+        epgs = EmergencyProcedureGuide.objects.filter(status='ACTIVE')
+        
+        usage_data = []
+        for epg in epgs:
+            # Count emergency plans that reference this EPG
+            plans_count = ShipmentEmergencyPlan.objects.filter(
+                referenced_epgs=epg
+            ).count()
+            
+            # Count incidents that used this EPG
+            incidents_count = EmergencyIncident.objects.filter(
+                emergency_plan__referenced_epgs=epg
+            ).count()
+            
+            # Calculate effectiveness score (mock calculation)
+            effectiveness_score = min(95, 60 + (plans_count * 2) + (incidents_count * 5))
+            
+            # Get last usage date
+            last_plan = ShipmentEmergencyPlan.objects.filter(
+                referenced_epgs=epg
+            ).order_by('-generated_at').first()
+            
+            last_used = last_plan.generated_at.isoformat() if last_plan else epg.created_at.isoformat()
+            
+            usage_data.append({
+                'epg_id': str(epg.id),
+                'epg_number': epg.epg_number,
+                'title': epg.title,
+                'usage_count': plans_count + incidents_count,
+                'last_used': last_used,
+                'shipments_generated': plans_count,
+                'incidents_referenced': incidents_count,
+                'effectiveness_score': effectiveness_score,
+                'update_frequency': len(epg.regulatory_references) + 1
+            })
+        
+        # Sort by usage count
+        usage_data.sort(key=lambda x: x['usage_count'], reverse=True)
+        
+        return Response(usage_data)
+    
+    @action(detail=False, methods=['get'], url_path='compliance-metrics')
+    def compliance_metrics(self, request):
+        """Get comprehensive compliance metrics for officers"""
+        user = request.user
+        
+        # Officer-specific metrics
+        reviews_completed = EmergencyProcedureGuide.objects.filter(
+            created_by=user,
+            status__in=['ACTIVE', 'ARCHIVED']
+        ).count()
+        
+        epgs_created = EmergencyProcedureGuide.objects.filter(
+            created_by=user
+        ).count()
+        
+        epgs_updated = EmergencyProcedureGuide.objects.filter(
+            created_by=user,
+            updated_at__gte=timezone.now() - timedelta(days=30)
+        ).count()
+        
+        # Plans reviewed/approved
+        plans_reviewed = ShipmentEmergencyPlan.objects.filter(
+            reviewed_by=user
+        ).count()
+        
+        plans_approved = ShipmentEmergencyPlan.objects.filter(
+            approved_by=user
+        ).count()
+        
+        # Calculate average review time (mock calculation)
+        avg_review_time = 2.5  # hours
+        
+        metrics = {
+            'total_reviews_completed': reviews_completed,
+            'avg_review_time_hours': avg_review_time,
+            'epgs_created': epgs_created,
+            'epgs_updated': epgs_updated,
+            'plans_reviewed': plans_reviewed,
+            'plans_approved': plans_approved,
+            'compliance_improvements': max(0, epgs_updated - 5),
+            'regulatory_updates_processed': epgs_updated,
+            'period_days': 30
+        }
+        
+        return Response(metrics)
+    
+    @action(detail=False, methods=['get'], url_path='regulatory-updates')
+    def regulatory_updates(self, request):
+        """Get pending regulatory updates and compliance changes"""
+        # Mock regulatory updates - in production this would come from regulatory databases
+        updates = [
+            {
+                'id': 'reg_001',
+                'title': 'ADG Code 2024 Amendment - Class 3 Transport Requirements',
+                'description': 'Updated requirements for flammable liquid transport containers',
+                'effective_date': (timezone.now() + timedelta(days=30)).date().isoformat(),
+                'priority': 'HIGH',
+                'affected_hazard_classes': ['3'],
+                'epgs_to_update': EmergencyProcedureGuide.objects.filter(
+                    hazard_class='3', status='ACTIVE'
+                ).count(),
+                'created_date': timezone.now().date().isoformat(),
+                'status': 'PENDING_REVIEW'
+            },
+            {
+                'id': 'reg_002',
+                'title': 'UN Model Regulations 2024 - Emergency Response Updates',
+                'description': 'Updated emergency response procedures for radioactive materials',
+                'effective_date': (timezone.now() + timedelta(days=60)).date().isoformat(),
+                'priority': 'CRITICAL',
+                'affected_hazard_classes': ['7'],
+                'epgs_to_update': EmergencyProcedureGuide.objects.filter(
+                    hazard_class='7', status='ACTIVE'
+                ).count(),
+                'created_date': (timezone.now() - timedelta(days=5)).date().isoformat(),
+                'status': 'UNDER_REVIEW'
+            }
+        ]
+        
+        return Response(updates)
+    
+    @action(detail=False, methods=['post'], url_path='bulk-update-review-dates')
+    def bulk_update_review_dates(self, request):
+        """Bulk update review dates for multiple EPGs"""
+        epg_ids = request.data.get('epg_ids', [])
+        new_review_date = request.data.get('review_date')
+        
+        if not epg_ids or not new_review_date:
+            return Response(
+                {'error': 'epg_ids and review_date are required'}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        try:
+            review_date = datetime.strptime(new_review_date, '%Y-%m-%d').date()
+        except ValueError:
+            return Response(
+                {'error': 'Invalid date format. Use YYYY-MM-DD'}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        updated_count = EmergencyProcedureGuide.objects.filter(
+            id__in=epg_ids
+        ).update(review_date=review_date)
+        
+        logger.info(f"Bulk updated review dates for {updated_count} EPGs by {request.user}")
+        
+        return Response({
+            'updated_count': updated_count,
+            'new_review_date': new_review_date
+        })
+    
+    @action(detail=False, methods=['get'], url_path='audit-trail')
+    def audit_trail(self, request):
+        """Get audit trail for EPG changes and compliance actions"""
+        days = int(request.query_params.get('days', 30))
+        cutoff_date = timezone.now() - timedelta(days=days)
+        
+        # Get recent EPG changes
+        epg_changes = EmergencyProcedureGuide.objects.filter(
+            updated_at__gte=cutoff_date
+        ).select_related('created_by').order_by('-updated_at')[:50]
+        
+        # Get recent plan changes
+        plan_changes = ShipmentEmergencyPlan.objects.filter(
+            generated_at__gte=cutoff_date
+        ).select_related('generated_by', 'reviewed_by', 'approved_by').order_by('-generated_at')[:25]
+        
+        audit_events = []
+        
+        # Add EPG changes to audit trail
+        for epg in epg_changes:
+            audit_events.append({
+                'id': f"epg_{epg.id}",
+                'type': 'EPG_UPDATE',
+                'timestamp': epg.updated_at.isoformat(),
+                'user': epg.created_by.get_full_name() if epg.created_by else 'System',
+                'description': f"Updated EPG {epg.epg_number} - {epg.title}",
+                'object_id': str(epg.id),
+                'object_type': 'EmergencyProcedureGuide',
+                'status': epg.status
+            })
+        
+        # Add plan changes to audit trail
+        for plan in plan_changes:
+            audit_events.append({
+                'id': f"plan_{plan.id}",
+                'type': 'PLAN_GENERATED',
+                'timestamp': plan.generated_at.isoformat(),
+                'user': plan.generated_by.get_full_name() if plan.generated_by else 'System',
+                'description': f"Generated emergency plan {plan.plan_number}",
+                'object_id': str(plan.id),
+                'object_type': 'ShipmentEmergencyPlan',
+                'status': plan.status
+            })
+        
+        # Sort by timestamp
+        audit_events.sort(key=lambda x: x['timestamp'], reverse=True)
+        
+        return Response({
+            'audit_events': audit_events[:100],  # Limit to 100 most recent
+            'period_days': days,
+            'total_events': len(audit_events)
+        })

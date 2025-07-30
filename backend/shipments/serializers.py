@@ -1,7 +1,8 @@
 # shipments/serializers.py
 from rest_framework import serializers
 from django.db import transaction
-from .models import Shipment, ConsignmentItem, ShipmentStatus, ShipmentFeedback  # ProofOfDelivery, ProofOfDeliveryPhoto
+from .models import Shipment, ConsignmentItem, ShipmentStatus, ShipmentFeedback
+from .proof_of_delivery import ProofOfDelivery, ProofOfDeliveryPhoto
 from dangerous_goods.models import DangerousGood  # Re-enabled after dangerous_goods app re-enabled
 from shared.validation_service import SafeShipperValidationMixin
 
@@ -257,83 +258,148 @@ class ShipmentListSerializer(serializers.ModelSerializer):
         return obj.items.filter(is_dangerous_good=True).exists()
 
 
-# class ProofOfDeliveryPhotoSerializer(serializers.ModelSerializer):
-#     """Serializer for proof of delivery photos"""
-#     image_file = serializers.ImageField(write_only=True, required=False)
-#     file_size_mb = serializers.ReadOnlyField()
-#     
-#     class Meta:
-#         model = ProofOfDeliveryPhoto
-#         fields = [
-#             'id', 'image_url', 'thumbnail_url', 'file_name',
-#             'file_size', 'file_size_mb', 'caption', 'taken_at', 'image_file'
-#         ]
-#         read_only_fields = ['id', 'taken_at', 'image_url', 'thumbnail_url']
-#     
-#     def create(self, validated_data):
-#         """Handle image file upload and generate URLs"""
-#         image_file = validated_data.pop('image_file', None)
-#         
-#         if image_file:
-#             validated_data['file_name'] = image_file.name
-#             validated_data['file_size'] = image_file.size
-#             # Placeholder URL - in production this would be the S3 URL
-#             validated_data['image_url'] = f"/media/pod_photos/{image_file.name}"
-#             
-#         return super().create(validated_data)
+class ProofOfDeliveryPhotoSerializer(serializers.ModelSerializer):
+    """Enhanced serializer for proof of delivery photos with metadata"""
+    image_file = serializers.ImageField(write_only=True, required=False)
+    file_size_mb = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = ProofOfDeliveryPhoto
+        fields = [
+            'id', 'image_url', 'thumbnail_url', 'file_name',
+            'file_size', 'file_size_mb', 'caption', 'taken_at', 'image_file'
+        ]
+        read_only_fields = ['id', 'taken_at', 'image_url', 'thumbnail_url']
+    
+    def get_file_size_mb(self, obj):
+        """Return file size in MB"""
+        return obj.file_size_mb
+    
+    def create(self, validated_data):
+        """Handle image file upload and generate URLs"""
+        image_file = validated_data.pop('image_file', None)
+        
+        if image_file:
+            validated_data['file_name'] = image_file.name
+            validated_data['file_size'] = image_file.size
+            # In production this would be the S3 URL
+            validated_data['image_url'] = f"/media/pod_photos/{image_file.name}"
+            
+        return super().create(validated_data)
 
 
-# class ProofOfDeliverySerializer(serializers.ModelSerializer):
-#     """Serializer for proof of delivery"""
-#     photos = ProofOfDeliveryPhotoSerializer(many=True, read_only=True)
-#     delivered_by_name = serializers.CharField(source='delivered_by.get_full_name', read_only=True)
-#     photo_count = serializers.ReadOnlyField()
-#     
-#     class Meta:
-#         model = ProofOfDelivery
-#         fields = [
-#             'id', 'shipment', 'delivered_by', 'delivered_by_name', 'delivered_at',
-#             'recipient_name', 'recipient_signature_url', 'delivery_notes',
-#             'delivery_location', 'photos', 'photo_count', 'created_at', 'updated_at'
-#         ]
-#         read_only_fields = ['id', 'delivered_at', 'created_at', 'updated_at']
+class ProofOfDeliverySerializer(serializers.ModelSerializer):
+    """Enhanced serializer for proof of delivery with shipment details"""
+    photos = ProofOfDeliveryPhotoSerializer(many=True, read_only=True)
+    delivered_by_name = serializers.CharField(source='delivered_by.get_full_name', read_only=True)
+    delivered_by_email = serializers.CharField(source='delivered_by.email', read_only=True)
+    photo_count = serializers.SerializerMethodField()
+    shipment_details = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = ProofOfDelivery
+        fields = [
+            'id', 'shipment', 'shipment_details', 'delivered_by', 'delivered_by_name', 
+            'delivered_by_email', 'delivered_at', 'recipient_name', 'recipient_signature_url', 
+            'delivery_notes', 'delivery_location', 'photos', 'photo_count', 
+            'created_at', 'updated_at'
+        ]
+        read_only_fields = ['id', 'delivered_at', 'created_at', 'updated_at']
+    
+    def get_photo_count(self, obj):
+        """Return the count of photos"""
+        return obj.photo_count
+    
+    def get_shipment_details(self, obj):
+        """Return basic shipment information"""
+        return {
+            'id': str(obj.shipment.id),
+            'tracking_number': obj.shipment.tracking_number,
+            'customer_name': obj.shipment.customer.name if obj.shipment.customer else None,
+            'status': obj.shipment.status,
+            'origin_location': obj.shipment.origin_location,
+            'destination_location': obj.shipment.destination_location
+        }
 
 
-# class ProofOfDeliveryCreateSerializer(serializers.ModelSerializer):
-#     """Serializer for creating proof of delivery with signature and photos"""
-#     photos_data = serializers.ListField(
-#         child=serializers.DictField(),
-#         write_only=True,
-#         required=False
-#     )
-#     signature_file = serializers.CharField(write_only=True, required=True)  # Base64 encoded signature
-#     
-#     class Meta:
-#         model = ProofOfDelivery
-#         fields = [
-#             'shipment', 'recipient_name', 'delivery_notes',
-#             'delivery_location', 'signature_file', 'photos_data'
-#         ]
-#     
-#     def create(self, validated_data):
-#         photos_data = validated_data.pop('photos_data', [])
-#         signature_file = validated_data.pop('signature_file')
-#         
-#         # Set the delivered_by from request context
-#         validated_data['delivered_by'] = self.context['request'].user
-#         
-#         # Handle signature - in production this would upload to S3
-#         validated_data['recipient_signature_url'] = f"data:image/png;base64,{signature_file}"
-#         
-#         # Create the POD
-#         pod = ProofOfDelivery.objects.create(**validated_data)
-#         
-#         # Create photos
-#         for photo_data in photos_data:
-#             photo_data['proof_of_delivery'] = pod
-#             ProofOfDeliveryPhoto.objects.create(**photo_data)
-#         
-#         return pod
+class ProofOfDeliveryCreateSerializer(serializers.ModelSerializer):
+    """Enhanced serializer for creating proof of delivery with comprehensive validation"""
+    photos_data = serializers.ListField(
+        child=serializers.DictField(),
+        write_only=True,
+        required=False,
+        help_text="List of photo data objects with image_url, file_name, etc."
+    )
+    signature_file = serializers.CharField(
+        write_only=True, 
+        required=True,
+        help_text="Base64 encoded signature data"
+    )
+    
+    class Meta:
+        model = ProofOfDelivery
+        fields = [
+            'shipment', 'recipient_name', 'delivery_notes',
+            'delivery_location', 'signature_file', 'photos_data'
+        ]
+    
+    def validate_recipient_name(self, value):
+        """Validate recipient name"""
+        if not value or len(value.strip()) < 2:
+            raise serializers.ValidationError("Recipient name must be at least 2 characters long")
+        return value.strip()
+    
+    def validate_signature_file(self, value):
+        """Validate signature data"""
+        if not value:
+            raise serializers.ValidationError("Signature is required")
+        
+        # Basic validation for base64 format
+        if not (value.startswith('data:image') or len(value) > 100):
+            raise serializers.ValidationError("Invalid signature format")
+        
+        return value
+    
+    def validate_photos_data(self, value):
+        """Validate photos data"""
+        if len(value) > 10:
+            raise serializers.ValidationError("Maximum 10 photos allowed per POD")
+        
+        for photo in value:
+            if not photo.get('image_url'):
+                raise serializers.ValidationError("Each photo must have an image_url")
+        
+        return value
+    
+    def create(self, validated_data):
+        """Create POD using the dedicated service"""
+        from .pod_capture_service import PODCaptureService
+        
+        photos_data = validated_data.pop('photos_data', [])
+        signature_file = validated_data.pop('signature_file')
+        shipment = validated_data.pop('shipment')
+        
+        # Prepare POD data for service
+        pod_data = {
+            'recipient_name': validated_data.get('recipient_name'),
+            'delivery_notes': validated_data.get('delivery_notes', ''),
+            'delivery_location': validated_data.get('delivery_location', ''),
+            'signature_file': signature_file,
+            'photos_data': photos_data
+        }
+        
+        # Use the POD capture service
+        result = PODCaptureService.submit_proof_of_delivery(
+            shipment_id=str(shipment.id),
+            driver_user=self.context['request'].user,
+            pod_data=pod_data
+        )
+        
+        if not result['success']:
+            raise serializers.ValidationError(result['error'])
+        
+        # Return the created POD
+        return ProofOfDelivery.objects.get(id=result['pod_id'])
 
 
 # ===== FEEDBACK SERIALIZERS =====

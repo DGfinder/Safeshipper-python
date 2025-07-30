@@ -125,6 +125,15 @@ export interface EquipmentFilter {
 class FleetComplianceService {
   private baseUrl = "/api/v1/vehicles";
 
+  // Fleet Status and Real-time Data
+  async getFleetStatus(limit?: number): Promise<any> {
+    const params = new URLSearchParams();
+    if (limit) params.append("limit", limit.toString());
+    
+    const response = await api.get(`${this.baseUrl}/fleet-status/?${params.toString()}`);
+    return response.data;
+  }
+
   // Vehicle Safety Equipment Management
   async getVehicleSafetyEquipment(filters?: EquipmentFilter): Promise<VehicleSafetyEquipment[]> {
     const params = new URLSearchParams();
@@ -198,8 +207,29 @@ class FleetComplianceService {
 
   // Fleet-wide Compliance Reporting
   async getFleetComplianceStats(): Promise<FleetComplianceStats> {
-    // This would be a custom endpoint that aggregates compliance data
     const response = await api.get(`${this.baseUrl}/fleet-compliance-stats/`);
+    return response.data;
+  }
+
+  async getMaintenanceSchedule(): Promise<{
+    vehicles_needing_service: Array<{
+      id: string;
+      registration_number: string;
+      next_service_date: string;
+      odometer_km: number | null;
+      assigned_driver__first_name: string | null;
+      assigned_driver__last_name: string | null;
+    }>;
+    equipment_needing_inspection: Array<{
+      vehicle__registration_number: string;
+      equipment_type__name: string;
+      next_inspection_date: string;
+      location_on_vehicle: string;
+    }>;
+    period_start: string;
+    period_end: string;
+  }> {
+    const response = await api.get(`${this.baseUrl}/maintenance-schedule/`);
     return response.data;
   }
 

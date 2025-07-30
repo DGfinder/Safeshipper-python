@@ -1,7 +1,9 @@
 from django.db import models
 from django.contrib.auth import get_user_model
+from django.contrib.gis.db import models as gis_models
 from django.utils import timezone
 from django.core.validators import MinValueValidator, MaxValueValidator
+from django.utils.translation import gettext_lazy as _
 import uuid
 
 User = get_user_model()
@@ -56,14 +58,32 @@ class Incident(models.Model):
     
     # Location and timing
     location = models.CharField(max_length=200)
+    address = models.TextField(blank=True, help_text="Full address of incident location")
     coordinates = models.JSONField(null=True, blank=True)  # {lat, lng}
+    # PostGIS point field for spatial queries
+    location_point = gis_models.PointField(null=True, blank=True, srid=4326, help_text="PostGIS point for spatial queries")
     occurred_at = models.DateTimeField()
     reported_at = models.DateTimeField(default=timezone.now)
+    
+    # Company and organization
+    company = models.ForeignKey(
+        'companies.Company', 
+        on_delete=models.CASCADE, 
+        related_name='incidents',
+        help_text="Company that owns this incident"
+    )
     
     # People involved
     reporter = models.ForeignKey(User, on_delete=models.CASCADE, related_name='reported_incidents')
     assigned_to = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='assigned_incidents')
     witnesses = models.ManyToManyField(User, blank=True, related_name='witnessed_incidents')
+    # Investigation team
+    investigators = models.ManyToManyField(
+        User, 
+        blank=True, 
+        related_name='investigating_incidents',
+        help_text="Team members investigating this incident"
+    )
     
     # Status and priority
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='reported')
@@ -83,6 +103,77 @@ class Incident(models.Model):
     shipment = models.ForeignKey('shipments.Shipment', on_delete=models.SET_NULL, null=True, blank=True)
     vehicle = models.ForeignKey('vehicles.Vehicle', on_delete=models.SET_NULL, null=True, blank=True)
     
+    # Dangerous goods involved
+    dangerous_goods_involved = models.ManyToManyField(
+        'dangerous_goods.DangerousGood',
+        through='IncidentDangerousGood',
+        blank=True,
+        related_name='incidents',
+        help_text="Dangerous goods involved in this incident"
+    )
+    
+    # Regulatory compliance
+    authority_notified = models.BooleanField(
+        default=False,
+        help_text="Whether regulatory authorities have been notified"
+    )
+    authority_reference = models.CharField(
+        max_length=100,
+        blank=True,
+        help_text="Reference number from regulatory authority"
+    )
+    regulatory_deadline = models.DateTimeField(
+        null=True, 
+        blank=True,
+        help_text="Deadline for regulatory reporting or response"
+    )
+    
+    # Investigation details
+    root_cause = models.TextField(
+        blank=True,
+        help_text="Identified root cause of the incident"
+    )
+    contributing_factors = models.JSONField(
+        default=list,
+        help_text="List of contributing factors"
+    )
+    
+    # Emergency response
+    emergency_services_called = models.BooleanField(
+        default=False,
+        help_text="Whether emergency services were called"
+    )
+    emergency_response_time = models.DurationField(
+        null=True,
+        blank=True,
+        help_text="Time taken for emergency services to respond"
+    )
+    
+    # Compliance and quality
+    safety_officer_notified = models.BooleanField(
+        default=False,
+        help_text="Whether safety officer was notified"
+    )
+    quality_impact = models.CharField(
+        max_length=50,
+        choices=[
+            ('none', 'No Impact'),
+            ('minor', 'Minor Impact'),
+            ('moderate', 'Moderate Impact'),
+            ('major', 'Major Impact'),
+            ('severe', 'Severe Impact'),
+        ],
+        default='none',
+        help_text="Impact on product/service quality"
+    )
+    
+    # Weather and conditions at time of incident 
+    weather_conditions = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text="Weather conditions at time of incident"
+    )
+    
     # Metadata
     metadata = models.JSONField(default=dict, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -95,6 +186,13 @@ class Incident(models.Model):
             models.Index(fields=['status']),
             models.Index(fields=['priority']),
             models.Index(fields=['occurred_at']),
+            models.Index(fields=['company']),
+            models.Index(fields=['assigned_to']),
+            models.Index(fields=['reporter']),
+            models.Index(fields=['authority_notified']),
+            models.Index(fields=['emergency_services_called']),
+            # Spatial index for location queries
+            # Note: PostGIS spatial indexes are created automatically
         ]
     
     def __str__(self):
@@ -117,6 +215,102 @@ class Incident(models.Model):
             self.incident_number = f'INC-{year}-{new_number:04d}'
         
         super().save(*args, **kwargs)
+    
+    def get_severity_display(self):
+        """Get display name for incident severity based on priority and type"""
+        if self.priority == 'critical':
+            return 'Critical'
+        elif self.priority == 'high':
+            return 'High'
+        elif self.priority == 'medium':
+            return 'Medium'
+        else:
+            return 'Low'
+    
+    def get_duration_open(self):
+        """Get how long the incident has been open"""
+        if self.status == 'closed' and self.closed_at:
+            return self.closed_at - self.reported_at
+        else:
+            return timezone.now() - self.reported_at
+    
+    def requires_regulatory_notification(self):
+        """Check if incident requires regulatory notification"""
+        # Critical incidents always require notification
+        if self.priority == 'critical':
+            return True
+        
+        # Environmental impact requires notification
+        if self.environmental_impact:
+            return True
+        
+        # Injuries require notification
+        if self.injuries_count > 0:
+            return True
+        
+        # High-value property damage requires notification
+        if self.property_damage_estimate and self.property_damage_estimate > 10000:
+            return True
+        
+        return False
+    
+    def is_overdue(self):
+        """Check if incident response is overdue"""
+        # Critical incidents - 4 hours
+        if self.priority == 'critical':
+            return timezone.now() > self.reported_at + timezone.timedelta(hours=4)
+        
+        # High priority - 24 hours
+        if self.priority == 'high':
+            return timezone.now() > self.reported_at + timezone.timedelta(hours=24)
+        
+        # Medium/Low priority - 72 hours
+        return timezone.now() > self.reported_at + timezone.timedelta(hours=72)
+
+
+class IncidentDangerousGood(models.Model):
+    """Through model for dangerous goods involved in incidents"""
+    incident = models.ForeignKey(Incident, on_delete=models.CASCADE)
+    dangerous_good = models.ForeignKey('dangerous_goods.DangerousGood', on_delete=models.CASCADE)
+    quantity_involved = models.DecimalField(
+        max_digits=10,
+        decimal_places=3,
+        help_text=\"Quantity of dangerous good involved in incident\"
+    )
+    quantity_unit = models.CharField(
+        max_length=20,
+        default='kg',
+        help_text=\"Unit of measurement for quantity\"
+    )
+    packaging_type = models.CharField(
+        max_length=100,
+        blank=True,
+        help_text=\"Type of packaging involved\"
+    )
+    release_amount = models.DecimalField(
+        max_digits=10,
+        decimal_places=3,
+        null=True,
+        blank=True,
+        help_text=\"Amount released during incident\"
+    )
+    containment_status = models.CharField(
+        max_length=50,
+        choices=[
+            ('contained', 'Fully Contained'),
+            ('partial', 'Partially Contained'),
+            ('released', 'Released to Environment'),
+            ('unknown', 'Unknown'),
+        ],
+        default='unknown',
+        help_text=\"Containment status of the dangerous good\"
+    )
+    
+    class Meta:
+        unique_together = ['incident', 'dangerous_good']
+    
+    def __str__(self):
+        return f\"{self.incident.incident_number} - {self.dangerous_good.un_number}\"
 
 
 class IncidentDocument(models.Model):

@@ -6,7 +6,8 @@ from .api_views import (
     ConsignmentItemViewSet,
     ShipmentFeedbackViewSet,
     FeedbackAnalyticsViewSet,
-    DeliverySuccessStatsView
+    DeliverySuccessStatsView,
+    ProofOfDeliveryViewSet
 )
 
 # Create a router and register our viewsets
@@ -15,6 +16,7 @@ router.register(r'', ShipmentViewSet, basename='shipment')  # Empty string since
 router.register(r'items', ConsignmentItemViewSet, basename='consignmentitem')
 router.register(r'feedback', ShipmentFeedbackViewSet, basename='shipment-feedback')
 router.register(r'analytics', FeedbackAnalyticsViewSet, basename='feedback-analytics')
+router.register(r'pods', ProofOfDeliveryViewSet, basename='proof-of-delivery')
 
 urlpatterns = [
     path('', include(router.urls)),

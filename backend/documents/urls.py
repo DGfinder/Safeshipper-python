@@ -1,7 +1,7 @@
 # documents/urls.py
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from .api_views import DocumentViewSet
+from .api_views import DocumentViewSet, PDFReportViewSet
 from .file_upload_views import (
     FileUploadView,
     BulkFileUploadView,
@@ -13,6 +13,7 @@ from .file_upload_views import (
 # Create a router and register our viewsets
 router = DefaultRouter()
 router.register(r'', DocumentViewSet, basename='document')
+router.register(r'pdf-reports', PDFReportViewSet, basename='pdf-report')
 
 app_name = 'documents'
 
