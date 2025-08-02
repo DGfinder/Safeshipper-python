@@ -17,7 +17,10 @@ from django.core.files.storage import default_storage
 from django.core.files.base import ContentFile
 from django.utils import timezone
 
-from .models import SafetyDataSheet, SDSDataSource
+from .models import SafetyDataSheet, SDSDataSource, DataSourceType, DataSourceStatus
+from django.contrib.auth import get_user_model
+
+User = get_user_model()
 from .enhanced_models import EnhancedSafetyDataSheet, SDSQualityCheck
 from .openai_service import enhanced_openai_service
 from dangerous_goods.models import DangerousGood

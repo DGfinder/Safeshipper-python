@@ -7,8 +7,8 @@ from datetime import timedelta
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 # Security
-SECRET_KEY = config('SECRET_KEY')
-DEBUG = config('DEBUG', default=False, cast=bool)
+SECRET_KEY = config('SECRET_KEY', default='django-insecure-development-key-change-in-production')
+DEBUG = config('DEBUG', default=True, cast=bool)
 ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='127.0.0.1,localhost', cast=Csv())
 
 # Enhanced Security Settings
@@ -32,7 +32,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'django.contrib.sites',
-    # 'django.contrib.gis',  # Temporarily disabled due to GDAL dependency
+    'django.contrib.gis',  # Re-enabled with GDAL dependencies installed
     
     # Third-party apps
     'channels',
@@ -49,47 +49,47 @@ INSTALLED_APPS = [
     'django_otp.plugins.otp_totp',
     'django_otp.plugins.otp_static',
     'corsheaders',
-    # 'django_elasticsearch_dsl',  # Temporarily disabled for migration
-    # 'django_elasticsearch_dsl_drf',  # Temporarily disabled for migration
+    'django_elasticsearch_dsl',  # Re-enabled for search functionality
+    'django_elasticsearch_dsl_drf',  # Re-enabled for search functionality
     
-    # Local apps (minimal set for EPG functionality)
+    # Local apps (full SafeShipper functionality enabled)
     'users',
     'companies',
-    'locations',
-    'shipments',
-    'dangerous_goods',  # Re-enabled after fixing shipments dependencies
-    'sds',  # Re-enabled after fixing dangerous_goods dependencies
-    # 'vehicles',  # Temporarily disabled due to GIS dependencies
-    'freight_types',
-    'enterprise_auth',  # Re-enabled for Phase 3D security
-    'incidents',    # Re-enabled for incident management system
-    'training',     # Re-enabled for training management system
-    # 'iot_devices',  # Temporarily disabled due to GIS dependencies
-    'documents',  # Re-enabled after fixing shipments dependencies
-    'manifests',  # Re-enabled after fixing documents dependencies
-    'audits',     # Re-enabled for Phase 5A comprehensive audit system
-    'inspections', # Re-enabled for Phase 5B quality management
-    'api_gateway', # Re-enabled for Phase 7A API gateway & developer platform
-    'erp_integration', # Re-enabled for Phase 7B ERP integration framework
-    'customer_portal', # Re-enabled for Phase 8A customer portal & self-service
-    'mobile_api', # Re-enabled for Phase 8B mobile API foundation
-    'communications', # Re-enabled for Phase 1 communication system
-    'dashboards', # Re-enabled for Phase 3A analytics
-    'load_plans', # Re-enabled for Phase 3B load planning
-    'epg',        # Re-enabled after fixing shipments dependencies
-    'capacity_marketplace', # Re-enabled for Phase 3C marketplace
-    'routes', # Re-enabled for Phase 3B route optimization
-    # 'emergency_procedures', # Temporarily disabled due to GIS dependencies
-    'search', # Unified search API system
+    'locations',  # Re-enabled with GIS dependencies
+    'shipments',  # Re-enabled with GIS dependencies
+    'dangerous_goods',  # Re-enabled with GIS dependencies
+    'sds',  # Re-enabled with GIS dependencies
+    'vehicles',  # Re-enabled with GIS dependencies
+    'freight_types',  # Re-enabled with GIS dependencies
+    'enterprise_auth',  # Re-enabled with GIS dependencies
+    'incidents',  # Re-enabled with GIS dependencies
+    'training',  # Re-enabled with GIS dependencies
+    'iot_devices',  # Re-enabled with GIS dependencies
+    'documents',  # Re-enabled with GIS dependencies
+    'manifests',  # Re-enabled with GIS dependencies
+    'audits',  # Re-enabled with GIS dependencies
+    'inspections',  # Re-enabled with GIS dependencies
+    'api_gateway',  # Re-enabled with GIS dependencies
+    'erp_integration',  # Re-enabled with GIS dependencies
+    'customer_portal',  # Re-enabled with GIS dependencies
+    'mobile_api',  # Re-enabled with GIS dependencies
+    'communications',  # Re-enabled with GIS dependencies
+    'dashboards',  # Re-enabled with GIS dependencies
+    'load_plans',  # Re-enabled with GIS dependencies
+    'epg',  # Re-enabled with GIS dependencies
+    'capacity_marketplace',  # Re-enabled with GIS dependencies
+    'routes',  # Re-enabled with GIS dependencies
+    'emergency_procedures',  # Re-enabled with GIS dependencies
+    'search',  # Re-enabled with GIS dependencies
 ]
 
 # Middleware
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'corsheaders.middleware.CorsMiddleware',
-    'safeshipper_core.middleware.SecurityHeadersMiddleware',
-    'api_gateway.middleware.APIGatewayMiddleware',
-    'api_gateway.middleware.APIVersioningMiddleware',
+    'safeshipper_core.middleware.SecurityHeadersMiddleware',  # Re-enabled
+    'api_gateway.middleware.APIGatewayMiddleware',  # Re-enabled
+    'api_gateway.middleware.APIVersioningMiddleware',  # Re-enabled
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -99,8 +99,8 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'allauth.account.middleware.AccountMiddleware',
     'simple_history.middleware.HistoryRequestMiddleware',
-    'safeshipper_core.middleware.RequestLoggingMiddleware',
-    'safeshipper_core.middleware.APIErrorHandlingMiddleware',
+    'safeshipper_core.middleware.RequestLoggingMiddleware',  # Re-enabled
+    'safeshipper_core.middleware.APIErrorHandlingMiddleware',  # Re-enabled
 ]
 
 ROOT_URLCONF = 'safeshipper_core.urls'
@@ -127,12 +127,12 @@ ASGI_APPLICATION = 'safeshipper_core.asgi.application'
 # Database
 DATABASES = {
     'default': {
-        'ENGINE': config('DB_ENGINE', default='django.db.backends.postgresql'),
-        'NAME': config('DB_NAME', default='safeshipper'),
-        'USER': config('DB_USER', default='safeshipper'),
-        'PASSWORD': config('DB_PASSWORD', default='safeshipper_dev_password'),
-        'HOST': config('DB_HOST', default='postgres'),
-        'PORT': config('DB_PORT', default='5432'),
+        'ENGINE': config('DB_ENGINE', default='django.db.backends.sqlite3'),
+        'NAME': config('DB_NAME', default=os.path.join(BASE_DIR, 'db.sqlite3')),
+        'USER': config('DB_USER', default=''),
+        'PASSWORD': config('DB_PASSWORD', default=''),
+        'HOST': config('DB_HOST', default=''),
+        'PORT': config('DB_PORT', default=''),
     }
 }
 

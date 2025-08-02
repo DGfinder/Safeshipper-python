@@ -1,8 +1,7 @@
 # shipments/serializers.py
 from rest_framework import serializers
 from django.db import transaction
-from .models import Shipment, ConsignmentItem, ShipmentStatus, ShipmentFeedback
-from .proof_of_delivery import ProofOfDelivery, ProofOfDeliveryPhoto
+from .models import Shipment, ConsignmentItem, ShipmentStatus, ShipmentFeedback, ProofOfDelivery, ProofOfDeliveryPhoto
 from dangerous_goods.models import DangerousGood  # Re-enabled after dangerous_goods app re-enabled
 from shared.validation_service import SafeShipperValidationMixin
 

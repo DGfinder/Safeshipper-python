@@ -15,6 +15,7 @@ from .models import (
 from shipments.models import Shipment
 from companies.models import Company
 from freight_types.models import FreightType
+from manifests.models import Manifest
 
 logger = logging.getLogger(__name__)
 

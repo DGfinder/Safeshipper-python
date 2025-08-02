@@ -1,6 +1,6 @@
 import uuid
 from django.db import models
-from django.contrib.gis.db import models as gis_models
+# from django.contrib.gis.db import models as gis_models  # Temporarily disabled for setup
 from django.utils import timezone
 from django.core.exceptions import ValidationError
 # from locations.models import GeoLocation  # Temporarily disabled
@@ -45,11 +45,15 @@ class Vehicle(models.Model):
     )
     
     # Live tracking fields
-    last_known_location = gis_models.PointField(
-        geography=True,
+    last_known_location_lat = models.FloatField(
         null=True,
         blank=True,
-        help_text="Last reported GPS location of the vehicle"
+        help_text="Last reported GPS latitude of the vehicle"
+    )
+    last_known_location_lng = models.FloatField(
+        null=True,
+        blank=True,
+        help_text="Last reported GPS longitude of the vehicle"
     )
     last_reported_at = models.DateTimeField(
         null=True,
@@ -77,10 +81,10 @@ class Vehicle(models.Model):
     @property
     def current_location(self):
         """Get the current location as lat/lng dictionary"""
-        if self.last_known_location:
+        if self.last_known_location_lat and self.last_known_location_lng:
             return {
-                'latitude': self.last_known_location.y,
-                'longitude': self.last_known_location.x,
+                'latitude': self.last_known_location_lat,
+                'longitude': self.last_known_location_lng,
                 'last_updated': self.last_reported_at.isoformat() if self.last_reported_at else None
             }
         return None
@@ -98,9 +102,10 @@ class Vehicle(models.Model):
         if timestamp is None:
             timestamp = timezone.now()
         
-        self.last_known_location = gis_models.Point(longitude, latitude, srid=4326)
+        self.last_known_location_lat = latitude
+        self.last_known_location_lng = longitude
         self.last_reported_at = timestamp
-        self.save(update_fields=['last_known_location', 'last_reported_at', 'updated_at'])
+        self.save(update_fields=['last_known_location_lat', 'last_known_location_lng', 'last_reported_at', 'updated_at'])
     
     @property
     def safety_equipment_status(self):

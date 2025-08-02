@@ -3,6 +3,7 @@ from rest_framework.decorators import api_view, permission_classes, action
 from rest_framework.response import Response
 from rest_framework.pagination import PageNumberPagination
 from django.shortcuts import get_object_or_404
+from django.db import models
 from django.db.models import Q, Count, Avg, Sum, F, Case, When, IntegerField
 from django.db.models.functions import TruncDate, TruncHour, TruncWeek, TruncMonth
 from django.utils import timezone

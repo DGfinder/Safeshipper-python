@@ -14,7 +14,7 @@ from .models import Shipment, ConsignmentItem, ShipmentFeedback
 from .serializers import (
     ShipmentSerializer, ShipmentListSerializer, ConsignmentItemSerializer,
     ShipmentFeedbackSerializer, ShipmentFeedbackListSerializer, ManagerResponseSerializer,
-    FeedbackAnalyticsSerializer, DeliverySuccessStatsSerializer
+    FeedbackAnalyticsSerializer, DeliverySuccessStatsSerializer, ProofOfDeliverySerializer
 )
 from .permissions import (
     IsAdminOrAssignedDepotUserForShipment, 

@@ -10,6 +10,7 @@ from django.conf import settings
 from django.core.files.storage import FileSystemStorage
 from storages.backends.s3boto3 import S3Boto3Storage
 from django.utils.deconstruct import deconstructible
+from django.utils import timezone
 
 logger = logging.getLogger(__name__)
 

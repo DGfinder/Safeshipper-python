@@ -12,7 +12,7 @@ from datetime import timedelta
 from typing import Dict, Any, List
 from django.utils import timezone
 from django.contrib.gis.geos import Point
-from django.db import transaction
+from django.db import transaction, models
 from django.core.cache import cache
 from django.contrib.auth import get_user_model
 from rest_framework import viewsets, permissions, status, views

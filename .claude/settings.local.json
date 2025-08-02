@@ -95,7 +95,22 @@
       "Bash(true)",
       "Bash(pkill:*)",
       "Bash(DJANGO_SETTINGS_MODULE=safeshipper_core.settings_minimal python3 manage.py check)",
-      "Bash(DJANGO_SETTINGS_MODULE=safeshipper_core.settings_minimal python3 manage.py migrate)"
+      "Bash(DJANGO_SETTINGS_MODULE=safeshipper_core.settings_minimal python3 manage.py migrate)",
+      "Bash(java:*)",
+      "Bash(groups)",
+      "Bash(./install_elasticsearch.sh)",
+      "Bash(cmd.exe:*)",
+      "Bash(sudo netstat:*)",
+      "Bash(systemctl:*)",
+      "Bash(redis-cli:*)",
+      "Bash(.venv/Scripts/activate.bat)",
+      "Bash(deactivate)",
+      "Bash(/mnt/c/Python313/python.exe:*)",
+      "Bash(pip3:*)",
+      "Bash(gdal-config:*)",
+      "Bash(geos-config:*)",
+      "Bash(proj)",
+      "Bash(flake8:*)"
     ],
     "deny": []
   }

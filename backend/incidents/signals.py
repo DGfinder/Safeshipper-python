@@ -76,12 +76,12 @@ def incident_post_save_handler(sender, instance, created, **kwargs):
         # Check for specific changes
         if old_values.get('status') != instance.status:
             new_values['status'] = instance.status
-            changes.append(f'Status: {old_values.get(\"status\")} → {instance.status}')
+            changes.append(f'Status: {old_values.get("status")} → {instance.status}')
             
             # Create specific audit log for status changes
             AuditLog.objects.create(
                 action_type=AuditActionType.STATUS_CHANGE,
-                action_description=f'Incident status changed: {old_values.get(\"status\")} → {instance.status}',
+                action_description=f'Incident status changed: {old_values.get("status")} → {instance.status}',
                 user=user,
                 user_role=user.role if user else None,
                 content_object=instance,
@@ -118,7 +118,7 @@ def incident_post_save_handler(sender, instance, created, **kwargs):
         
         if old_values.get('priority') != instance.priority:
             new_values['priority'] = instance.priority
-            changes.append(f'Priority: {old_values.get(\"priority\")} → {instance.priority}')
+            changes.append(f'Priority: {old_values.get("priority")} → {instance.priority}')
         
         if old_values.get('location') != instance.location:
             new_values['location'] = instance.location

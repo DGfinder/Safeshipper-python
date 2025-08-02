@@ -1,6 +1,6 @@
 from django.db import models
 from django.contrib.auth import get_user_model
-from django.contrib.gis.db import models as gis_models
+# from django.contrib.gis.db import models as gis_models  # Temporarily disabled for setup
 from django.utils import timezone
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.utils.translation import gettext_lazy as _
@@ -60,8 +60,9 @@ class Incident(models.Model):
     location = models.CharField(max_length=200)
     address = models.TextField(blank=True, help_text="Full address of incident location")
     coordinates = models.JSONField(null=True, blank=True)  # {lat, lng}
-    # PostGIS point field for spatial queries
-    location_point = gis_models.PointField(null=True, blank=True, srid=4326, help_text="PostGIS point for spatial queries")
+    # Location coordinates (temporarily using regular fields)
+    location_lat = models.FloatField(null=True, blank=True, help_text="Latitude of incident location")
+    location_lng = models.FloatField(null=True, blank=True, help_text="Longitude of incident location")
     occurred_at = models.DateTimeField()
     reported_at = models.DateTimeField(default=timezone.now)
     
@@ -275,24 +276,24 @@ class IncidentDangerousGood(models.Model):
     quantity_involved = models.DecimalField(
         max_digits=10,
         decimal_places=3,
-        help_text=\"Quantity of dangerous good involved in incident\"
+        help_text="Quantity of dangerous good involved in incident"
     )
     quantity_unit = models.CharField(
         max_length=20,
         default='kg',
-        help_text=\"Unit of measurement for quantity\"
+        help_text="Unit of measurement for quantity"
     )
     packaging_type = models.CharField(
         max_length=100,
         blank=True,
-        help_text=\"Type of packaging involved\"
+        help_text="Type of packaging involved"
     )
     release_amount = models.DecimalField(
         max_digits=10,
         decimal_places=3,
         null=True,
         blank=True,
-        help_text=\"Amount released during incident\"
+        help_text="Amount released during incident"
     )
     containment_status = models.CharField(
         max_length=50,
@@ -303,14 +304,14 @@ class IncidentDangerousGood(models.Model):
             ('unknown', 'Unknown'),
         ],
         default='unknown',
-        help_text=\"Containment status of the dangerous good\"
+        help_text="Containment status of the dangerous good"
     )
     
     class Meta:
         unique_together = ['incident', 'dangerous_good']
     
     def __str__(self):
-        return f\"{self.incident.incident_number} - {self.dangerous_good.un_number}\"
+        return f"{self.incident.incident_number} - {self.dangerous_good.un_number}"
 
 
 class IncidentDocument(models.Model):

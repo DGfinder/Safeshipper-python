@@ -61,8 +61,8 @@ twilio==9.3.7
 pyfcm==1.5.4
 
 # OAuth and Social Authentication
-dj-rest-auth==6.1.3
-dj-rest-auth[with_social]==6.1.3
+dj-rest-auth==7.0.1
+dj-rest-auth[with_social]==7.0.1
 djangorestframework-simplejwt==5.5.0
 oauthlib==3.2.2
 requests-oauthlib==2.0.0

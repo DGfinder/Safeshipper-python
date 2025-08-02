@@ -263,9 +263,9 @@ def get_vehicle_location_history(
     for event in events:
         # Get any active visits at this time
         active_visits = LocationVisit.objects.filter(
+            Q(exit_time__isnull=True) | Q(exit_time__gte=event.timestamp),
             vehicle=vehicle,
-            entry_time__lte=event.timestamp,
-            Q(exit_time__isnull=True) | Q(exit_time__gte=event.timestamp)
+            entry_time__lte=event.timestamp
         ).select_related('location')
         
         history.append({

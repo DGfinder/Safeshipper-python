@@ -233,7 +233,7 @@ class ShipmentAuditLog(models.Model):
     class Meta:
         verbose_name = _("Shipment Audit Log")
         verbose_name_plural = _("Shipment Audit Logs")
-        ordering = ['-audit_log__timestamp']
+        ordering = ['-id']
         indexes = [
             models.Index(fields=['shipment', 'audit_log']),
             models.Index(fields=['previous_status', 'new_status']),
@@ -426,13 +426,13 @@ class ComplianceAuditLog(models.Model):
     class Meta:
         verbose_name = _("Compliance Audit Log")
         verbose_name_plural = _("Compliance Audit Logs")
-        ordering = ['-audit_log__timestamp']
+        ordering = ['-id']
         indexes = [
             models.Index(fields=['company', 'compliance_status', 'audit_log']),
             models.Index(fields=['regulation_type', 'compliance_status']),
             models.Index(fields=['remediation_status', 'remediation_deadline']),
             models.Index(fields=['risk_assessment_score']),
-            models.Index(fields=['audit_log__timestamp', 'company']),
+            models.Index(fields=['company']),
             models.Index(fields=['shipment_reference']),
             models.Index(fields=['vehicle_reference']),
             models.Index(fields=['driver_reference']),
@@ -689,11 +689,11 @@ class DangerousGoodsAuditLog(models.Model):
     class Meta:
         verbose_name = _("Dangerous Goods Audit Log")
         verbose_name_plural = _("Dangerous Goods Audit Logs")
-        ordering = ['-audit_log__timestamp']
+        ordering = ['-id']
         indexes = [
             models.Index(fields=['company', 'un_number']),
             models.Index(fields=['hazard_class', 'packing_group']),
-            models.Index(fields=['operation_type', 'audit_log__timestamp']),
+            models.Index(fields=['operation_type']),
             models.Index(fields=['adg_compliant', 'iata_compliant', 'imdg_compliant']),
             models.Index(fields=['regulatory_notification_required', 'regulatory_notification_sent']),
             models.Index(fields=['transport_document_number']),

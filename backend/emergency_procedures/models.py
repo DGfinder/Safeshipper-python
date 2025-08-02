@@ -1,6 +1,7 @@
 # emergency_procedures/models.py
 import uuid
 from django.db import models
+from django.contrib.gis.db import models as gis_models
 from django.utils.translation import gettext_lazy as _
 from django.contrib.auth import get_user_model
 from django.utils import timezone
@@ -272,7 +273,7 @@ class EmergencyIncident(models.Model):
         max_length=255,
         help_text=_("Where the incident occurred")
     )
-    coordinates = models.PointField(
+    coordinates = gis_models.PointField(
         _("GPS Coordinates"),
         null=True,
         blank=True,
@@ -493,7 +494,7 @@ class EmergencyContact(models.Model):
         max_length=255,
         help_text=_("Geographic area this contact serves")
     )
-    coordinates = models.PointField(
+    coordinates = gis_models.PointField(
         _("Location"),
         null=True,
         blank=True,
